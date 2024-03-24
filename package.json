@@ -1,1 +1,19 @@
-{ "dependencies": { "@supabase/supabase-js": "^2.39.8", "express": "^4.19.1" }, "name": "demonlistvn-v3-api", "module": "index.ts", "type": "module", "devDependencies": { "@types/bun": "latest", "@types/express": "^4.17.21" }, "peerDependencies": { "typescript": "^5.0.0" } }
+{
+    "dependencies": {
+        "@supabase/supabase-js": "^2.39.8",
+        "express": "^4.19.1"
+    },
+    "name": "demonlistvn-v3-api",
+    "module": "index.ts",
+    "type": "module",
+    "devDependencies": {
+        "@types/bun": "latest",
+        "@types/express": "^4.17.21"
+    },
+    "peerDependencies": {
+        "typescript": "^5.0.0"
+    },
+    "scripts": {
+        "dev": "bun --watch index.ts"
+    }
+}
