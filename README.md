@@ -1,15 +1,13 @@
-# demonlistvn-v3-api
+# Prerequisite
 
-To install dependencies:
+- Docker
+- Bun
+- Supabase CLI
+
+# Getting started
 
 ```bash
 bun install
+supabase start
+bun run dev # Server run on localhost:8080
 ```
-
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.0.29. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
