@@ -1,10 +1,11 @@
 import express from 'express'
 import Level from '@root/classes/Level'
+import adminAuth from '@root/middleware/adminAuth'
 
 const router = express.Router()
 
 router.route('/')
-    .put(async (req, res) => {
+    .put(adminAuth, async (req, res) => {
         const data = req.body
 
         if (!('id' in data)) {
