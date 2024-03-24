@@ -1,6 +1,6 @@
 import express from 'express'
 import Player from '@src/classes/Player'
-import adminAuth from '@src/middleware/adminAuth'
+import userAuth from '@src/middleware/userAuth'
 
 const router = express.Router()
 
@@ -17,7 +17,7 @@ router.route('/')
         *      content:
         *        application/json:
      */
-    .put(adminAuth, async (req, res) => {
+    .put(userAuth, async (req, res) => {
         const data = req.body
 
         if (!('uid' in data)) {
