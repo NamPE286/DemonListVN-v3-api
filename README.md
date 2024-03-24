@@ -9,5 +9,13 @@
 ```bash
 bun install
 supabase start
-bun run dev # Server run on localhost:8080
+bun run dev
 ```
+
+Local development server will run on `http://localhost:/YOUR_ENV_PORT`. Documentation is avaliable at `/docs`
+
+# Deployment
+## Deploy Supabase server
+
+
+## Deploy REST API server
