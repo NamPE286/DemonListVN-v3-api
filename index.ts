@@ -3,6 +3,8 @@ import levelRoute from './routes/level.ts'
 
 const app = express()
 
+app.use(express.json())
+
 app.get('/', (req, res) => {
     res.send({
         timestamp: new Date().toISOString()
