@@ -1,20 +1,30 @@
-import supabase from '@root/database/supabase'
+import supabase from '@src/database/supabase'
 
 interface Data {
-    id: number
+    uid: string
+    id?: number
     name?: string
-    creator?: string
-    videoID?: string
-    minProgress?: string
-    flTop?: number
-    dlTop?: number
-    flPt?: number
-    dlPt?: number
+    email?: string
+    avatar?: string
+    facebook?: string
+    youtube?: string
+    discord?: string
+    totalFLpt?: number
+    totalDLpt?: number
+    flrank?: number
+    dlrank?: number
+    isAdmin?: boolean
+    isBanned?: boolean
+    isHidden?: boolean
     rating?: number
-    songID?: number
+    dlMaxPt?: number
+    flMaxPt?: number
+    overallRank?: number
+    province?: string
+    city?: string
 }
 
-class Level {
+class Player {
     #initialized: boolean = false
     data: Data
 
@@ -28,9 +38,9 @@ class Level {
         }
 
         const { data, error } = await supabase
-            .from('levels')
+            .from('players')
             .select('*')
-            .eq('id', this.data.id)
+            .eq('uid', this.data.uid)
             .single()
 
         if (error) {
@@ -43,7 +53,7 @@ class Level {
 
     async update() {
         const { error } = await supabase
-            .from('levels')
+            .from('players')
             .upsert(this.data)
 
         if (error) {
@@ -52,4 +62,4 @@ class Level {
     }
 }
 
-export default Level
+export default Player

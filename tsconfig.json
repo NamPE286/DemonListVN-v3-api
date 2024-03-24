@@ -24,7 +24,7 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
     "paths": {
-      "@root/*": ["./*"]
+      "@src/*": ["./src/*"]
     }
   }
 }

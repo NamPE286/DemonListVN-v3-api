@@ -1,6 +1,6 @@
 import express from 'express'
-import Level from '@root/classes/Level'
-import adminAuth from '@root/middleware/adminAuth'
+import Level from '@src/classes/Level'
+import adminAuth from '@src/middleware/adminAuth'
 
 const router = express.Router()
 

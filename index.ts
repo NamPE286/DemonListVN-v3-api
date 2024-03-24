@@ -1,7 +1,7 @@
 import express from 'express'
 import levelRoute from './routes/level.ts'
 import playerRoute from './routes/player.ts'
-import swaggerDocs from '@root/utils/swagger.ts'
+import swaggerDocs from '@src/utils/swagger.ts'
 
 const app = express()
 
