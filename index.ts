@@ -1,5 +1,6 @@
 import express from 'express'
 import levelRoute from './routes/level.ts'
+import playerRoute from './routes/player.ts'
 
 const app = express()
 
@@ -12,6 +13,7 @@ app.get('/', (req, res) => {
 })
 
 app.use('/level', levelRoute)
+app.use('/player', playerRoute)
 
 app.listen(process.env.EXPRESS_PORT, () => {
     console.log(`Server started on port ${process.env.EXPRESS_PORT} (local url: http://localhost:${process.env.EXPRESS_PORT})`)
