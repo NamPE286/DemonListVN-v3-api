@@ -1,17 +1,17 @@
 import supabase from '@src/database/supabase'
 
 interface Data {
-    id: number
-    name?: string
-    creator?: string
-    videoID?: string
-    minProgress?: string
-    flTop?: number
-    dlTop?: number
+    levelid: number
+    userid: string
+    progress?: number
+    timestamp?: number
     flPt?: number
     dlPt?: number
-    rating?: number
-    songID?: number
+    refreshRate?: number
+    videoLink?: string
+    mobile?: boolean
+    isChecked?: boolean
+    comment?: string
 }
 
 class Level {
@@ -23,9 +23,9 @@ class Level {
 
     async init() {
         const { data, error } = await supabase
-            .from('levels')
+            .from('records')
             .select('*')
-            .eq('id', this.data.id)
+            .match({uid: this.data.userid, levelid: this.data.levelid})
             .single()
 
         if (error) {
@@ -49,7 +49,7 @@ class Level {
         const { error } = await supabase
             .from('levels')
             .delete()
-            .eq('id', this.data.id)
+            .match({uid: this.data.userid, levelid: this.data.levelid})
 
         if (error) {
             throw error

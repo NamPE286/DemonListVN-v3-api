@@ -25,7 +25,6 @@ interface Data {
 }
 
 class Player {
-    #initialized: boolean = false
     data: Data
 
     constructor(data: Data) {
@@ -33,10 +32,6 @@ class Player {
     }
 
     async init() {
-        if (this.#initialized) {
-            return
-        }
-
         const { data, error } = await supabase
             .from('players')
             .select('*')
@@ -48,7 +43,6 @@ class Player {
         }
 
         this.data = data
-        this.#initialized = true
     }
 
     async update() {
