@@ -1,4 +1,6 @@
 import express from 'express'
+import supabase from '@src/database/supabase'
+import Record from '@src/classes/Record'
 import Level from '@src/classes/Level'
 import adminAuth from '@src/middleware/adminAuth'
 
@@ -96,6 +98,48 @@ router.route('/:id')
         await level.delete()
 
         res.send()
+    })
+
+router.route('/:id/records')
+    /**
+     * @openapi
+     * "/level/{id}/records":
+     *   get:
+     *     tags:
+     *       - Level
+     *     summary: Get all records of a level
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the level
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
+    .get(async (req, res) => {
+        const { id } = req.params
+        const { data, error } = await supabase
+            .from('records')
+            .select('*')
+            .eq('levelid', parseInt(id))
+
+        if(error) {
+            throw error
+        }
+
+        const records: Record[] = []
+
+        for(const i of data) {
+            records.push(new Record(i))
+        }
+
+        res.send(records)
     })
 
 export default router
