@@ -99,7 +99,6 @@ router.route('/:uid')
      */
     .get(async (req, res) => {
         const { uid } = req.params
-        console.log(uid)
         const { data, error } = await supabase
             .from('records')
             .select('*')
