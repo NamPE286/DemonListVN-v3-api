@@ -1,7 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from 'jsonwebtoken'
+import Player from "@src/classes/Player";
 
-export default function (req: Request, res: Response, next: NextFunction) {
+export default async function (req: Request, res: Response, next: NextFunction) {
     if (!req.headers.authorization ||
         !req.headers.authorization.startsWith('Bearer')) {
         res.status(401).send()
@@ -12,7 +13,14 @@ export default function (req: Request, res: Response, next: NextFunction) {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET!)
-        console.log(decoded.sub)
+        const uid = String(decoded.sub)
+        const player = new Player({uid: uid})
+
+        await player.init()
+
+        if(!player.data.isAdmin) {
+            return
+        }
 
     } catch {
         res.status(403).send()

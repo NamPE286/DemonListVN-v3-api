@@ -19,6 +19,7 @@ router.route('/')
      */
     .put(userAuth, async (req, res) => {
         const data = req.body
+        const user: Player = res.locals.user
 
         if (!('uid' in data)) {
             res.status(400).send({
@@ -26,6 +27,10 @@ router.route('/')
             })
 
             return
+        }
+
+        if (user.data.uid != data.uid && !user.data.isAdmin) {
+            res.status(403).send()
         }
 
         const player = new Player(data)
