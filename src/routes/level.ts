@@ -6,16 +6,16 @@ const router = express.Router()
 
 router.route('/')
     /**
-        * @openapi
-        * '/level':
-        *  put:
-        *     tags:
-        *     - Level
-        *     summary: Add or update a level
-        *     requestBody:
-        *      required: true
-        *      content:
-        *        application/json:
+      * @openapi
+      * "/level":
+      * put:
+      *   tags:
+      *     - Level
+      *   summary: Add or update a level
+      *   requestBody:
+      *   required: true
+      *   content:
+      *     application/json:
      */
     .put(adminAuth, async (req, res) => {
         const data = req.body
@@ -36,25 +36,25 @@ router.route('/')
 
 router.route('/:id')
     /**
-        * @openapi
-        * '/level/{id}':
-        *  get:
-        *     tags:
-        *     - Level
-        *     summary: Get a single level by the id
-        *     parameters:
-        *      - name: id
-        *        in: path
-        *        description: The id of the level
-        *        required: true
-        *        schema:
-        *           type: number
-        *     responses:
-        *       200:
-        *         description: Success
-        *         content:
-        *          application/json:
-        *           schema:
+     * @openapi
+     * "/level/{id}":
+     *   get:
+     *     tags:
+     *       - Level
+     *     summary: Get a single level by the id
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the level
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
      */
     .get(async (req, res) => {
         const { id } = req.params
