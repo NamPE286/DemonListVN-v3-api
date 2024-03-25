@@ -1,6 +1,8 @@
 import express from 'express'
 import Player from '@src/classes/Player'
+import Record from '@src/classes/Record'
 import userAuth from '@src/middleware/userAuth'
+import supabase from '@src/database/supabase'
 
 const router = express.Router()
 
@@ -73,6 +75,47 @@ router.route('/:uid')
         res.send(player.data)
     })
 
+    router.route('/:uid/records')
+    /**
+     * @openapi
+     * "/player/{uid}/records":
+     *   get:
+     *     tags:
+     *       - Player
+     *     summary: Get all records of a player
+     *     parameters:
+     *       - name: uid
+     *         in: path
+     *         description: The uid of the player
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
+    .get(async (req, res) => {
+        const { uid } = req.params
+        console.log(uid)
+        const { data, error } = await supabase
+            .from('records')
+            .select('*')
+            .eq('userid', uid)
 
+        if(error) {
+            throw error
+        }
+
+        const records: Record[] = []
+
+        for(const i of data) {
+            records.push(new Record(i))
+        }
+
+        res.send(records)
+    })
 
 export default router
