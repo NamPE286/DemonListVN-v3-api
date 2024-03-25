@@ -8,14 +8,17 @@ router.route('/')
     /**
       * @openapi
       * "/level":
-      * put:
-      *   tags:
-      *     - Level
-      *   summary: Add or update a level
-      *   requestBody:
-      *   required: true
-      *   content:
-      *     application/json:
+      *   put:
+      *     tags:
+      *       - Level
+      *     summary: Add or update a level
+      *     requestBody:
+      *     required: true
+      *     content:
+      *       application/json:
+      *     responses:
+      *       200:
+      *         description: Success
      */
     .put(adminAuth, async (req, res) => {
         const data = req.body
@@ -63,6 +66,36 @@ router.route('/:id')
         await level.init()
 
         res.send(level.data)
+    })
+
+    /**
+     * @openapi
+     * "/level/{id}":
+     *   delete:
+     *     tags:
+     *       - Level
+     *     summary: Delete a single level by the id
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the level
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
+    .delete(adminAuth, async (req, res) => {
+        const { id } = req.params
+        const level = new Level({ id: parseInt(id) })
+
+        await level.delete()
+
+        res.send()
     })
 
 export default router

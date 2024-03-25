@@ -16,6 +16,9 @@ router.route('/')
      *       required: true
      *       content:
      *         application/json:
+     *     responses:
+     *       200:
+     *         description: Success
      */
     .put(userAuth, async (req, res) => {
         const data = req.body
@@ -43,23 +46,23 @@ router.route('/:uid')
     /**
      * @openapi
      * "/player/{uid}":
-     * get:
-     *   tags:
-     *     - Player
-     *   summary: Get a single player by the uid
-     *   parameters:
-     *     - name: uid
-     *   in: path
-     *   description: The uid of the player
-     *   required: true
-     *   schema:
-     *     type: string
-     *   responses:
-     *   200:
-     *     description: Success
-     *     content:
-     *     application/json:
-     *     schema:
+     *   get:
+     *     tags:
+     *       - Player
+     *     summary: Get a single player by the uid
+     *     parameters:
+     *       - name: uid
+     *         in: path
+     *         description: The uid of the player
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
         */
     .get(async (req, res) => {
         const { uid } = req.params

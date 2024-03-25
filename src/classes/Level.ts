@@ -50,6 +50,17 @@ class Level {
             throw error
         }
     }
+
+    async delete() {
+        const { error } = await supabase
+            .from('levels')
+            .delete()
+            .eq('id', this.data.id)
+
+        if (error) {
+            throw error
+        }
+    }
 }
 
 export default Level
