@@ -14,7 +14,7 @@ interface Data {
     comment?: string
 }
 
-class Level {
+class Record {
     data: Data
 
     constructor(data: Data) {
@@ -37,7 +37,7 @@ class Level {
 
     async update() {
         const { error } = await supabase
-            .from('levels')
+            .from('records')
             .upsert(this.data)
 
         if (error) {
@@ -47,7 +47,7 @@ class Level {
 
     async delete() {
         const { error } = await supabase
-            .from('levels')
+            .from('records')
             .delete()
             .match({uid: this.data.userid, levelid: this.data.levelid})
 
@@ -57,4 +57,4 @@ class Level {
     }
 }
 
-export default Level
+export default Record
