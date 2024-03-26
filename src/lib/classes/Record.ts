@@ -15,6 +15,7 @@ interface Data {
 }
 
 class Record {
+    #synced = false
     data: Data
 
     constructor(data: Data) {
@@ -33,6 +34,7 @@ class Record {
         }
 
         this.data = data
+        this.#synced = true
     }
 
     async update() {

@@ -25,6 +25,7 @@ interface Data {
 }
 
 class Player {
+    #synced = false
     data: Data
 
     constructor(data: Data) {
@@ -43,6 +44,7 @@ class Player {
         }
 
         this.data = data
+        this.#synced = true
     }
 
     async update() {
