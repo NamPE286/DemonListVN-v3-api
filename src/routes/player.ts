@@ -3,6 +3,7 @@ import Player from '@lib/classes/Player'
 import Record from '@src/lib/classes/Record'
 import userAuth from '@src/middleware/userAuth'
 import supabase from '@src/database/supabase'
+import { getPlayerRecords } from '@src/lib/client'
 
 const router = express.Router()
 
@@ -98,23 +99,8 @@ router.route('/:uid')
      *             schema:
      */
     .get(async (req, res) => {
-        const { uid } = req.params
-        const { data, error } = await supabase
-            .from('records')
-            .select('*')
-            .eq('userid', uid)
+        res.send(await getPlayerRecords(req.params.uid))
 
-        if(error) {
-            throw error
-        }
-
-        const records: Record[] = []
-
-        for(const i of data) {
-            records.push(new Record(i))
-        }
-
-        res.send(records)
     })
 
 export default router

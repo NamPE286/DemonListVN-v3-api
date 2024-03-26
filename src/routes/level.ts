@@ -3,6 +3,7 @@ import supabase from '@src/database/supabase'
 import Record from '@src/lib/classes/Record'
 import Level from '@lib/classes/Level'
 import adminAuth from '@src/middleware/adminAuth'
+import { getLevelRecords } from '@lib/client'
 
 const router = express.Router()
 
@@ -122,24 +123,8 @@ router.route('/:id/records')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        const { id } = req.params
-        const { data, error } = await supabase
-            .from('records')
-            .select('*')
-            .eq('levelid', parseInt(id))
-
-        if(error) {
-            throw error
-        }
-
-        const records: Record[] = []
-
-        for(const i of data) {
-            records.push(new Record(i))
-        }
-
-        res.send(records)
+    .get(async (req, res) => {        
+        res.send(await getLevelRecords(parseInt(req.params.id)))
     })
 
 export default router
