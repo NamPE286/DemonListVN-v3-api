@@ -1,5 +1,5 @@
 import express from "express";
-import { getDemonListLevels, getFeaturedListLevels } from '@lib/client'
+import { getDemonListLevels, getDemonListSubmissions, getFeaturedListLevels, getFeaturedListSubmissions } from '@lib/client'
 
 const router = express.Router()
 
@@ -97,6 +97,17 @@ router.route('/FL')
      */
     .get(async (req, res) => {
         res.send(await getFeaturedListLevels(req.query))
+    })
+
+router.route('/DL/submissions')
+    .get(async (req, res) => {
+        return await getDemonListSubmissions(req.query)
+    })
+
+router.route('/FL/submissions')
+    .get(async (req, res) => {
+        return await getFeaturedListSubmissions(req.query)
+
     })
 
 export default router

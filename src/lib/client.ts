@@ -83,7 +83,7 @@ export async function getPlayerRecords(uid: string, { start = 0, end = 50, accep
     if (typeof accepted == 'string') {
         accepted = (accepted == 'true')
     }
-    
+
     const { data, error } = await supabase
         .from('records')
         .select('*')
@@ -100,6 +100,50 @@ export async function getPlayerRecords(uid: string, { start = 0, end = 50, accep
     const records: Record[] = []
 
     for (const i of data) {
+        records.push(new Record(i))
+    }
+
+    return records
+}
+
+export async function getDemonListSubmissions({ start = 0, end = 50 }) {
+    const { data, error } = await supabase
+        .from('records')
+        .select('*')
+        .not('dlPt', 'is', null)
+        .order('flPt', { ascending: false })
+        .eq('accepted', false)
+        .range(start, end)
+
+    if(error) {
+        throw error
+    }
+
+    const records: Record[] = []
+
+    for(const i of data) {
+        records.push(new Record(i))
+    }
+
+    return records
+}
+
+export async function getFeaturedListSubmissions({ start = 0, end = 50 }) {
+    const { data, error } = await supabase
+        .from('records')
+        .select('*')
+        .not('flPt', 'is', null)
+        .order('flPt', { ascending: false })
+        .eq('accepted', false)
+        .range(start, end)
+
+    if(error) {
+        throw error
+    }
+
+    const records: Record[] = []
+
+    for(const i of data) {
         records.push(new Record(i))
     }
 

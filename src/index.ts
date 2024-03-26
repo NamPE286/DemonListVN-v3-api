@@ -13,10 +13,20 @@ app.get('/', (req, res) => {
     })
 })
 
-const routes: string[] = fs.readdirSync(path.join(__dirname, 'routes'))
+const routes: string[] = (() => {
+    const a: string[] = fs.readdirSync(path.join(__dirname, 'routes'))
+
+    for(let i = 0; i < a.length; i++) {
+        a[i] = a[i].substring(0, a[i].length - 3)
+    }
+
+    return a
+})()
+
+console.log(routes)
 
 for(const route of routes) {
-    app.use(route, require(`./routes/${route}`).default)
+    app.use('/' + route, require(`./routes/${route}`).default)
 }
 
 app.listen(process.env.EXPRESS_PORT, () => {
