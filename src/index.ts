@@ -2,6 +2,7 @@ import express from 'express'
 import levelRoute from './routes/level.ts'
 import playerRoute from './routes/player.ts'
 import swaggerDocs from '@src/utils/swagger.ts'
+import listRoute from './routes/list.ts'
 
 const app = express()
 
@@ -13,6 +14,7 @@ app.get('/', (req, res) => {
     })
 })
 
+app.use('/list', listRoute)
 app.use('/level', levelRoute)
 app.use('/player', playerRoute)
 

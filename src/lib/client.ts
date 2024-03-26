@@ -1,7 +1,27 @@
 import supabase from '@database/supabase'
 import Record from '@src/lib/classes/Record'
 
-export const getLevelRecords = async (id: number) => {
+interface Filter {
+    start?: number
+    end?: number
+    sortBy?: string
+}
+
+const defaultFilter: Filter = {
+    start: 0,
+    end: 50,
+    sortBy: 'timestamp'
+}
+
+export async function getDemonListLevels(filter: Filter = defaultFilter) {
+
+}
+
+export async function getFeaturedListLevels(filter: Filter = defaultFilter) {
+
+}
+
+export async function getLevelRecords(id: number) {
     const { data, error } = await supabase
         .from('records')
         .select('*')
@@ -20,7 +40,7 @@ export const getLevelRecords = async (id: number) => {
     return records
 }
 
-export const getPlayerRecords = async (uid: string) => {
+export async function getPlayerRecords(uid: string) {
     const { data, error } = await supabase
         .from('records')
         .select('*')
