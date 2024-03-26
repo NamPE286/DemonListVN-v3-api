@@ -86,9 +86,6 @@ router.route('/:id')
      *     responses:
      *       200:
      *         description: Success
-     *         content:
-     *           application/json:
-     *             schema:
      */
     .delete(adminAuth, async (req, res) => {
         const { id } = req.params

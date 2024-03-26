@@ -6,6 +6,24 @@ import userAuth from '@src/middleware/userAuth'
 const router = express.Router()
 
 router.route('/')
+    /**
+     * @openapi
+     * "/record":
+     *   get:
+     *     tags:
+     *       - Record
+     *     summary: Add or update a record
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
     .put(adminAuth, async (req, res) => {
         const record = new Record(req.body)
         await record.update()
@@ -14,6 +32,30 @@ router.route('/')
     })
 
 router.route('/:userID/:levelID')
+    /**
+     * @openapi
+     * "/record/{userID}/{levelID}":
+     *   delete:
+     *     tags:
+     *       - Record
+     *     summary: Delete a single record
+     *     parameters:
+     *       - name: userID
+     *         in: path
+     *         description: The uid of the player
+     *         required: true
+     *         schema:
+     *           type: string
+     *       - name: levelID
+     *         in: path
+     *         description: The id of the level
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     */
     .delete(userAuth, async (req, res) => {
         const { user } = res.locals
         const { userID, levelID } = req.params
