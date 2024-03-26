@@ -1,4 +1,4 @@
-import supabase from '@src/database/supabase'
+import supabase from '@database/supabase'
 
 interface Data {
     levelid: number
