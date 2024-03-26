@@ -100,11 +100,69 @@ router.route('/FL')
     })
 
 router.route('/DL/submissions')
+    /**
+     * @openapi
+     * "/list/DL/submissions":
+     *   get:
+     *     tags:
+     *       - List
+     *     summary: Get all submission of the Demon List
+     *     parameters:
+     *       - name: start
+     *         in: query
+     *         description: Range start index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 0
+     *       - name: end
+     *         in: query
+     *         description: Range end index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 50
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
     .get(async (req, res) => {
         res.send(await getDemonListSubmissions(req.query))
     })
 
 router.route('/FL/submissions')
+    /**
+     * @openapi
+     * "/list/FL/submissions":
+     *   get:
+     *     tags:
+     *       - List
+     *     summary: Get all submission of the Featured List
+     *     parameters:
+     *       - name: start
+     *         in: query
+     *         description: Range start index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 0
+     *       - name: end
+     *         in: query
+     *         description: Range end index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 50
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
     .get(async (req, res) => {
         res.send(await getFeaturedListSubmissions(req.query))
 
