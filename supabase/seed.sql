@@ -23,7 +23,12 @@ VALUES
 (42584142,'Bloodlust','Riot, Manix648 and more','9bnzhl79Qi0',46,NULL,3,NULL,'1',3955,NULL),
 (51657783,'Sigma','MindCap and more','7baWM0Xodns',47,NULL,4,NULL,NULL,3920,NULL),
 (56703691,'Ouroboros','Viprin','CHzQs2HojL0',48,NULL,5,NULL,NULL,3863,NULL),
-(52919433,'Arctic Lights','ViRuZ & Endlevel','By67IwYNFRA',49,NULL,6,NULL,NULL,3850,NULL);
+(52919433,'Arctic Lights','ViRuZ & Endlevel','By67IwYNFRA',49,NULL,6,NULL,NULL,3850,NULL),
+(76400976,'SCAM OF THE CENTURY','cerufiffy','30MhXK8Osrg',0,39,NULL,44.56,NULL,NULL,NULL),
+(65969451,'Timor','Colorbolt & Maxie25','SUlNb3WXMMU',52,1,'36',249.05,NULL,'3715',NULL),
+(76166083,'Springtime','VigorousGard3n','UGAmTQHz9mQ',53,3,'40',219.39,'1.68','3690',NULL),
+(92782493,'BLACKLIGHTS','whlt, MaxxoRMeN and J27Blaze','IMSnxczYMp4',96,5,'188',195,NULL,'1975',NULL),
+(84983693,'cave of heart','ImMaxX1 & Onvil','L3PTKJ4sBZQ',100,4,'212',206.63,NULL,'1783',NULL);
 
 INSERT INTO "records" ("videoLink","refreshRate","progress","timestamp","flPt","dlPt","userid","levelid","mobile","isChecked","comment")
 VALUES

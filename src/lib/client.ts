@@ -1,24 +1,42 @@
 import supabase from '@database/supabase'
 import Record from '@src/lib/classes/Record'
 
-interface Filter {
-    start?: number
-    end?: number
-    sortBy?: string
+export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true } = {}) {
+    if(typeof ascending == 'string') {
+        ascending = (ascending == 'true')
+    }
+
+    const { data, error } = await supabase
+        .from('levels')
+        .select('*')
+        .not('dlTop', 'is', null)
+        .order(sortBy, { ascending: ascending })
+        .range(start, end)
+    
+    if(error) {
+        throw error
+    }
+
+    return data
 }
 
-const defaultFilter: Filter = {
-    start: 0,
-    end: 50,
-    sortBy: 'timestamp'
-}
+export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flTop', ascending = true } = {}) {
+    if(typeof ascending == 'string') {
+        ascending = (ascending == 'true')
+    }
 
-export async function getDemonListLevels(filter: Filter = defaultFilter) {
+    const { data, error } = await supabase
+        .from('levels')
+        .select('*')
+        .not('flTop', 'is', null)
+        .order(sortBy, { ascending: ascending })
+        .range(start, end)
 
-}
+    if(error) {
+        throw error
+    }
 
-export async function getFeaturedListLevels(filter: Filter = defaultFilter) {
-
+    return data
 }
 
 export async function getLevelRecords(id: number) {

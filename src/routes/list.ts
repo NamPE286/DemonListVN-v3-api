@@ -4,14 +4,13 @@ import { getDemonListLevels, getFeaturedListLevels } from '@lib/client'
 const router = express.Router()
 
 router.route('/DL')
-    .get((req, res) => {
-        getDemonListLevels({start: 0, end: 10})
-        res.send()
+    .get(async (req, res) => {
+        res.send(await getDemonListLevels(req.query))
     })
 
 router.route('/FL')
-    .get((req, res) => {
-
+    .get(async (req, res) => {
+        res.send(await getFeaturedListLevels(req.query))
     })
 
 export default router
