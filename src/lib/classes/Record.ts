@@ -26,7 +26,7 @@ class Record {
         const { data, error } = await supabase
             .from('records')
             .select('*')
-            .match({uid: this.data.userid, levelid: this.data.levelid})
+            .match({userid: this.data.userid, levelid: this.data.levelid})
             .single()
 
         if (error) {
@@ -35,6 +35,17 @@ class Record {
 
         this.data = data
         this.#synced = true
+    }
+
+    async submit() {
+        const record = new Record(this.data)
+        await record.pull()
+
+        if(record.data.progress! >= this.data.progress!) {
+            throw new Error('Better record is submitted')
+        }
+
+        await this.update()
     }
 
     async update() {
@@ -51,7 +62,7 @@ class Record {
         const { error } = await supabase
             .from('records')
             .delete()
-            .match({uid: this.data.userid, levelid: this.data.levelid})
+            .match({userid: this.data.userid, levelid: this.data.levelid})
 
         if (error) {
             throw error

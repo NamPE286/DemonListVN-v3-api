@@ -1,6 +1,7 @@
 import express, { application } from 'express'
 import Record from '@lib/classes/Record'
 import userAuth from '@src/middleware/userAuth'
+import Logger from '@src/lib/classes/Logger'
 
 const router = express.Router()
 
@@ -8,7 +9,7 @@ router.route('/')
     /**
       * @openapi
       * "/submission":
-      *   put:
+      *   post:
       *     tags:
       *       - Submission
       *     summary: Add or edit a submission
@@ -20,7 +21,7 @@ router.route('/')
       *       200:
       *         description: Success
      */
-    .put(userAuth, async (req, res) => {
+    .post(userAuth, async (req, res) => {
         const { user } = res.locals
         req.body.userid = user.data.uid
         req.body.timestamp = Date.now()
@@ -34,9 +35,15 @@ router.route('/')
         }
 
         const record = new Record(req.body)
-        await record.update()
 
-        res.send()
+        try {
+            await record.submit()
+            res.send()
+            new Logger().notice(`New record submitted! Please check it out.`)
+        } catch (err: any) {
+            console.log(err.message)
+            res.status(500).send({message: err.message})
+        }
     })
 
 export default router
