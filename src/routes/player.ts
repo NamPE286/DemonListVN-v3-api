@@ -64,7 +64,7 @@ router.route('/:uid')
      *         content:
      *           application/json:
      *             schema:
-        */
+    */
     .get(async (req, res) => {
         const { uid } = req.params
         const player = new Player({ uid: uid })

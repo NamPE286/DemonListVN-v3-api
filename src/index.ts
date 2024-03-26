@@ -3,6 +3,7 @@ import levelRoute from './routes/level.ts'
 import playerRoute from './routes/player.ts'
 import swaggerDocs from '@src/utils/swagger.ts'
 import listRoute from './routes/list.ts'
+import provincesRoute from './routes/provinces.ts'
 
 const app = express()
 
@@ -17,6 +18,7 @@ app.get('/', (req, res) => {
 app.use('/list', listRoute)
 app.use('/level', levelRoute)
 app.use('/player', playerRoute)
+app.use('/provinces', provincesRoute)
 
 app.listen(process.env.EXPRESS_PORT, () => {
     console.log(`Server started on port ${process.env.EXPRESS_PORT} (local url: http://localhost:${process.env.EXPRESS_PORT})`)
