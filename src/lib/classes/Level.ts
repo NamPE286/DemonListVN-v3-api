@@ -57,6 +57,23 @@ class Level {
             throw error
         }
     }
+
+    getSongPublicURL() {
+        if(!this.#synced) {
+            throw new Error('Level is not synced with database')
+        }
+
+        if(!this.data.songID) {
+            throw new Error("Not avaliable")
+        }
+
+        const { data } = supabase
+            .storage
+            .from('songs')
+            .getPublicUrl(`${this.data.songID}.mp3`)
+
+        return data.publicUrl
+    }
 }
 
 export default Level

@@ -135,8 +135,39 @@ router.route('/:id/records')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {        
+    .get(async (req, res) => {
         res.send(await getLevelRecords(parseInt(req.params.id), req.query))
+    })
+
+router.route('/:id/song')
+    /**
+     * @openapi
+     * "/level/{id}/song":
+     *   get:
+     *     tags:
+     *       - Level
+     *     summary: Download level's NONG song if exist
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the level
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           audio/mp3:
+     *             schema:
+     */
+    .get(async (req, res) => {
+        const { id } = req.params
+        const level = new Level({ id: parseInt(id) })
+
+        await level.pull()
+
+        res.redirect(level.getSongPublicURL())
     })
 
 export default router
