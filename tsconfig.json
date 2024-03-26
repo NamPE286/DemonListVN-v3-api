@@ -29,5 +29,6 @@
       "@database/*": ["./src/database/*"],
       "@static/*": ["./static/*"]
     }
-  }
+  },
+  "include": ["./src/**/*", "./src/types/*.ts"],
 }

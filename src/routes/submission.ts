@@ -5,15 +5,11 @@ import userAuth from '@src/middleware/userAuth'
 
 const router = express.Router()
 
-router.route('/:levelID/:userID')
-    .get(async (req, res) => {
+router.route('/')
+    .post(userAuth, async (req, res) => {
+        const { user } = res.locals
 
-    })
-    .put(userAuth, async (req, res) => {
         
-    })
-    .delete(userAuth, async (req, res) => {
-
     })
 
 export default router
