@@ -1,5 +1,6 @@
 import supabase from '@database/supabase'
 import Record from '@src/lib/classes/Record'
+import Level from '@src/lib/classes/Level'
 
 export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true } = {}) {
     if (typeof ascending == 'string') {
@@ -17,7 +18,13 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
         throw error
     }
 
-    return data
+    const levels: Level[] = []
+
+    for (const i of data) {
+        levels.push(new Level(i))
+    }
+
+    return levels
 }
 
 export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flTop', ascending = true } = {}) {
@@ -36,7 +43,13 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
         throw error
     }
 
-    return data
+    const levels: Level[] = []
+
+    for (const i of data) {
+        levels.push(new Level(i))
+    }
+
+    return levels
 }
 
 export async function getLevelRecords(id: number, { start = 0, end = 50 } = {}) {
