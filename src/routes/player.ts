@@ -1,6 +1,6 @@
 import express from 'express'
-import Player from '@src/classes/Player'
-import Record from '@src/classes/Record'
+import Player from '@lib/classes/Player'
+import Record from '@src/lib/classes/Record'
 import userAuth from '@src/middleware/userAuth'
 import supabase from '@src/database/supabase'
 

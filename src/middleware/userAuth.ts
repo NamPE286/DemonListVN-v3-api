@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from 'jsonwebtoken'
-import Player from "@src/classes/Player";
+import Player from "@lib/classes/Player";
 
 export default async function (req: Request, res: Response, next: NextFunction) {
     if (!req.headers.authorization ||

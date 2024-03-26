@@ -1,7 +1,7 @@
 import express from 'express'
 import supabase from '@src/database/supabase'
-import Record from '@src/classes/Record'
-import Level from '@src/classes/Level'
+import Record from '@src/lib/classes/Record'
+import Level from '@lib/classes/Level'
 import adminAuth from '@src/middleware/adminAuth'
 
 const router = express.Router()

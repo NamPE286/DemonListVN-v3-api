@@ -24,7 +24,9 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
     "paths": {
-      "@src/*": ["./src/*"]
+      "@src/*": ["./src/*"],
+      "@lib/*": ["./dsrc/lib/*"],
+      "@database/*": ["src/database/*"]
     }
   }
 }
