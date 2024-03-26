@@ -103,6 +103,13 @@ router.route('/:uid')
      *         schema:
      *           type: number
      *           default: 50
+     *       - name: accepted
+     *         in: query
+     *         description: Record acception status
+     *         required: false
+     *         schema:
+     *           type: boolean
+     *           default: true
      *     responses:
      *       200:
      *         description: Success
@@ -111,7 +118,7 @@ router.route('/:uid')
      *             schema:
      */
     .get(async (req, res) => {
-        res.send(await getPlayerRecords(req.params.uid, true, req.query))
+        res.send(await getPlayerRecords(req.params.uid, req.query))
     })
 
 export default router

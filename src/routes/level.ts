@@ -128,6 +128,13 @@ router.route('/:id/records')
      *         schema:
      *           type: number
      *           default: 50
+     *       - name: accepted
+     *         in: query
+     *         description: Record acception status
+     *         required: false
+     *         schema:
+     *           type: boolean
+     *           default: true
      *     responses:
      *       200:
      *         description: Success
@@ -136,7 +143,7 @@ router.route('/:id/records')
      *             schema:
      */
     .get(async (req, res) => {
-        res.send(await getLevelRecords(parseInt(req.params.id), true, req.query))
+        res.send(await getLevelRecords(parseInt(req.params.id), req.query))
     })
 
 router.route('/:id/song')

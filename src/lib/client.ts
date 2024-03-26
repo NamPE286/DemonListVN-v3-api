@@ -52,14 +52,18 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
     return levels
 }
 
-export async function getLevelRecords(id: number, accepted = true, { start = 0, end = 50 } = {}) {
+export async function getLevelRecords(id: number, { start = 0, end = 50, accepted = true } = {}) {
+    if (typeof accepted == 'string') {
+        accepted = (accepted == 'true')
+    }
+
     const { data, error } = await supabase
         .from('records')
         .select('*')
         .eq('levelid', id)
-        .order('dlPt', {ascending: false})
-        .order('flPt', {ascending: false})
-        .eq('accepted', true)
+        .order('dlPt', { ascending: false })
+        .order('flPt', { ascending: false })
+        .eq('accepted', accepted)
         .range(start, end)
 
     if (error) {
@@ -75,14 +79,18 @@ export async function getLevelRecords(id: number, accepted = true, { start = 0, 
     return records
 }
 
-export async function getPlayerRecords(uid: string, accepted = true, { start = 0, end = 50 } = {}) {
+export async function getPlayerRecords(uid: string, { start = 0, end = 50, accepted = true } = {}) {
+    if (typeof accepted == 'string') {
+        accepted = (accepted == 'true')
+    }
+    
     const { data, error } = await supabase
         .from('records')
         .select('*')
         .eq('userid', uid)
-        .order('dlPt', {ascending: false})
-        .order('flPt', {ascending: false})
-        .eq('accepted', true)
+        .order('dlPt', { ascending: false })
+        .order('flPt', { ascending: false })
+        .eq('accepted', accepted)
         .range(start, end)
 
     if (error) {
