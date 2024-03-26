@@ -2,7 +2,7 @@ import supabase from '@database/supabase'
 import Record from '@src/lib/classes/Record'
 
 export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true } = {}) {
-    if(typeof ascending == 'string') {
+    if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
 
@@ -12,8 +12,8 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
         .not('dlTop', 'is', null)
         .order(sortBy, { ascending: ascending })
         .range(start, end)
-    
-    if(error) {
+
+    if (error) {
         throw error
     }
 
@@ -21,7 +21,7 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
 }
 
 export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flTop', ascending = true } = {}) {
-    if(typeof ascending == 'string') {
+    if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
 
@@ -32,18 +32,21 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
         .order(sortBy, { ascending: ascending })
         .range(start, end)
 
-    if(error) {
+    if (error) {
         throw error
     }
 
     return data
 }
 
-export async function getLevelRecords(id: number) {
+export async function getLevelRecords(id: number, { start = 0, end = 50 } = {}) {
     const { data, error } = await supabase
         .from('records')
         .select('*')
         .eq('levelid', id)
+        .order('dlPt', {ascending: false})
+        .order('flPt', {ascending: false})
+        .range(start, end)
 
     if (error) {
         throw error
@@ -58,11 +61,14 @@ export async function getLevelRecords(id: number) {
     return records
 }
 
-export async function getPlayerRecords(uid: string) {
+export async function getPlayerRecords(uid: string, { start = 0, end = 50 } = {}) {
     const { data, error } = await supabase
         .from('records')
         .select('*')
         .eq('userid', uid)
+        .order('dlPt', {ascending: false})
+        .order('flPt', {ascending: false})
+        .range(start, end)
 
     if (error) {
         throw error

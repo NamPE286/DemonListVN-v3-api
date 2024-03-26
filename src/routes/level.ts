@@ -114,6 +114,20 @@ router.route('/:id/records')
      *         required: true
      *         schema:
      *           type: number
+     *       - name: start
+     *         in: query
+     *         description: Range start index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 0
+     *       - name: end
+     *         in: query
+     *         description: Range end index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 50
      *     responses:
      *       200:
      *         description: Success
@@ -122,7 +136,7 @@ router.route('/:id/records')
      *             schema:
      */
     .get(async (req, res) => {        
-        res.send(await getLevelRecords(parseInt(req.params.id)))
+        res.send(await getLevelRecords(parseInt(req.params.id), req.query))
     })
 
 export default router

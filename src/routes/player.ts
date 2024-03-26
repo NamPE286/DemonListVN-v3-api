@@ -89,6 +89,20 @@ router.route('/:uid')
      *         required: true
      *         schema:
      *           type: string
+     *       - name: start
+     *         in: query
+     *         description: Range start index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 0
+     *       - name: end
+     *         in: query
+     *         description: Range end index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 50
      *     responses:
      *       200:
      *         description: Success
@@ -97,8 +111,7 @@ router.route('/:uid')
      *             schema:
      */
     .get(async (req, res) => {
-        res.send(await getPlayerRecords(req.params.uid))
-
+        res.send(await getPlayerRecords(req.params.uid, req.query))
     })
 
 export default router
