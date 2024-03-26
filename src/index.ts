@@ -23,8 +23,6 @@ const routes: string[] = (() => {
     return a
 })()
 
-console.log(routes)
-
 for(const route of routes) {
     app.use('/' + route, require(`./routes/${route}`).default)
 }

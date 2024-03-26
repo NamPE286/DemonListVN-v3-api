@@ -52,9 +52,9 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
     return levels
 }
 
-export async function getLevelRecords(id: number, { start = 0, end = 50, accepted = true } = {}) {
-    if (typeof accepted == 'string') {
-        accepted = (accepted == 'true')
+export async function getLevelRecords(id: number, { start = 0, end = 50, isChecked = true } = {}) {
+    if (typeof isChecked == 'string') {
+        isChecked = (isChecked == 'true')
     }
 
     const { data, error } = await supabase
@@ -63,7 +63,7 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, accepte
         .eq('levelid', id)
         .order('dlPt', { ascending: false })
         .order('flPt', { ascending: false })
-        .eq('accepted', accepted)
+        .eq('isChecked', isChecked)
         .range(start, end)
 
     if (error) {
@@ -79,9 +79,9 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, accepte
     return records
 }
 
-export async function getPlayerRecords(uid: string, { start = 0, end = 50, accepted = true } = {}) {
-    if (typeof accepted == 'string') {
-        accepted = (accepted == 'true')
+export async function getPlayerRecords(uid: string, { start = 0, end = 50, isChecked = true } = {}) {
+    if (typeof isChecked == 'string') {
+        isChecked = (isChecked == 'true')
     }
 
     const { data, error } = await supabase
@@ -90,7 +90,7 @@ export async function getPlayerRecords(uid: string, { start = 0, end = 50, accep
         .eq('userid', uid)
         .order('dlPt', { ascending: false })
         .order('flPt', { ascending: false })
-        .eq('accepted', accepted)
+        .eq('isChecked', isChecked)
         .range(start, end)
 
     if (error) {
@@ -112,7 +112,7 @@ export async function getDemonListSubmissions({ start = 0, end = 50 }) {
         .select('*')
         .not('dlPt', 'is', null)
         .order('flPt', { ascending: false })
-        .eq('accepted', false)
+        .eq('isChecked', false)
         .range(start, end)
 
     if(error) {
@@ -134,7 +134,7 @@ export async function getFeaturedListSubmissions({ start = 0, end = 50 }) {
         .select('*')
         .not('flPt', 'is', null)
         .order('flPt', { ascending: false })
-        .eq('accepted', false)
+        .eq('isChecked', false)
         .range(start, end)
 
     if(error) {

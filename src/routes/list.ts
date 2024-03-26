@@ -101,12 +101,12 @@ router.route('/FL')
 
 router.route('/DL/submissions')
     .get(async (req, res) => {
-        return await getDemonListSubmissions(req.query)
+        res.send(await getDemonListSubmissions(req.query))
     })
 
 router.route('/FL/submissions')
     .get(async (req, res) => {
-        return await getFeaturedListSubmissions(req.query)
+        res.send(await getFeaturedListSubmissions(req.query))
 
     })
 

@@ -128,7 +128,7 @@ router.route('/:id/records')
      *         schema:
      *           type: number
      *           default: 50
-     *       - name: accepted
+     *       - name: isChecked
      *         in: query
      *         description: Record acception status
      *         required: false
