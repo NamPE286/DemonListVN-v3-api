@@ -1,5 +1,5 @@
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
-# working directory name when running `supabase init`.
+# working directory name when running `supabase pull`.
 project_id = "DemonListVN-v3-api"
 
 [api]
@@ -18,7 +18,7 @@ max_rows = 1000
 [db]
 # Port to use for the local database URL.
 port = 51329
-# Port used by db diff command to initialize the shadow database.
+# Port used by db diff command to pullialize the shadow database.
 shadow_port = 51320
 # The database major version to use. This has to be the same as your remote database's. Run `SHOW
 # server_version;` on the remote database to check.

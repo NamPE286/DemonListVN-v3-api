@@ -3,7 +3,7 @@ import swaggerJsdoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 
 const options: swaggerJsdoc.Options = {
-  definition: {
+  defpullion: {
     openapi: "3.0.0",
     info: {
       title: "Demon List VN v3 REST API Docs",

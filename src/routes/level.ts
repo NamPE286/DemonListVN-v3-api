@@ -1,6 +1,4 @@
 import express from 'express'
-import supabase from '@src/database/supabase'
-import Record from '@src/lib/classes/Record'
 import Level from '@lib/classes/Level'
 import adminAuth from '@src/middleware/adminAuth'
 import { getLevelRecords } from '@lib/client'
@@ -66,7 +64,7 @@ router.route('/:id')
         const { id } = req.params
         const level = new Level({ id: parseInt(id) })
 
-        await level.init()
+        await level.pull()
 
         res.send(level.data)
     })

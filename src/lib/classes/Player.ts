@@ -31,7 +31,7 @@ class Player {
         this.data = data
     }
 
-    async init() {
+    async pull() {
         const { data, error } = await supabase
             .from('players')
             .select('*')

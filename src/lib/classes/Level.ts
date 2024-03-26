@@ -21,7 +21,7 @@ class Level {
         this.data = data
     }
 
-    async init() {
+    async pull() {
         const { data, error } = await supabase
             .from('levels')
             .select('*')

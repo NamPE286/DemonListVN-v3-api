@@ -1,8 +1,6 @@
 import express from 'express'
 import Player from '@lib/classes/Player'
-import Record from '@src/lib/classes/Record'
 import userAuth from '@src/middleware/userAuth'
-import supabase from '@src/database/supabase'
 import { getPlayerRecords } from '@src/lib/client'
 
 const router = express.Router()
@@ -71,7 +69,7 @@ router.route('/:uid')
         const { uid } = req.params
         const player = new Player({ uid: uid })
 
-        await player.init()
+        await player.pull()
 
         res.send(player.data)
     })

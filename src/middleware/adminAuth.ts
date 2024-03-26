@@ -16,7 +16,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
         const uid = String(decoded.sub)
         const player = new Player({uid: uid})
 
-        await player.init()
+        await player.pull()
 
         if(!player.data.isAdmin) {
             return
