@@ -170,4 +170,14 @@ router.route('/:id/song')
         res.redirect(level.getSongPublicURL())
     })
 
+    .delete(adminAuth, async (req, res) => {
+        const { id } = req.params
+        const level = new Level({ id: parseInt(id) })
+
+        await level.pull()
+        await level.deleteSong()
+
+        res.send()
+    })
+
 export default router

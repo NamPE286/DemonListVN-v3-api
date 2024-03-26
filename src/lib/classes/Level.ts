@@ -11,7 +11,7 @@ interface Data {
     flPt?: number
     dlPt?: number
     rating?: number
-    songID?: number
+    songID?: number | null
 }
 
 class Level {
@@ -73,6 +73,28 @@ class Level {
             .getPublicUrl(`${this.data.songID}.mp3`)
 
         return data.publicUrl
+    }
+
+    async deleteSong() {
+        if(!this.#synced) {
+            throw new Error('Level is not synced with database')
+        }
+
+        if(!this.data.songID) {
+            return
+        }
+
+        const { data, error } = await supabase
+            .storage
+            .from('songs')
+            .remove([`${this.data.songID}.mp3`])
+        
+        if(error) {
+            throw error
+        }
+
+        this.data.songID = null
+        this.update()
     }
 }
 
