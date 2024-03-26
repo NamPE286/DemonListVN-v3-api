@@ -14,9 +14,9 @@ router.route('/')
       *       - Level
       *     summary: Add or update a level
       *     requestBody:
-      *     required: true
-      *     content:
-      *       application/json:
+      *         required: true
+      *         content:
+      *             application/json:
       *     responses:
       *       200:
       *         description: Success

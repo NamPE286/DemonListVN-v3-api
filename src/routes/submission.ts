@@ -5,7 +5,22 @@ import userAuth from '@src/middleware/userAuth'
 const router = express.Router()
 
 router.route('/')
-    .post(userAuth, async (req, res) => {
+    /**
+      * @openapi
+      * "/submission":
+      *   put:
+      *     tags:
+      *       - Submission
+      *     summary: Add or edit a submission
+      *     requestBody:
+      *         required: true
+      *         content:
+      *             application/json:
+      *     responses:
+      *       200:
+      *         description: Success
+     */
+    .put(userAuth, async (req, res) => {
         const { user } = res.locals
         req.body.userid = user.data.uid
         req.body.timestamp = Date.now()
