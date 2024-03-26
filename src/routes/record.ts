@@ -9,7 +9,7 @@ router.route('/')
     /**
      * @openapi
      * "/record":
-     *   get:
+     *   put:
      *     tags:
      *       - Record
      *     summary: Add or update a record
