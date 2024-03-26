@@ -136,7 +136,7 @@ router.route('/:id/records')
      *             schema:
      */
     .get(async (req, res) => {
-        res.send(await getLevelRecords(parseInt(req.params.id), req.query))
+        res.send(await getLevelRecords(parseInt(req.params.id), true, req.query))
     })
 
 router.route('/:id/song')
@@ -170,6 +170,27 @@ router.route('/:id/song')
         res.redirect(level.getSongPublicURL())
     })
 
+    /**
+     * @openapi
+     * "/level/{id}/song":
+     *   delete:
+     *     tags:
+     *       - Level
+     *     summary: Delete a level's song
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the level
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
     .delete(adminAuth, async (req, res) => {
         const { id } = req.params
         const level = new Level({ id: parseInt(id) })

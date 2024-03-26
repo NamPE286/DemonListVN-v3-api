@@ -111,7 +111,7 @@ router.route('/:uid')
      *             schema:
      */
     .get(async (req, res) => {
-        res.send(await getPlayerRecords(req.params.uid, req.query))
+        res.send(await getPlayerRecords(req.params.uid, true, req.query))
     })
 
 export default router
