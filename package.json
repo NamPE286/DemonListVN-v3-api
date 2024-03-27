@@ -6,6 +6,7 @@
     "@types/swagger-ui-express": "^4.1.6",
     "@types/uuid": "^9.0.8",
     "express": "^4.19.2",
+    "express-rate-limit": "^7.2.0",
     "jsonwebtoken": "^9.0.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",

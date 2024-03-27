@@ -8,7 +8,7 @@ function isNumeric(value: string) {
 }
 
 export const search = {
-    async level(query: string, { limit = 5} = {}) {
+    async levels(query: string, { limit = 5} = {}) {
         if (isNumeric(query)) {
             const { data, error } = await supabase
                 .from('levels')
@@ -48,7 +48,7 @@ export const search = {
         return res
     },
 
-    async player(query: string, { limit = 5} = {}) {
+    async players(query: string, { limit = 5} = {}) {
         if (uuid.validate(query)) {
             const { data, error } = await supabase
                 .from('players')
