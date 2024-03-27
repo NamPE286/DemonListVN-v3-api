@@ -38,4 +38,4 @@ app.listen(process.env.EXPRESS_PORT, () => {
     swaggerDocs(app, parseInt(process.env.EXPRESS_PORT!))
 })
 
-module.exports = app
+export default app

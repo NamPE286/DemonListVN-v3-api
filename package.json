@@ -24,6 +24,6 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "start": "bun run src/index.ts",
-    "build": "echo skip"
+    "vercel-build": "echo skip"
   }
 }
