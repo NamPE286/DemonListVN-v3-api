@@ -1,7 +1,7 @@
 import express, { application } from 'express'
 import Record from '@lib/classes/Record'
 import userAuth from '@src/middleware/userAuth'
-import Logger from '@src/lib/classes/Logger'
+import logger from '@src/utils/logger'
 
 const router = express.Router()
 
@@ -39,7 +39,7 @@ router.route('/')
         try {
             await record.submit()
             res.send()
-            new Logger().notice(`New record submitted! Please check it out.`)
+            logger.notice(`New record submitted! Please check it out.`)
         } catch (err: any) {
             res.status(500).send({message: err.message})
         }
