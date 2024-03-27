@@ -1,5 +1,5 @@
 import express from "express";
-import { getDemonListLevels, getDemonListSubmissions, getFeaturedListLevels, getFeaturedListSubmissions } from '@lib/client'
+import { getDemonListLevels, getDemonListRecords, getFeaturedListLevels, getFeaturedListRecords } from '@lib/client'
 
 const router = express.Router()
 
@@ -99,14 +99,14 @@ router.route('/FL')
         res.send(await getFeaturedListLevels(req.query))
     })
 
-router.route('/DL/submissions')
+router.route('/DL/records')
     /**
      * @openapi
-     * "/list/DL/submissions":
+     * "/list/DL/records":
      *   get:
      *     tags:
      *       - List
-     *     summary: Get all submission of the Demon List
+     *     summary: Get all records of the Demon List
      *     parameters:
      *       - name: start
      *         in: query
@@ -122,6 +122,13 @@ router.route('/DL/submissions')
      *         schema:
      *           type: number
      *           default: 50
+     *       - name: isChecked
+     *         in: query
+     *         description: Record acception status
+     *         required: false
+     *         schema:
+     *           type: boolean
+     *           default: true
      *     responses:
      *       200:
      *         description: Success
@@ -130,17 +137,17 @@ router.route('/DL/submissions')
      *             schema:
      */
     .get(async (req, res) => {
-        res.send(await getDemonListSubmissions(req.query))
+        res.send(await getDemonListRecords(req.query))
     })
 
-router.route('/FL/submissions')
+router.route('/FL/records')
     /**
      * @openapi
-     * "/list/FL/submissions":
+     * "/list/FL/records":
      *   get:
      *     tags:
      *       - List
-     *     summary: Get all submission of the Featured List
+     *     summary: Get all records of the Featured List
      *     parameters:
      *       - name: start
      *         in: query
@@ -156,6 +163,13 @@ router.route('/FL/submissions')
      *         schema:
      *           type: number
      *           default: 50
+     *       - name: isChecked
+     *         in: query
+     *         description: Record acception status
+     *         required: false
+     *         schema:
+     *           type: boolean
+     *           default: true
      *     responses:
      *       200:
      *         description: Success
@@ -164,7 +178,7 @@ router.route('/FL/submissions')
      *             schema:
      */
     .get(async (req, res) => {
-        res.send(await getFeaturedListSubmissions(req.query))
+        res.send(await getFeaturedListRecords(req.query))
 
     })
 

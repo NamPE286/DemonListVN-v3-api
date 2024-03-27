@@ -107,50 +107,6 @@ export async function getPlayerRecords(uid: string, { start = 0, end = 50, isChe
     return records
 }
 
-export async function getDemonListSubmissions({ start = 0, end = 50 }) {
-    const { data, error } = await supabase
-        .from('records')
-        .select('*')
-        .not('dlPt', 'is', null)
-        .order('flPt', { ascending: false })
-        .eq('isChecked', false)
-        .range(start, end)
-
-    if (error) {
-        throw error
-    }
-
-    const records: Record[] = []
-
-    for (const i of data) {
-        records.push(new Record(i))
-    }
-
-    return records
-}
-
-export async function getFeaturedListSubmissions({ start = 0, end = 50 }) {
-    const { data, error } = await supabase
-        .from('records')
-        .select('*')
-        .not('flPt', 'is', null)
-        .order('flPt', { ascending: false })
-        .eq('isChecked', false)
-        .range(start, end)
-
-    if (error) {
-        throw error
-    }
-
-    const records: Record[] = []
-
-    for (const i of data) {
-        records.push(new Record(i))
-    }
-
-    return records
-}
-
 export async function sendNotification(notification: Notification) {
     notification.timestamp = Date.now()
 
@@ -158,7 +114,7 @@ export async function sendNotification(notification: Notification) {
         .from('notifications')
         .insert(notification)
 
-    if(error) {
+    if (error) {
         throw error
     }
 }
@@ -169,15 +125,75 @@ export async function getPlayerNotifications(uid: string) {
         .select('*')
         .eq('to', uid)
 
-    if(error) {
+    if (error) {
         throw error
     }
 
     const res: Notification[] = []
 
-    for(const i of data!) {
+    for (const i of data!) {
         res.push(i)
     }
 
     return res
 }
+
+export async function getRecords({ start = 0, end = 0, isChecked = false } = {}) {
+    if (typeof isChecked == 'string') {
+        isChecked = (isChecked == 'true')
+    }
+
+    const { data, error } = await supabase
+        .from('records')
+        .select('*')
+        .match({ isChecked: isChecked })
+        .order('timestamp', { ascending: true })
+        .range(start, end)
+
+    if (error) {
+        throw error
+    }
+
+    return data
+}
+
+export async function getDemonListRecords({ start = 0, end = 0, isChecked = false } = {}) {
+    if (typeof isChecked == 'string') {
+        isChecked = (isChecked == 'true')
+    }
+
+    const { data, error } = await supabase
+        .from('records')
+        .select('*')
+        .match({ isChecked: isChecked })
+        .not('dlPt', 'is', null)
+        .order('timestamp', { ascending: true })
+        .range(start, end)
+
+    if (error) {
+        throw error
+    }
+
+    return data
+}
+
+export async function getFeaturedListRecords({ start = 0, end = 0, isChecked = false } = {}) {
+    if (typeof isChecked == 'string') {
+        isChecked = (isChecked == 'true')
+    }
+
+    const { data, error } = await supabase
+        .from('records')
+        .select('*')
+        .match({ isChecked: isChecked })
+        .not('flPt', 'is', null)
+        .order('timestamp', { ascending: true })
+        .range(start, end)
+
+    if (error) {
+        throw error
+    }
+
+    return data
+}
+
