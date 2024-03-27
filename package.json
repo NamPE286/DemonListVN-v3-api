@@ -22,8 +22,7 @@
     "typescript": "^5.0.0"
   },
   "scripts": {
-    "dev": "bun --watch src/index.ts",
-    "start": "bun run src/index.ts",
+    "dev": "bun --watch src/app.ts",
     "vercel-build": "echo skip"
   }
 }
