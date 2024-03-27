@@ -1,4 +1,5 @@
 import express from 'express'
+import rateLimit from 'express-rate-limit'
 import swaggerDocs from '@src/utils/swagger.ts'
 import fs from 'fs'
 import path from 'path'
@@ -6,6 +7,10 @@ import path from 'path'
 const app = express()
 
 app.use(express.json())
+app.use(rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100
+}))
 
 app.get('/', (req, res) => {
     res.send({
