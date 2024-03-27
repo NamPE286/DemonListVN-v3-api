@@ -37,3 +37,5 @@ app.listen(process.env.EXPRESS_PORT, () => {
     console.log(`Server started on port ${process.env.EXPRESS_PORT} (local url: http://localhost:${process.env.EXPRESS_PORT})`)
     swaggerDocs(app, parseInt(process.env.EXPRESS_PORT!))
 })
+
+module.exports = app
