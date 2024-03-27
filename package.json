@@ -16,13 +16,14 @@
   "type": "module",
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/express": "^4.17.21"
+    "@types/express": "^4.17.21",
+    "bun-vercel": "^1.0.0-alpha.4"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
   "scripts": {
     "dev": "bun --watch src/app.ts",
-    "vercel-build": "echo skip"
+    "build": "bun-vercel ./src/main.ts"
   }
 }
