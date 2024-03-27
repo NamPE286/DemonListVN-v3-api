@@ -22,6 +22,7 @@
     "typescript": "^5.0.0"
   },
   "scripts": {
-    "dev": "bun --watch src/app.ts"
+    "dev": "bun --watch src/app.ts",
+    "build": "bun build src/index.ts --target bun --compile --outfile app"
   }
 }
