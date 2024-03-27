@@ -18,6 +18,11 @@ jobs:
     name: Build and Deploy
     runs-on: ubuntu-latest
     steps:
+      - name: 'Create env file'
+        run: |
+          touch .env
+          echo "${{ secrets.ENV_FILE }}" >> .env
+          cat .env
       - uses: actions/checkout@v3
       - name: Use Bun
         uses: oven-sh/setup-bun@v1
