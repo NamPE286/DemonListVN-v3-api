@@ -38,6 +38,7 @@ class Level {
     }
 
     async update() {
+        console.log('oo')
         const { error } = await supabase
             .from('levels')
             .upsert(this.data)

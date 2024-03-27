@@ -1,4 +1,18 @@
 import supabase from '@database/supabase'
+import Level from '@src/lib/classes/Level'
+
+async function isLevelExists(id: number) {
+    const { data, error } = await supabase
+        .from('levels')
+        .select('id')
+        .eq('id', id)
+
+    if (error || !data.length) {
+        return false
+    }
+
+    return true
+}
 
 interface Data {
     levelid: number
@@ -26,7 +40,7 @@ class Record {
         const { data, error } = await supabase
             .from('records')
             .select('*')
-            .match({userid: this.data.userid, levelid: this.data.levelid})
+            .match({ userid: this.data.userid, levelid: this.data.levelid })
             .single()
 
         if (error) {
@@ -38,12 +52,25 @@ class Record {
     }
 
     async submit() {
-        const record = new Record(this.data)
-        await record.pull()
+        if (!(await isLevelExists(this.data.levelid))) {
+            const level = new Level({
+                id: this.data.levelid,
+                name: 'New Level! Please edit this field',
+                creator: 'Unknown'
+            })
 
-        if(record.data.progress! >= this.data.progress!) {
-            throw new Error('Better record is submitted')
+            await level.update()
         }
+
+        const record = new Record(this.data)
+
+        try {
+            await record.pull()
+
+            if (record.data.progress! >= this.data.progress!) {
+                throw new Error('Better record is submitted')
+            }
+        } catch (err) { }
 
         await this.update()
     }
@@ -62,7 +89,7 @@ class Record {
         const { error } = await supabase
             .from('records')
             .delete()
-            .match({userid: this.data.userid, levelid: this.data.levelid})
+            .match({ userid: this.data.userid, levelid: this.data.levelid })
 
         if (error) {
             throw error
