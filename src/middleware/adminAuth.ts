@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from 'jsonwebtoken'
 import Player from "@lib/classes/Player";
-import Logger from "@src/lib/classes/Logger";
+import logger from "@src/utils/logger";
 
 export default async function (req: Request, res: Response, next: NextFunction) {
     if (!req.headers.authorization ||
@@ -29,7 +29,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             msg += `\n\`\`\`json\n// Body content\n${JSON.stringify(req.body, null, 4)}\`\`\``
         }
 
-        new Logger().log(msg)
+        logger.log(msg)
     } catch {
         res.status(403).send()
         return

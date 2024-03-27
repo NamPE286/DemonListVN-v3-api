@@ -1,4 +1,4 @@
-class Logger {
+export default {
     notice(message: string) {
         fetch(process.env.DISCORD_WEBHOOK_NOTICE!, {
             method: "POST",
@@ -10,7 +10,7 @@ class Logger {
                 "Content-Type": "application/json"
             }
         });
-    }
+    },
 
     log(message: string) {
         fetch(process.env.DISCORD_WEBHOOK_LOG!, {
@@ -25,5 +25,3 @@ class Logger {
         });
     }
 }
-
-export default Logger
