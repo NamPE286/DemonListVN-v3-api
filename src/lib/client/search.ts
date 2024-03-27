@@ -1,5 +1,4 @@
 import supabase from "@src/database/supabase";
-import uuid from 'uuid'
 import Level from "@src/lib/classes/Level";
 import Player from "@src/lib/classes/Player";
 
@@ -49,27 +48,6 @@ export const search = {
     },
 
     async players(query: string, { limit = 5} = {}) {
-        if (uuid.validate(query)) {
-            const { data, error } = await supabase
-                .from('players')
-                .select('name, uid, isHidden')
-                .eq('uid', query)
-                .eq('isHidden', false)
-                .limit(limit)
-
-            if (error) {
-                throw error
-            }
-
-            const res: Player[] = []
-
-            for (const i of data) {
-                res.push(new Player(i));
-            }
-
-            return res
-        }
-
         const { data, error } = await supabase
             .from('players')
             .select('name, uid, isHidden')

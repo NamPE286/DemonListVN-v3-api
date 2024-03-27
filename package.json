@@ -9,8 +9,7 @@
     "express-rate-limit": "^7.2.0",
     "jsonwebtoken": "^9.0.2",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.0",
-    "uuid": "^9.0.1"
+    "swagger-ui-express": "^5.0.0"
   },
   "name": "demonlistvn-v3-api",
   "module": "index.ts",
