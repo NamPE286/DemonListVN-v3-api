@@ -1,5 +1,5 @@
 import Level from '@lib/classes/Level'
-import Player from '@src/lib/classes/Player'
+import Player from '@lib/classes/Player'
 
 export type SearchResult = {
     levels: Level[]

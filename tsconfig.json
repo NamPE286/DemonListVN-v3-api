@@ -26,10 +26,10 @@
     "paths": {
       "@src/*": ["./src/*"],
       "@lib/*": ["./src/lib/*"],
-      "@types/*": ["./src/types/*"],
+      "@types/*": ["./src/lib/types/*"],
       "@database/*": ["./src/database/*"],
       "@static/*": ["./static/*"]
     }
   },
-  "include": ["./src/**/*", "./src/types/*.ts"],
+  "include": ["./src/**/*", "src/lib/types/*.ts*.ts"],
 }

@@ -1,6 +1,7 @@
 import supabase from '@database/supabase'
 import Record from '@src/lib/classes/Record'
 import Level from '@src/lib/classes/Level'
+import type { Notification } from '@lib/types/Notification'
 
 export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true } = {}) {
     if (typeof ascending == 'string') {
@@ -115,13 +116,13 @@ export async function getDemonListSubmissions({ start = 0, end = 50 }) {
         .eq('isChecked', false)
         .range(start, end)
 
-    if(error) {
+    if (error) {
         throw error
     }
 
     const records: Record[] = []
 
-    for(const i of data) {
+    for (const i of data) {
         records.push(new Record(i))
     }
 
@@ -137,15 +138,46 @@ export async function getFeaturedListSubmissions({ start = 0, end = 50 }) {
         .eq('isChecked', false)
         .range(start, end)
 
-    if(error) {
+    if (error) {
         throw error
     }
 
     const records: Record[] = []
 
-    for(const i of data) {
+    for (const i of data) {
         records.push(new Record(i))
     }
 
     return records
+}
+
+export async function sendNotification(notification: Notification) {
+    notification.timestamp = Date.now()
+
+    var { data, error } = await supabase
+        .from('notifications')
+        .insert(notification)
+
+    if(error) {
+        throw error
+    }
+}
+
+export async function getPlayerNotifications(uid: string) {
+    const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('to', uid)
+
+    if(error) {
+        throw error
+    }
+
+    const res: Notification[] = []
+
+    for(const i of data!) {
+        res.push(i)
+    }
+
+    return res
 }
