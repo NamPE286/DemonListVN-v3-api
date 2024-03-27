@@ -3,7 +3,7 @@
     "builds": [
       {
         "src": "src/index.ts",
-        "use": "@bun"
+        "use": "@now/bun"
       }
     ]
   }
