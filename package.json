@@ -22,7 +22,8 @@
     "typescript": "^5.0.0"
   },
   "scripts": {
-    "dev": "bun --watch src/app.ts",
-    "build": "bun build --compile --minify --sourcemap ./src/app.ts --outfile app"
+    "dev": "bun --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "build": "bun build --compile --minify --sourcemap ./src/index.ts --outfile app"
   }
 }

@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit'
 import swaggerDocs from '@src/utils/swagger.ts'
 
 const app = express()
-const port = process.env.port ? parseInt(process.env.port) : 8080
+const port = 8080
 
 app.use(express.json())
 app.use(rateLimit({
@@ -35,5 +35,3 @@ app.listen(port, () => {
     console.log(`Server started on port ${port}`)
     swaggerDocs(app, port)
 })
-
-export default app
