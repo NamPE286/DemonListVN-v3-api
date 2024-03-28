@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit'
 import swaggerDocs from '@src/utils/swagger.ts'
 
 const app = express()
-const port = process.env.PORT ? parseInt(process.env.PORT) : 3000
+const port = process.env.PORT ? parseInt(process.env.PORT) : 8080
 const ip = '0.0.0.0'
 
 app.use(express.json())
