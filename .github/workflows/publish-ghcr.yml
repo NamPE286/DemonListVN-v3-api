@@ -11,5 +11,5 @@ jobs:
       - name: Build and push the image
         run: |
           docker login --username nampe286 --password ${{ secrets.GH_PAT }} ghcr.io
-          docker build . -t ghcr.io/nampe286/dlvn-api-v3-ghcr:lastest
-          docker push ghcr.io/nampe286/dlvn-api-v3-ghcr:lastest
+          docker build . -t ghcr.io/nampe286/dlvn-api-v3-ghcr:latest
+          docker push ghcr.io/nampe286/dlvn-api-v3-ghcr:latest
