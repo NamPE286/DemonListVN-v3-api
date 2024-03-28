@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit'
 import swaggerDocs from '@src/utils/swagger.ts'
 
 const app = express()
+const port = process.env.PORT ? parseInt(process.env.PORT) : 3000
 
 app.use(express.json())
 app.use(rateLimit({
@@ -30,9 +31,9 @@ app.use('/refresh', require(`./routes/refresh`).default)
 app.use('/search', require(`./routes/search`).default)
 app.use('/submission', require(`./routes/submission`).default)
 
-app.listen(process.env.EXPRESS_PORT, () => {
-    console.log(`Server started on port ${process.env.EXPRESS_PORT} (local url: http://localhost:${process.env.EXPRESS_PORT})`)
-    swaggerDocs(app, parseInt(process.env.EXPRESS_PORT!))
+app.listen(port, () => {
+    console.log(`Server started on port ${port} (local url: http://localhost:${port})`)
+    swaggerDocs(app, port)
 })
 
 export default app
