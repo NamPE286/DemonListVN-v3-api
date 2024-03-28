@@ -6,8 +6,6 @@ const app = express()
 const port = process.env.port ? parseInt(process.env.port) : 8080
 const ip = '0.0.0.0'
 
-console.log(process.env)
-
 app.use(express.json())
 app.use(rateLimit({
     windowMs: 15 * 60 * 1000,
