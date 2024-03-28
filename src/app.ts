@@ -4,6 +4,7 @@ import swaggerDocs from '@src/utils/swagger.ts'
 
 const app = express()
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3000
+const ip = '0.0.0.0'
 
 app.use(express.json())
 app.use(rateLimit({
@@ -31,8 +32,8 @@ app.use('/refresh', require(`./routes/refresh`).default)
 app.use('/search', require(`./routes/search`).default)
 app.use('/submission', require(`./routes/submission`).default)
 
-app.listen(port, () => {
-    console.log(`Server started on port ${port} (local url: http://localhost:${port})`)
+app.listen(port, ip, () => {
+    console.log(`Server started on port ${port} (local url: http://${ip}:${port})`)
     swaggerDocs(app, port)
 })
 
