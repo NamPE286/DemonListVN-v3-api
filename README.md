@@ -56,12 +56,12 @@ Use this method if you want to make change to the source code.
 docker login --username YOUR_GITHUB_USERNAME --password YOUR_GITHUB_PERSONAL_ACCESS_TOKEN
 
 # Build and tag image
-docker build -t ghcr.io/YOUR_GITHUB_USERNAME/YOUR_CONTAINER_NAME:latest
+docker build . -t ghcr.io/YOUR_GITHUB_USERNAME/YOUR_CONTAINER_NAME:latest
 
 # Push the container
-docker push --tag ghcr.io/YOUR_GITHUB_USERNAME/YOUR_CONTAINER_NAME:latest
+docker push ghcr.io/YOUR_GITHUB_USERNAME/YOUR_CONTAINER_NAME:latest
 ```
-- In update container workflows, replace my username (nampe286) to your username and replace `ghcr.io/nampe286/dlvn-api-v3-ghcr:latest` with your container url.
+- In build and publish workflows, replace my username (nampe286) to your username and replace `ghcr.io/nampe286/dlvn-api-v3-ghcr:latest` with your container url.
 - Use service like Azure container app or Google cloud run and deploy your docker container.
 - Define all environment variable mentioned in `.env.example`.
 - You are ready to go!
