@@ -37,10 +37,14 @@ router.route('/')
             res.status(403).send()
         }
 
-        const player = new Player(data)
-        await player.update()
-
-        res.send()
+        try {
+            const player = new Player(data)
+            await player.update()
+    
+            res.send()
+        } catch(err) {
+            res.status(500).send(err)
+        }
     })
 
 router.route('/:uid')
@@ -67,11 +71,16 @@ router.route('/:uid')
     */
     .get(async (req, res) => {
         const { uid } = req.params
-        const player = new Player({ uid: uid })
 
-        await player.pull()
+        try {
+            const player = new Player({ uid: uid })
+            await player.pull()
+    
+            res.send(player.data)
+        } catch {
+            res.status(404).send()
+        }
 
-        res.send(player.data)
     })
 
     router.route('/:uid/records')
@@ -118,7 +127,11 @@ router.route('/:uid')
      *             schema:
      */
     .get(async (req, res) => {
-        res.send(await getPlayerRecords(req.params.uid, req.query))
+        try {
+            res.send(await getPlayerRecords(req.params.uid, req.query))
+        } catch {
+            res.status(404).send()
+        }
     })
 
 export default router

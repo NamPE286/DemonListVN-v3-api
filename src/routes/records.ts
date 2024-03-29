@@ -41,7 +41,11 @@ router.route('/')
      *             schema:
      */
     .get(async (req, res) => {
-        res.send(await getRecords(req.query))
+        try {
+            res.send(await getRecords(req.query))
+        } catch (err) {
+            res.status(500).send(err)
+        }
     })
 
 export default router

@@ -25,10 +25,14 @@ router.route('/')
      *             schema:
      */
     .put(adminAuth, async (req, res) => {
-        const record = new Record(req.body)
-        await record.update()
-
-        res.send()
+        try {
+            const record = new Record(req.body)
+            await record.update()
+    
+            res.send()
+        } catch(err) {
+            res.status(500).send(err)
+        }
     })
 
 router.route('/:userID/:levelID')
@@ -65,10 +69,14 @@ router.route('/:userID/:levelID')
             return
         }
 
-        const record = new Record({userid: userID, levelid: parseInt(levelID)})
-        await record.delete()
-
-        res.send()
+        try {
+            const record = new Record({userid: userID, levelid: parseInt(levelID)})
+            await record.delete()
+    
+            res.send()
+        } catch(err) {
+            res.status(500).send(err)
+        }
     })
 
 export default router
