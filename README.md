@@ -50,10 +50,10 @@ Use this method if you want to make change to the source code.
 #### Steps
 
 - Define `GH_PAT` repo action secret. This is your GitHub personal access. token. This token must support action read, write and delete.
-- Clone the source code and in source code directory, run this following command:
+- Clone the source code and in the source code directory, run this following command:
 ```bash
 # Login to container registry
-docker login --username YOUR_GITHUB_USERNAME --password YOUR_GITHUB_PERSONAL_ACCESS_TOKEN
+docker login --username YOUR_GITHUB_USERNAME --password YOUR_GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io
 
 # Build and tag image
 docker build . -t ghcr.io/YOUR_GITHUB_USERNAME/YOUR_CONTAINER_NAME:latest
