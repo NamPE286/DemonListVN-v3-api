@@ -1,11 +1,12 @@
 import express from 'express'
+import type { NextFunction, Response, Request } from 'express'
 import Level from '@lib/classes/Level'
 import adminAuth from '@src/middleware/adminAuth'
 import { getLevelRecords } from '@lib/client'
 
 const router = express.Router()
 
-router.use((req, res, next) => {
+function checkID(req: Request, res: Response, next: NextFunction) {
     if ('id' in req.params) {
         if (isNaN(parseInt(req.params.id))) {
             res.status(400).send({
@@ -17,7 +18,7 @@ router.use((req, res, next) => {
     }
 
     next()
-})
+}
 
 router.route('/')
     /**
@@ -78,7 +79,7 @@ router.route('/:id')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
+    .get(checkID, async (req, res) => {
         const { id } = req.params
 
         try {
@@ -109,7 +110,7 @@ router.route('/:id')
      *       200:
      *         description: Success
      */
-    .delete(adminAuth, async (req, res) => {
+    .delete([adminAuth, checkID], async (req: Request, res: Response) => {
         const { id } = req.params
 
         try {
@@ -165,7 +166,7 @@ router.route('/:id/records')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
+    .get(checkID, async (req, res) => {
         try {
             res.send(await getLevelRecords(parseInt(req.params.id), req.query))
         } catch {
@@ -201,7 +202,7 @@ router.route('/:id/song')
         try {
             const level = new Level({ id: parseInt(id) })
             await level.pull()
-    
+
             res.redirect(level.getSongPublicURL())
         } catch {
             res.status(404).send()
@@ -237,7 +238,7 @@ router.route('/:id/song')
 
             await level.pull()
             await level.deleteSong()
-    
+
             res.send()
         } catch {
             res.status(500).send()
