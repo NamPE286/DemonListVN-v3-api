@@ -48,7 +48,11 @@ router.route('/DL')
      *             schema:
      */
     .get(async (req, res) => {
-        res.send(await getDemonListLevels(req.query))
+        try {
+            res.send(await getDemonListLevels(req.query))
+        } catch (err) {
+            res.status(500).send(err)
+        }
     })
 
 router.route('/FL')
@@ -96,7 +100,11 @@ router.route('/FL')
      *             schema:
      */
     .get(async (req, res) => {
-        res.send(await getFeaturedListLevels(req.query))
+        try {
+            res.send(await getFeaturedListLevels(req.query))
+        } catch (err) {
+            res.status(500).send(err)
+        }
     })
 
 router.route('/DL/records')
@@ -137,7 +145,11 @@ router.route('/DL/records')
      *             schema:
      */
     .get(async (req, res) => {
-        res.send(await getDemonListRecords(req.query))
+        try {
+            res.send(await getDemonListRecords(req.query))
+        } catch (err) {
+            res.status(500).send(err)
+        }
     })
 
 router.route('/FL/records')
@@ -178,8 +190,11 @@ router.route('/FL/records')
      *             schema:
      */
     .get(async (req, res) => {
-        res.send(await getFeaturedListRecords(req.query))
-
+        try {
+            res.send(await getFeaturedListRecords(req.query))
+        } catch(err) {
+            res.status(500).send(err)
+        }
     })
 
 export default router

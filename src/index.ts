@@ -6,6 +6,7 @@ const app = express()
 const port = 8080
 
 app.use(express.json())
+
 app.use(rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
