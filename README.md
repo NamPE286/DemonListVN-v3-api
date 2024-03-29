@@ -39,7 +39,7 @@ Use this method if you want a identical copy with your own database and stay up 
 
 #### Steps
 
-- Use service like Azure container app or Google cloud run and deploy this docker image `ghcr.io/nampe286/dlvn-api-v3-ghcr:latest`.
+- Use service like Azure container app or Google cloud run and deploy this docker container: `ghcr.io/nampe286/dlvn-api-v3-ghcr:latest`.
 - Define all environment variable mentioned in `.env.example`.
 - You are ready to go!
 
