@@ -17,4 +17,4 @@ jobs:
         run: |
           docker login --username $USERNAME --password $PASSWORD $REGISTRY_URL
           docker build . -t $REGISTRY/$IMAGE
-          docker push $REGISTRY/$IMAGE
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE }}
