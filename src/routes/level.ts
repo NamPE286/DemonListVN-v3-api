@@ -5,6 +5,20 @@ import { getLevelRecords } from '@lib/client'
 
 const router = express.Router()
 
+router.use((req, res, next) => {
+    if ('id' in req.params) {
+        if (isNaN(parseInt(req.params.id))) {
+            res.status(500).send({
+                message: "Invalid ID (ID should only include numeric character)"
+            })
+
+            return
+        }
+    }
+
+    next()
+})
+
 router.route('/')
     /**
       * @openapi
@@ -32,10 +46,14 @@ router.route('/')
             return
         }
 
-        const level = new Level(data)
-        await level.update()
+        try {
+            const level = new Level(data)
+            await level.update()
 
-        res.send()
+            res.send()
+        } catch (err) {
+            res.status(500).send(err)
+        }
     })
 
 router.route('/:id')
@@ -62,11 +80,15 @@ router.route('/:id')
      */
     .get(async (req, res) => {
         const { id } = req.params
-        const level = new Level({ id: parseInt(id) })
 
-        await level.pull()
+        try {
+            const level = new Level({ id: parseInt(id) })
+            await level.pull()
 
-        res.send(level.data)
+            res.send(level.data)
+        } catch {
+            res.status(404).send()
+        }
     })
 
     /**
@@ -89,11 +111,15 @@ router.route('/:id')
      */
     .delete(adminAuth, async (req, res) => {
         const { id } = req.params
-        const level = new Level({ id: parseInt(id) })
 
-        await level.delete()
+        try {
+            const level = new Level({ id: parseInt(id) })
+            await level.delete()
 
-        res.send()
+            res.send()
+        } catch (err) {
+            res.status(500).send(err)
+        }
     })
 
 router.route('/:id/records')
@@ -140,7 +166,11 @@ router.route('/:id/records')
      *             schema:
      */
     .get(async (req, res) => {
-        res.send(await getLevelRecords(parseInt(req.params.id), req.query))
+        try {
+            res.send(await getLevelRecords(parseInt(req.params.id), req.query))
+        } catch {
+            res.status(404).send()
+        }
     })
 
 router.route('/:id/song')
@@ -167,11 +197,15 @@ router.route('/:id/song')
      */
     .get(async (req, res) => {
         const { id } = req.params
-        const level = new Level({ id: parseInt(id) })
 
-        await level.pull()
-
-        res.redirect(level.getSongPublicURL())
+        try {
+            const level = new Level({ id: parseInt(id) })
+            await level.pull()
+    
+            res.redirect(level.getSongPublicURL())
+        } catch {
+            res.status(404).send()
+        }
     })
 
     /**
@@ -197,12 +231,17 @@ router.route('/:id/song')
      */
     .delete(adminAuth, async (req, res) => {
         const { id } = req.params
-        const level = new Level({ id: parseInt(id) })
 
-        await level.pull()
-        await level.deleteSong()
+        try {
+            const level = new Level({ id: parseInt(id) })
 
-        res.send()
+            await level.pull()
+            await level.deleteSong()
+    
+            res.send()
+        } catch {
+            res.status(500).send()
+        }
     })
 
 export default router
