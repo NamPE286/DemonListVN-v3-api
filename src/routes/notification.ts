@@ -21,8 +21,13 @@ router.route('/')
       *         description: Success
      */
     .post(adminAuth, async (req, res) => {
-        await sendNotification(req.body)
-        res.send()
+        try {
+            await sendNotification(req.body)
+            res.send()
+        } catch(err) {
+            res.status(500).send(err)
+        }
+
     })
 
 export default router

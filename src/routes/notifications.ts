@@ -35,7 +35,11 @@ router.route('/:uid')
             return
         }
 
-        res.send(await getPlayerNotifications(uid))
+        try {
+            res.send(await getPlayerNotifications(uid))
+        } catch (err) {
+            res.status(500).send(err)
+        }
     })
 
     /**
@@ -65,7 +69,12 @@ router.route('/:uid')
             return
         }
 
-        res.send(await clearPlayerNotifications(uid))
+        try {
+            res.send(await clearPlayerNotifications(uid))
+        } catch(err) {
+            res.status(500).send(err)
+        }
+
     })
 
 export default router

@@ -8,7 +8,7 @@ const router = express.Router()
 router.use((req, res, next) => {
     if ('id' in req.params) {
         if (isNaN(parseInt(req.params.id))) {
-            res.status(500).send({
+            res.status(400).send({
                 message: "Invalid ID (ID should only include numeric character)"
             })
 

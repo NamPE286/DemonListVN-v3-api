@@ -37,10 +37,20 @@ router.route('/:a/:b')
             .update({ userid: b })
             .eq('userid', a)
 
+        if(error) {
+            res.status(500).send(error)
+            return
+        }
+
         var { error } = await supabase
             .from('players')
             .delete()
             .match({ uid: a })
+
+        if(error) {
+            res.status(500).send(error)
+            return
+        }
 
         await supabase.rpc('updateRank')
 
