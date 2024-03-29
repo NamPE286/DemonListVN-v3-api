@@ -35,7 +35,7 @@ Follow [this tutorial](https://supabase.com/docs/guides/cli/local-development) f
 
 ### Deploy with Docker container
 
-Use this method if you want a identical copy and stay up to date with this repo.
+Use this method if you want a identical copy with your own database and stay up to date with this repo.
 
 #### Steps
 
