@@ -35,33 +35,24 @@ Follow [this tutorial](https://supabase.com/docs/guides/cli/local-development) f
 
 ### Deploy with Docker container
 
-Use this method if you want a identical copy with your own database and stay up to date with this repo.
+Use this method if you want a copy of the API and use it with your own database.
 
 #### Steps
 
 - Use service like Azure container app or Google cloud run and deploy this docker container: `ghcr.io/nampe286/dlvn-api-v3-ghcr:latest`.
 - Define all environment variable mentioned in `.env.example`.
 - You are ready to go!
+- Note: If you want to update the API, you have to pull new docker image manually.
 
 ### Deploy modified version of this repo
 
 Use this method if you want to make change to the source code.
 
-#### Steps
+#### Steps (for Azure)
 
-- Define `GH_PAT` repo action secret. This is your GitHub personal access. token. This token must support action read, write and delete.
-- Clone the source code and in the source code directory, run this following command:
-```bash
-# Login to container registry
-docker login --username YOUR_GITHUB_USERNAME --password YOUR_GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io
-
-# Build and tag image
-docker build . -t ghcr.io/YOUR_GITHUB_USERNAME/YOUR_CONTAINER_NAME:latest
-
-# Push the container
-docker push ghcr.io/YOUR_GITHUB_USERNAME/YOUR_CONTAINER_NAME:latest
-```
-- In `publish_ghcr.yml` workflows, replace my username (nampe286) to your username and replace `ghcr.io/nampe286/dlvn-api-v3-ghcr:latest` with your container url.
-- Use service like Azure container app or Google cloud run and deploy your docker container.
+- Create a new Azure Container App resource.
 - Define all environment variable mentioned in `.env.example`.
+- In Azure Container App resource page, go to Continuous Deployment and connect with your GitHub account (you may have to create a Container Registry before this step).
 - You are ready to go!
+
+Note: Other cloud platform (e.g: GCP, AWS, ...) usually have service equivalent to Azure Container App (e.g: Cloud Run in GCP, ...).
