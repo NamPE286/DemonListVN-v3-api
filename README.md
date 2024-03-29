@@ -61,7 +61,7 @@ docker build . -t ghcr.io/YOUR_GITHUB_USERNAME/YOUR_CONTAINER_NAME:latest
 # Push the container
 docker push ghcr.io/YOUR_GITHUB_USERNAME/YOUR_CONTAINER_NAME:latest
 ```
-- In build and publish workflows, replace my username (nampe286) to your username and replace `ghcr.io/nampe286/dlvn-api-v3-ghcr:latest` with your container url.
+- In `publish_ghcr.yml` workflows, replace my username (nampe286) to your username and replace `ghcr.io/nampe286/dlvn-api-v3-ghcr:latest` with your container url.
 - Use service like Azure container app or Google cloud run and deploy your docker container.
 - Define all environment variable mentioned in `.env.example`.
 - You are ready to go!
