@@ -33,7 +33,7 @@ Follow [this tutorial](https://supabase.com/docs/guides/cli/local-development#de
 
 ## Deploy REST API server
 
-### Deploy with Docker container
+### Method 1: Deploy with Docker container
 
 Use this method if you want a copy of the API and use it with your own database.
 
@@ -44,7 +44,7 @@ Use this method if you want a copy of the API and use it with your own database.
 - You are ready to go!
 - Note: If you want to update the API, you have to pull new docker image manually.
 
-### Deploy modified version of this repo
+### Method 2: Deploy modified version of this repo
 
 Use this method if you want to make change to the source code.
 
