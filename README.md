@@ -29,7 +29,7 @@ Local development server is avaliable on `localhost:8080`. Documentation is aval
 # Deployment
 ## Deploy Supabase server
 
-Follow [this tutorial](https://supabase.com/docs/guides/cli/local-development) from Supabase.
+Follow [this tutorial](https://supabase.com/docs/guides/cli/local-development#deploy-your-project) from Supabase.
 
 ## Deploy REST API server
 
