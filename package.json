@@ -13,7 +13,7 @@
   },
   "name": "demonlistvn-v3-api",
   "module": "index.ts",
-  "version": "3.0.0",
+  "version": "3.0",
   "type": "module",
   "devDependencies": {
     "@types/bun": "latest",
