@@ -44,7 +44,7 @@ router.route('/')
         try {
             res.send(await getRecords(req.query))
         } catch (err) {
-            res.status(500).send(err)
+            res.status(500).send()
         }
     })
 

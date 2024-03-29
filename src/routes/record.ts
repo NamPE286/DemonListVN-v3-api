@@ -31,7 +31,7 @@ router.route('/')
     
             res.send()
         } catch(err) {
-            res.status(500).send(err)
+            res.status(500).send()
         }
     })
 
@@ -75,7 +75,7 @@ router.route('/:userID/:levelID')
     
             res.send()
         } catch(err) {
-            res.status(500).send(err)
+            res.status(500).send()
         }
     })
 

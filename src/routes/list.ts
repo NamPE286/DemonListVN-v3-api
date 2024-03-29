@@ -51,7 +51,7 @@ router.route('/DL')
         try {
             res.send(await getDemonListLevels(req.query))
         } catch (err) {
-            res.status(500).send(err)
+            res.status(500).send()
         }
     })
 
@@ -103,7 +103,7 @@ router.route('/FL')
         try {
             res.send(await getFeaturedListLevels(req.query))
         } catch (err) {
-            res.status(500).send(err)
+            res.status(500).send()
         }
     })
 
@@ -148,7 +148,7 @@ router.route('/DL/records')
         try {
             res.send(await getDemonListRecords(req.query))
         } catch (err) {
-            res.status(500).send(err)
+            res.status(500).send()
         }
     })
 
@@ -193,7 +193,7 @@ router.route('/FL/records')
         try {
             res.send(await getFeaturedListRecords(req.query))
         } catch(err) {
-            res.status(500).send(err)
+            res.status(500).send()
         }
     })
 

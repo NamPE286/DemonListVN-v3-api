@@ -25,7 +25,7 @@ router.route('/')
             await sendNotification(req.body)
             res.send()
         } catch(err) {
-            res.status(500).send(err)
+            res.status(500).send()
         }
 
     })
