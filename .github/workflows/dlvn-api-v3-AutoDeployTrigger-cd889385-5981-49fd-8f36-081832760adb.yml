@@ -35,7 +35,7 @@ jobs:
           registryPassword: ${{ secrets.DLVNAPIV3_REGISTRY_PASSWORD }}
           containerAppName: dlvn-api-v3
           resourceGroup: DefaultResourceGroup-SEA
-          imageToBuild: ghcr.io/nampe286/dlvn-api-v3-ghcr:${{ github.sha }}
+          imageToBuild: ghcr.io/nampe286/dlvn-api-v3-ghcr:latest
           
             
 
