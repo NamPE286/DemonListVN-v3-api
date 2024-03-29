@@ -35,7 +35,7 @@ Follow [this tutorial](https://supabase.com/docs/guides/cli/local-development#de
 
 ### Method 1: Deploy with Docker container
 
-Use this method if you want a copy of the API and use it with your own database.
+Use this method if you want a identical copy of the API and use it with your own database.
 
 #### Steps
 
