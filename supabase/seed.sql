@@ -16,19 +16,19 @@ VALUES
 (242,'HGL','huynhgialuongtdn@gmail.com','https://i.pinimg.com/736x/11/75/dc/1175dcc6a0cb56e21331a881b138c3e0.jpg','https://www.facebook.com/profile.php?id=100079498210159','https://www.youtube.com/channel/UCNaqnGZ9DZjV-Julb4uPjfA','HGL#2446',103.81,34368,103,21,'f76ff7e1-2882-4731-8686-6b43cf15f5fe',FALSE,FALSE,FALSE,4012,3785,71,14,'Hồ Chí Minh','Hồ Chí Minh'),
 (569,'ReimuSellsWeed','truongthanh20042006@gmail.com',NULL,'https://www.facebook.com/positivedrugtrade?mibextid=ZbWKwL','https://www.youtube.com/channel/UCUe8EbViyQk0nZKIgu3Mttg','TheRocc#3844',404.21,34640,41,20,'8283226f-63ed-4c8e-a345-e806e95157de',FALSE,FALSE,FALSE,4008,3779,77,15,'Đắk Lắk','Buôn Ma Thuột');
 
-INSERT INTO "levels" ("id","name","creator","videoID","minProgress","flTop","dlTop","flPt","dlPt","rating","songID")
+INSERT INTO "levels" ("id","name","creator","videoID","minProgress","flTop","dlTop","flPt","dlPt","rating","songID","created_at")
 VALUES
-(52374843,'Zodiac','Bianox and more','FX9paD5rRsM',44,NULL,1,NULL,NULL,4056,NULL),
-(57828784,'The Rupture','Ka1ns','SaU454afkKY',45,NULL,2,NULL,'151.49',4000,NULL),
-(42584142,'Bloodlust','Riot, Manix648 and more','9bnzhl79Qi0',46,NULL,3,NULL,'1',3955,NULL),
-(51657783,'Sigma','MindCap and more','7baWM0Xodns',47,NULL,4,NULL,NULL,3920,NULL),
-(56703691,'Ouroboros','Viprin','CHzQs2HojL0',48,NULL,5,NULL,NULL,3863,NULL),
-(52919433,'Arctic Lights','ViRuZ & Endlevel','By67IwYNFRA',49,NULL,6,NULL,NULL,3850,NULL),
-(76400976,'SCAM OF THE CENTURY','cerufiffy','30MhXK8Osrg',0,39,NULL,44.56,NULL,NULL,NULL),
-(65969451,'Timor','Colorbolt & Maxie25','SUlNb3WXMMU',52,1,'36',249.05,NULL,'3715',NULL),
-(76166083,'Springtime','VigorousGard3n','UGAmTQHz9mQ',53,3,'40',219.39,'1.68','3690',NULL),
-(92782493,'BLACKLIGHTS','whlt, MaxxoRMeN and J27Blaze','IMSnxczYMp4',96,5,'188',195,NULL,'1975',NULL),
-(84983693,'cave of heart','ImMaxX1 & Onvil','L3PTKJ4sBZQ',100,4,'212',206.63,NULL,'1783',NULL);
+(52374843,'Zodiac','Bianox and more','FX9paD5rRsM',44,NULL,1,NULL,NULL,4056,NULL,'2024-03-30 16:11:42.468644+00'),
+(57828784,'The Rupture','Ka1ns','SaU454afkKY',45,NULL,2,NULL,'151.49',4000,NULL,'2024-03-30 16:11:42.468644+00'),
+(42584142,'Bloodlust','Riot, Manix648 and more','9bnzhl79Qi0',46,NULL,3,NULL,'1',3955,NULL,'2024-03-30 16:11:42.468644+00'),
+(51657783,'Sigma','MindCap and more','7baWM0Xodns',47,NULL,4,NULL,NULL,3920,NULL,'2024-03-30 16:11:42.468644+00'),
+(56703691,'Ouroboros','Viprin','CHzQs2HojL0',48,NULL,5,NULL,NULL,3863,NULL,'2024-03-30 16:11:42.468644+00'),
+(52919433,'Arctic Lights','ViRuZ & Endlevel','By67IwYNFRA',49,NULL,6,NULL,NULL,3850,NULL,'2024-03-30 16:11:42.468644+00'),
+(38655495,'Plasma Pulse Finale','Smokes & Giron','wIh9dYYt4X8',49,NULL,7,NULL,NULL,3845,NULL,'2024-03-30 16:11:42.468644+00'),
+(88421468,'AKIRA','Eridani & more','svp1FIoTjj0',49,NULL,8,NULL,NULL,3844,NULL,'2024-03-30 16:11:42.468644+00'),
+(78164953,'Shutdown','OliSW','BFmp7sR0kHU',49,NULL,9,NULL,NULL,3842,NULL,'2024-03-30 16:11:42.468644+00'),
+(59209010,'Spectrum Cyclone','lTemp','8-enShIsdxM',49,NULL,10,NULL,NULL,3840,NULL,'2024-03-30 16:11:42.468644+00');
+
 
 INSERT INTO "records" ("videoLink","refreshRate","progress","timestamp","flPt","dlPt","userid","levelid","mobile","isChecked","comment")
 VALUES
