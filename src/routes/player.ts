@@ -25,8 +25,6 @@ router.route('/')
         const data = req.body
         const user: Player = res.locals.user
 
-        console.log(data)        
-
         if (!('uid' in data)) {
             if (user.data.isAdmin) {
                 res.status(400).send({
