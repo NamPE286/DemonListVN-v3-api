@@ -25,12 +25,18 @@ router.route('/')
         const data = req.body
         const user: Player = res.locals.user
 
-        if (!('uid' in data)) {
-            res.status(400).send({
-                message: "Missing 'uid' property"
-            })
+        console.log(data)        
 
-            return
+        if (!('uid' in data)) {
+            if (user.data.isAdmin) {
+                res.status(400).send({
+                    message: "Missing 'uid' property"
+                })
+
+                return
+            } else {
+                data.uid = user.data.uid
+            }
         }
 
         if (user.data.uid != data.uid && !user.data.isAdmin) {
@@ -40,9 +46,9 @@ router.route('/')
         try {
             const player = new Player(data)
             await player.update()
-    
+
             res.send()
-        } catch(err) {
+        } catch (err) {
             res.status(500).send()
         }
     })
@@ -75,7 +81,7 @@ router.route('/:uid')
         try {
             const player = new Player({ uid: uid })
             await player.pull()
-    
+
             res.send(player.data)
         } catch {
             res.status(404).send()
@@ -83,7 +89,7 @@ router.route('/:uid')
 
     })
 
-    router.route('/:uid/records')
+router.route('/:uid/records')
     /**
      * @openapi
      * "/player/{uid}/records":
