@@ -35,6 +35,7 @@ app.use('/records', require(`./routes/records`).default)
 app.use('/refresh', require(`./routes/refresh`).default)
 app.use('/search', require(`./routes/search`).default)
 app.use('/submission', require(`./routes/submission`).default)
+app.use('/leaderboard', require(`./routes/leaderboard`).default)
 
 app.listen(port, () => {
     console.log(`Server started on port ${port}`)
