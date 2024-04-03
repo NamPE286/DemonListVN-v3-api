@@ -5,7 +5,7 @@ import logger from "@src/utils/logger";
 
 export default async function (req: Request, res: Response, next: NextFunction) {
     if (!req.headers.authorization ||
-        !req.headers.authorization.startsWith('Bearer')) {
+        !req.headers.authorization.startsWith('Bearer ')) {
         res.status(401).send()
         return
     }

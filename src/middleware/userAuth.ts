@@ -2,10 +2,11 @@ import type { Request, Response, NextFunction } from "express";
 import jwt from 'jsonwebtoken'
 import Player from "@lib/classes/Player";
 import logger from "@src/utils/logger";
+import { collapseTextChangeRangesAcrossMultipleVersions } from "typescript";
 
 export default async function (req: Request, res: Response, next: NextFunction) {
     if (!req.headers.authorization ||
-        !req.headers.authorization.startsWith('Bearer')) {
+        !req.headers.authorization.startsWith('Bearer ')) {
         res.status(401).send()
         return
     }
