@@ -6,6 +6,7 @@ export async function getPlayerNotifications(uid: string) {
         .from('notifications')
         .select('*')
         .eq('to', uid)
+        .order('timestamp', { ascending: false })
 
     if (error) {
         throw error
