@@ -1,7 +1,7 @@
 import supabase from "@src/database/supabase"
 import Player from "@src/lib/classes/Player"
 
-export async function getDemonListLeaderboard({ start = 0, end = 50, sortBy = 'dlrank', ascending = true } = {}) {
+export async function getDemonListLeaderboard({ start = 0, end = 50, sortBy = 'overallRank', ascending = true } = {}) {
     if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
@@ -9,7 +9,7 @@ export async function getDemonListLeaderboard({ start = 0, end = 50, sortBy = 'd
     const { data, error } = await supabase
         .from('players')
         .select('*')
-        .not('dlrank', 'is', null)
+        .not('overallRank', 'is', null)
         .order(sortBy, { ascending: ascending })
         .range(start, end)
 
