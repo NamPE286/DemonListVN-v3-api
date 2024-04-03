@@ -3,10 +3,10 @@ import { getDemonListLevels, getDemonListRecords, getFeaturedListLevels, getFeat
 
 const router = express.Router()
 
-router.route('/DL')
+router.route('/dl')
     /**
      * @openapi
-     * "/list/DL":
+     * "/list/dl":
      *   get:
      *     tags:
      *       - List
@@ -55,10 +55,10 @@ router.route('/DL')
         }
     })
 
-router.route('/FL')
+router.route('/fl')
     /**
      * @openapi
-     * "/list/FL":
+     * "/list/fl":
      *   get:
      *     tags:
      *       - List
@@ -107,10 +107,10 @@ router.route('/FL')
         }
     })
 
-router.route('/DL/records')
+router.route('/dl/records')
     /**
      * @openapi
-     * "/list/DL/records":
+     * "/list/dl/records":
      *   get:
      *     tags:
      *       - List
@@ -152,10 +152,10 @@ router.route('/DL/records')
         }
     })
 
-router.route('/FL/records')
+router.route('/fl/records')
     /**
      * @openapi
-     * "/list/FL/records":
+     * "/list/fl/records":
      *   get:
      *     tags:
      *       - List
