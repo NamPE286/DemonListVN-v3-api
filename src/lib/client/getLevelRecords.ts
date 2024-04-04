@@ -8,7 +8,7 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, isCheck
 
     const { data, error } = await supabase
         .from('records')
-        .select('*')
+        .select('*, players(*)')
         .eq('levelid', id)
         .order('dlPt', { ascending: false })
         .order('flPt', { ascending: false })
