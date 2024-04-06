@@ -8,7 +8,7 @@ export async function getPlayerRecords(uid: string, { start = 0, end = 50, isChe
 
     const { data, error } = await supabase
         .from('records')
-        .select('*')
+        .select('*, levels(*)')
         .eq('userid', uid)
         .order('dlPt', { ascending: false })
         .order('flPt', { ascending: false })
