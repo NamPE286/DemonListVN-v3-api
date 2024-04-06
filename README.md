@@ -44,7 +44,7 @@ Use this method if you want a identical copy of the API and use it with your own
 - You are ready to go!
 - Note: If you want to update the API, you have to pull new docker image manually.
 
-### Method 2: Deploy modified version of this repo
+### Method 2: Deploy with source code
 
 Use this method if you want to make change to the source code.
 
