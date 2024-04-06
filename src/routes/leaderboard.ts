@@ -3,6 +3,11 @@ import { getDemonListLeaderboard, getFeaturedListLeaderboard } from '@src/lib/cl
 
 const router = express.Router()
 
+router.use((req, res, next) => {
+    res.set('Cache-Control', 'public, s-maxage=180, max-age=180')
+    next()
+})
+
 router.route('/dl')
     /**
      * @openapi
