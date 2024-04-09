@@ -1,9 +1,8 @@
 {
-    "buildCommand": "bun run build",
     "rewrites": [
         {
             "source": "/(.*)",
-            "destination": "/dist"
+            "destination": "/"
         }
     ]
 }
