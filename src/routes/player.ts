@@ -1,7 +1,7 @@
 import express from 'express'
 import Player from '@lib/classes/Player'
 import userAuth from '@src/middleware/userAuth'
-import { getPlayerRecords } from '@src/lib/client'
+import { getPlayerRecords } from '@src/lib/client/index'
 
 const router = express.Router()
 

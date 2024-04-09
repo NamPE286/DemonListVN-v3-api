@@ -1,5 +1,5 @@
 import express from 'express'
-import { search } from '@lib/client'
+import { search } from '@lib/client/index'
 
 const router = express.Router()
 
