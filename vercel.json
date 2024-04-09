@@ -1,5 +1,12 @@
 {
     "version": 2,
+    "builds": [
+        {
+            "src": "dist/index.js",
+            "use": "bun@1",
+            "config": { "includeFiles": ["dist/**"] }
+        }
+    ],
     "routes": [
         {
             "src": "/(.*)",
