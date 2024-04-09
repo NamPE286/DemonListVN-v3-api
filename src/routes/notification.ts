@@ -1,5 +1,5 @@
 import express from 'express'
-import { sendNotification } from '@src/lib/client/index.ts'
+import { sendNotification } from '@src/lib/client'
 import adminAuth from '@src/middleware/adminAuth'
 
 const router = express.Router()

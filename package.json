@@ -26,6 +26,7 @@
   },
   "scripts": {
     "dev": "bun --watch src/index.ts",
-    "vercel-build": "echo hello"
+    "start": "bun run src/index.ts",
+    "build": "bun build --compile --minify --sourcemap ./src/index.ts --outfile app"
   }
 }

@@ -1,5 +1,5 @@
 import express from 'express'
-import { getRecords } from '@src/lib/client/index.ts'
+import { getRecords } from '@src/lib/client'
 
 const router = express.Router()
 
