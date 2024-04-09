@@ -23,16 +23,6 @@ export default async function (req: Request, res: Response, next: NextFunction) 
         } catch {}
 
         res.locals.user = player
-
-        if (player.data.isAdmin) {
-            let msg = `${player.data.name} (${player.data.uid}) performed ${req.method} ${req.originalUrl}`
-
-            if (req.body) {
-                msg += `\n\`\`\`json\n// Body content\n${JSON.stringify(req.body, null, 4)}\`\`\``
-            }
-
-            logger.log(msg)
-        }
     } catch {
         res.status(403).send()
     }
