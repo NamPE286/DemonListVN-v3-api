@@ -43,4 +43,4 @@ app.listen(port, () => {
     swaggerDocs(app, port)
 })
 
-export default app
+module.exports = app
