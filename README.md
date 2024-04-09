@@ -33,9 +33,7 @@ Follow [this tutorial](https://supabase.com/docs/guides/cli/local-development#de
 
 ## Deploy REST API server
 
-### Method 1: Deploy with Docker container
-
-Use this method if you want a identical copy of the API and use it with your own database.
+### Deploy with Docker container
 
 #### Steps
 
@@ -43,16 +41,3 @@ Use this method if you want a identical copy of the API and use it with your own
 - Define all environment variable mentioned in `.env.example`.
 - You are ready to go!
 - Note: If you want to update the API, you have to pull new docker image manually.
-
-### Method 2: Deploy with source code
-
-Use this method if you want to make change to the source code.
-
-#### Steps (for Azure)
-
-- Create a new Azure Container App resource.
-- Define all environment variable mentioned in `.env.example`.
-- In Azure Container App resource page, go to Continuous Deployment and connect with your GitHub account (you may have to create a Container Registry before this step).
-- You are ready to go!
-
-Note: Other cloud platform (e.g: GCP, AWS, ...) usually have service equivalent to Azure Container App (e.g: Cloud Run in GCP, ...).
