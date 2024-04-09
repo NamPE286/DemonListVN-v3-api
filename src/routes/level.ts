@@ -2,7 +2,7 @@ import express from 'express'
 import type { NextFunction, Response, Request } from 'express'
 import Level from '@lib/classes/Level'
 import adminAuth from '@src/middleware/adminAuth'
-import { getLevelRecords } from '@lib/client/index'
+import { getLevelRecords } from '@lib/client/index.ts'
 
 const router = express.Router()
 

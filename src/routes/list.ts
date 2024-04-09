@@ -1,5 +1,5 @@
 import express from "express";
-import { getDemonListLevels, getDemonListRecords, getFeaturedListLevels, getFeaturedListRecords } from '@lib/client/index'
+import { getDemonListLevels, getDemonListRecords, getFeaturedListLevels, getFeaturedListRecords } from '@lib/client/index.ts'
 
 const router = express.Router()
 
