@@ -27,6 +27,7 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "start": "node dist/index.js",
-    "build": "bun build --entrypoints ./src/index.ts --outdir ./api --target node"
+    "build": "bun build --entrypoints ./src/index.ts --outdir ./api --target node",
+    "vercel-build": "echo hello"
   }
 }
