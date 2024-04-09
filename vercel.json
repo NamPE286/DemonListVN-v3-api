@@ -1,16 +1,8 @@
 {
-    "version": 2,
-    "builds": [
+    "rewrites": [
         {
-            "src": "dist/index.js",
-            "use": "bun@1",
-            "config": { "includeFiles": ["dist/**"] }
-        }
-    ],
-    "routes": [
-        {
-            "src": "/(.*)",
-            "dest": "dist/index.js"
+            "source": "/(.*)",
+            "destination": "/dist"
         }
     ]
 }
