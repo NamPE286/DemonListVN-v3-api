@@ -10,8 +10,8 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, isCheck
         .from('records')
         .select('*, players(*)')
         .eq('levelid', id)
-        .order('dlPt', { ascending: false })
-        .order('flPt', { ascending: false })
+        .order('progress', { ascending: false })
+        .order('timestamp')
         .eq('isChecked', isChecked)
         .range(start, end)
 
