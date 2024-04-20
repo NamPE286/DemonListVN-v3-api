@@ -5,6 +5,17 @@ import { createAPIKey, deleteAPIKey, getAllAPIKey } from '@src/lib/client'
 const router = express.Router()
 
 router.route('/')
+    /**
+     * @openapi
+     * "/APIKey":
+     *   get:
+     *     tags:
+        *       - API key
+     *     summary: Get all player API key
+     *     responses:
+     *       200:
+     *         description: Success
+     */
     .get(userAuth, async (req, res) => {
         if(res.locals.authType == 'key') {
             res.status(403).send()
@@ -17,6 +28,17 @@ router.route('/')
             res.status(500).send()
         }
     })
+    /**
+     * @openapi
+     * "/APIKey":
+     *   post:
+     *     tags:
+     *       - API key
+     *     summary: Create a new API key
+     *     responses:
+     *       200:
+     *         description: Success
+     */
     .post(userAuth, async (req, res) => {
         if(res.locals.authType == 'key') {
             res.status(403).send()
@@ -32,6 +54,24 @@ router.route('/')
     })
 
 router.route('/:key')
+    /**
+     * @openapi
+     * "/APIKey/{key}":
+     *   delete:
+     *     tags:
+     *       - API key
+     *     summary: Delete an API key
+     *     parameters:
+     *       - name: key
+     *         in: path
+     *         description: API key to delete
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Success
+     */
     .delete(userAuth, async (req, res) => {
         if(res.locals.authType == 'key') {
             res.status(403).send()
