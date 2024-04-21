@@ -27,8 +27,8 @@ export async function getHeatmap(uid: string, year: number) {
 }
 
 export async function updateHeatmap(uid: string, count: number) {
-    const data = await fetchData(uid, new Date().getFullYear())
-    const date = new Date()
+    const date = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}))
+    const data = await fetchData(uid, date.getFullYear())
     const year = date.getFullYear()
     const month = date.getMonth()
     const day = date.getDate()
