@@ -4,6 +4,7 @@ async function fetchData(uid: string, year: number): Promise<any> {
     let { data, error } = await supabase
         .from('heatmap')
         .select('*')
+        .eq('uid', uid)
         .eq('year', year)
         .limit(1)
         .single()
