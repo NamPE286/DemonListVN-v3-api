@@ -151,7 +151,7 @@ router.route('/:uid/records')
         }
     })
 
-router.route('/:uid/heatmap')
+router.route('/:uid/heatmap/:year')
     /**
      * @openapi
      * "/player/{uid}/heatmap":
@@ -166,13 +166,19 @@ router.route('/:uid/heatmap')
      *         required: true
      *         schema:
      *           type: string
+     *       - name: year
+     *         in: path
+     *         description: Year to fetch
+     *         required: true
+     *         schema:
+     *           type: number
      *     responses:
      *       200:
      *         description: Success
      */
     .get(async (req, res) => {
         try {
-            res.send(await getHeatmap(req.params.uid))
+            res.send(await getHeatmap(req.params.uid, parseInt(req.params.year)))
         } catch {
             res.status(500).send()
         }
