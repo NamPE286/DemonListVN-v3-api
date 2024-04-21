@@ -38,6 +38,7 @@ app.use('/submission', require(`./routes/submission`).default)
 app.use('/leaderboard', require(`./routes/leaderboard`).default)
 app.use('/players', require(`./routes/players`).default)
 app.use('/APIKey', require(`./routes/APIKey`).default)
+app.use('/updateHeatmap', require(`./routes/updateHeatmap`).default)
 
 app.listen(port, () => {
     console.log(`Server started on port ${port}`)
