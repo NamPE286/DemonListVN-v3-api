@@ -9,8 +9,6 @@ async function fetchData(uid: string): Promise<any> {
         .limit(1)
         .single()
 
-    console.log(data, error)
-
     if (data == null || data.length == 0) {
         return { uid: uid, year: year, days: Array(366).fill(0) }
     }
@@ -25,14 +23,18 @@ function dayOfYear(year: number, month: number, date: number) {
     return Math.floor((y - x) / 86400000);
 }
 
-export async function updateHeatmap(uid: string) {
+export async function getHeatmap(uid: string) {
+    return await fetchData(uid)
+}
+
+export async function updateHeatmap(uid: string, count: number) {
     const data = await fetchData(uid)
     const date = new Date()
     const year = date.getFullYear()
     const month = date.getMonth()
     const day = date.getDate()
 
-    data.days[dayOfYear(year, month, day)]++
+    data.days[dayOfYear(year, month, day)] += count
 
     const { error } = await supabase
         .from('heatmap')

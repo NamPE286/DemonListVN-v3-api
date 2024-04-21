@@ -1,7 +1,8 @@
 import express from 'express'
 import Player from '@lib/classes/Player'
 import userAuth from '@src/middleware/userAuth'
-import { getPlayerRecords } from '@src/lib/client'
+import { getHeatmap, getPlayerRecords } from '@src/lib/client'
+import { updateHeatmap } from '@src/lib/client'
 
 const router = express.Router()
 
@@ -88,7 +89,7 @@ router.route('/:uid')
             const player = new Player({ uid: uid })
             await player.pull()
 
-            if(cached == 'true') {
+            if (cached == 'true') {
                 res.set('Cache-Control', 'public, s-maxage=1800, max-age=1800 stale-while-revalidate=7200')
             }
 
@@ -149,5 +150,61 @@ router.route('/:uid/records')
             res.status(404).send()
         }
     })
+
+router.route('/:uid/heatmap')
+    /**
+     * @openapi
+     * "/player/{uid}/heatmap":
+     *   get:
+     *     tags:
+     *       - Player
+     *     summary: Get player heatmap
+     *     parameters:
+     *       - name: uid
+     *         in: path
+     *         description: The uid of the player
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Success
+     */
+    .get(async (req, res) => {
+        try {
+            res.send(await getHeatmap(req.params.uid))
+        } catch {
+            res.status(500).send()
+        }
+    })
+
+router.route('/heatmap/:count')
+    /**
+     * @openapi
+     * "/player/heatmap/{count}":
+     *   post:
+     *     tags:
+     *       - Player
+     *     summary: Add 1 attempt to the heatmap
+     *     parameters:
+     *       - name: count
+     *         in: path
+     *         description: Amount of attempt to add
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     */
+    .post(userAuth, async (req, res) => {
+        try {
+            updateHeatmap(res.locals.user.data.uid, parseInt(req.params.count))
+            res.send()
+        } catch {
+            res.status(500).send()
+        }
+    })
+
 
 export default router
