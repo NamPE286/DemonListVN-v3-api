@@ -16,7 +16,7 @@ async function fetchPlayerData(uid: string, levelID: number): Promise<any> {
     return data
 }
 
-async function fetchLevelData(uid: string, levelID: number): Promise<any> {
+async function fetchLevelData(levelID: number): Promise<any> {
     let { data, error } = await supabase
         .from('levelDeathCount')
         .select('*')
@@ -41,13 +41,17 @@ export async function getDeathCount(uid: string, year: number) {
     return await fetchPlayerData(uid, year)
 }
 
+export async function getLevelDeathCount(id: number) {
+    return await fetchLevelData(id);
+}
+
 export async function updateDeathCount(uid: string, levelID: number, arr: number[]) {
     if (!(await isEligible(levelID))) {
         throw new Error();
     }
 
     const player = await fetchPlayerData(uid, levelID)
-    const level = await fetchLevelData(uid, levelID)
+    const level = await fetchLevelData(levelID)
 
     for (let i = 0; i < 100; i++) {
         player.count[i] += arr[i];
