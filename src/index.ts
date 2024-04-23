@@ -7,6 +7,7 @@ import { version } from '../package.json'
 const app = express()
 const port = 8080
 
+app.enable('trust proxy');
 app.use(express.json())
 app.use(cors())
 
