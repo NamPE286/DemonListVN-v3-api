@@ -8,7 +8,7 @@ export async function getPlayers({province = '', city = '', sortBy = 'rating', a
     let query = supabase
         .from('players')
         .select('*')
-        .order(sortBy, {ascending: ascending == 'true'})
+        .order(sortBy, {ascending: ascending == 'true', nullsFirst: false})
         .eq('province', province)
     
     if(city) {
