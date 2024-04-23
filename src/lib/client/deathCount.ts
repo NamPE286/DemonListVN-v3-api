@@ -1,6 +1,6 @@
 import supabase from "@src/database/supabase";
 
-async function fetchData(uid: string, levelID: number): Promise<any> {
+async function fetchPlayerData(uid: string, levelID: number): Promise<any> {
     let { data, error } = await supabase
         .from('deathCount')
         .select('*')
@@ -16,6 +16,21 @@ async function fetchData(uid: string, levelID: number): Promise<any> {
     return data
 }
 
+async function fetchLevelData(uid: string, levelID: number): Promise<any> {
+    let { data, error } = await supabase
+        .from('levelDeathCount')
+        .select('*')
+        .eq('levelID', levelID)
+        .limit(1)
+        .single()
+
+    if (data == null || data.length == 0) {
+        return { levelID: levelID, count: Array(100).fill(0) }
+    }
+
+    return data
+}
+
 async function isEligible(levelID: number): Promise<boolean> {
     const data: any = await ((await fetch(`https://gdbrowser.com/api/level/${levelID}`)).json())
 
@@ -23,7 +38,7 @@ async function isEligible(levelID: number): Promise<boolean> {
 }
 
 export async function getDeathCount(uid: string, year: number) {
-    return await fetchData(uid, year)
+    return await fetchPlayerData(uid, year)
 }
 
 export async function updateDeathCount(uid: string, levelID: number, arr: number[]) {
@@ -31,17 +46,19 @@ export async function updateDeathCount(uid: string, levelID: number, arr: number
         throw new Error();
     }
 
-    const data = await fetchData(uid, levelID)
+    const player = await fetchPlayerData(uid, levelID)
+    const level = await fetchLevelData(uid, levelID)
 
     for (let i = 0; i < 100; i++) {
-        data.count[i] += arr[i];
+        player.count[i] += arr[i];
+        level.count[i] += arr[i];
     }
 
-    const { error } = await supabase
+    await supabase
         .from('deathCount')
-        .upsert(data)
+        .upsert(player)
 
-    if (error) {
-        throw error
-    }
+    await supabase
+        .from('levelDeathCount')
+        .upsert(player)
 }
