@@ -60,5 +60,5 @@ export async function updateDeathCount(uid: string, levelID: number, arr: number
 
     await supabase
         .from('levelDeathCount')
-        .upsert(player)
+        .upsert(level)
 }
