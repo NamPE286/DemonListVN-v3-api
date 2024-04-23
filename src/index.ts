@@ -7,15 +7,14 @@ import { version } from '../package.json'
 const app = express()
 const port = 8080
 
-app.enable('trust proxy');
 app.use(express.json())
 app.use(cors())
 
-app.use(rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 1000,
-    message: "Too many requests, please try again later."
-}))
+// app.use(rateLimit({
+//     windowMs: 15 * 60 * 1000,
+//     max: 1000,
+//     message: "Too many requests, please try again later."
+// }))
 
 app.get('/', (req, res) => {
     res.send({
