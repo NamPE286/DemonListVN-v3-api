@@ -2,7 +2,7 @@ import express from 'express'
 import type { NextFunction, Response, Request } from 'express'
 import Level from '@lib/classes/Level'
 import adminAuth from '@src/middleware/adminAuth'
-import { getLevelRecords } from '@lib/client'
+import { getLevelDeathCount, getLevelRecords } from '@lib/client'
 
 const router = express.Router()
 
@@ -245,4 +245,34 @@ router.route('/:id/song')
         }
     })
 
+router.route('/:id/deathCount')
+    /**
+     * @openapi
+     * "/deathCount/{uid}/{levelID}":
+     *   get:
+     *     tags:
+     *       - Level
+     *     summary: Get level's death count
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the level
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
+    .get(async (req, res) => {
+        try {
+            const { id } = req.params;
+            res.send(await getLevelDeathCount(parseInt(id)));
+        } catch {
+            res.status(500).send()
+        }
+    })
 export default router
