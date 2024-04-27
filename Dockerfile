@@ -5,8 +5,7 @@ WORKDIR /app
 COPY . .
 
 RUN bun install
-RUN bun run build
 
 EXPOSE 8080
 
-CMD ["./app"]
+CMD ["bun run ./src/index.ts"]
