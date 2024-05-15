@@ -12,6 +12,7 @@ interface Data {
     dlPt?: number
     rating?: number
     songID?: number | null
+    avgSuggestedRating?: number
 }
 
 class Level {

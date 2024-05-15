@@ -26,6 +26,7 @@ interface Data {
     mobile?: boolean
     isChecked?: boolean
     comment?: string
+    suggestedRating?: number
 }
 
 class Record {
