@@ -2,6 +2,7 @@ import express from 'express'
 import Record from '@lib/classes/Record'
 import adminAuth from '@src/middleware/adminAuth'
 import userAuth from '@src/middleware/userAuth'
+import { getRecord } from '@src/lib/client'
 
 const router = express.Router()
 
@@ -28,9 +29,9 @@ router.route('/')
         try {
             const record = new Record(req.body)
             await record.update()
-    
+
             res.send()
-        } catch(err) {
+        } catch (err) {
             res.status(500).send()
         }
     })
@@ -70,11 +71,46 @@ router.route('/:userID/:levelID')
         }
 
         try {
-            const record = new Record({userid: userID, levelid: parseInt(levelID)})
+            const record = new Record({ userid: userID, levelid: parseInt(levelID) })
             await record.delete()
-    
+
             res.send()
-        } catch(err) {
+        } catch (err) {
+            res.status(500).send()
+        }
+    })
+
+router.route('/:userID/:levelID')
+    /**
+     * @openapi
+     * "/record/{userID}/{levelID}":
+     *   get:
+     *     tags:
+     *       - Record
+     *     summary: Get a single record
+     *     parameters:
+     *       - name: userID
+     *         in: path
+     *         description: The uid of the player
+     *         required: true
+     *         schema:
+     *           type: string
+     *       - name: levelID
+     *         in: path
+     *         description: The id of the level
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     */
+    .get(async (req, res) => {
+        const { userID, levelID } = req.params
+
+        try {
+            res.send(await getRecord(userID, parseInt(levelID)))
+        } catch (err) {
             res.status(500).send()
         }
     })
