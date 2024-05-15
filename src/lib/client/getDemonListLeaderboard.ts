@@ -10,6 +10,7 @@ export async function getDemonListLeaderboard({ start = 0, end = 50, sortBy = 'o
         .from('players')
         .select('*')
         .not('overallRank', 'is', null)
+        .eq('isHidden', false)
         .order(sortBy, { ascending: ascending })
         .range(start, end)
 

@@ -10,6 +10,7 @@ export async function getFeaturedListLeaderboard({ start = 0, end = 50, sortBy =
         .from('players')
         .select('*')
         .not('flrank', 'is', null)
+        .eq('isHidden', false)
         .order(sortBy, { ascending: ascending })
         .range(start, end)
 
