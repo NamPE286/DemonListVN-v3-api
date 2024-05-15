@@ -3,6 +3,7 @@ import Record from '@lib/classes/Record'
 import adminAuth from '@src/middleware/adminAuth'
 import userAuth from '@src/middleware/userAuth'
 import { getRecord } from '@src/lib/client'
+import { changeSuggestedRating } from '@src/lib/client/changeSuggestedRating'
 
 const router = express.Router()
 
@@ -84,7 +85,7 @@ router.route('/:userID/:levelID')
     /**
      * @openapi
      * "/record/{userID}/{levelID}":
-     *   get:
+     *   GET:
      *     tags:
      *       - Record
      *     summary: Get a single record
@@ -110,6 +111,49 @@ router.route('/:userID/:levelID')
 
         try {
             res.send(await getRecord(userID, parseInt(levelID)))
+        } catch (err) {
+            res.status(500).send()
+        }
+    })
+
+router.route('/:userID/:levelID/changeSuggestedRating/:rating')
+    /**
+     * @openapi
+     * "/record/{userID}/{levelID}/changeSuggestedRating/{rating}":
+     *   PUT:
+     *     tags:
+     *       - Record
+     *     summary: Change suggested rating of a record
+     *     parameters:
+     *       - name: userID
+     *         in: path
+     *         description: The uid of the player
+     *         required: true
+     *         schema:
+     *           type: string
+     *       - name: levelID
+     *         in: path
+     *         description: The id of the level
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     */
+    .put(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { userID, levelID, rating } = req.params
+
+        console.log(user.data.uid, userID)
+
+        if(user.data.uid != userID) {
+            res.status(401).send()
+            return;
+        }
+
+        try {
+            res.send(await changeSuggestedRating(userID, parseInt(levelID), parseInt(rating)))
         } catch (err) {
             res.status(500).send()
         }
