@@ -145,8 +145,6 @@ router.route('/:userID/:levelID/changeSuggestedRating/:rating')
         const { user } = res.locals
         const { userID, levelID, rating } = req.params
 
-        console.log(user.data.uid, userID)
-
         if(user.data.uid != userID) {
             res.status(401).send()
             return;
