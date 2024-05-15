@@ -10,6 +10,7 @@ export async function getPlayers({province = '', city = '', sortBy = 'rating', a
         .select('*')
         .order(sortBy, {ascending: ascending == 'true', nullsFirst: false})
         .eq('province', province)
+        .eq('isHidden', false)
     
     if(city) {
         query = query.eq('city', city)

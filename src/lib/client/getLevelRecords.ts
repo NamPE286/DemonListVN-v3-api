@@ -8,11 +8,12 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, isCheck
 
     const { data, error } = await supabase
         .from('records')
-        .select('*, players(*)')
+        .select('*, players!inner(*)')
         .eq('levelid', id)
+        .eq('isChecked', isChecked)
+        .eq('players.isHidden', false)
         .order('progress', { ascending: false })
         .order('timestamp')
-        .eq('isChecked', isChecked)
         .range(start, end)
 
     if (error) {
