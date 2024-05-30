@@ -50,6 +50,12 @@ class Player {
     }
 
     async update() {
+        delete this.data.isAdmin
+        delete this.data.isTrusted
+        delete this.data.reviewCooldown
+        delete this.data.rating
+        delete this.data.overallRank
+
         const { error } = await supabase
             .from('players')
             .upsert(this.data)
@@ -57,6 +63,8 @@ class Player {
         if (error) {
             throw error
         }
+
+        await this.pull()
     }
 }
 
