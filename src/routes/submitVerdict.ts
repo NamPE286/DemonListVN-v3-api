@@ -30,10 +30,21 @@ router.route('/')
             return
         }
 
-        const { error } = await supabase
+        var { error } = await supabase
             .from('records')
             .update(req.body)
             .match({ userid: req.body.userid, levelid: req.body.levelid })
+
+        if (error) {
+            console.log(error)
+            res.status(500).send()
+            return
+        }
+
+        var { error } = await supabase
+            .from('players')
+            .update({reviewCooldown: new Date()})
+            .match({ uid: res.locals.user.data.uid })
 
         if (error) {
             console.log(error)

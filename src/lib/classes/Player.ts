@@ -23,6 +23,7 @@ interface Data {
     province?: string
     city?: string
     isTrusted?: boolean
+    reviewCooldown?: string
 }
 
 class Player {

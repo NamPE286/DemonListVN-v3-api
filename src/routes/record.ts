@@ -176,6 +176,12 @@ router.route('/retrieve')
             res.status(401).send()
             return
         }
+
+        if (user.data.reviewCooldown && (new Date()).getTime() - new Date(user.data.reviewCooldown).getTime() < 7200000) {
+            res.status(429).send()
+            return
+        }
+
         try {
             res.send(await retrieveRecord(user))
         } catch (err) {
