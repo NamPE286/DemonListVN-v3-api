@@ -2,7 +2,7 @@ import express from 'express'
 import Record from '@lib/classes/Record'
 import adminAuth from '@src/middleware/adminAuth'
 import userAuth from '@src/middleware/userAuth'
-import { getRecord } from '@src/lib/client'
+import { getRecord, retrieveRecord } from '@src/lib/client'
 import { changeSuggestedRating } from '@src/lib/client/changeSuggestedRating'
 
 const router = express.Router()
@@ -145,13 +145,28 @@ router.route('/:userID/:levelID/changeSuggestedRating/:rating')
         const { user } = res.locals
         const { userID, levelID, rating } = req.params
 
-        if(user.data.uid != userID) {
+        if (user.data.uid != userID) {
             res.status(401).send()
             return;
         }
 
         try {
             res.send(await changeSuggestedRating(userID, parseInt(levelID), parseInt(rating)))
+        } catch (err) {
+            res.status(500).send()
+        }
+    })
+
+router.route('/retrieve')
+    .get(userAuth, async (req, res) => {
+        const { user } = res.locals
+
+        if (!user.data.isAdmin && !user.data.isTrusted) {
+            res.status(401).send()
+            return
+        }
+        try {
+            res.send(await retrieveRecord(user))
         } catch (err) {
             res.status(500).send()
         }

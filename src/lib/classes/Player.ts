@@ -22,6 +22,7 @@ interface Data {
     overallRank?: number
     province?: string
     city?: string
+    isTrusted?: boolean
 }
 
 class Player {

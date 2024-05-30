@@ -28,6 +28,7 @@ interface Data {
     comment?: string
     suggestedRating?: number
     reviewer?: string
+    needMod?: boolean
 }
 
 class Record {
