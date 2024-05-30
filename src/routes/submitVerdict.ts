@@ -59,17 +59,16 @@ router.route('/')
         res.send()
 
         logger.log(`${user.data.name} (${user.data.uid}) ${req.body.needMod ? 'forwarded' : ''}${req.body.isChecked ? 'accepted' : ''} ${req.body.levelid} record of ${req.body.userid}\nReviewer's comment: ${req.body.reviewerComment}`)
-
-        if (req.body.needMod) {
-            const level = new Level({ id: parseInt(req.body.levelid) });
-            await level.pull()
-
-            await sendNotification({ to: req.body.userid, content: `Your ${level.data.name} (${level.data.id}) record has been forwarded to moderator for further inspection by ${user.data.name}.`, status: 0 })
-        } else if (req.body.isChecked) {
+        if (req.body.isChecked) {
             const level = new Level({ id: parseInt(req.body.levelid) });
             await level.pull()
 
             await sendNotification({ to: req.body.userid, content: `Your ${level.data.name} (${level.data.id}) record has been accepted by ${user.data.name}.`, status: 0 })
+        } else if (req.body.needMod) {
+            const level = new Level({ id: parseInt(req.body.levelid) });
+            await level.pull()
+
+            await sendNotification({ to: req.body.userid, content: `Your ${level.data.name} (${level.data.id}) record has been forwarded to moderator for further inspection by ${user.data.name}.`, status: 0 })
         }
     })
 
