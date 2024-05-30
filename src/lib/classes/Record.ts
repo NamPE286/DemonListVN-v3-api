@@ -83,6 +83,7 @@ class Record {
             .upsert(this.data)
 
         if (error) {
+            console.log(error)
             throw error
         }
     }
