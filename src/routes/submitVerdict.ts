@@ -68,7 +68,7 @@ router.route('/')
             const level = new Level({ id: parseInt(req.body.levelid) });
             await level.pull()
 
-            await sendNotification({ to: req.body.userid, content: `Your ${level.data.name} (${level.data.id}) record has been forwarded to moderator for further inspection by ${user.data.name}.`, status: 0 })
+            await sendNotification({ to: req.body.userid, content: `Your ${level.data.name} (${level.data.id}) record has been forwarded to moderator team for further inspection by ${user.data.name}.`, status: 0 })
         }
     })
 
