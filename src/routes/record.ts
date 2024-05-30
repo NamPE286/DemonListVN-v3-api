@@ -158,6 +158,17 @@ router.route('/:userID/:levelID/changeSuggestedRating/:rating')
     })
 
 router.route('/retrieve')
+    /**
+     * @openapi
+     * "/retrieve":
+     *   GET:
+     *     tags:
+     *       - Record
+     *     summary: Retrieve a record for trusted player
+     *     responses:
+     *       200:
+     *         description: Success
+     */
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
 

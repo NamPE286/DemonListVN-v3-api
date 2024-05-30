@@ -9,7 +9,7 @@ router.route('/')
     /**
       * @openapi
       * "/submission":
-      *   post:
+      *   POST:
       *     tags:
       *       - Submission
       *     summary: Add or edit a submission
