@@ -27,7 +27,7 @@ router.route('/')
         const record = new Record({ userid: req.body.userid, levelid: req.body.levelid })
         await record.pull()
 
-        if (record.data.reviewer != res.locals.user.data.uid || !res.locals.user.data.isTrusted) {
+        if (record.data.reviewer != res.locals.user.data.uid || (!user.data.isAdmin && !user.data.isTrusted)) {
             res.status(401).send()
             return
         }
@@ -56,7 +56,7 @@ router.route('/')
 
         res.send()
 
-        logger.log(`${user.data.name} (${user.data.uid}) ${req.body.needMod ? 'forwarded' : ''}${req.body.isChecked ? 'accepted' : ''} ${req.body.levelid} record of ${req.body.userid}`)
+        logger.log(`${user.data.name} (${user.data.uid}) ${req.body.needMod ? 'forwarded' : ''}${req.body.isChecked ? 'accepted' : ''} ${req.body.levelid} record of ${req.body.userid}\nReviewer's comment: ${req.body.reviewerComment}`)
     })
 
 export default router
