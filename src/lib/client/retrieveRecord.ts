@@ -5,7 +5,7 @@ import Record from "@src/lib/classes/Record"
 export async function retrieveRecord(user: Player) {
     var { data, error } = await supabase
         .from('records')
-        .select('*')
+        .select('*, levels!inner(*)')
         .neq('userid', user.data.uid)
         .eq('needMod', false)
         .eq('isChecked', false)
@@ -20,7 +20,8 @@ export async function retrieveRecord(user: Player) {
 
     var { data, error } = await supabase
         .from('records')
-        .select('*')
+        .select('*, levels!inner(*)')
+        .lte('levels.rating', user.data.rating! + 500)
         .neq('userid', user.data.uid)
         .eq('needMod', false)
         .eq('isChecked', false)
