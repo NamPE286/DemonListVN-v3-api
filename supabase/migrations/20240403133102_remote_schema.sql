@@ -10,8 +10,6 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
-CREATE EXTENSION IF NOT EXISTS "pg_cron" WITH SCHEMA "extensions";
-
 CREATE SCHEMA IF NOT EXISTS "levels";
 
 ALTER SCHEMA "levels" OWNER TO "postgres";

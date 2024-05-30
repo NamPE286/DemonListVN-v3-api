@@ -27,6 +27,7 @@ interface Data {
     isChecked?: boolean
     comment?: string
     suggestedRating?: number
+    reviewer?: string
 }
 
 class Record {
