@@ -4,6 +4,7 @@ import adminAuth from '@src/middleware/adminAuth'
 import userAuth from '@src/middleware/userAuth'
 import { getRecord, retrieveRecord } from '@src/lib/client'
 import { changeSuggestedRating } from '@src/lib/client/changeSuggestedRating'
+import logger from '@src/utils/logger'
 
 const router = express.Router()
 
@@ -76,6 +77,7 @@ router.route('/:userID/:levelID')
             await record.delete()
 
             res.send()
+            logger.log(`${user.data.name} (${user.data.uid}) perfromed DELETE /record/${userID}/${levelID}`)
         } catch (err) {
             res.status(500).send()
         }
