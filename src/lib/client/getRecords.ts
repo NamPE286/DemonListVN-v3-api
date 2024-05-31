@@ -1,4 +1,5 @@
 import supabase from '@database/supabase'
+import Record from '@src/lib/classes/Record'
 
 export async function getRecords({ start = 0, end = 50, isChecked = false } = {}) {
     if (typeof isChecked == 'string') {
@@ -7,7 +8,7 @@ export async function getRecords({ start = 0, end = 50, isChecked = false } = {}
 
     const { data, error } = await supabase
         .from('records')
-        .select('*, players!userid(uid, name), reviewer:players!reviewer(uid, name)')
+        .select('*, players!userid(uid, name), reviewer:players!reviewer(uid, name), levels(*)')
         .match({ isChecked: isChecked })
         .order('timestamp', { ascending: true })
         .range(start, end)
@@ -16,5 +17,11 @@ export async function getRecords({ start = 0, end = 50, isChecked = false } = {}
         throw error
     }
 
-    return data
+    const records: Record[] = []
+
+    for (const i of data) {
+        records.push(new Record(i))
+    }
+
+    return records
 }
