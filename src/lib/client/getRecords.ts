@@ -10,6 +10,7 @@ export async function getRecords({ start = 0, end = 50, isChecked = false } = {}
         .from('records')
         .select('*, players!userid(uid, name), reviewer:players!reviewer(uid, name), levels(*)')
         .match({ isChecked: isChecked })
+        .order('needMod', { ascending: false })
         .order('timestamp', { ascending: true })
         .range(start, end)
 
