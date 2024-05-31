@@ -14,6 +14,8 @@ export async function retrieveRecord(user: Player) {
         .limit(1)
         .single()
 
+    console.log(data)
+
     if (data) {
         return data
     }
