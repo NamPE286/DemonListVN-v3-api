@@ -57,15 +57,9 @@ class Record {
 
     async submit() {
         if (!(await isLevelExists(this.data.levelid))) {
+            let apiLevel: any
             try {
-                const apiLevel: any = await ((await fetch(`https://gdbrowser.com/api/level/${this.data.levelid}`)).json())
-                const level = new Level({
-                    id: this.data.levelid,
-                    name: apiLevel.name,
-                    creator: apiLevel.author
-                })
-
-                await level.update()
+                apiLevel = await ((await fetch(`https://gdbrowser.com/api/level/${this.data.levelid}`)).json())
             } catch {
                 const level = new Level({
                     id: this.data.levelid,
@@ -74,7 +68,20 @@ class Record {
                 })
 
                 await level.update()
+                return
             }
+
+            if (apiLevel == -1) {
+                throw new Error()
+            }
+
+            const level = new Level({
+                id: this.data.levelid,
+                name: apiLevel.name,
+                creator: apiLevel.author
+            })
+
+            await level.update()
         }
 
         const record = new Record(this.data)
