@@ -77,7 +77,7 @@ router.route('/:userID/:levelID')
             await record.delete()
 
             res.send()
-            logger.log(`${user.data.name} (${user.data.uid}) perfromed DELETE /record/${userID}/${levelID}`)
+            logger.log(`${user.data.name} (${user.data.uid}) performed DELETE /record/${userID}/${levelID}`)
         } catch (err) {
             res.status(500).send()
         }
