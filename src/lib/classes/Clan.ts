@@ -4,7 +4,7 @@ import Player from '@src/lib/classes/Player'
 import Record from '@src/lib/classes/Record'
 
 interface Data {
-    id: number
+    id?: number
     created_at?: string
     name?: string
     tag?: string
@@ -34,10 +34,32 @@ class Clan {
         this.#synced = true
     }
 
+    async create() {
+        const { data, error } = await supabase
+            .from('clans')
+            .insert(this.data)
+            .select()
+            .single()
+
+        if (error) {
+            throw error
+        }
+
+        const player = new Player({ uid: data.owner })
+        await player.pull()
+
+        player.data.clan = data.id
+        this.data.id = data.id
+
+        await player.update({ updateClan: true })
+        await this.pull()
+    }
+
     async update() {
         const { error } = await supabase
             .from('clans')
-            .upsert(this.data)
+            .update(this.data)
+            .eq('id', this.data.id)
 
         if (error) {
             throw error
@@ -46,7 +68,7 @@ class Clan {
         await this.pull()
     }
 
-    async fetchMembers() {
+    async fetchMembers(): Promise<Player[]> {
         const { data, error } = await supabase
             .from('players')
             .select('*')
@@ -91,11 +113,11 @@ class Clan {
             throw new Error('Player is already in a clan')
         }
 
-        const invitation = new ClanInvitation({ to: player.data.uid, clan: this.data.id })
+        const invitation = new ClanInvitation({ to: player.data.uid, clan: this.data.id! })
         await invitation.update()
     }
 
-    async fetchRecords() {
+    async fetchRecords(): Promise<Record[]> {
         const { data, error } = await supabase
             .from('records')
             .select('*, players!userid!inner(*)')

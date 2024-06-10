@@ -44,7 +44,7 @@ class ClanInvitation {
         }
 
         const player = new Player({ uid: this.data.to!, clan: this.data.id })
-        await player.update()
+        await player.update({updateClan: true})
 
         const { error } = await supabase
             .from('clanInvitations')

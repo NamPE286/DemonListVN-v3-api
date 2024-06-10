@@ -51,13 +51,17 @@ class Player {
         this.#synced = true
     }
 
-    async update() {
+    async update({updateClan = false} = {}) {
         delete this.data.isAdmin
         delete this.data.isTrusted
         delete this.data.reviewCooldown
+        delete this.data.renameCooldown
         delete this.data.rating
         delete this.data.overallRank
-        delete this.data.clan
+
+        if (!updateClan) {
+            delete this.data.clan
+        }
 
         const { error } = await supabase
             .from('players')
