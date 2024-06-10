@@ -22,7 +22,7 @@ router.route('/:id/records')
 
     })
 
-router.route('/:id/invite')
+router.route('/invite/:uid')
     .post(userAuth, async (req, res) => {
 
     })
