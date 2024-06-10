@@ -9,6 +9,7 @@ interface Data {
     name?: string
     tag?: string
     owner?: string
+    isPublic?: boolean
 }
 
 class Clan {
@@ -122,6 +123,7 @@ class Clan {
             .from('records')
             .select('*, players!userid!inner(*)')
             .eq('players.clan', this.data.id)
+            .eq('isChecked', true)
 
         if (error) {
             throw error

@@ -40,7 +40,7 @@ class ClanInvitation {
 
     async accept() {
         if (!(await this.isExist())) {
-            throw new Error('Invitation invalid')
+            throw new Error('Invalid invitation')
         }
 
         const player = new Player({ uid: this.data.to!, clan: this.data.id })
@@ -58,7 +58,7 @@ class ClanInvitation {
 
     async reject() {
         if (!(await this.isExist())) {
-            throw new Error('Invitation invalid')
+            throw new Error('Invalid invitation')
         }
         
         const { error } = await supabase
