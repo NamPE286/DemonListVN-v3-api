@@ -46,6 +46,19 @@ class Clan {
         await this.pull()
     }
 
+    async fetchMembers() {
+        const { data, error } = await supabase
+            .from('players')
+            .select('*')
+            .eq('clan', this.data.id)
+
+        if (error) {
+            throw error
+        }
+
+        return data
+    }
+
     async addMember(uid: string) {
         const player = new Player({ uid: uid })
         await player.pull()

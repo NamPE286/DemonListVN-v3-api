@@ -39,6 +39,10 @@ class ClanInvitation {
     }
 
     async accept() {
+        if (!(await this.isExist())) {
+            throw new Error('Invitation invalid')
+        }
+
         const player = new Player({ uid: this.data.to!, clan: this.data.id })
         await player.update()
 
@@ -53,6 +57,10 @@ class ClanInvitation {
     }
 
     async reject() {
+        if (!(await this.isExist())) {
+            throw new Error('Invitation invalid')
+        }
+        
         const { error } = await supabase
             .from('clanInvitations')
             .delete()
