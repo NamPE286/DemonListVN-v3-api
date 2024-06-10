@@ -8,7 +8,7 @@ export async function getRecords({ start = 0, end = 50, isChecked = false } = {}
 
     const { data, error } = await supabase
         .from('records')
-        .select('*, players!userid(uid, name), reviewer:players!reviewer(uid, name), levels(*)')
+        .select('*, players!userid(*), reviewer:players!reviewer(*), levels(*)')
         .match({ isChecked: isChecked })
         .order('needMod', { ascending: false })
         .order('timestamp', { ascending: true })

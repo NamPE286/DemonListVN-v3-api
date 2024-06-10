@@ -24,6 +24,8 @@ interface Data {
     city?: string
     isTrusted?: boolean
     reviewCooldown?: string
+    clan?: number
+    renameCooldown?: string
 }
 
 class Player {
@@ -55,6 +57,7 @@ class Player {
         delete this.data.reviewCooldown
         delete this.data.rating
         delete this.data.overallRank
+        delete this.data.clan
 
         const { error } = await supabase
             .from('players')
