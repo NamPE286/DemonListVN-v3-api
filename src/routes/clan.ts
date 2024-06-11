@@ -5,8 +5,22 @@ import express from 'express'
 
 const router = express.Router()
 
-
 router.route('/')
+    /**
+      * @openapi
+      * "/clan":
+      *   post:
+      *     tags:
+      *       - Clan
+      *     summary: Create a new clan
+      *     requestBody:
+      *         required: true
+      *         content:
+      *             application/json:
+      *     responses:
+      *       200:
+      *         description: Success
+     */
     .post(userAuth, async (req, res) => {
         const { user } = res.locals
 
@@ -29,6 +43,21 @@ router.route('/')
         }
     })
 
+    /**
+     * @openapi
+     * "/clan":
+     *   patch:
+     *     tags:
+     *       - Clan
+     *     summary: Edit a clan owned by user
+     *     requestBody:
+     *         required: true
+     *         content:
+     *             application/json:
+     *     responses:
+     *       200:
+     *         description: Success
+     */
     .patch(userAuth, async (req, res) => {
         const { user } = res.locals
 
@@ -50,6 +79,27 @@ router.route('/')
     })
 
 router.route('/:id')
+    /**
+     * @openapi
+     * "/clan/{id}":
+     *   get:
+     *     tags:
+     *       - Clan
+     *     summary: Get a single clan by the id
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the clan
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
     .get(async (req, res) => {
         const { id } = req.params
         const clan = new Clan({ id: parseInt(id) })
@@ -64,6 +114,27 @@ router.route('/:id')
     })
 
 router.route('/:id/members')
+    /**
+     * @openapi
+     * "/clan/{id}/members":
+     *   get:
+     *     tags:
+     *       - Clan
+     *     summary: Get member list of a clan
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the clan
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
     .get(async (req, res) => {
         const { id } = req.params
         const clan = new Clan({ id: parseInt(id) })
@@ -78,6 +149,27 @@ router.route('/:id/members')
 
 
 router.route('/:id/records')
+    /**
+     * @openapi
+     * "/clan/{id}/records":
+     *   get:
+     *     tags:
+     *       - Clan
+     *     summary: Get record list of a clan
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the clan
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
     .get(async (req, res) => {
         const { id } = req.params
         const clan = new Clan({ id: parseInt(id) })
@@ -91,6 +183,24 @@ router.route('/:id/records')
     })
 
 router.route('/invite/:uid')
+    /**
+      * @openapi
+      * "/clan/invite/{uid}":
+      *   post:
+      *     tags:
+      *       - Clan
+      *     summary: Invite a player to a clan by the uid
+      *     parameters:
+      *       - name: uid
+      *         in: path
+      *         description: The uid of the player
+      *         required: true
+      *         schema:
+      *           type: string
+      *     responses:
+      *       200:
+      *         description: Success
+      */
     .post(userAuth, async (req, res) => {
         const { user } = res.locals
         const { uid } = req.params
@@ -113,7 +223,25 @@ router.route('/invite/:uid')
     })
 
 router.route('/:id/invite')
-    .put(userAuth, async (req, res) => {
+    /**
+      * @openapi
+      * "/clan/{id}/invite":
+      *   patch:
+      *     tags:
+      *       - Clan
+      *     summary: Accept a clan invitation
+      *     parameters:
+      *       - name: id
+      *         in: path
+      *         description: The id of the clan
+      *         required: true
+      *         schema:
+      *           type: number
+      *     responses:
+      *       200:
+      *         description: Success
+      */
+    .patch(userAuth, async (req, res) => {
         const { user } = res.locals
         const { id } = req.params
         const invitation = new ClanInvitation({ to: user.data.uid, clan: parseInt(id) })
@@ -128,6 +256,24 @@ router.route('/:id/invite')
     })
 
 router.route('/:id/invite')
+    /**
+      * @openapi
+      * "/clan/{id}/invite":
+      *   delete:
+      *     tags:
+      *       - Clan
+      *     summary: Reject a clan invitation
+      *     parameters:
+      *       - name: id
+      *         in: path
+      *         description: The id of the clan
+      *         required: true
+      *         schema:
+      *           type: number
+      *     responses:
+      *       200:
+      *         description: Success
+      */
     .delete(userAuth, async (req, res) => {
         const { user } = res.locals
         const { id } = req.params
