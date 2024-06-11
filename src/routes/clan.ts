@@ -5,6 +5,13 @@ import express from 'express'
 
 const router = express.Router()
 
+async function isOwner(uid: string, clanID: number) {
+    const clan = new Clan({ id: clanID })
+    await clan.pull()
+
+    return uid == clan.data.owner
+}
+
 router.route('/')
     /**
       * @openapi
@@ -43,41 +50,6 @@ router.route('/')
         }
     })
 
-    /**
-     * @openapi
-     * "/clan":
-     *   patch:
-     *     tags:
-     *       - Clan
-     *     summary: Edit a clan owned by user
-     *     requestBody:
-     *         required: true
-     *         content:
-     *             application/json:
-     *     responses:
-     *       200:
-     *         description: Success
-     */
-    .patch(userAuth, async (req, res) => {
-        const { user } = res.locals
-
-        if (!user.data.clan) {
-            res.status(500).send()
-            return
-        }
-
-        req.body.id = user.data.clan
-        const clan = new Clan(req.body)
-
-        try {
-            await clan.update()
-            res.send()
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
-
 router.route('/:id')
     /**
      * @openapi
@@ -107,6 +79,55 @@ router.route('/:id')
         try {
             await clan.pull()
             res.send(clan.data)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+    /**
+     * @openapi
+     * "/clan/{id}":
+     *   patch:
+     *     tags:
+     *       - Clan
+     *     summary: Edit a clan owned by user
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the clan
+     *         required: true
+     *         schema:
+     *           type: number
+     *     requestBody:
+     *         required: true
+     *         content:
+     *             application/json:
+     *     responses:
+     *       200:
+     *         description: Success
+     */
+    .patch(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { id } = req.params
+
+
+        if (!user.data.clan) {
+            res.status(500).send()
+            return
+        }
+
+        if (!(await isOwner(user.data.uid, parseInt(id))) && !user.data.isAdmin) {
+            res.status(403).send()
+            return
+        }
+
+        req.body.id = id
+        const clan = new Clan(req.body)
+
+        try {
+            await clan.update()
+            res.send()
         } catch (err) {
             console.error(err)
             res.status(500).send()

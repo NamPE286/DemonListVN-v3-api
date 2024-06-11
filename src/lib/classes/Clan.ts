@@ -23,7 +23,7 @@ class Clan {
     async pull() {
         const { data, error } = await supabase
             .from('clans')
-            .select('*')
+            .select('*, players!owner(*)')
             .eq('id', this.data.id)
             .single()
 
