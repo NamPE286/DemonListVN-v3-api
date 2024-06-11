@@ -17,7 +17,7 @@ class ClanInvitation {
 
     async isExist() {
         const { data, error } = await supabase
-            .from('clans')
+            .from('clanInvitations')
             .select('*')
             .match({ to: this.data.to, clan: this.data.clan })
 
@@ -43,7 +43,11 @@ class ClanInvitation {
             throw new Error('Invalid invitation')
         }
 
-        const player = new Player({ uid: this.data.to!, clan: this.data.id })
+        const player = new Player({ uid: this.data.to! })
+        await player.pull()
+        
+        player.data.clan = this.data.clan
+
         await player.update({updateClan: true})
 
         const { error } = await supabase

@@ -1,4 +1,5 @@
 import Clan from '@src/lib/classes/Clan'
+import ClanInvitation from '@src/lib/classes/ClanInvitation'
 import userAuth from '@src/middleware/userAuth'
 import express from 'express'
 
@@ -111,14 +112,34 @@ router.route('/invite/:uid')
         res.status(403).send()
     })
 
-router.route('/:id/invite/accept')
+router.route('/:id/invite')
     .put(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { id } = req.params
+        const invitation = new ClanInvitation({ to: user.data.uid, clan: parseInt(id) })
 
+        try {
+            await invitation.accept()
+            res.send()
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
     })
 
-router.route('/:id/invite/reject')
+router.route('/:id/invite')
     .delete(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { id } = req.params
+        const invitation = new ClanInvitation({ to: user.data.uid, clan: parseInt(id) })
 
+        try {
+            await invitation.reject()
+            res.send()
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
     })
 
 export default router
