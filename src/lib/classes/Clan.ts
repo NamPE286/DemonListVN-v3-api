@@ -69,11 +69,13 @@ class Clan {
         await this.pull()
     }
 
-    async fetchMembers(): Promise<Player[]> {
+    async fetchMembers({ start = 0, end = 50, sortBy = 'rating', ascending = false } = {}): Promise<Player[]> {
         const { data, error } = await supabase
             .from('players')
             .select('*')
             .eq('clan', this.data.id)
+            .order(sortBy, { ascending: ascending, nullsFirst: false })
+            .range(start, end)
 
         if (error) {
             throw error
@@ -118,12 +120,15 @@ class Clan {
         await invitation.update()
     }
 
-    async fetchRecords(): Promise<Record[]> {
+    async fetchRecords({ start = 0, end = 50, sortBy = 'dlPt', ascending = false } = {}): Promise<Record[]> {
         const { data, error } = await supabase
             .from('records')
             .select('*, players!userid!inner(*)')
             .eq('players.clan', this.data.id)
             .eq('isChecked', true)
+            .not(sortBy, 'is', null)
+            .order(sortBy, { ascending: ascending })
+            .range(start, end)
 
         if (error) {
             throw error

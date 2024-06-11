@@ -20,7 +20,7 @@ router.route('/')
       *     responses:
       *       200:
       *         description: Success
-     */
+      */
     .post(userAuth, async (req, res) => {
         const { user } = res.locals
 
@@ -128,6 +128,34 @@ router.route('/:id/members')
      *         required: true
      *         schema:
      *           type: number
+     *       - name: start
+     *         in: query
+     *         description: Range start index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 0
+     *       - name: end
+     *         in: query
+     *         description: Range end index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 50
+     *       - name: sortBy
+     *         in: query
+     *         description: Property of level to sort by
+     *         required: false
+     *         schema:
+     *           type: string
+     *           default: rating
+     *       - name: ascending
+     *         in: query
+     *         description: Sort ascending
+     *         required: false
+     *         schema:
+     *           type: boolean
+     *           default: false
      *     responses:
      *       200:
      *         description: Success
@@ -140,7 +168,7 @@ router.route('/:id/members')
         const clan = new Clan({ id: parseInt(id) })
 
         try {
-            res.send(await clan.fetchMembers())
+            res.send(await clan.fetchMembers(req.query))
         } catch (err) {
             console.error(err)
             res.status(500).send()
@@ -163,6 +191,34 @@ router.route('/:id/records')
      *         required: true
      *         schema:
      *           type: number
+     *       - name: start
+     *         in: query
+     *         description: Range start index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 0
+     *       - name: end
+     *         in: query
+     *         description: Range end index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 50
+     *       - name: sortBy
+     *         in: query
+     *         description: Property of level to sort by
+     *         required: false
+     *         schema:
+     *           type: string
+     *           default: dlPt
+     *       - name: ascending
+     *         in: query
+     *         description: Sort ascending
+     *         required: false
+     *         schema:
+     *           type: boolean
+     *           default: false
      *     responses:
      *       200:
      *         description: Success
@@ -175,7 +231,7 @@ router.route('/:id/records')
         const clan = new Clan({ id: parseInt(id) })
 
         try {
-            res.send(await clan.fetchRecords())
+            res.send(await clan.fetchRecords(req.query))
         } catch (err) {
             console.error(err)
             res.status(500).send()
