@@ -123,7 +123,7 @@ class Clan {
     async fetchRecords({ start = 0, end = 50, sortBy = 'dlPt', ascending = false } = {}): Promise<Record[]> {
         const { data, error } = await supabase
             .from('records')
-            .select('*, players!userid!inner(*)')
+            .select('*, players!userid!inner(*), levels(*)')
             .eq('players.clan', this.data.id)
             .eq('isChecked', true)
             .not(sortBy, 'is', null)
