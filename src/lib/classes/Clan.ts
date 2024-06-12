@@ -2,6 +2,7 @@ import supabase from '@database/supabase'
 import ClanInvitation from '@src/lib/classes/ClanInvitation'
 import Player from '@src/lib/classes/Player'
 import Record from '@src/lib/classes/Record'
+import { sendNotification } from '@src/lib/client'
 
 interface Data {
     id?: number
@@ -118,6 +119,7 @@ class Clan {
 
         const invitation = new ClanInvitation({ to: player.data.uid, clan: this.data.id! })
         await invitation.update()
+        await sendNotification({ to: uid, content: `You've been invited to ${this.data.name} clan!` })
     }
 
     async fetchRecords({ start = 0, end = 50, sortBy = 'dlPt', ascending = 'false' } = {}): Promise<Record[]> {
