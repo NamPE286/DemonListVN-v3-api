@@ -24,7 +24,7 @@ interface Data {
     city?: string
     isTrusted?: boolean
     reviewCooldown?: string
-    clan?: number
+    clan?: number | null
     renameCooldown?: string
 }
 

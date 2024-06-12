@@ -104,7 +104,7 @@ class Clan {
             throw new Error('Player is not in this clan')
         }
 
-        player.data.clan = NaN
+        player.data.clan = null
         await player.update()
     }
 

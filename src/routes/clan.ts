@@ -450,8 +450,8 @@ router.route('/leave')
             return
         }
 
-        user.data.clan = NaN
-        await user.update()
+        user.data.clan = null
+        await user.update({ updateClan: true })
 
         res.send()
     })
@@ -492,7 +492,7 @@ router.route('/:id/join')
         }
 
         user.data.clan = parseInt(id)
-        await user.update()
+        await user.update({ updateClan: true })
 
         res.send()
     })
