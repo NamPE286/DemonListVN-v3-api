@@ -126,8 +126,6 @@ router.route('/:id')
         req.body.id = id
         const clan = new Clan(req.body)
 
-        console.log(clan)
-
         try {
             await clan.update()
             res.send()
