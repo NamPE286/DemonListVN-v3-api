@@ -58,6 +58,13 @@ class Clan {
     }
 
     async update() {
+        const player = new Player({ uid: this.data.owner! })
+        await player.pull()
+
+        if (player.data.clan != this.data.owner) {
+            throw new Error('Cannot give ownership. This player is not this clan\' member')
+        }
+
         const { error } = await supabase
             .from('clans')
             .update(this.data)
