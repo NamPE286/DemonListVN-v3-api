@@ -72,7 +72,7 @@ class Clan {
     async fetchMembers({ start = 0, end = 50, sortBy = 'rating', ascending = 'false' } = {}): Promise<Player[]> {
         const { data, error } = await supabase
             .from('players')
-            .select('*')
+            .select('*, clans!id(*)')
             .eq('clan', this.data.id)
             .order(sortBy, { ascending: ascending == 'true', nullsFirst: false })
             .range(start, end)

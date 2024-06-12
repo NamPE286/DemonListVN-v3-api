@@ -6,8 +6,8 @@ export async function getPlayers({province = '', city = '', sortBy = 'rating', a
     }
 
     let query = supabase
-        .from('players, clans!id(*)')
-        .select('*')
+        .from('players')
+        .select('*, clans!id(*)')
         .order(sortBy, {ascending: ascending == 'true', nullsFirst: false})
         .eq('province', province)
         .eq('isHidden', false)
