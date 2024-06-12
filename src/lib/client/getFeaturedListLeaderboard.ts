@@ -7,7 +7,7 @@ export async function getFeaturedListLeaderboard({ start = 0, end = 50, sortBy =
     }
 
     const { data, error } = await supabase
-        .from('players')
+        .from('players, clans!id(*)')
         .select('*')
         .not('flrank', 'is', null)
         .eq('isHidden', false)

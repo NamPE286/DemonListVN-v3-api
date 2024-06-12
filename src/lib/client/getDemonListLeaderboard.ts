@@ -7,7 +7,7 @@ export async function getDemonListLeaderboard({ start = 0, end = 50, sortBy = 'o
     }
 
     const { data, error } = await supabase
-        .from('players')
+        .from('players, clans!id(*)')
         .select('*')
         .not('overallRank', 'is', null)
         .eq('isHidden', false)

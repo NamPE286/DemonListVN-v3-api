@@ -94,7 +94,7 @@ router.route('/:uid')
             }
 
             res.send(player.data)
-        } catch {
+        } catch (err) {
             res.status(404).send()
         }
 
