@@ -8,7 +8,7 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, isCheck
 
     const { data, error } = await supabase
         .from('records')
-        .select('*, players!userid!inner(*)')
+        .select('*, players!userid!inner(*, clans!id(*))')
         .eq('players.isHidden', false)
         .eq('levelid', id)
         .eq('isChecked', isChecked)

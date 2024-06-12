@@ -23,7 +23,7 @@ class Clan {
     async pull() {
         const { data, error } = await supabase
             .from('clans')
-            .select('*, players!owner(*)')
+            .select('*, players!owner(*, clans!id(*))')
             .eq('id', this.data.id)
             .single()
 
@@ -123,7 +123,7 @@ class Clan {
     async fetchRecords({ start = 0, end = 50, sortBy = 'dlPt', ascending = 'false' } = {}): Promise<Record[]> {
         const { data, error } = await supabase
             .from('records')
-            .select('*, players!userid!inner(*), levels(*)')
+            .select('*, players!userid!inner(*, clans!id(*)), levels(*)')
             .eq('players.clan', this.data.id)
             .eq('isChecked', true)
             .not(sortBy, 'is', null)
