@@ -1,3 +1,4 @@
+import supabase from '@src/database/supabase'
 import Clan from '@src/lib/classes/Clan'
 import ClanInvitation from '@src/lib/classes/ClanInvitation'
 import userAuth from '@src/middleware/userAuth'
@@ -132,6 +133,63 @@ router.route('/:id')
             console.error(err)
             res.status(500).send()
         }
+    })
+
+    /**
+     * @openapi
+     * "/clan/{id}":
+     *   delete:
+     *     tags:
+     *       - Clan
+     *     summary: Delete a clan owned by user
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the clan
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     */
+    .delete(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { id } = req.params
+
+
+        if (!user.data.clan) {
+            res.status(500).send()
+            return
+        }
+
+        if (!(await isOwner(user.data.uid, parseInt(id))) && !user.data.isAdmin) {
+            res.status(403).send()
+            return
+        }
+
+        var { data, error } = await supabase
+            .from('players')
+            .select('*')
+            .eq('clan', id)
+            .limit(1)
+
+        if (error || data?.length) {
+            res.status(500).send()
+            return
+        }
+
+        var { error } = await supabase
+            .from('clan')
+            .delete()
+            .eq('id', id)
+
+        if (error) {
+            res.status(500).send()
+            return
+        }
+
+        res.send()
     })
 
 router.route('/:id/members')
@@ -332,7 +390,6 @@ router.route('/:id/invite')
         }
     })
 
-router.route('/:id/invite')
     /**
       * @openapi
       * "/clan/{id}/invite":
@@ -363,6 +420,86 @@ router.route('/:id/invite')
             console.error(err)
             res.status(500).send()
         }
+    })
+
+router.route('/leave')
+    /**
+     * @openapi
+     * "/clan/leave":
+     *   put:
+     *     tags:
+     *       - Clan
+     *     summary: Leave joined clan
+     *     responses:
+     *       200:
+     *         description: Success
+     */
+    .put(userAuth, async (req, res) => {
+        const { user } = res.locals
+
+        if (!user.data.clan) {
+            res.status(500).send()
+            return
+        }
+
+        const clan = new Clan({ id: user.data.clan })
+        await clan.pull()
+
+        if (user.data.uid == clan.data.owner) {
+            res.status(500).send()
+            return
+        }
+
+        user.data.clan = NaN
+        await user.update()
+
+        res.send()
+    })
+
+router.route('/:id/join')
+    /**
+      * @openapi
+      * "/clan/{id}/join":
+      *   put:
+      *     tags:
+      *       - Clan
+      *     summary: Join a clan
+      *     parameters:
+      *       - name: id
+      *         in: path
+      *         description: The id of the clan
+      *         required: true
+      *         schema:
+      *           type: number
+      *     responses:
+      *       200:
+      *         description: Success
+      */
+    .put(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { id } = req.params
+        const clan = new Clan({ id: parseInt(id) })
+        await clan.pull()
+
+        if (!clan.data.isPublic) {
+            res.status(403).send()
+            return
+        }
+
+        if (user.data.clan) {
+            res.status(500).send()
+            return
+        }
+
+        user.data.clan = parseInt(id)
+        await user.update()
+
+        res.send()
+    })
+
+router.route('/:id/ban/:uid')
+    .post(userAuth, async (req, res) => {
+
     })
 
 export default router
