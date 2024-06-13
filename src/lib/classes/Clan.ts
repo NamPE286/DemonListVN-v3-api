@@ -11,6 +11,8 @@ interface Data {
     tag?: string
     owner?: string
     isPublic?: boolean
+    tagTextColor?: string
+    tagBgColor?: string
 }
 
 class Clan {
