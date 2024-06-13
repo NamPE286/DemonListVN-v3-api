@@ -40,6 +40,7 @@ app.use('/players', require(`./routes/players`).default)
 app.use('/APIKey', require(`./routes/APIKey`).default)
 app.use('/submitVerdict', require(`./routes/submitVerdict`).default)
 app.use('/clan', require(`./routes/clan`).default)
+app.use('/clans', require(`./routes/clans`).default)
 
 app.listen(port, () => {
     console.log(`Server started on port ${port}`)
