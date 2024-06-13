@@ -157,7 +157,6 @@ router.route('/:id')
         const { user } = res.locals
         const { id } = req.params
 
-
         if (!user.data.clan) {
             res.status(500).send()
             return
@@ -181,7 +180,7 @@ router.route('/:id')
         }
 
         var { error } = await supabase
-            .from('clan')
+            .from('clans')
             .delete()
             .eq('id', id)
 

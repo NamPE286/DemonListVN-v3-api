@@ -61,7 +61,7 @@ class Clan {
         const player = new Player({ uid: this.data.owner! })
         await player.pull()
 
-        if (player.data.clan != this.data.owner) {
+        if (player.data.clan != this.data.id) {
             throw new Error('Cannot give ownership. This player is not this clan\' member')
         }
 
