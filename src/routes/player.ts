@@ -67,13 +67,6 @@ router.route('/:uid')
      *         required: true
      *         schema:
      *           type: string
-     *       - name: cached
-     *         in: query
-     *         description: Whether to cache the player data
-     *         required: false
-     *         schema:
-     *           type: boolean
-     *           default: false
      *     responses:
      *       200:
      *         description: Success
@@ -88,10 +81,6 @@ router.route('/:uid')
         try {
             const player = new Player({ uid: uid })
             await player.pull()
-
-            if (cached == 'true') {
-                res.set('Cache-Control', 'public, s-maxage=1800, max-age=1800 stale-while-revalidate=7200')
-            }
 
             res.send(player.data)
         } catch (err) {
