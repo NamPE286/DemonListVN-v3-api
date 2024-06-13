@@ -1,7 +1,6 @@
 import supabase from "@src/database/supabase"
 
 export async function getClans({ start = 0, end = 50, sortBy = 'name', ascending = 'true', searchQuery = '' } = {}) {
-    console.log(searchQuery)
     let query = supabase
         .from('clans')
         .select('*, players!owner(*, clans!id(*))')
