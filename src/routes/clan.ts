@@ -51,6 +51,37 @@ router.route('/')
         }
     })
 
+router.route('/invitations')
+    /**
+     * @openapi
+     * "/clan/invitations":
+     *   get:
+     *     tags:
+     *       - Clan
+     *     summary: Get clan invitation list
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
+    .get(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { data, error } = await supabase
+            .from('clanInvitations')
+            .select('*, clans(*, players!owner(*, clans!id(*)))')
+            .eq('to', user.data.uid)
+
+        if (error) {
+            console.error(error)
+            res.status(500).send()
+            return
+        }
+
+        res.send(data)
+    })
+
 router.route('/:id')
     /**
      * @openapi
@@ -511,5 +542,7 @@ router.route('/:id/ban/:uid')
     .post(userAuth, async (req, res) => {
 
     })
+
+
 
 export default router

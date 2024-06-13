@@ -40,6 +40,12 @@ router.route('/')
      *         schema:
      *           type: boolean
      *           default: true
+     *       - name: searchQuery
+     *         in: query
+     *         description: Search query
+     *         required: false
+     *         schema:
+     *           type: string
      *     responses:
      *       200:
      *         description: Success
@@ -49,7 +55,7 @@ router.route('/')
      */
     .get(async (req, res) => {
         try {
-            res.send(await getClans(req.body))
+            res.send(await getClans(req.query))
         } catch (err) {
             console.error(err)
             res.status(500).send()
