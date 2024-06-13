@@ -189,6 +189,11 @@ router.route('/:id')
             return
         }
 
+        await supabase
+            .storage
+            .from('clanPhotos')
+            .remove([`${id}.jpg`])
+
         res.send()
     })
 
