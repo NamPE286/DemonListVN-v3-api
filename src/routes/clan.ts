@@ -172,6 +172,7 @@ router.route('/:id')
             .from('players')
             .select('*')
             .eq('clan', id)
+            .neq('uid', user.data.uid)
             .limit(1)
 
         if (error || data?.length) {
@@ -493,6 +494,11 @@ router.route('/:id/join')
 
         user.data.clan = parseInt(id)
         await user.update({ updateClan: true })
+
+        const { error } = await supabase
+            .from('clanInvitations')
+            .delete()
+            .eq('to', user.data.uid)
 
         res.send()
     })

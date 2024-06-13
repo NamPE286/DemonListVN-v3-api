@@ -51,13 +51,16 @@ class Player {
         this.#synced = true
     }
 
-    async update({updateClan = false} = {}) {
-        delete this.data.isAdmin
-        delete this.data.isTrusted
-        delete this.data.reviewCooldown
-        delete this.data.renameCooldown
-        delete this.data.rating
-        delete this.data.overallRank
+    async update({ updateClan = false } = {}) {
+        const updateData = this.data
+        delete updateData.isAdmin
+        delete updateData.isTrusted
+        delete updateData.reviewCooldown
+        delete updateData.renameCooldown
+        delete updateData.rating
+        delete updateData.overallRank
+        //@ts-ignore
+        delete updateData.clans
 
         if (!updateClan) {
             delete this.data.clan
