@@ -198,18 +198,6 @@ router.route('/:id')
             return
         }
 
-        var { data, error } = await supabase
-            .from('players')
-            .select('*')
-            .eq('clan', id)
-            .neq('uid', user.data.uid)
-            .limit(1)
-
-        if (error || data?.length) {
-            res.status(500).send()
-            return
-        }
-
         var { error } = await supabase
             .from('clans')
             .delete()

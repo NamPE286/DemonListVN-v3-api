@@ -4,7 +4,6 @@ export async function getClans({ start = 0, end = 50, sortBy = 'name', ascending
     let query = supabase
         .from('clans')
         .select('*, players!owner(*, clans!id(*))')
-        .eq('isPublic', true)
 
     if (searchQuery.length) {
         query = query.ilike('name', `%${searchQuery}%`)
