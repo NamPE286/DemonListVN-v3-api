@@ -13,6 +13,9 @@ interface Data {
     isPublic?: boolean
     tagTextColor?: string
     tagBgColor?: string
+    memberCount?: number
+    rating?: number
+    rank?: number
 }
 
 class Clan {
