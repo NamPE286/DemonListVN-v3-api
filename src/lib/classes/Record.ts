@@ -75,6 +75,10 @@ class Record {
                 throw new Error()
             }
 
+            if (apiLevel.difficulty != 'Extreme Demon' && apiLevel.difficulty != 'Insane Demon') {
+                throw new Error('Level is not hard enough')
+            }
+
             const level = new Level({
                 id: this.data.levelid,
                 name: apiLevel.name,
