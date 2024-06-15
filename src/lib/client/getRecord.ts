@@ -4,7 +4,7 @@ import Record from "@src/lib/classes/Record"
 export async function getRecord(uid: string, levelID: number): Promise<Record> {
     const { data, error } = await supabase
         .from('records')
-        .select('*, players!userid(*, clans!id(*)), reviewer:players!reviewer(*), levels(*)')
+        .select('*, players!userid(*, clans!id(*)), reviewer:players!reviewer(*, clans!id(*)), levels(*)')
         .eq('levelid', levelID)
         .eq('userid', uid)
         .limit(1)
