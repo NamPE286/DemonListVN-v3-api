@@ -1,6 +1,7 @@
 import supabase from '@src/database/supabase'
 import Clan from '@src/lib/classes/Clan'
 import ClanInvitation from '@src/lib/classes/ClanInvitation'
+import Player from '@src/lib/classes/Player'
 import userAuth from '@src/middleware/userAuth'
 import express from 'express'
 
@@ -531,7 +532,7 @@ router.route('/:id/invitation/:uid')
      *   delete:
      *     tags:
      *       - Clan
-     *     summary: Get an+ invitation
+     *     summary: Get an invitation
      *     parameters:
      *       - name: id
      *         in: path
@@ -563,15 +564,57 @@ router.route('/:id/invitation/:uid')
         }
     })
 
+router.route('/:id/kick/:uid')
+    /**
+     * @openapi
+     * "/clan/{id}/kick/{uid}":
+     *   delete:
+     *     tags:
+     *       - Clan
+     *     summary: Kick a player
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the clan
+     *         required: true
+     *         schema:
+     *           type: number
+     *       - name: uid
+     *         in: path
+     *         description: The uid of the player
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     */
+    .patch(userAuth, async (req, res) => {
+        const { id, uid } = req.params
+        const { user } = res.locals
+        const clan = new Clan({ id: parseInt(id) })
+        await clan.pull()
+
+        if (user.data.uid == uid) {
+            res.status(500).send()
+            return
+        }
+
+        if (user.data.uid != clan.data.owner) {
+            res.status(403).send()
+            return
+        }
+
+        await clan.removeMember(uid)
+        res.send()
+    })
+
 router.route('/:id/ban/:uid')
     .post(userAuth, async (req, res) => {
 
     })
 
-router.route('/:id/kick/:uid')
-    .put(userAuth, async (req, res) => {
 
-    })
 
 
 

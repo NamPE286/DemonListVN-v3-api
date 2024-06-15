@@ -59,6 +59,11 @@ class ClanInvitation {
 
         const clan = new Clan({ id: this.data.clan })
         await clan.addMember(this.data.to)
+
+        const { error } = await supabase
+            .from('clanInvitations')
+            .delete()
+            .eq('to', this.data.to)
     }
 
     async reject() {

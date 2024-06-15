@@ -105,12 +105,6 @@ class Clan {
             throw new Error('Member limit exceeded')
         }
 
-        const tmp = this
-        //@ts-ignore
-        delete tmp.data.players
-        tmp.data.memberCount!++
-        await tmp.update()
-
         const player = new Player({ uid: uid })
         await player.pull()
 
@@ -118,18 +112,20 @@ class Clan {
             throw new Error('Player is already in a clan')
         }
 
+
+        const tmp = this
+        //@ts-ignore
+        delete tmp.data.players
+        tmp.data.memberCount!++
+        await tmp.update()
+
         player.data.clan = this.data.id
         await player.update({ updateClan: true })
+        await this.pull()
     }
 
     async removeMember(uid: string) {
         await this.pull()
-        const tmp = this
-        //@ts-ignore
-        delete tmp.data.players
-        tmp.data.memberCount!--
-        await tmp.update()
-
         const player = new Player({ uid: uid })
         await player.pull()
 
@@ -137,8 +133,15 @@ class Clan {
             throw new Error('Player is not in this clan')
         }
 
+        const tmp = this
+        //@ts-ignore
+        delete tmp.data.players
+        tmp.data.memberCount!--
+        await tmp.update()
+
         player.data.clan = null
         await player.update({ updateClan: true })
+        await this.pull()
     }
 
     async invite(uid: string) {
