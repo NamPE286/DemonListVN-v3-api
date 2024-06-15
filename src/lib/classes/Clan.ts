@@ -88,6 +88,7 @@ class Clan {
             .from('players')
             .select('*, clans!id(*)')
             .eq('clan', this.data.id)
+            .eq('isHidden', false)
             .order(sortBy, { ascending: ascending == 'true', nullsFirst: false })
             .range(start, end)
 
@@ -162,6 +163,7 @@ class Clan {
             .from('records')
             .select('*, players!userid!inner(*, clans!id(*)), levels(*)')
             .eq('players.clan', this.data.id)
+            .eq('players.isHidden', false)
             .eq('isChecked', true)
             .not(sortBy, 'is', null)
             .order(sortBy, { ascending: ascending == 'true' })
