@@ -592,6 +592,9 @@ router.route('/:id/invitation/:uid')
         const { id, uid } = req.params
         const { user } = res.locals
         const clan = new Clan({ id: parseInt(id) })
+        await clan.pull()
+
+        console.log(clan.data.owner, user.data.uid)
 
         if (clan.data.owner != user.data.uid) {
             res.status(403).send()
@@ -677,15 +680,16 @@ router.route('/:id/invitations')
         const { id } = req.params
         const { data, error } = await supabase
             .from('clanInvitations')
-            .select('*')
+            .select('*, players(*)')
             .eq('clan', parseInt(id))
+            .order('created_at', { ascending: false })
 
-        if(error) {
+        if (error) {
             console.error(error)
             res.status(500).send()
             return
         }
-        
+
         res.send(data)
     })
 
