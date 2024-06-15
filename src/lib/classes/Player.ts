@@ -55,6 +55,7 @@ class Player {
         const updateData = this.data
         delete updateData.isAdmin
         delete updateData.isTrusted
+        delete updateData.isBanned
         delete updateData.reviewCooldown
         delete updateData.renameCooldown
         delete updateData.rating

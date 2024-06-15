@@ -16,6 +16,7 @@ interface Data {
     memberCount?: number
     rating?: number
     rank?: number
+    memberLimit?: number
 }
 
 class Clan {
@@ -27,7 +28,7 @@ class Clan {
     }
 
     async pull() {
-        const { data, error } = await supabase
+        var { data, error } = await supabase
             .from('clans')
             .select('*, players!owner(*, clans!id(*))')
             .eq('id', this.data.id)
@@ -98,6 +99,18 @@ class Clan {
     }
 
     async addMember(uid: string) {
+        await this.pull()
+
+        if (this.data.memberCount == this.data.memberLimit) {
+            throw new Error('Member limit exceeded')
+        }
+
+        const tmp = this
+        //@ts-ignore
+        delete tmp.data.players
+        tmp.data.memberCount!++
+        await tmp.update()
+
         const player = new Player({ uid: uid })
         await player.pull()
 
@@ -106,10 +119,17 @@ class Clan {
         }
 
         player.data.clan = this.data.id
-        await player.update()
+        await player.update({ updateClan: true })
     }
 
     async removeMember(uid: string) {
+        await this.pull()
+        const tmp = this
+        //@ts-ignore
+        delete tmp.data.players
+        tmp.data.memberCount!--
+        await tmp.update()
+
         const player = new Player({ uid: uid })
         await player.pull()
 
@@ -118,7 +138,7 @@ class Clan {
         }
 
         player.data.clan = null
-        await player.update()
+        await player.update({ updateClan: true })
     }
 
     async invite(uid: string) {
@@ -131,7 +151,7 @@ class Clan {
 
         const invitation = new ClanInvitation({ to: player.data.uid, clan: this.data.id! })
         await invitation.update()
-        await sendNotification({ to: uid, content: `You've been invited to ${this.data.name} clan!` })
+        await sendNotification({ to: uid, content: `You've been invited to ${this.data.name} clan!`, redirect: `/clan/${this.data.id}` })
     }
 
     async fetchRecords({ start = 0, end = 50, sortBy = 'dlPt', ascending = 'false' } = {}): Promise<Record[]> {

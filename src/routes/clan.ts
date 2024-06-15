@@ -44,7 +44,7 @@ router.route('/')
 
         try {
             await clan.create()
-            res.send()
+            res.send(clan)
         } catch (err) {
             console.error(err)
             res.status(500).send()
@@ -474,8 +474,7 @@ router.route('/leave')
             return
         }
 
-        user.data.clan = null
-        await user.update({ updateClan: true })
+        await clan.removeMember(user.data.uid)
 
         res.send()
     })
@@ -515,8 +514,7 @@ router.route('/:id/join')
             return
         }
 
-        user.data.clan = parseInt(id)
-        await user.update({ updateClan: true })
+        await clan.addMember(user.data.uid)
 
         const { error } = await supabase
             .from('clanInvitations')
@@ -526,8 +524,52 @@ router.route('/:id/join')
         res.send()
     })
 
+router.route('/:id/invitation/:uid')
+    /**
+     * @openapi
+     * "/clan/{id}/invitation/{uid}":
+     *   delete:
+     *     tags:
+     *       - Clan
+     *     summary: Get an+ invitation
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the clan
+     *         required: true
+     *         schema:
+     *           type: number
+     *       - name: uid
+     *         in: path
+     *         description: The uid of the player
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     */
+    .get(async (req, res) => {
+        const { id, uid } = req.params
+
+        try {
+            const invitation = new ClanInvitation({ clan: parseInt(id), to: uid })
+            await invitation.pull()
+
+            res.send(invitation.data)
+        } catch (err) {
+            console.error(err)
+            res.status(404).send()
+        }
+    })
+
 router.route('/:id/ban/:uid')
     .post(userAuth, async (req, res) => {
+
+    })
+
+router.route('/:id/kick/:uid')
+    .put(userAuth, async (req, res) => {
 
     })
 

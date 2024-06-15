@@ -1,5 +1,5 @@
 import supabase from "@src/database/supabase";
-import Player from "@src/lib/classes/Player";
+import Clan from "@src/lib/classes/Clan";
 
 interface Data {
     id?: number
@@ -28,6 +28,20 @@ class ClanInvitation {
         return true
     }
 
+    async pull() {
+        const { data, error } = await supabase
+            .from('clanInvitations')
+            .select('*')
+            .match({ to: this.data.to, clan: this.data.clan })
+            .single()
+
+        if (error || !data) {
+            throw error
+        }
+
+        this.data = data
+    }
+
     async update() {
         const { error } = await supabase
             .from('clanInvitations')
@@ -43,28 +57,15 @@ class ClanInvitation {
             throw new Error('Invalid invitation')
         }
 
-        const player = new Player({ uid: this.data.to! })
-        await player.pull()
-        
-        player.data.clan = this.data.clan
-
-        await player.update({updateClan: true})
-
-        const { error } = await supabase
-            .from('clanInvitations')
-            .delete()
-            .eq('to', this.data.to)
-
-        if (error) {
-            throw error
-        }
+        const clan = new Clan({ id: this.data.clan })
+        await clan.addMember(this.data.to)
     }
 
     async reject() {
         if (!(await this.isExist())) {
             throw new Error('Invalid invitation')
         }
-        
+
         const { error } = await supabase
             .from('clanInvitations')
             .delete()

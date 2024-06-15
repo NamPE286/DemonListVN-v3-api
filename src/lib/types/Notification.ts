@@ -3,4 +3,5 @@ export type Notification = {
     content: string
     status?: number
     timestamp?: string
+    redirect?: string
 }

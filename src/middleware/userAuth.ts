@@ -20,12 +20,17 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             await player.pull()
         } catch { }
 
+        if (player.data.isBanned) {
+            res.status(401).send();
+            return;
+        }
+
         res.locals.user = player
         res.locals.authType = 'token'
     } catch {
         try {
             const key = req.headers.authorization.split(' ')[1]
-            
+
             const { data, error } = await supabase
                 .from('APIKey')
                 .select('*, players(*)')
@@ -39,6 +44,11 @@ export default async function (req: Request, res: Response, next: NextFunction) 
 
             res.locals.user = new Player(data.players)
             res.locals.authType = 'key'
+
+            if (res.locals.user.data.isBanned) {
+                res.status(401).send();
+                return;
+            }
         } catch {
             res.status(403).send()
             return
