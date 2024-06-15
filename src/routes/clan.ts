@@ -529,7 +529,7 @@ router.route('/:id/invitation/:uid')
     /**
      * @openapi
      * "/clan/{id}/invitation/{uid}":
-     *   delete:
+     *   get:
      *     tags:
      *       - Clan
      *     summary: Get an invitation
@@ -564,11 +564,56 @@ router.route('/:id/invitation/:uid')
         }
     })
 
+    /**
+     * @openapi
+     * "/clan/{id}/invitation/{uid}":
+     *   delete:
+     *     tags:
+     *       - Clan
+     *     summary: Delete an invitation
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the clan
+     *         required: true
+     *         schema:
+     *           type: number
+     *       - name: uid
+     *         in: path
+     *         description: The uid of the player
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     */
+    .delete(userAuth, async (req, res) => {
+        const { id, uid } = req.params
+        const { user } = res.locals
+        const clan = new Clan({ id: parseInt(id) })
+
+        if (clan.data.owner != user.data.uid) {
+            res.status(403).send()
+            return
+        }
+
+        try {
+            const invitation = new ClanInvitation({ clan: parseInt(id), to: uid })
+            await invitation.reject()
+
+            res.send()
+        } catch (err) {
+            console.error(err)
+            res.status(404).send()
+        }
+    })
+
 router.route('/:id/kick/:uid')
     /**
      * @openapi
      * "/clan/{id}/kick/{uid}":
-     *   delete:
+     *   patch:
      *     tags:
      *       - Clan
      *     summary: Kick a player
@@ -607,6 +652,41 @@ router.route('/:id/kick/:uid')
 
         await clan.removeMember(uid)
         res.send()
+    })
+
+router.route('/:id/invitations')
+    /**
+     * @openapi
+     * "/clan/invitations":
+     *   get:
+     *     tags:
+     *       - Clan
+     *     summary: Get all invitations sent by clan
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the clan
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     */
+    .get(async (req, res) => {
+        const { id } = req.params
+        const { data, error } = await supabase
+            .from('clanInvitations')
+            .select('*')
+            .eq('clan', parseInt(id))
+
+        if(error) {
+            console.error(error)
+            res.status(500).send()
+            return
+        }
+        
+        res.send(data)
     })
 
 router.route('/:id/ban/:uid')
