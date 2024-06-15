@@ -101,7 +101,7 @@ class Clan {
     async addMember(uid: string) {
         await this.pull()
 
-        if (this.data.memberCount == this.data.memberLimit) {
+        if (this.data.memberCount! >= this.data.memberLimit!) {
             throw new Error('Member limit exceeded')
         }
 
