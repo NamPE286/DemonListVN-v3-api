@@ -43,6 +43,10 @@ class Clan {
     }
 
     async create() {
+        if (this.data.memberLimit && this.data.memberLimit < 0) {
+            throw new Error('Invalid member limit')
+        }
+
         const { data, error } = await supabase
             .from('clans')
             .insert(this.data)
@@ -69,6 +73,10 @@ class Clan {
 
         if (player.data.clan != this.data.id) {
             throw new Error('Cannot give ownership. This player is not this clan\' member')
+        }
+
+        if (this.data.memberLimit && this.data.memberLimit < 0) {
+            throw new Error('Invalid member limit')
         }
 
         const { error } = await supabase
