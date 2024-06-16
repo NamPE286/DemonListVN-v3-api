@@ -38,6 +38,11 @@ router.route('/')
             return
         }
 
+        if (!user.data.rating && !user.data.totalFLpt) {
+            res.status(500).send()
+            return
+        }
+
         req.body.owner = user.data.uid
         delete req.body.id
 
