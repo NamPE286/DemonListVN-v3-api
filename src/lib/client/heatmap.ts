@@ -9,7 +9,7 @@ async function fetchData(uid: string, year: number): Promise<any> {
         .limit(1)
         .single()
 
-    if (data == null || data.length == 0) {
+    if (data == null) {
         return { uid: uid, year: year, days: Array(366).fill(0) }
     }
 

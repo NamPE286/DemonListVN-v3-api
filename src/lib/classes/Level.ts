@@ -15,7 +15,7 @@ class Level {
         const { data, error } = await supabase
             .from('levels')
             .select('*')
-            .eq('id', this.data.id)
+            .eq('id', this.data.id!)
             .single()
 
         if (error) {
@@ -29,7 +29,7 @@ class Level {
     async update() {
         const { error } = await supabase
             .from('levels')
-            .upsert(this.data)
+            .upsert(this.data as any)
 
         if (error) {
             throw error
@@ -40,7 +40,7 @@ class Level {
         const { error } = await supabase
             .from('levels')
             .delete()
-            .eq('id', this.data.id)
+            .eq('id', this.data.id!)
 
         if (error) {
             throw error

@@ -90,7 +90,7 @@ class Record {
     async update() {
         const { error } = await supabase
             .from('records')
-            .upsert(this.data)
+            .upsert(this.data as any)
 
         if (error) {
             console.log(error)

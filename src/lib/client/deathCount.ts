@@ -9,7 +9,7 @@ async function fetchPlayerData(uid: string, levelID: number): Promise<any> {
         .limit(1)
         .single()
 
-    if (data == null || data.length == 0) {
+    if (data == null) {
         return { uid: uid, levelID: levelID, count: Array(100).fill(0) }
     }
 
@@ -24,7 +24,7 @@ async function fetchLevelData(levelID: number): Promise<any> {
         .limit(1)
         .single()
 
-    if (data == null || data.length == 0) {
+    if (data == null) {
         return { levelID: levelID, count: Array(100).fill(0) }
     }
 

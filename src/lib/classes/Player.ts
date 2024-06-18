@@ -15,7 +15,7 @@ class Player {
         const { data, error } = await supabase
             .from('players')
             .select('*, clans!id(*)')
-            .eq('uid', this.data.uid)
+            .eq('uid', this.data.uid!)
             .single()
 
         if (error) {
@@ -44,7 +44,7 @@ class Player {
 
         const { error } = await supabase
             .from('players')
-            .upsert(this.data)
+            .upsert(this.data as any)
 
         if (error) {
             throw error

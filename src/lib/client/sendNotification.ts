@@ -4,7 +4,7 @@ import type { Notification } from "@src/lib/types/Notification"
 export async function sendNotification(notification: Notification) {
     var { data, error } = await supabase
         .from('notifications')
-        .insert(notification)
+        .insert(notification as any)
 
     if (error) {
         throw error

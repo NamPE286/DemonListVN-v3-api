@@ -41,7 +41,7 @@ class ClanInvitation {
     async update() {
         const { error } = await supabase
             .from('clanInvitations')
-            .upsert(this.data)
+            .upsert(this.data as any)
 
         if (error) {
             throw error
@@ -59,7 +59,7 @@ class ClanInvitation {
         const { error } = await supabase
             .from('clanInvitations')
             .delete()
-            .eq('to', this.data.to)
+            .eq('to', this.data.to!)
     }
 
     async reject() {

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@src/lib/types/supabase'
 
-const supabase = createClient(process.env.SUPABASE_API_URL!, process.env.SUPABASE_API_KEY!)
+const supabase = createClient<Database>(process.env.SUPABASE_API_URL!, process.env.SUPABASE_API_KEY!)
 
 export default supabase

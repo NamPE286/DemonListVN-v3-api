@@ -9,7 +9,7 @@ export async function retrieveRecord(user: Player) {
         .neq('userid', user.data.uid)
         .eq('needMod', false)
         .eq('isChecked', false)
-        .eq('reviewer', user.data.uid)
+        .eq('reviewer', user.data.uid!)
         .order('timestamp', { ascending: true })
         .limit(1)
         .single()
@@ -30,9 +30,13 @@ export async function retrieveRecord(user: Player) {
         .limit(1)
         .single()
 
+    if(data == null) {
+        throw new Error("No avaliable record")
+    }
+
     const record = new Record({ userid: data.userid, levelid: data.levelid })
     await record.pull()
-    record.data.reviewer = data.reviewer = user.data.uid
+    record.data.reviewer = data.reviewer = user.data.uid!
     record.update()
 
     return data

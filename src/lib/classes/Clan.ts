@@ -19,13 +19,14 @@ class Clan {
         var { data, error } = await supabase
             .from('clans')
             .select('*, players!owner(*, clans!id(*))')
-            .eq('id', this.data.id)
+            .eq('id', this.data.id!)
             .single()
 
         if (error) {
             throw error
         }
 
+        // @ts-ignore
         this.data = data
         this.#synced = true
     }
@@ -37,7 +38,7 @@ class Clan {
 
         const { data, error } = await supabase
             .from('clans')
-            .insert(this.data)
+            .insert(this.data as any)
             .select()
             .single()
 
@@ -70,7 +71,7 @@ class Clan {
         const { error } = await supabase
             .from('clans')
             .update(this.data)
-            .eq('id', this.data.id)
+            .eq('id', this.data.id!)
 
         if (error) {
             throw error
@@ -79,11 +80,11 @@ class Clan {
         await this.pull()
     }
 
-    async fetchMembers({ start = 0, end = 50, sortBy = 'rating', ascending = 'false' } = {}): Promise<Player[]> {
+    async fetchMembers({ start = 0, end = 50, sortBy = 'rating', ascending = 'false' } = {}) {
         const { data, error } = await supabase
             .from('players')
             .select('*, clans!id(*)')
-            .eq('clan', this.data.id)
+            .eq('clan', this.data.id!)
             .eq('isHidden', false)
             .order(sortBy, { ascending: ascending == 'true', nullsFirst: false })
             .range(start, end)
@@ -154,11 +155,11 @@ class Clan {
         await sendNotification({ to: uid, content: `You've been invited to ${this.data.name} clan!`, redirect: `/clan/${this.data.id}` })
     }
 
-    async fetchRecords({ start = 0, end = 50, sortBy = 'dlPt', ascending = 'false' } = {}): Promise<Record[]> {
+    async fetchRecords({ start = 0, end = 50, sortBy = 'dlPt', ascending = 'false' } = {}) {
         const { data, error } = await supabase
             .from('records')
             .select('*, players!userid!inner(*, clans!id(*)), levels(*)')
-            .eq('players.clan', this.data.id)
+            .eq('players.clan', this.data.id!)
             .eq('players.isHidden', false)
             .eq('isChecked', true)
             .not(sortBy, 'is', null)
