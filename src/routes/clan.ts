@@ -1,7 +1,6 @@
 import supabase from '@src/database/supabase'
 import Clan from '@src/lib/classes/Clan'
 import ClanInvitation from '@src/lib/classes/ClanInvitation'
-import Player from '@src/lib/classes/Player'
 import userAuth from '@src/middleware/userAuth'
 import express from 'express'
 
