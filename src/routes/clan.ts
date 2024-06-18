@@ -76,7 +76,7 @@ router.route('/invitations')
         const { data, error } = await supabase
             .from('clanInvitations')
             .select('*, clans(*, players!owner(*, clans!id(*)))')
-            .eq('to', user.data.uid)
+            .eq('to', user.data.uid!)
 
         if (error) {
             console.error(error)
@@ -524,7 +524,7 @@ router.route('/:id/join')
         const { error } = await supabase
             .from('clanInvitations')
             .delete()
-            .eq('to', user.data.uid)
+            .eq('to', user.data.uid!)
 
         res.send()
     })
