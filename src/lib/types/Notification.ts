@@ -1,7 +1,3 @@
-export type Notification = {
-    to: string
-    content: string
-    status?: number
-    timestamp?: string
-    redirect?: string
-}
+import type { Database } from '@src/lib/types/supabase'
+
+export type Notification = Database['public']['Tables']['notifications']['Update']

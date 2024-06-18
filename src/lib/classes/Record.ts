@@ -1,5 +1,8 @@
 import supabase from '@database/supabase'
 import Level from '@src/lib/classes/Level'
+import type { Database } from '@src/lib/types/supabase'
+
+type Data = Database['public']['Tables']['records']['Update']
 
 async function isLevelExists(id: number) {
     const { data, error } = await supabase
@@ -14,23 +17,6 @@ async function isLevelExists(id: number) {
     return true
 }
 
-interface Data {
-    levelid: number
-    userid: string
-    progress?: number
-    timestamp?: number
-    flPt?: number
-    dlPt?: number
-    refreshRate?: number
-    videoLink?: string
-    mobile?: boolean
-    isChecked?: boolean
-    comment?: string
-    suggestedRating?: number
-    reviewer?: string
-    needMod?: boolean
-    reviewerComment?: string
-}
 
 class Record {
     #synced = false
@@ -56,7 +42,7 @@ class Record {
     }
 
     async submit() {
-        if (!(await isLevelExists(this.data.levelid))) {
+        if (!(await isLevelExists(this.data.levelid!))) {
             let apiLevel: any
             try {
                 apiLevel = await ((await fetch(`https://gdbrowser.com/api/level/${this.data.levelid}`)).json())

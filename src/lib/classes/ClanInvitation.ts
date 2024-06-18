@@ -1,12 +1,8 @@
 import supabase from "@src/database/supabase";
 import Clan from "@src/lib/classes/Clan";
+import type { Database } from '@src/lib/types/supabase'
 
-interface Data {
-    id?: number
-    created_at?: string
-    to: string
-    clan: number
-}
+type Data = Database['public']['Tables']['clanInvitations']['Update']
 
 class ClanInvitation {
     data: Data
@@ -58,7 +54,7 @@ class ClanInvitation {
         }
 
         const clan = new Clan({ id: this.data.clan })
-        await clan.addMember(this.data.to)
+        await clan.addMember(this.data.to!)
 
         const { error } = await supabase
             .from('clanInvitations')

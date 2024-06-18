@@ -154,7 +154,7 @@ router.route('/:id')
             return
         }
 
-        if (!(await isOwner(user.data.uid, parseInt(id))) && !user.data.isAdmin) {
+        if (!(await isOwner(user.data.uid!, parseInt(id))) && !user.data.isAdmin) {
             res.status(403).send()
             return
         }
@@ -198,7 +198,7 @@ router.route('/:id')
             return
         }
 
-        if (!(await isOwner(user.data.uid, parseInt(id))) && !user.data.isAdmin) {
+        if (!(await isOwner(user.data.uid!, parseInt(id))) && !user.data.isAdmin) {
             res.status(403).send()
             return
         }
@@ -479,7 +479,7 @@ router.route('/leave')
             return
         }
 
-        await clan.removeMember(user.data.uid)
+        await clan.removeMember(user.data.uid!)
 
         res.send()
     })
@@ -519,7 +519,7 @@ router.route('/:id/join')
             return
         }
 
-        await clan.addMember(user.data.uid)
+        await clan.addMember(user.data.uid!)
 
         const { error } = await supabase
             .from('clanInvitations')

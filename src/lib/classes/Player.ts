@@ -1,32 +1,7 @@
 import supabase from '@database/supabase'
+import type { Database } from '@src/lib/types/supabase'
 
-interface Data {
-    uid: string
-    id?: number
-    name?: string
-    email?: string
-    avatar?: string
-    facebook?: string
-    youtube?: string
-    discord?: string
-    totalFLpt?: number
-    totalDLpt?: number
-    flrank?: number
-    dlrank?: number
-    isAdmin?: boolean
-    isBanned?: boolean
-    isHidden?: boolean
-    rating?: number
-    dlMaxPt?: number
-    flMaxPt?: number
-    overallRank?: number
-    province?: string
-    city?: string
-    isTrusted?: boolean
-    reviewCooldown?: string
-    clan?: number | null
-    renameCooldown?: string
-}
+type Data = Database['public']['Tables']['players']['Update']
 
 class Player {
     #synced = false

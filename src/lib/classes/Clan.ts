@@ -3,27 +3,15 @@ import ClanInvitation from '@src/lib/classes/ClanInvitation'
 import Player from '@src/lib/classes/Player'
 import Record from '@src/lib/classes/Record'
 import { sendNotification } from '@src/lib/client'
+import type { Database } from '@src/lib/types/supabase'
 
-interface Data {
-    id?: number
-    created_at?: string
-    name?: string
-    tag?: string
-    owner?: string
-    isPublic?: boolean
-    tagTextColor?: string
-    tagBgColor?: string
-    memberCount?: number
-    rating?: number
-    rank?: number
-    memberLimit?: number
-}
+type Data = Database['public']['Tables']['clans']['Update']
 
 class Clan {
     #synced = false
     data: Data
 
-    constructor(data: Data) {
+    constructor(data: any) {
         this.data = data
     }
 

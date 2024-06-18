@@ -23,7 +23,7 @@ router.route('/')
         }
         
         try {
-            res.send(await getAllAPIKey(res.locals.user.data.uid))
+            res.send(await getAllAPIKey(res.locals.user.data.uid!))
         } catch (err) {
             res.status(500).send()
         }
@@ -46,7 +46,7 @@ router.route('/')
         }
         
         try {
-            await createAPIKey(res.locals.user.data.uid)
+            await createAPIKey(res.locals.user.data.uid!)
             res.send()
         } catch (err) {
             res.status(500).send()
@@ -79,7 +79,7 @@ router.route('/:key')
         }
         
         try {
-            await deleteAPIKey(res.locals.user.data.uid, req.params.key)
+            await deleteAPIKey(res.locals.user.data.uid!, req.params.key)
             res.send()
         } catch (err) {
             res.status(500).send()

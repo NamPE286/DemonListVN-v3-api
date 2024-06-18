@@ -1,19 +1,7 @@
 import supabase from '@database/supabase'
+import type { Database } from '@src/lib/types/supabase'
 
-interface Data {
-    id: number
-    name?: string
-    creator?: string
-    videoID?: string
-    minProgress?: string
-    flTop?: number
-    dlTop?: number
-    flPt?: number
-    dlPt?: number
-    rating?: number
-    songID?: number | null
-    avgSuggestedRating?: number
-}
+type Data = Database['public']['Tables']['levels']['Update']
 
 class Level {
     #synced = false
