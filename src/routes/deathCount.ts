@@ -44,24 +44,24 @@ router.route('/:uid/:levelID')
 router.route('/:levelID/:count')
     /**
      * @openapi
-     * "/deathCount/{uid}/{levelID}":
+     * "/deathCount/{levelID}/{count}":
      *   post:
      *     tags:
      *       - Death count
      *     summary: Add player's level death count
      *     parameters:
-     *       - name: uid
+     *       - name: id
      *         in: path
-     *         description: The uid of the player
+     *         description: The id of the level
      *         required: true
      *         schema:
-     *           type: string
+     *           type: number
      *       - name: count
      *         in: path
      *         description: Serialized array string
      *         required: true
      *         schema:
-     *           type: number
+     *           type: string
      *     responses:
      *       200:
      *         description: Success
