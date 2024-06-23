@@ -193,12 +193,11 @@ router.route('/heatmap/:count')
      *         description: Success
      */
     .post(userAuth, async (req, res) => {
+        console.log('heatmap')
+        res.send()
         try {
             updateHeatmap(res.locals.user.data.uid!, parseInt(req.params.count))
-            res.send()
-        } catch {
-            res.status(500).send()
-        }
+        } catch { }
     })
 
 

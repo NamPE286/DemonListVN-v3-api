@@ -70,6 +70,8 @@ router.route('/:levelID/:count')
      *             schema:
      */
     .post(userAuth, async (req, res) => {
+        console.log('deathCount')
+        res.send()
         const { count } = req.params
         const arr: any[] = count.split('|')
 
@@ -81,10 +83,8 @@ router.route('/:levelID/:count')
             const { levelID } = req.params
             const uid = res.locals.user.data.uid!
 
-            res.send(await updateDeathCount(uid, parseInt(levelID), arr));
-        } catch {
-            res.status(500).send();
-        }
+            await updateDeathCount(uid, parseInt(levelID), arr);
+        } catch { }
     })
 
 export default router
