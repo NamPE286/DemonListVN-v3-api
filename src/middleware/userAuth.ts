@@ -42,7 +42,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
                 throw error
             }
 
-            res.locals.user = new Player(data.players)
+            res.locals.user = new Player(data.players!)
             res.locals.authType = 'key'
 
             if (res.locals.user.data.isBanned) {
