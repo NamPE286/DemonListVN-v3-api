@@ -12,7 +12,7 @@ const port = 8080
 app.use(express.json())
 app.use(cors())
 
-cron.schedule('* 30 * * *', async () => {
+cron.schedule('0 */15 * * * *', async () => {
     await supabase.rpc('updateRank')
     await supabase.rpc('updateList')
 
