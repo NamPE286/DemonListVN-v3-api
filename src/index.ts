@@ -3,22 +3,11 @@ import cors from 'cors'
 import rateLimit from 'express-rate-limit'
 import swaggerDocs from '@src/utils/swagger.ts'
 import { version } from '../package.json'
-import cron from 'node-cron'
-import supabase from '@src/database/supabase'
-
 const app = express()
 const port = 8080
 
 app.use(express.json())
 app.use(cors())
-
-cron.schedule('0 */15 * * * *', async () => {
-    await supabase.rpc('updateRank')
-    await supabase.rpc('updateList')
-
-    console.log("Refreshing...")
-});
-
 app.use(rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 1000,
