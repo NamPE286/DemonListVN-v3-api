@@ -19,9 +19,9 @@ router.route('/')
      *           application/json:
      *             schema:
      */
-    .patch(adminAuth, (req, res) => {
-        supabase.rpc('updateRank')
-        supabase.rpc('updateList')
+    .patch(adminAuth, async (req, res) => {
+        await supabase.rpc('updateRank')
+        await supabase.rpc('updateList')
 
         res.send()
     })
