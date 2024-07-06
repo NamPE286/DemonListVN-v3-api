@@ -1,7 +1,6 @@
 import supabase from '@database/supabase'
 import ClanInvitation from '@src/lib/classes/ClanInvitation'
 import Player from '@src/lib/classes/Player'
-import Record from '@src/lib/classes/Record'
 import { sendNotification } from '@src/lib/client'
 import type { Database } from '@src/lib/types/supabase'
 
