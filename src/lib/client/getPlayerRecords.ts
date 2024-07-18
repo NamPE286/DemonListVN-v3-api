@@ -1,8 +1,12 @@
 import supabase from "@src/database/supabase"
-import Record from "@src/lib/classes/Record"
 
-export async function getPlayerRecords(uid: string, { start = 0, end = 50, sortBy = 'pt', ascending = 'false', isChecked = 'true' } = {}) {
+export async function getPlayerRecords(uid: string, { start = '0', end = '50', sortBy = 'pt', ascending = 'false', isChecked = 'true' } = {}) {
     let query = supabase
+        .from('records')
+        .select('*, levels!inner(*)')
+        .eq('userid', uid)
+        .eq('isChecked', isChecked == 'true')
+    let query1 = supabase
         .from('records')
         .select('*, levels!inner(*)')
         .eq('userid', uid)
@@ -11,24 +15,32 @@ export async function getPlayerRecords(uid: string, { start = 0, end = 50, sortB
     if (sortBy == 'pt') {
         query = query
             .order('dlPt', { ascending: ascending == 'true' })
+            .order('timestamp', { ascending: false })
+            .not('dlPt', 'is', null)
+            .range(parseInt(start), parseInt(end))
+        query1 = query1
             .order('flPt', { ascending: ascending == 'true' })
-    } else {
-        query = query.order(sortBy, { ascending: ascending == 'true' })
+            .order('timestamp', { ascending: false })
+            .not('flPt', 'is', null)
+            .range(parseInt(start), parseInt(end))
+
+        return {
+            dl: (await query).data,
+            fl: (await query1).data
+        }
     }
 
-    query = query.range(start, end)
+    query = query
+        .order(sortBy, { ascending: ascending == 'true' })
+        .not('dlPt', 'is', null)
+        .range(parseInt(start), parseInt(end))
+    query1 = query1
+        .order(sortBy, { ascending: ascending == 'true' })
+        .not('flPt', 'is', null)
+        .range(parseInt(start), parseInt(end))
 
-    const { data, error } = await query
-
-    if (error) {
-        throw error
+    return {
+        dl: (await query).data,
+        fl: (await query1).data
     }
-
-    const records: Record[] = []
-
-    for (const i of data) {
-        records.push(new Record(i))
-    }
-
-    return records
 }
