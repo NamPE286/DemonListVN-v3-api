@@ -16,7 +16,7 @@ export async function getPlayerRecords(uid: string, { start = '0', end = '50', s
         query = query
             .order('dlPt', { ascending: ascending == 'true' })
             .order('timestamp', { ascending: false })
-            .not('dlPt', 'is', null)
+            .is('flPt', null)
             .range(parseInt(start), parseInt(end))
         query1 = query1
             .order('flPt', { ascending: ascending == 'true' })
