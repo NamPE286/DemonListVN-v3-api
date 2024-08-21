@@ -702,8 +702,4 @@ router.route('/:id/ban/:uid')
 
     })
 
-
-
-
-
 export default router

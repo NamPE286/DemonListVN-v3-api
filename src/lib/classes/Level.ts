@@ -1,4 +1,5 @@
 import supabase from '@database/supabase'
+import { addChangelog } from '@src/lib/client/addChangelog'
 import type { Database } from '@src/lib/types/supabase'
 
 type Data = Database['public']['Tables']['levels']['Update']
@@ -27,13 +28,24 @@ class Level {
     }
 
     async update() {
-        const { error } = await supabase
+        let { data } = await supabase
+            .from('levels')
+            .select('*')
+            .eq('id', this.data.id!)
+            .limit(1)
+            .single()
+
+        let { error } = await supabase
             .from('levels')
             .upsert(this.data as any)
+
+        await supabase.rpc('updateList')
 
         if (error) {
             throw error
         }
+
+        addChangelog(this.data.id!, data)
     }
 
     async delete() {
@@ -48,11 +60,11 @@ class Level {
     }
 
     getSongPublicURL() {
-        if(!this.#synced) {
+        if (!this.#synced) {
             throw new Error('Level is not synced with database')
         }
 
-        if(!this.data.songID) {
+        if (!this.data.songID) {
             throw new Error("Not avaliable")
         }
 
@@ -65,11 +77,11 @@ class Level {
     }
 
     async deleteSong() {
-        if(!this.#synced) {
+        if (!this.#synced) {
             throw new Error('Level is not synced with database')
         }
 
-        if(!this.data.songID) {
+        if (!this.data.songID) {
             return
         }
 
@@ -77,8 +89,8 @@ class Level {
             .storage
             .from('songs')
             .remove([`${this.data.songID}.mp3`])
-        
-        if(error) {
+
+        if (error) {
             throw error
         }
 
