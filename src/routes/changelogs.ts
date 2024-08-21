@@ -112,10 +112,10 @@ router.route('/publish')
             result = result.slice(0, -1)
         }
 
-        // await supabase
-        //     .from('changelogs')
-        //     .update({ published: true })
-        //     .eq('published', false)
+        await supabase
+            .from('changelogs')
+            .update({ published: true })
+            .eq('published', false)
 
         logger.changelog(result)
         res.send()
