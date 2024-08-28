@@ -3,6 +3,7 @@ import Player from '@lib/classes/Player'
 import userAuth from '@src/middleware/userAuth'
 import { getHeatmap, getPlayerRecords } from '@src/lib/client'
 import { updateHeatmap } from '@src/lib/client'
+import { getPlayerSubmissions } from '@src/lib/client/getPlayerSubmissions'
 
 const router = express.Router()
 
@@ -193,12 +194,38 @@ router.route('/heatmap/:count')
      *         description: Success
      */
     .post(userAuth, async (req, res) => {
-        console.log('heatmap')
         res.send()
         try {
             updateHeatmap(res.locals.user.data.uid!, parseInt(req.params.count))
         } catch { }
     })
 
+router.route('/:uid/submissions')
+    /**
+     * @openapi
+     * "/{uid}/submissions":
+     *   get:
+     *     tags:
+     *       - Player
+     *     summary: Get player's submissions
+     *     parameters:
+     *       - name: uid
+     *         in: path
+     *         description: The UID of the player
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Success
+     */
+    .get(async (req, res) => {
+        const { uid } = req.params
+        try {
+            res.send(await getPlayerSubmissions(uid))
+        } catch {
+            res.status(500).send()
+        }
+    })
 
 export default router
