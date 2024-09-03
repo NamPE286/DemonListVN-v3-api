@@ -10,6 +10,10 @@ export default async function (req: Request, res: Response, next: NextFunction) 
         return
     }
 
+    const getUrl = function () {
+        return req.protocol + "://" + req.get('host') + req.originalUrl;
+    }
+
     try {
         const token = req.headers.authorization.split(' ')[1]
         const decoded = jwt.verify(token, process.env.JWT_SECRET!)
@@ -21,6 +25,11 @@ export default async function (req: Request, res: Response, next: NextFunction) 
         } catch { }
 
         if (player.data.isBanned) {
+            res.status(401).send();
+            return;
+        }
+
+        if (player.data.recordCount == 0 && !(getUrl().endsWith('submission') && req.method == 'POST')) {
             res.status(401).send();
             return;
         }
@@ -46,6 +55,11 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             res.locals.authType = 'key'
 
             if (res.locals.user.data.isBanned) {
+                res.status(401).send();
+                return;
+            }
+
+            if (res.locals.user.data.recordCount == 0 && !(getUrl().endsWith('submission') && req.method == 'POST')) {
                 res.status(401).send();
                 return;
             }

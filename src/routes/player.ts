@@ -44,11 +44,6 @@ router.route('/')
             return
         }
 
-        if (user.data.recordCount == 0) {
-            res.status(401).send()
-            return
-        }
-
         try {
             const player = new Player(data)
             await player.update()
