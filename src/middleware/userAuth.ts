@@ -29,7 +29,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             return;
         }
 
-        if (player.data.recordCount == 0 && !(getUrl().endsWith('submission') && req.method == 'POST')) {
+        if (player.data.recordCount == 0 && !(getUrl().endsWith('submission') && req.method == 'POST') && !player.data.isAdmin) {
             res.status(401).send();
             return;
         }
@@ -59,7 +59,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
                 return;
             }
 
-            if (res.locals.user.data.recordCount == 0 && !(getUrl().endsWith('submission') && req.method == 'POST')) {
+            if (res.locals.user.data.recordCount == 0 && !(getUrl().endsWith('submission') && req.method == 'POST') && !res.locals.user.data.isAdmin) {
                 res.status(401).send();
                 return;
             }
