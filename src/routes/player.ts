@@ -41,6 +41,12 @@ router.route('/')
 
         if (user.data.uid != data.uid && !user.data.isAdmin) {
             res.status(403).send()
+            return
+        }
+
+        if (user.data.recordCount == 0) {
+            res.status(401).send()
+            return
         }
 
         try {

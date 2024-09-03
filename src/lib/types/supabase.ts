@@ -412,6 +412,7 @@ export type Database = {
           overallRank: number | null
           province: string | null
           rating: number | null
+          recordCount: number
           renameCooldown: string
           reviewCooldown: string | null
           totalDLpt: number | null
@@ -439,6 +440,7 @@ export type Database = {
           overallRank?: number | null
           province?: string | null
           rating?: number | null
+          recordCount?: number
           renameCooldown?: string
           reviewCooldown?: string | null
           totalDLpt?: number | null
@@ -466,6 +468,7 @@ export type Database = {
           overallRank?: number | null
           province?: string | null
           rating?: number | null
+          recordCount?: number
           renameCooldown?: string
           reviewCooldown?: string | null
           totalDLpt?: number | null
