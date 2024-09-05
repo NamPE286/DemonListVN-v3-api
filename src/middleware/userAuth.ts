@@ -10,10 +10,6 @@ export default async function (req: Request, res: Response, next: NextFunction) 
         return
     }
 
-    const getUrl = function () {
-        return req.protocol + "://" + req.get('host') + req.originalUrl;
-    }
-
     try {
         const token = req.headers.authorization.split(' ')[1]
         const decoded = jwt.verify(token, process.env.JWT_SECRET!)
@@ -29,9 +25,13 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             return;
         }
 
-        if (player.data.recordCount === 0 && !(getUrl().endsWith('submission') && req.method == 'POST') && !player.data.isAdmin) {
-            res.status(401).send();
-            return;
+        if (player.data.recordCount === 0 && !player.data.isAdmin) {
+            if (req.originalUrl.endsWith('submission') && req.method == 'POST') { }
+            else if (req.originalUrl.startsWith('/record') && req.method == 'DELETE') { }
+            else {
+                res.status(401).send();
+                return;
+            }
         }
 
         res.locals.user = player
@@ -59,7 +59,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
                 return;
             }
 
-            if (res.locals.user.data.recordCount === 0 && !(getUrl().endsWith('submission') && req.method == 'POST') && !res.locals.user.data.isAdmin) {
+            if (res.locals.user.data.recordCount === 0 && !(req.originalUrl.endsWith('submission') && req.method == 'POST') && !res.locals.user.data.isAdmin) {
                 res.status(401).send();
                 return;
             }
