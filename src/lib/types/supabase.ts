@@ -400,6 +400,7 @@ export type Database = {
           dlMaxPt: number | null
           dlrank: number | null
           email: string | null
+          exp: number
           facebook: string | null
           flMaxPt: number | null
           flrank: number | null
@@ -428,6 +429,7 @@ export type Database = {
           dlMaxPt?: number | null
           dlrank?: number | null
           email?: string | null
+          exp?: number
           facebook?: string | null
           flMaxPt?: number | null
           flrank?: number | null
@@ -456,6 +458,7 @@ export type Database = {
           dlMaxPt?: number | null
           dlrank?: number | null
           email?: string | null
+          exp?: number
           facebook?: string | null
           flMaxPt?: number | null
           flrank?: number | null
