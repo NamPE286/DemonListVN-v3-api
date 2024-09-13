@@ -525,6 +525,36 @@ export type Database = {
           },
         ]
       }
+      promotions: {
+        Row: {
+          created_at: string
+          description: string
+          end: string
+          id: number
+          imgUrl: string
+          start: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          end: string
+          id?: number
+          imgUrl: string
+          start: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          end?: string
+          id?: number
+          imgUrl?: string
+          start?: string
+          title?: string
+        }
+        Relationships: []
+      }
       PVPPlayers: {
         Row: {
           joined_at: string
