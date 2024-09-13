@@ -267,6 +267,36 @@ export type Database = {
           },
         ]
       }
+      events: {
+        Row: {
+          created_at: string
+          description: string
+          end: string
+          id: number
+          imgUrl: string
+          start: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          end: string
+          id?: number
+          imgUrl: string
+          start: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          end?: string
+          id?: number
+          imgUrl?: string
+          start?: string
+          title?: string
+        }
+        Relationships: []
+      }
       heatmap: {
         Row: {
           days: number[]
@@ -524,36 +554,6 @@ export type Database = {
             referencedColumns: ["uid"]
           },
         ]
-      }
-      promotions: {
-        Row: {
-          created_at: string
-          description: string
-          end: string
-          id: number
-          imgUrl: string
-          start: string
-          title: string
-        }
-        Insert: {
-          created_at?: string
-          description: string
-          end: string
-          id?: number
-          imgUrl: string
-          start: string
-          title: string
-        }
-        Update: {
-          created_at?: string
-          description?: string
-          end?: string
-          id?: number
-          imgUrl?: string
-          start?: string
-          title?: string
-        }
-        Relationships: []
       }
       PVPPlayers: {
         Row: {

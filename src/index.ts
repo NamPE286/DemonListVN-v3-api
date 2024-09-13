@@ -52,6 +52,7 @@ app.use('/clan', require(`./routes/clan`).default)
 app.use('/clans', require(`./routes/clans`).default)
 app.use('/deathCount', require(`./routes/deathCount`).default)
 app.use('/changelogs', require(`./routes/changelogs`).default)
+app.use('/events', require(`./routes/events`).default)
 
 app.listen(port, () => {
     console.log(`Server started on port ${port}`)
