@@ -55,5 +55,6 @@ app.use('/changelogs', require(`./routes/changelogs`).default)
 
 app.listen(port, () => {
     console.log(`Server started on port ${port}`)
+    console.log('Timezone: ' + Intl.DateTimeFormat().resolvedOptions().timeZone)
     swaggerDocs(app, port)
 })
