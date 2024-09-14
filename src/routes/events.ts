@@ -1,5 +1,5 @@
 import express from 'express'
-import { getAllEvents, getOngoingEvents } from '@src/lib/client/events'
+import { getAllEvents, getOngoingEvents } from '@src/lib/client/event'
 
 const router = express.Router()
 
@@ -12,6 +12,20 @@ router.route('/all')
         }
     })
 
+/**
+ * @openapi
+ * "/events/ongoing":
+ *   get:
+ *     tags:
+ *       - Event
+ *     summary: Get ongoing events
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ */
 router.route('/ongoing')
     .get(async (req, res) => {
         try {
