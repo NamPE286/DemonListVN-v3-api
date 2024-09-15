@@ -8,7 +8,7 @@ const router = express.Router()
 router.route('/:id')
     /**
      * @openapi
-     * "/events/{id}":
+     * "/event/{id}":
      *   get:
      *     tags:
      *       - Event
@@ -40,7 +40,7 @@ router.route('/:id')
 router.route('/:id/proofs')
     /**
      * @openapi
-     * "/events/{id}/proofs":
+     * "/event/{id}/proofs":
      *   get:
      *     tags:
      *       - Event
@@ -72,7 +72,7 @@ router.route('/:id/proofs')
 router.route('/:id/proof/:uid')
     /**
      * @openapi
-     * "/events/{id}/proof/{uid}":
+     * "/event/{id}/proof/{uid}":
      *   get:
      *     tags:
      *       - Event
@@ -110,7 +110,7 @@ router.route('/:id/proof/:uid')
 router.route('/proof')
     /**
      * @openapi
-     * "/events/{id}/proof":
+     * "/event/proof":
      *   put:
      *     tags:
      *       - Event
@@ -135,7 +135,7 @@ router.route('/proof')
     })
     /**
      * @openapi
-     * "/events/{id}/proof":
+     * "/event/proof":
      *   post:
      *     tags:
      *       - Event
@@ -153,6 +153,7 @@ router.route('/proof')
      */
     .post(userAuth, async (req, res) => {
         req.body.userid = res.locals.user.data.uid
+        req.body.accepted = false
 
         try {
             res.send(await insertEventProof(req.body))
