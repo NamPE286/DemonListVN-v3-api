@@ -1,5 +1,5 @@
 import express from 'express'
-import { getEvent, getEventProof, getEventProofs, insertEventProof, upsertEventProof } from '@src/lib/client/event'
+import { deleteEventProof, getEvent, getEventProof, getEventProofs, insertEventProof, upsertEventProof } from '@src/lib/client/event'
 import userAuth from '@src/middleware/userAuth'
 import adminAuth from '@src/middleware/adminAuth'
 
@@ -104,6 +104,15 @@ router.route('/:id/proof/:uid')
             res.send(await getEventProof(parseInt(id), uid))
         } catch {
             res.status(500).send();
+        }
+    })
+    .delete(userAuth, async (req, res) => {
+        const { id, uid } = req.params
+
+        try {
+            res.send(await deleteEventProof(parseInt(id), uid))
+        } catch {
+            res.status(500).send()
         }
     })
 

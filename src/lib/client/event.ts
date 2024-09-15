@@ -96,3 +96,14 @@ export async function insertEventProof(data: any) {
         throw error
     }
 }
+
+export async function deleteEventProof(eventID: number, uid: string) {
+    const { error } = await supabase
+        .from('eventProofs')
+        .delete()
+        .match({ eventID: eventID, userid: uid })
+
+    if (error) {
+        throw error
+    }
+}
