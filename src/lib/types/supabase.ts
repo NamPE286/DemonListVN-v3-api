@@ -267,31 +267,79 @@ export type Database = {
           },
         ]
       }
+      eventProofs: {
+        Row: {
+          accepted: boolean
+          content: string
+          created_at: string
+          eventID: number
+          userid: string
+        }
+        Insert: {
+          accepted?: boolean
+          content: string
+          created_at?: string
+          eventID: number
+          userid: string
+        }
+        Update: {
+          accepted?: boolean
+          content?: string
+          created_at?: string
+          eventID?: number
+          userid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventProof_eventID_fkey"
+            columns: ["eventID"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventProof_userid_fkey"
+            columns: ["userid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       events: {
         Row: {
+          content: string | null
           created_at: string
           description: string
-          end: string
+          end: string | null
+          exp: number | null
           id: number
           imgUrl: string
+          redirect: string | null
           start: string
           title: string
         }
         Insert: {
+          content?: string | null
           created_at?: string
           description: string
-          end: string
+          end?: string | null
+          exp?: number | null
           id?: number
           imgUrl: string
+          redirect?: string | null
           start: string
           title: string
         }
         Update: {
+          content?: string | null
           created_at?: string
           description?: string
-          end?: string
+          end?: string | null
+          exp?: number | null
           id?: number
           imgUrl?: string
+          redirect?: string | null
           start?: string
           title?: string
         }
@@ -557,17 +605,17 @@ export type Database = {
       }
       PVPPlayers: {
         Row: {
-          joined_at: string
+          joined_at: string | null
           player: string
           room: number
         }
         Insert: {
-          joined_at?: string
+          joined_at?: string | null
           player: string
           room: number
         }
         Update: {
-          joined_at?: string
+          joined_at?: string | null
           player?: string
           room?: number
         }
