@@ -38,6 +38,27 @@ router.route('/:id')
     })
 
 router.route('/:id/proofs')
+    /**
+     * @openapi
+     * "/events/{id}/proofs":
+     *   get:
+     *     tags:
+     *       - Event
+     *     summary: Get event's proofs
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the event
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
     .get(async (req, res) => {
         const { id } = req.params
 
@@ -49,6 +70,33 @@ router.route('/:id/proofs')
     })
 
 router.route('/:id/proof/:uid')
+    /**
+     * @openapi
+     * "/events/{id}/proof/{uid}":
+     *   get:
+     *     tags:
+     *       - Event
+     *     summary: Get user's event proof
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the event
+     *         required: true
+     *         schema:
+     *           type: number
+     *       - name: uid
+     *         in: path
+     *         description: The id of the event
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
     .get(async (req, res) => {
         const { id, uid } = req.params
 
@@ -60,6 +108,24 @@ router.route('/:id/proof/:uid')
     })
 
 router.route('/proof')
+    /**
+     * @openapi
+     * "/events/{id}/proof/{uid}":
+     *   put:
+     *     tags:
+     *       - Event
+     *     summary: Add/Edit user's event proof
+     *     requestBody:
+     *         required: true
+     *         content:
+     *             application/json:
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
     .put(adminAuth, async (req, res) => {
         try {
             res.send(await upsertEventProof(req.body))
@@ -67,9 +133,27 @@ router.route('/proof')
             res.status(500).send();
         }
     })
+    /**
+     * @openapi
+     * "/events/{id}/proof/{uid}":
+     *   post:
+     *     tags:
+     *       - Event
+     *     summary: Create new event proof
+     *     requestBody:
+     *         required: true
+     *         content:
+     *             application/json:
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
     .post(userAuth, async (req, res) => {
         req.body.userid = res.locals.user.data.uid
-        
+
         try {
             res.send(await insertEventProof(req.body))
         } catch {
