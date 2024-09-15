@@ -106,8 +106,28 @@ router.route('/:id/proof/:uid')
             res.status(500).send();
         }
     })
+    /**
+     * @openapi
+     * "/event/{id}/proof/{uid}":
+     *   get:
+     *     tags:
+     *       - Event
+     *     summary: Delete a player's event proof
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
     .delete(userAuth, async (req, res) => {
         const { id, uid } = req.params
+        const user = res.locals.user.data
+
+        if (!user.isAdmin && !(user.uid == uid)) {
+            res.status(401).send()
+            return
+        }
 
         try {
             res.send(await deleteEventProof(parseInt(id), uid))
