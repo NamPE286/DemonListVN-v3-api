@@ -110,7 +110,7 @@ router.route('/:id/proof/:uid')
 router.route('/proof')
     /**
      * @openapi
-     * "/events/{id}/proof/{uid}":
+     * "/events/{id}/proof":
      *   put:
      *     tags:
      *       - Event
@@ -135,7 +135,7 @@ router.route('/proof')
     })
     /**
      * @openapi
-     * "/events/{id}/proof/{uid}":
+     * "/events/{id}/proof":
      *   post:
      *     tags:
      *       - Event
