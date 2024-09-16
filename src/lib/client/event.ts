@@ -64,7 +64,7 @@ export async function getEventProof(eventID: number, uid: string) {
 export async function getEventProofs(eventID: number | null, { start = 0, end = 50, accepted = 'true' } = {}) {
     let query = supabase
         .from('eventProofs')
-        .select('*')
+        .select('*, events(*), players(*)')
 
     if (eventID) {
         query = query.eq('eventID', eventID)

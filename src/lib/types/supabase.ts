@@ -291,14 +291,14 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "eventProof_eventID_fkey"
+            foreignKeyName: "eventProofs_eventID_fkey"
             columns: ["eventID"]
             isOneToOne: false
             referencedRelation: "events"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "eventProof_userid_fkey"
+            foreignKeyName: "eventProofs_userid_fkey"
             columns: ["userid"]
             isOneToOne: false
             referencedRelation: "players"
@@ -479,6 +479,7 @@ export type Database = {
           dlrank: number | null
           email: string | null
           exp: number
+          extraExp: number | null
           facebook: string | null
           flMaxPt: number | null
           flrank: number | null
@@ -508,6 +509,7 @@ export type Database = {
           dlrank?: number | null
           email?: string | null
           exp?: number
+          extraExp?: number | null
           facebook?: string | null
           flMaxPt?: number | null
           flrank?: number | null
@@ -537,6 +539,7 @@ export type Database = {
           dlrank?: number | null
           email?: string | null
           exp?: number
+          extraExp?: number | null
           facebook?: string | null
           flMaxPt?: number | null
           flrank?: number | null
