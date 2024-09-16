@@ -1,6 +1,6 @@
 import supabase from "@src/database/supabase";
 
-export async function getAllEvents() {
+export async function getEvents() {
 
 }
 
@@ -61,14 +61,21 @@ export async function getEventProof(eventID: number, uid: string) {
     return data
 }
 
-export async function getEventProofs(eventID: number, { start = 0, end = 50, accepted = 'true' } = {}) {
-    const { data, error } = await supabase
+export async function getEventProofs(eventID: number | null, { start = 0, end = 50, accepted = 'true' } = {}) {
+    let query = supabase
         .from('eventProofs')
         .select('*')
-        .eq('eventID', eventID)
+
+    if (eventID) {
+        query = query.eq('eventID', eventID)
+    }
+
+    query = query
         .eq('accepted', accepted == 'true')
         .order('created_at', { ascending: true })
         .range(start, end)
+
+    const { data, error } = await query
 
     if (error) {
         throw error

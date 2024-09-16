@@ -1,12 +1,12 @@
 import express from 'express'
-import { getAllEvents, getOngoingEvents } from '@src/lib/client/event'
+import { getEvents, getOngoingEvents, getEventProofs } from '@src/lib/client/event'
 
 const router = express.Router()
 
 router.route('/all')
     .get(async (req, res) => {
         try {
-            res.send(await getAllEvents())
+            res.send(await getEvents())
         } catch {
             res.status(500).send()
         }
@@ -30,6 +30,15 @@ router.route('/ongoing')
     .get(async (req, res) => {
         try {
             res.send(await getOngoingEvents())
+        } catch {
+            res.status(500).send()
+        }
+    })
+
+router.route('/proofs')
+    .get(async (req, res) => {
+        try {
+            res.send(await getEventProofs(null, req.query))
         } catch {
             res.status(500).send()
         }
