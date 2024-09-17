@@ -109,7 +109,7 @@ router.route('/:id/proof/:uid')
     /**
      * @openapi
      * "/event/{id}/proof/{uid}":
-     *   get:
+     *   delete:
      *     tags:
      *       - Event
      *     summary: Delete a player's event proof

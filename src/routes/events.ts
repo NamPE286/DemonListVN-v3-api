@@ -35,6 +35,36 @@ router.route('/ongoing')
         }
     })
 
+/**
+ * @openapi
+ * "/proofs":
+ *   delete:
+ *     tags:
+ *       - Event
+ *     summary: Get event proofs
+ *     parameters:
+ *       - name: start
+ *         in: query
+ *         description: Range start index
+ *         required: false
+ *         schema:
+ *           type: number
+ *       - name: end
+ *         in: query
+ *         description: Range end index
+ *         required: false
+ *         schema:
+ *           type: number
+ *       - name: accepted
+ *         in: query
+ *         description: Whether the proof is accepted
+ *         required: false
+ *         schema:
+ *           type: boolean
+ *     responses:
+ *       200:
+ *         description: Success
+ */
 router.route('/proofs')
     .get(async (req, res) => {
         try {
