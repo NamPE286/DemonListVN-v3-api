@@ -45,6 +45,13 @@ router.route('/dl')
      *         schema:
      *           type: boolean
      *           default: false
+     *       - name: uid
+     *         in: query
+     *         description: Progress of player
+     *         required: false
+     *         schema:
+     *           type: string
+     *           default: false
      *     responses:
      *       200:
      *         description: Success
