@@ -48,6 +48,7 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
         .from('records')
         .select('levelid, userid, progress')
         .eq('userid', uid)
+        .eq('isChecked', true)
         .in('levelid', IDs)
 
     if (b.error || !b.data) {
