@@ -34,7 +34,12 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
     }
 
     if (!uid) {
-        return a.data
+        const res = []
+
+        for (const i of a.data) {
+            res.push({ data: i })
+        }
+        return res
     }
 
     const IDs = convertToIDArray(a.data);
@@ -50,6 +55,7 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
     }
 
     const mp = new Map<number, typeof b.data[0]>
+    const res = []
 
     for (const i of b.data) {
         mp.set(i.levelid, i)
@@ -61,7 +67,10 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
         }
 
         (i as any).progress = mp.get(i.id)?.progress
+        res.push({ data: i })
     }
 
-    return a.data
+    console.log(res)
+
+    return res
 }

@@ -34,7 +34,12 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
     }
 
     if (!uid) {
-        return a.data
+        const res = []
+
+        for (const i of a.data) {
+            res.push({ data: i })
+        }
+        return res
     }
 
     const IDs = convertToIDArray(a.data);
@@ -50,6 +55,7 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
     }
 
     const mp = new Map<number, typeof b.data[0]>
+    const res = []
 
     for (const i of b.data) {
         mp.set(i.levelid, i)
@@ -61,6 +67,7 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
         }
 
         (i as any).progress = mp.get(i.id)?.progress
+        res.push({ data: i })
     }
 
     return a.data
