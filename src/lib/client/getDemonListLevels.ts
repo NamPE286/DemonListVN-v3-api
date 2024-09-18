@@ -30,7 +30,7 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
     }
 
     for (const i of a.data) {
-        (i as any).progress = 0
+        (i as any).record = null
     }
 
     if (!uid) {
@@ -48,7 +48,6 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
         .from('records')
         .select('levelid, userid, progress')
         .eq('userid', uid)
-        .eq('isChecked', true)
         .in('levelid', IDs)
 
     if (b.error || !b.data) {
@@ -64,14 +63,13 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
 
     for (const i of a.data) {
         if (!mp.has(i.id)) {
+            res.push({ data: i })
             continue
         }
 
-        (i as any).progress = mp.get(i.id)?.progress
+        (i as any).record = mp.get(i.id)
         res.push({ data: i })
     }
-
-    console.log(res)
 
     return res
 }
