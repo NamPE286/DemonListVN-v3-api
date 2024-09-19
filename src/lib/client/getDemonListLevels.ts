@@ -46,7 +46,7 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
 
     var b = await supabase
         .from('records')
-        .select('levelid, userid, progress')
+        .select('levelid, userid, progress, isChecked')
         .eq('userid', uid)
         .in('levelid', IDs)
 

@@ -46,7 +46,7 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
 
     var b = await supabase
         .from('records')
-        .select('levelid, userid, progress')
+        .select('levelid, userid, progress, isChecked')
         .eq('userid', uid)
         .eq('isChecked', true)
         .in('levelid', IDs)
