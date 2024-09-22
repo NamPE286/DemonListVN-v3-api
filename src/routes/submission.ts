@@ -30,7 +30,7 @@ router.route('/')
         if (req.body.videoLink == undefined ||
             req.body.progress == undefined ||
             req.body.mobile == undefined) {
-            res.status(400).send()
+            res.status(500).send()
             return
         }
 
@@ -41,7 +41,8 @@ router.route('/')
             res.send()
             logger.notice(`New record submitted! Please check it out.`)
         } catch (err: any) {
-            res.status(500).send()
+            console.log(err.message)
+            res.status(500).send({ message: err.message })
         }
     })
 
