@@ -20,8 +20,21 @@ router.route('/')
      *             schema:
      */
     .patch(adminAuth, async (req, res) => {
-        await supabase.rpc('updateRank')
-        await supabase.rpc('updateList')
+        const a = await supabase.rpc('updateRank')
+
+        if (a.error) {
+            console.log(a.error)
+            res.status(500).send()
+            return
+        }
+
+        const b = await supabase.rpc('updateList')
+
+        if (b.error) {
+            console.log(b.error)
+            res.status(500).send()
+            return
+        }
 
         res.send()
     })
