@@ -15,38 +15,35 @@ async function isLevelExists(id: number) {
     return true
 }
 
+interface Record extends TRecord { }
 
 class Record {
-    #synced = false
-    data: TRecord
-
     constructor(data: TRecord) {
-        this.data = data
+        Object.assign(this, data)
     }
 
     async pull() {
         const { data, error } = await supabase
             .from('records')
             .select('*')
-            .match({ userid: this.data.userid, levelid: this.data.levelid })
+            .match({ userid: this.userid, levelid: this.levelid })
             .single()
 
         if (error) {
             throw error
         }
 
-        this.data = data
-        this.#synced = true
+        Object.assign(this, FormData)
     }
 
     async submit() {
-        if (!(await isLevelExists(this.data.levelid!))) {
+        if (!(await isLevelExists(this.levelid!))) {
             let apiLevel: any
             try {
-                apiLevel = await ((await fetch(`https://gdbrowser.com/api/level/${this.data.levelid}`)).json())
+                apiLevel = await ((await fetch(`https://gdbrowser.com/api/level/${this.levelid}`)).json())
             } catch {
                 const level = new Level({
-                    id: this.data.levelid,
+                    id: this.levelid,
                     name: 'Failed to fetch',
                     creator: 'Unknown'
                 })
@@ -64,7 +61,7 @@ class Record {
             }
 
             const level = new Level({
-                id: this.data.levelid,
+                id: this.levelid,
                 name: apiLevel.name,
                 creator: apiLevel.author
             })
@@ -72,12 +69,12 @@ class Record {
             await level.update()
         }
 
-        const record = new Record(this.data)
+        const record = new Record(this)
 
         try {
             await record.pull()
 
-            if (record.data.progress! >= this.data.progress!) {
+            if (record.progress! >= this.progress!) {
                 throw new Error('Better record is submitted')
             }
         } catch (err) { }
@@ -88,7 +85,7 @@ class Record {
     async update() {
         const { error } = await supabase
             .from('records')
-            .upsert(this.data as any)
+            .upsert(this as any)
 
         if (error) {
             console.log(error)
@@ -100,7 +97,7 @@ class Record {
         const { error } = await supabase
             .from('records')
             .delete()
-            .match({ userid: this.data.userid, levelid: this.data.levelid })
+            .match({ userid: this.userid, levelid: this.levelid })
 
         if (error) {
             throw error

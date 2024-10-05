@@ -162,7 +162,7 @@ export async function retrieveRecord(user: Player) {
 
     const record = new RecordClass({ userid: data.userid, levelid: data.levelid })
     await record.pull()
-    record.data.reviewer = data.reviewer = user.uid!
+    record.reviewer = data.reviewer = user.uid!
     record.update()
 
     return data

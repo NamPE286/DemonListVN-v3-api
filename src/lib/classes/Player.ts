@@ -2,6 +2,7 @@ import supabase from '@database/supabase'
 import type { TPlayer } from '@src/lib/types'
 
 interface Player extends TPlayer { }
+
 class Player {
     constructor(data: TPlayer) {
         Object.assign(this, data)

@@ -29,7 +29,7 @@ router.route('/')
         const record = new Record({ userid: req.body.userid, levelid: req.body.levelid })
         await record.pull()
 
-        if (record.data.reviewer != res.locals.user.uid || (!user.isAdmin && !user.isTrusted)) {
+        if (record.reviewer != res.locals.user.uid || (!user.isAdmin && !user.isTrusted)) {
             res.status(401).send()
             return
         }
