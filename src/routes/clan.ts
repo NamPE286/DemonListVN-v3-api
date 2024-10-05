@@ -10,7 +10,7 @@ async function isOwner(uid: string, clanID: number) {
     const clan = new Clan({ id: clanID })
     await clan.pull()
 
-    return uid == clan.data.owner
+    return uid == clan.owner
 }
 
 router.route('/')
@@ -115,7 +115,7 @@ router.route('/:id')
 
         try {
             await clan.pull()
-            res.send(clan.data)
+            res.send(clan)
         } catch (err) {
             console.error(err)
             res.status(500).send()
@@ -377,7 +377,7 @@ router.route('/invite/:uid')
         const clan = new Clan({ id: user.clan })
         await clan.pull()
 
-        if (clan.data.isPublic || clan.data.owner == user.uid) {
+        if (clan.isPublic || clan.owner == user.uid) {
             await clan.invite(uid)
             res.send()
             return
@@ -474,7 +474,7 @@ router.route('/leave')
         const clan = new Clan({ id: user.clan })
         await clan.pull()
 
-        if (user.uid == clan.data.owner) {
+        if (user.uid == clan.owner) {
             res.status(500).send()
             return
         }
@@ -509,7 +509,7 @@ router.route('/:id/join')
         const clan = new Clan({ id: parseInt(id) })
         await clan.pull()
 
-        if (!clan.data.isPublic) {
+        if (!clan.isPublic) {
             res.status(403).send()
             return
         }
@@ -561,7 +561,7 @@ router.route('/:id/invitation/:uid')
             const invitation = new ClanInvitation({ clan: parseInt(id), to: uid })
             await invitation.pull()
 
-            res.send(invitation.data)
+            res.send(invitation)
         } catch (err) {
             console.error(err)
             res.status(404).send()
@@ -598,9 +598,9 @@ router.route('/:id/invitation/:uid')
         const clan = new Clan({ id: parseInt(id) })
         await clan.pull()
 
-        console.log(clan.data.owner, user.uid)
+        console.log(clan.owner, user.uid)
 
-        if (clan.data.owner != user.uid) {
+        if (clan.owner != user.uid) {
             res.status(403).send()
             return
         }
@@ -652,7 +652,7 @@ router.route('/:id/kick/:uid')
             return
         }
 
-        if (user.uid != clan.data.owner) {
+        if (user.uid != clan.owner) {
             res.status(403).send()
             return
         }

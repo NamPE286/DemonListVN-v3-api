@@ -32,12 +32,7 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
     }
 
     if (!uid) {
-        const res = []
-
-        for (const i of a.data) {
-            res.push({ data: i })
-        }
-        return res
+        return a.data
     }
 
     const IDs = convertToIDArray(a.data);
@@ -61,12 +56,12 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
 
     for (const i of a.data) {
         if (!mp.has(i.id)) {
-            res.push({ data: i })
+            res.push(i)
             continue
         }
 
         (i as any).record = mp.get(i.id)
-        res.push({ data: i })
+        res.push(i)
     }
 
     return res
@@ -93,12 +88,7 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
     }
 
     if (!uid) {
-        const res = []
-
-        for (const i of a.data) {
-            res.push({ data: i })
-        }
-        return res
+        return a.data
     }
 
     const IDs = convertToIDArray(a.data);
@@ -123,12 +113,12 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
 
     for (const i of a.data) {
         if (!mp.has(i.id)) {
-            res.push({ data: i })
+            res.push(i)
             continue
         }
 
         (i as any).record = mp.get(i.id)
-        res.push({ data: i })
+        res.push(i)
     }
 
     return res
