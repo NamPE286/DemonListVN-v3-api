@@ -1,4 +1,7 @@
 import supabase from "@src/database/supabase"
+import type { Database } from '@src/lib/types/supabase'
+
+type Clan = Database['public']['Tables']['clans']['Update']
 
 export async function getClans({ start = 0, end = 50, sortBy = 'name', ascending = 'true', searchQuery = '' } = {}) {
     let query = supabase

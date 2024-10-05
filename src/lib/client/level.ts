@@ -1,9 +1,8 @@
 import supabase from "@src/database/supabase"
 import type { Database } from '@src/lib/types/supabase'
+import type { TLevel } from "@src/lib/classes/Level"
 
-export type Level = Database['public']['Tables']['levels']['Update']
-
-function convertToIDArray(levels: Level[]) {
+function convertToIDArray(levels: TLevel[]) {
     let res: number[] = []
 
     for (const i of levels) {

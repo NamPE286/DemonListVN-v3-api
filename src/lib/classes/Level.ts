@@ -2,13 +2,13 @@ import supabase from '@database/supabase'
 import { addChangelog } from '@src/lib/client/changelog'
 import type { Database } from '@src/lib/types/supabase'
 
-type Data = Database['public']['Tables']['levels']['Update']
+export type TLevel = Database['public']['Tables']['levels']['Update']
 
 class Level {
     #synced = false
-    data: Data
+    data: TLevel
 
-    constructor(data: Data) {
+    constructor(data: TLevel) {
         this.data = data
     }
 

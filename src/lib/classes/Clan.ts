@@ -10,7 +10,7 @@ class Clan {
     #synced = false
     data: Data
 
-    constructor(data: any) {
+    constructor(data: Data) {
         this.data = data
     }
 
