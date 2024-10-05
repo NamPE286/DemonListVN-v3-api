@@ -87,7 +87,7 @@ router.route('/:id')
             const level = new Level({ id: parseInt(id) })
             await level.pull()
 
-            res.send(level.data)
+            res.send(level)
         } catch {
             res.status(404).send()
         }

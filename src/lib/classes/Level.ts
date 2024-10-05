@@ -2,40 +2,37 @@ import supabase from '@database/supabase'
 import { addChangelog } from '@src/lib/client/changelog'
 import type { TLevel } from '@src/lib/types'
 
+interface Level extends TLevel { }
 class Level {
-    #synced = false
-    data: TLevel
-
     constructor(data: TLevel) {
-        this.data = data
+        Object.assign(this, data)
     }
 
     async pull() {
         const { data, error } = await supabase
             .from('levels')
             .select('*')
-            .eq('id', this.data.id!)
+            .eq('id', this.id!)
             .single()
 
         if (error) {
             throw error
         }
 
-        this.data = data
-        this.#synced = true
+        Object.assign(this, data)
     }
 
     async update() {
         let { data } = await supabase
             .from('levels')
             .select('*')
-            .eq('id', this.data.id!)
+            .eq('id', this.id!)
             .limit(1)
             .single()
 
         let { error } = await supabase
             .from('levels')
-            .upsert(this.data as any)
+            .upsert(this as any)
 
         await supabase.rpc('updateList')
 
@@ -43,14 +40,14 @@ class Level {
             throw error
         }
 
-        addChangelog(this.data.id!, data)
+        addChangelog(this.id!, data)
     }
 
     async delete() {
         const { error } = await supabase
             .from('levels')
             .delete()
-            .eq('id', this.data.id!)
+            .eq('id', this.id!)
 
         if (error) {
             throw error
@@ -58,41 +55,33 @@ class Level {
     }
 
     getSongPublicURL() {
-        if (!this.#synced) {
-            throw new Error('Level is not synced with database')
-        }
-
-        if (!this.data.songID) {
+        if (!this.songID) {
             throw new Error("Not avaliable")
         }
 
         const { data } = supabase
             .storage
             .from('songs')
-            .getPublicUrl(`${this.data.songID}.mp3`)
+            .getPublicUrl(`${this.songID}.mp3`)
 
         return data.publicUrl
     }
 
     async deleteSong() {
-        if (!this.#synced) {
-            throw new Error('Level is not synced with database')
-        }
-
-        if (!this.data.songID) {
+        if (!this.songID) {
             return
         }
 
         const { data, error } = await supabase
             .storage
             .from('songs')
-            .remove([`${this.data.songID}.mp3`])
+            .remove([`${this.songID}.mp3`])
 
         if (error) {
             throw error
         }
 
-        this.data.songID = null
+        this.songID = null
         this.update()
     }
 }

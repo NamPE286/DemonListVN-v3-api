@@ -63,12 +63,12 @@ router.route('/')
             const level = new Level({ id: parseInt(req.body.levelid) });
             await level.pull()
 
-            await sendNotification({ to: req.body.userid, content: `Your ${level.data.name} (${level.data.id}) record has been accepted by ${user.name}.`, status: 0 })
+            await sendNotification({ to: req.body.userid, content: `Your ${level.name} (${level.id}) record has been accepted by ${user.name}.`, status: 0 })
         } else if (req.body.needMod) {
             const level = new Level({ id: parseInt(req.body.levelid) });
             await level.pull()
 
-            await sendNotification({ to: req.body.userid, content: `Your ${level.data.name} (${level.data.id}) record has been forwarded to moderator team for further inspection by ${user.name}.`, status: 0 })
+            await sendNotification({ to: req.body.userid, content: `Your ${level.name} (${level.id}) record has been forwarded to moderator team for further inspection by ${user.name}.`, status: 0 })
         }
     })
 
