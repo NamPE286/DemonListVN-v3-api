@@ -3,8 +3,7 @@ import ClanInvitation from '@src/lib/classes/ClanInvitation'
 import Player from '@src/lib/classes/Player'
 import { sendNotification } from '@src/lib/client/notification'
 import type { Database } from '@src/lib/types/supabase'
-
-export type TClan = Database['public']['Tables']['clans']['Update']
+import type { TClan } from '@src/lib/types'
 
 class Clan {
     #synced = false

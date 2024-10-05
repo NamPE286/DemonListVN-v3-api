@@ -1,8 +1,7 @@
 import supabase from '@database/supabase'
 import Level from '@src/lib/classes/Level'
 import type { Database } from '@src/lib/types/supabase'
-
-export type TRecord = Database['public']['Tables']['records']['Update']
+import type { TRecord } from '@src/lib/types'
 
 async function isLevelExists(id: number) {
     const { data, error } = await supabase

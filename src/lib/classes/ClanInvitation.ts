@@ -1,8 +1,7 @@
 import supabase from "@src/database/supabase";
 import Clan from "@src/lib/classes/Clan";
 import type { Database } from '@src/lib/types/supabase'
-
-export type TClanInvitation = Database['public']['Tables']['clanInvitations']['Update']
+import type { TClanInvitation } from "@src/lib/types";
 
 class ClanInvitation {
     data: TClanInvitation

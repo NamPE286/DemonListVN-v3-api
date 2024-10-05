@@ -1,7 +1,5 @@
 import supabase from "@src/database/supabase"
-import type { Database } from '@src/lib/types/supabase'
-
-export type Notification = Database['public']['Tables']['notifications']['Update']
+import type { TNotification } from "@src/lib/types"
 
 export async function getPlayerNotifications(uid: string) {
     const { data, error } = await supabase
@@ -28,7 +26,7 @@ export async function clearPlayerNotifications(uid: string) {
     }
 }
 
-export async function sendNotification(notification: Notification) {
+export async function sendNotification(notification: TNotification) {
     var { data, error } = await supabase
         .from('notifications')
         .insert(notification as any)

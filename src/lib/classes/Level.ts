@@ -1,8 +1,7 @@
 import supabase from '@database/supabase'
 import { addChangelog } from '@src/lib/client/changelog'
 import type { Database } from '@src/lib/types/supabase'
-
-export type TLevel = Database['public']['Tables']['levels']['Update']
+import type { TLevel } from '@src/lib/types'
 
 class Level {
     #synced = false

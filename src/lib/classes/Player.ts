@@ -1,7 +1,6 @@
 import supabase from '@database/supabase'
 import type { Database } from '@src/lib/types/supabase'
-
-export type TPlayer = Database['public']['Tables']['players']['Update']
+import type { TPlayer } from '@src/lib/types'
 
 class Player {
     #synced = false
