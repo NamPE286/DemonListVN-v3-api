@@ -4,7 +4,7 @@ import userAuth from '@src/middleware/userAuth'
 import { getHeatmap } from '@src/lib/client'
 import { getPlayerRecords } from '@src/lib/client/record'
 import { updateHeatmap } from '@src/lib/client'
-import { getPlayerSubmissions } from '@src/lib/client/getPlayerSubmissions'
+import { getPlayerSubmissions } from '@src/lib/client/record'
 
 const router = express.Router()
 

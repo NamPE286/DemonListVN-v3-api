@@ -1,7 +1,10 @@
 import supabase from "@src/database/supabase";
 import type { Database } from '@src/lib/types/supabase'
 
-export type Record = Database['public']['Tables']['records']['Update']
+import Record from "@src/lib/classes/Record";
+import Player from "@src/lib/classes/Player";
+
+// export type Record = Database['public']['Tables']['records']['Update']
 
 export async function getDemonListRecords({ start = 0, end = 0, isChecked = false } = {}) {
     if (typeof isChecked == 'string') {
@@ -102,6 +105,102 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, isCheck
         .order('progress', { ascending: false })
         .order('timestamp')
         .range(start, end)
+
+    if (error) {
+        throw error
+    }
+
+    return data
+}
+
+export async function getRecord(uid: string, levelID: number): Promise<Record> {
+    const { data, error } = await supabase
+        .from('records')
+        .select('*, players!userid(*, clans!id(*)), reviewer:players!reviewer(*, clans!id(*)), levels(*)')
+        .eq('levelid', levelID)
+        .eq('userid', uid)
+        .limit(1)
+        .single()
+
+    if (error) {
+        console.log(error)
+        throw error
+    }
+
+    // @ts-ignore
+    return data
+}
+
+
+export async function retrieveRecord(user: Player) {
+    var { data, error } = await supabase
+        .from('records')
+        .select('*, levels!inner(*)')
+        .neq('userid', user.data.uid)
+        .eq('needMod', false)
+        .eq('isChecked', false)
+        .eq('reviewer', user.data.uid!)
+        .order('timestamp', { ascending: true })
+        .limit(1)
+        .single()
+
+    if (data) {
+        return data
+    }
+
+    var { data, error } = await supabase
+        .from('records')
+        .select('*, levels!inner(*)')
+        .lte('levels.rating', user.data.rating! + 500)
+        .neq('userid', user.data.uid)
+        .eq('needMod', false)
+        .eq('isChecked', false)
+        .is('reviewer', null)
+        .order('timestamp', { ascending: true })
+        .limit(1)
+        .single()
+
+    if (data == null) {
+        throw new Error("No avaliable record")
+    }
+
+    const record = new Record({ userid: data.userid, levelid: data.levelid })
+    await record.pull()
+    record.data.reviewer = data.reviewer = user.data.uid!
+    record.update()
+
+    return data
+}
+
+export async function getRecords({ start = 0, end = 50, isChecked = false } = {}) {
+    if (typeof isChecked == 'string') {
+        isChecked = (isChecked == 'true')
+    }
+
+    const { data, error } = await supabase
+        .from('records')
+        .select('*, players!userid!inner(*, clans!id(*)), reviewer:players!reviewer(*), levels(*)')
+        .match({ isChecked: isChecked })
+        .eq('players.isHidden', false)
+        .order('needMod', { ascending: false })
+        .order('timestamp', { ascending: true })
+        .range(start, end)
+
+    if (error) {
+        throw error
+    }
+
+    return data
+}
+
+export async function getPlayerSubmissions(uid: string, { start = '0', end = '50', ascending = 'true' } = {}) {
+    const { data, error } = await supabase
+        .from('records')
+        .select('*, levels(*)')
+        .eq('userid', uid)
+        .eq('isChecked', false)
+        .order('timestamp', { ascending: ascending == 'true' })
+        .range(parseInt(start), parseInt(end))
 
     if (error) {
         throw error

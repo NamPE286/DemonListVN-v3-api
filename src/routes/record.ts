@@ -2,7 +2,7 @@ import express from 'express'
 import Record from '@lib/classes/Record'
 import adminAuth from '@src/middleware/adminAuth'
 import userAuth from '@src/middleware/userAuth'
-import { getRecord, retrieveRecord } from '@src/lib/client'
+import { getRecord, retrieveRecord } from '@src/lib/client/record'
 import { changeSuggestedRating } from '@src/lib/client/changeSuggestedRating'
 import logger from '@src/utils/logger'
 
