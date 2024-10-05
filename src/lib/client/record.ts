@@ -1,4 +1,47 @@
-import supabase from "@src/database/supabase"
+import supabase from "@src/database/supabase";
+import type { Database } from '@src/lib/types/supabase'
+
+export type Record = Database['public']['Tables']['records']['Update']
+
+export async function getDemonListRecords({ start = 0, end = 0, isChecked = false } = {}) {
+    if (typeof isChecked == 'string') {
+        isChecked = (isChecked == 'true')
+    }
+
+    const { data, error } = await supabase
+        .from('records')
+        .select('*')
+        .match({ isChecked: isChecked })
+        .not('dlPt', 'is', null)
+        .order('timestamp', { ascending: true })
+        .range(start, end)
+
+    if (error) {
+        throw error
+    }
+
+    return data
+}
+
+export async function getFeaturedListRecords({ start = 0, end = 0, isChecked = false } = {}) {
+    if (typeof isChecked == 'string') {
+        isChecked = (isChecked == 'true')
+    }
+
+    const { data, error } = await supabase
+        .from('records')
+        .select('*')
+        .match({ isChecked: isChecked })
+        .not('flPt', 'is', null)
+        .order('timestamp', { ascending: true })
+        .range(start, end)
+
+    if (error) {
+        throw error
+    }
+
+    return data
+}
 
 export async function getPlayerRecords(uid: string, { start = '0', end = '50', sortBy = 'pt', ascending = 'false', isChecked = 'true' } = {}) {
     let query = supabase

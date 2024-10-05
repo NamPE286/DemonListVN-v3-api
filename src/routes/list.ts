@@ -1,5 +1,6 @@
 import express from "express";
-import { getDemonListLevels, getDemonListRecords, getFeaturedListLevels, getFeaturedListRecords } from '@lib/client'
+import { getDemonListLevels, getFeaturedListLevels } from '@lib/client/level'
+import { getDemonListRecords, getFeaturedListRecords } from "@src/lib/client/record";
 
 const router = express.Router()
 
@@ -204,7 +205,7 @@ router.route('/fl/records')
     .get(async (req, res) => {
         try {
             res.send(await getFeaturedListRecords(req.query))
-        } catch(err) {
+        } catch (err) {
             res.status(500).send()
         }
     })

@@ -1,7 +1,8 @@
 import express from 'express'
 import Player from '@lib/classes/Player'
 import userAuth from '@src/middleware/userAuth'
-import { getHeatmap, getPlayerRecords } from '@src/lib/client'
+import { getHeatmap } from '@src/lib/client'
+import { getPlayerRecords } from '@src/lib/client/record'
 import { updateHeatmap } from '@src/lib/client'
 import { getPlayerSubmissions } from '@src/lib/client/getPlayerSubmissions'
 
