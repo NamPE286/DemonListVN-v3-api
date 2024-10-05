@@ -81,7 +81,7 @@ router.route('/:levelID/:count')
 
         try {
             const { levelID } = req.params
-            const uid = res.locals.user.data.uid!
+            const uid = res.locals.user.uid!
 
             await updateDeathCount(uid, parseInt(levelID), arr);
         } catch { }

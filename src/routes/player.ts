@@ -29,18 +29,18 @@ router.route('/')
         const user: Player = res.locals.user
 
         if (!('uid' in data)) {
-            if (user.data.isAdmin) {
+            if (user.isAdmin) {
                 res.status(400).send({
                     message: "Missing 'uid' property"
                 })
 
                 return
             } else {
-                data.uid = user.data.uid
+                data.uid = user.uid
             }
         }
 
-        if (user.data.uid != data.uid && !user.data.isAdmin) {
+        if (user.uid != data.uid && !user.isAdmin) {
             res.status(403).send()
             return
         }
@@ -85,7 +85,7 @@ router.route('/:uid')
             const player = new Player({ uid: uid })
             await player.pull()
 
-            res.send(player.data)
+            res.send(player)
         } catch (err) {
             res.status(404).send()
         }
@@ -198,7 +198,7 @@ router.route('/heatmap/:count')
     .post(userAuth, async (req, res) => {
         res.send()
         try {
-            updateHeatmap(res.locals.user.data.uid!, parseInt(req.params.count))
+            updateHeatmap(res.locals.user.uid!, parseInt(req.params.count))
         } catch { }
     })
 

@@ -46,7 +46,7 @@ class Clan {
         const player = new Player({ uid: data.owner })
         await player.pull()
 
-        player.data.clan = data.id
+        player.clan = data.id
         this.data.id = data.id
 
         await player.update({ updateClan: true })
@@ -57,7 +57,7 @@ class Clan {
         const player = new Player({ uid: this.data.owner! })
         await player.pull()
 
-        if (player.data.clan != this.data.id) {
+        if (player.clan != this.data.id) {
             throw new Error('Cannot give ownership. This player is not this clan\' member')
         }
 
@@ -103,7 +103,7 @@ class Clan {
         const player = new Player({ uid: uid })
         await player.pull()
 
-        if (player.data.clan) {
+        if (player.clan) {
             throw new Error('Player is already in a clan')
         }
 
@@ -114,7 +114,7 @@ class Clan {
         tmp.data.memberCount!++
         await tmp.update()
 
-        player.data.clan = this.data.id
+        player.clan = this.data.id
         await player.update({ updateClan: true })
         await this.pull()
     }
@@ -124,7 +124,7 @@ class Clan {
         const player = new Player({ uid: uid })
         await player.pull()
 
-        if (player.data.clan != this.data.id) {
+        if (player.clan != this.data.id) {
             throw new Error('Player is not in this clan')
         }
 
@@ -134,7 +134,7 @@ class Clan {
         tmp.data.memberCount!--
         await tmp.update()
 
-        player.data.clan = null
+        player.clan = null
         await player.update({ updateClan: true })
         await this.pull()
     }
@@ -143,11 +143,11 @@ class Clan {
         const player = new Player({ uid: uid })
         await player.pull()
 
-        if (player.data.clan) {
+        if (player.clan) {
             throw new Error('Player is already in a clan')
         }
 
-        const invitation = new ClanInvitation({ to: player.data.uid, clan: this.data.id! })
+        const invitation = new ClanInvitation({ to: player.uid, clan: this.data.id! })
         await invitation.update()
         await sendNotification({ to: uid, content: `You've been invited to ${this.data.name} clan!`, redirect: `/clan/${this.data.id}` })
     }

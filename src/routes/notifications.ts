@@ -30,7 +30,7 @@ router.route('/:uid')
         const { uid } = req.params
         const { user } = res.locals
 
-        if (user.data.uid != uid && !user.data.isAdmin) {
+        if (user.uid != uid && !user.isAdmin) {
             res.status(403).send()
             return
         }
@@ -64,7 +64,7 @@ router.route('/:uid')
         const { uid } = req.params
         const { user } = res.locals
 
-        if (user.data.uid != uid && !user.data.isAdmin) {
+        if (user.uid != uid && !user.isAdmin) {
             res.status(403).send()
             return
         }

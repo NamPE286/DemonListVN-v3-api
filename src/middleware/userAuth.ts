@@ -20,12 +20,12 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             await player.pull()
         } catch { }
 
-        if (player.data.isBanned) {
+        if (player.isBanned) {
             res.status(401).send();
             return;
         }
 
-        if (player.data.recordCount === 0 && !player.data.isAdmin) {
+        if (player.recordCount === 0 && !player.isAdmin) {
             if (req.originalUrl.endsWith('submission') && req.method == 'POST') { }
             else if (req.originalUrl.startsWith('/record') && req.method == 'DELETE') { }
             else {
@@ -54,12 +54,12 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             res.locals.user = new Player(data.players!)
             res.locals.authType = 'key'
 
-            if (res.locals.user.data.isBanned) {
+            if (res.locals.user.isBanned) {
                 res.status(401).send();
                 return;
             }
 
-            if (res.locals.user.data.recordCount === 0 && !(req.originalUrl.endsWith('submission') && req.method == 'POST') && !res.locals.user.data.isAdmin) {
+            if (res.locals.user.recordCount === 0 && !(req.originalUrl.endsWith('submission') && req.method == 'POST') && !res.locals.user.isAdmin) {
                 res.status(401).send();
                 return;
             }

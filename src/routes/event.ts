@@ -122,7 +122,7 @@ router.route('/:id/proof/:uid')
      */
     .delete(userAuth, async (req, res) => {
         const { id, uid } = req.params
-        const user = res.locals.user.data
+        const user = res.locals.user
 
         if (!user.isAdmin && !(user.uid == uid)) {
             res.status(401).send()
@@ -181,7 +181,7 @@ router.route('/proof')
      *             schema:
      */
     .post(userAuth, async (req, res) => {
-        req.body.userid = res.locals.user.data.uid
+        req.body.userid = res.locals.user.uid
         req.body.accepted = false
 
         try {

@@ -132,10 +132,10 @@ export async function retrieveRecord(user: Player) {
     var { data, error } = await supabase
         .from('records')
         .select('*, levels!inner(*)')
-        .neq('userid', user.data.uid)
+        .neq('userid', user.uid)
         .eq('needMod', false)
         .eq('isChecked', false)
-        .eq('reviewer', user.data.uid!)
+        .eq('reviewer', user.uid!)
         .order('timestamp', { ascending: true })
         .limit(1)
         .single()
@@ -147,8 +147,8 @@ export async function retrieveRecord(user: Player) {
     var { data, error } = await supabase
         .from('records')
         .select('*, levels!inner(*)')
-        .lte('levels.rating', user.data.rating! + 500)
-        .neq('userid', user.data.uid)
+        .lte('levels.rating', user.rating! + 500)
+        .neq('userid', user.uid)
         .eq('needMod', false)
         .eq('isChecked', false)
         .is('reviewer', null)
@@ -162,7 +162,7 @@ export async function retrieveRecord(user: Player) {
 
     const record = new RecordClass({ userid: data.userid, levelid: data.levelid })
     await record.pull()
-    record.data.reviewer = data.reviewer = user.data.uid!
+    record.data.reviewer = data.reviewer = user.uid!
     record.update()
 
     return data

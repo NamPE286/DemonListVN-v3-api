@@ -32,17 +32,17 @@ router.route('/')
     .post(userAuth, async (req, res) => {
         const { user } = res.locals
 
-        if (user.data.clan) {
+        if (user.clan) {
             res.status(500).send()
             return
         }
 
-        if (!user.data.rating && !user.data.totalFLpt) {
+        if (!user.rating && !user.totalFLpt) {
             res.status(500).send()
             return
         }
 
-        req.body.owner = user.data.uid
+        req.body.owner = user.uid
         delete req.body.id
 
         const clan = new Clan(req.body)
@@ -76,7 +76,7 @@ router.route('/invitations')
         const { data, error } = await supabase
             .from('clanInvitations')
             .select('*, clans(*, players!owner(*, clans!id(*)))')
-            .eq('to', user.data.uid!)
+            .eq('to', user.uid!)
 
         if (error) {
             console.error(error)
@@ -149,12 +149,12 @@ router.route('/:id')
         const { id } = req.params
 
 
-        if (!user.data.clan) {
+        if (!user.clan) {
             res.status(500).send()
             return
         }
 
-        if (!(await isOwner(user.data.uid!, parseInt(id))) && !user.data.isAdmin) {
+        if (!(await isOwner(user.uid!, parseInt(id))) && !user.isAdmin) {
             res.status(403).send()
             return
         }
@@ -193,12 +193,12 @@ router.route('/:id')
         const { user } = res.locals
         const { id } = req.params
 
-        if (!user.data.clan) {
+        if (!user.clan) {
             res.status(500).send()
             return
         }
 
-        if (!(await isOwner(user.data.uid!, parseInt(id))) && !user.data.isAdmin) {
+        if (!(await isOwner(user.uid!, parseInt(id))) && !user.isAdmin) {
             res.status(403).send()
             return
         }
@@ -369,15 +369,15 @@ router.route('/invite/:uid')
         const { user } = res.locals
         const { uid } = req.params
 
-        if (!user.data.clan) {
+        if (!user.clan) {
             res.status(500).send()
             return
         }
 
-        const clan = new Clan({ id: user.data.clan })
+        const clan = new Clan({ id: user.clan })
         await clan.pull()
 
-        if (clan.data.isPublic || clan.data.owner == user.data.uid) {
+        if (clan.data.isPublic || clan.data.owner == user.uid) {
             await clan.invite(uid)
             res.send()
             return
@@ -408,7 +408,7 @@ router.route('/:id/invite')
     .patch(userAuth, async (req, res) => {
         const { user } = res.locals
         const { id } = req.params
-        const invitation = new ClanInvitation({ to: user.data.uid, clan: parseInt(id) })
+        const invitation = new ClanInvitation({ to: user.uid, clan: parseInt(id) })
 
         try {
             await invitation.accept()
@@ -440,7 +440,7 @@ router.route('/:id/invite')
     .delete(userAuth, async (req, res) => {
         const { user } = res.locals
         const { id } = req.params
-        const invitation = new ClanInvitation({ to: user.data.uid, clan: parseInt(id) })
+        const invitation = new ClanInvitation({ to: user.uid, clan: parseInt(id) })
 
         try {
             await invitation.reject()
@@ -466,20 +466,20 @@ router.route('/leave')
     .put(userAuth, async (req, res) => {
         const { user } = res.locals
 
-        if (!user.data.clan) {
+        if (!user.clan) {
             res.status(500).send()
             return
         }
 
-        const clan = new Clan({ id: user.data.clan })
+        const clan = new Clan({ id: user.clan })
         await clan.pull()
 
-        if (user.data.uid == clan.data.owner) {
+        if (user.uid == clan.data.owner) {
             res.status(500).send()
             return
         }
 
-        await clan.removeMember(user.data.uid!)
+        await clan.removeMember(user.uid!)
 
         res.send()
     })
@@ -514,17 +514,17 @@ router.route('/:id/join')
             return
         }
 
-        if (user.data.clan) {
+        if (user.clan) {
             res.status(500).send()
             return
         }
 
-        await clan.addMember(user.data.uid!)
+        await clan.addMember(user.uid!)
 
         const { error } = await supabase
             .from('clanInvitations')
             .delete()
-            .eq('to', user.data.uid!)
+            .eq('to', user.uid!)
 
         res.send()
     })
@@ -598,9 +598,9 @@ router.route('/:id/invitation/:uid')
         const clan = new Clan({ id: parseInt(id) })
         await clan.pull()
 
-        console.log(clan.data.owner, user.data.uid)
+        console.log(clan.data.owner, user.uid)
 
-        if (clan.data.owner != user.data.uid) {
+        if (clan.data.owner != user.uid) {
             res.status(403).send()
             return
         }
@@ -647,12 +647,12 @@ router.route('/:id/kick/:uid')
         const clan = new Clan({ id: parseInt(id) })
         await clan.pull()
 
-        if (user.data.uid == uid) {
+        if (user.uid == uid) {
             res.status(500).send()
             return
         }
 
-        if (user.data.uid != clan.data.owner) {
+        if (user.uid != clan.data.owner) {
             res.status(403).send()
             return
         }

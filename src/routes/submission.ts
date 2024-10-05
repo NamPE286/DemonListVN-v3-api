@@ -23,7 +23,7 @@ router.route('/')
      */
     .post(userAuth, async (req, res) => {
         const { user } = res.locals
-        req.body.userid = user.data.uid
+        req.body.userid = user.uid
         req.body.timestamp = Date.now()
         req.body.isChecked = false
 

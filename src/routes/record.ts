@@ -67,7 +67,7 @@ router.route('/:userID/:levelID')
         const { user } = res.locals
         const { userID, levelID } = req.params
 
-        if (user.data.uid != userID && !user.data.isAdmin) {
+        if (user.uid != userID && !user.isAdmin) {
             res.status(403).send()
             return
         }
@@ -77,7 +77,7 @@ router.route('/:userID/:levelID')
             await record.delete()
 
             res.send()
-            logger.log(`${user.data.name} (${user.data.uid}) performed DELETE /record/${userID}/${levelID}`)
+            logger.log(`${user.name} (${user.uid}) performed DELETE /record/${userID}/${levelID}`)
         } catch (err) {
             res.status(500).send()
         }
@@ -147,7 +147,7 @@ router.route('/:userID/:levelID/changeSuggestedRating/:rating')
         const { user } = res.locals
         const { userID, levelID, rating } = req.params
 
-        if (user.data.uid != userID) {
+        if (user.uid != userID) {
             res.status(401).send()
             return;
         }
@@ -174,12 +174,12 @@ router.route('/retrieve')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
 
-        if (!user.data.isAdmin && !user.data.isTrusted) {
+        if (!user.isAdmin && !user.isTrusted) {
             res.status(401).send()
             return
         }
 
-        if (user.data.reviewCooldown && (new Date()).getTime() - new Date(user.data.reviewCooldown).getTime() < 7200000) {
+        if (user.reviewCooldown && (new Date()).getTime() - new Date(user.reviewCooldown).getTime() < 7200000) {
             res.status(429).send()
             return
         }

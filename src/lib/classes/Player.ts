@@ -1,31 +1,28 @@
 import supabase from '@database/supabase'
 import type { TPlayer } from '@src/lib/types'
 
+interface Player extends TPlayer { }
 class Player {
-    #synced = false
-    data: TPlayer
-
     constructor(data: TPlayer) {
-        this.data = data
+        Object.assign(this, data)
     }
 
     async pull() {
         const { data, error } = await supabase
             .from('players')
             .select('*, clans!id(*)')
-            .eq('uid', this.data.uid!)
+            .eq('uid', this.uid!)
             .single()
 
         if (error) {
             throw error
         }
 
-        this.data = data
-        this.#synced = true
+        Object.assign(this, data)
     }
 
     async update({ updateClan = false } = {}) {
-        const updateData = this.data
+        const updateData = this
         delete updateData.isAdmin
         delete updateData.isTrusted
         delete updateData.isBanned
@@ -37,12 +34,12 @@ class Player {
         delete updateData.clans
 
         if (!updateClan) {
-            delete this.data.clan
+            delete this.clan
         }
 
         const { error } = await supabase
             .from('players')
-            .upsert(this.data as any)
+            .upsert(this as any)
 
         if (error) {
             throw error
