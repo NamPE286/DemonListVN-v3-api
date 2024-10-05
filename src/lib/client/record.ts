@@ -1,10 +1,10 @@
 import supabase from "@src/database/supabase";
 import type { Database } from '@src/lib/types/supabase'
 
-import Record from "@src/lib/classes/Record";
+import RecordClass from "@src/lib/classes/Record";
 import Player from "@src/lib/classes/Player";
 
-// export type Record = Database['public']['Tables']['records']['Update']
+export type Record = Database['public']['Tables']['records']['Update']
 
 export async function getDemonListRecords({ start = 0, end = 0, isChecked = false } = {}) {
     if (typeof isChecked == 'string') {
@@ -113,7 +113,7 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, isCheck
     return data
 }
 
-export async function getRecord(uid: string, levelID: number): Promise<Record> {
+export async function getRecord(uid: string, levelID: number) {
     const { data, error } = await supabase
         .from('records')
         .select('*, players!userid(*, clans!id(*)), reviewer:players!reviewer(*, clans!id(*)), levels(*)')
@@ -164,7 +164,7 @@ export async function retrieveRecord(user: Player) {
         throw new Error("No avaliable record")
     }
 
-    const record = new Record({ userid: data.userid, levelid: data.levelid })
+    const record = new RecordClass({ userid: data.userid, levelid: data.levelid })
     await record.pull()
     record.data.reviewer = data.reviewer = user.data.uid!
     record.update()
