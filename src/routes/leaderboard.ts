@@ -1,5 +1,5 @@
 import express from 'express'
-import { getDemonListLeaderboard, getFeaturedListLeaderboard } from '@src/lib/client'
+import { getDemonListLeaderboard, getFeaturedListLeaderboard } from '@src/lib/client/player'
 
 const router = express.Router()
 
