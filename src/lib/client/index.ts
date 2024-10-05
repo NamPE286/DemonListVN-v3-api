@@ -1,6 +1,3 @@
-export * from './sendNotification'
-export * from './getPlayerNotifications'
-export * from './clearPlayerNotifications'
 export * from './search'
 export * from './APIKey'
 export * from './heatmap'

@@ -1,7 +1,7 @@
 import supabase from '@src/database/supabase'
 import Level from '@src/lib/classes/Level'
 import Record from '@src/lib/classes/Record'
-import { sendNotification } from '@src/lib/client'
+import { sendNotification } from '@src/lib/client/notification'
 import userAuth from '@src/middleware/userAuth'
 import logger from '@src/utils/logger'
 import express from 'express'
