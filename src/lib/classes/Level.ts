@@ -3,6 +3,7 @@ import { addChangelog } from '@src/lib/client/changelog'
 import type { TLevel } from '@src/lib/types'
 
 interface Level extends TLevel { }
+
 class Level {
     constructor(data: TLevel) {
         Object.assign(this, data)

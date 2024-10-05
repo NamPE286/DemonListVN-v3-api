@@ -2,18 +2,18 @@ import supabase from "@src/database/supabase";
 import Clan from "@src/lib/classes/Clan";
 import type { TClanInvitation } from "@src/lib/types";
 
-class ClanInvitation {
-    data: TClanInvitation
+interface ClanInvitation extends TClanInvitation { }
 
+class ClanInvitation {
     constructor(data: TClanInvitation) {
-        this.data = data
+        Object.assign(this, data)
     }
 
     async isExist() {
         const { data, error } = await supabase
             .from('clanInvitations')
             .select('*')
-            .match({ to: this.data.to, clan: this.data.clan })
+            .match({ to: this.to, clan: this.clan })
 
         if (error) {
             return false
@@ -26,20 +26,20 @@ class ClanInvitation {
         const { data, error } = await supabase
             .from('clanInvitations')
             .select('*')
-            .match({ to: this.data.to, clan: this.data.clan })
+            .match({ to: this.to, clan: this.clan })
             .single()
 
         if (error || !data) {
             throw error
         }
 
-        this.data = data
+        Object.assign(this, data)
     }
 
     async update() {
         const { error } = await supabase
             .from('clanInvitations')
-            .upsert(this.data as any)
+            .upsert(this as any)
 
         if (error) {
             throw error
@@ -51,13 +51,13 @@ class ClanInvitation {
             throw new Error('Invalid invitation')
         }
 
-        const clan = new Clan({ id: this.data.clan })
-        await clan.addMember(this.data.to!)
+        const clan = new Clan({ id: this.clan })
+        await clan.addMember(this.to!)
 
         const { error } = await supabase
             .from('clanInvitations')
             .delete()
-            .eq('to', this.data.to!)
+            .eq('to', this.to!)
     }
 
     async reject() {
@@ -68,7 +68,7 @@ class ClanInvitation {
         const { error } = await supabase
             .from('clanInvitations')
             .delete()
-            .match({ to: this.data.to, clan: this.data.clan })
+            .match({ to: this.to, clan: this.clan })
 
         if (error) {
             throw error

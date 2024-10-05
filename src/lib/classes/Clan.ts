@@ -4,38 +4,35 @@ import Player from '@src/lib/classes/Player'
 import { sendNotification } from '@src/lib/client/notification'
 import type { TClan } from '@src/lib/types'
 
-class Clan {
-    #synced = false
-    data: TClan
+interface Clan extends TClan { }
 
+class Clan {
     constructor(data: TClan) {
-        this.data = data
+        Object.assign(this, data)
     }
 
     async pull() {
         var { data, error } = await supabase
             .from('clans')
             .select('*, players!owner(*, clans!id(*))')
-            .eq('id', this.data.id!)
+            .eq('id', this.id!)
             .single()
 
         if (error) {
             throw error
         }
 
-        // @ts-ignore
-        this.data = data
-        this.#synced = true
+        Object.assign(this, data)
     }
 
     async create() {
-        if (this.data.memberLimit && this.data.memberLimit < 0) {
+        if (this.memberLimit && this.memberLimit < 0) {
             throw new Error('Invalid member limit')
         }
 
         const { data, error } = await supabase
             .from('clans')
-            .insert(this.data as any)
+            .insert(this as any)
             .select()
             .single()
 
@@ -47,28 +44,28 @@ class Clan {
         await player.pull()
 
         player.clan = data.id
-        this.data.id = data.id
+        this.id = data.id
 
         await player.update({ updateClan: true })
         await this.pull()
     }
 
     async update() {
-        const player = new Player({ uid: this.data.owner! })
+        const player = new Player({ uid: this.owner! })
         await player.pull()
 
-        if (player.clan != this.data.id) {
+        if (player.clan != this.id) {
             throw new Error('Cannot give ownership. This player is not this clan\' member')
         }
 
-        if (this.data.memberLimit && this.data.memberLimit < 0) {
+        if (this.memberLimit && this.memberLimit < 0) {
             throw new Error('Invalid member limit')
         }
 
         const { error } = await supabase
             .from('clans')
-            .update(this.data)
-            .eq('id', this.data.id!)
+            .update(this)
+            .eq('id', this.id!)
 
         if (error) {
             throw error
@@ -81,7 +78,7 @@ class Clan {
         const { data, error } = await supabase
             .from('players')
             .select('*, clans!id(*)')
-            .eq('clan', this.data.id!)
+            .eq('clan', this.id!)
             .eq('isHidden', false)
             .order(sortBy, { ascending: ascending == 'true', nullsFirst: false })
             .range(start, end)
@@ -96,7 +93,7 @@ class Clan {
     async addMember(uid: string) {
         await this.pull()
 
-        if (this.data.memberCount! >= this.data.memberLimit! && this.data.memberLimit != 0) {
+        if (this.memberCount! >= this.memberLimit! && this.memberLimit != 0) {
             throw new Error('Member limit exceeded')
         }
 
@@ -111,10 +108,10 @@ class Clan {
         const tmp = this
         //@ts-ignore
         delete tmp.data.players
-        tmp.data.memberCount!++
+        tmp.memberCount!++
         await tmp.update()
 
-        player.clan = this.data.id
+        player.clan = this.id
         await player.update({ updateClan: true })
         await this.pull()
     }
@@ -124,14 +121,14 @@ class Clan {
         const player = new Player({ uid: uid })
         await player.pull()
 
-        if (player.clan != this.data.id) {
+        if (player.clan != this.id) {
             throw new Error('Player is not in this clan')
         }
 
         const tmp = this
         //@ts-ignore
         delete tmp.data.players
-        tmp.data.memberCount!--
+        tmp.memberCount!--
         await tmp.update()
 
         player.clan = null
@@ -147,16 +144,16 @@ class Clan {
             throw new Error('Player is already in a clan')
         }
 
-        const invitation = new ClanInvitation({ to: player.uid, clan: this.data.id! })
+        const invitation = new ClanInvitation({ to: player.uid, clan: this.id! })
         await invitation.update()
-        await sendNotification({ to: uid, content: `You've been invited to ${this.data.name} clan!`, redirect: `/clan/${this.data.id}` })
+        await sendNotification({ to: uid, content: `You've been invited to ${this.name} clan!`, redirect: `/clan/${this.id}` })
     }
 
     async fetchRecords({ start = 0, end = 50, sortBy = 'dlPt', ascending = 'false' } = {}) {
         const { data, error } = await supabase
             .from('records')
             .select('*, players!userid!inner(*, clans!id(*)), levels(*)')
-            .eq('players.clan', this.data.id!)
+            .eq('players.clan', this.id!)
             .eq('players.isHidden', false)
             .eq('isChecked', true)
             .not(sortBy, 'is', null)
