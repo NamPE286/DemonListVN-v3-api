@@ -87,3 +87,25 @@ export async function getPlayerRecords(uid: string, { start = '0', end = '50', s
         fl: (await query1).data
     }
 }
+
+export async function getLevelRecords(id: number, { start = 0, end = 50, isChecked = true } = {}) {
+    if (typeof isChecked == 'string') {
+        isChecked = (isChecked == 'true')
+    }
+
+    const { data, error } = await supabase
+        .from('records')
+        .select('*, players!userid!inner(*, clans!id(*))')
+        .eq('players.isHidden', false)
+        .eq('levelid', id)
+        .eq('isChecked', isChecked)
+        .order('progress', { ascending: false })
+        .order('timestamp')
+        .range(start, end)
+
+    if (error) {
+        throw error
+    }
+
+    return data
+}
