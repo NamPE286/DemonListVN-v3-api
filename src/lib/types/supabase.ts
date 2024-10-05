@@ -759,6 +759,41 @@ export type Database = {
           },
         ]
       }
+      userSocial: {
+        Row: {
+          created_at: string
+          id: string
+          isVisible: boolean
+          name: string | null
+          platform: string
+          userid: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          isVisible?: boolean
+          name?: string | null
+          platform: string
+          userid: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          isVisible?: boolean
+          name?: string | null
+          platform?: string
+          userid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "userSocial_userid_fkey"
+            columns: ["userid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
