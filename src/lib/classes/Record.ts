@@ -1,6 +1,5 @@
 import supabase from '@database/supabase'
 import Level from '@src/lib/classes/Level'
-import type { Database } from '@src/lib/types/supabase'
 import type { TRecord } from '@src/lib/types'
 
 async function isLevelExists(id: number) {

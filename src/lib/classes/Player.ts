@@ -1,5 +1,4 @@
 import supabase from '@database/supabase'
-import type { Database } from '@src/lib/types/supabase'
 import type { TPlayer } from '@src/lib/types'
 
 class Player {

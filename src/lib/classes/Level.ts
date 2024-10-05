@@ -1,6 +1,5 @@
 import supabase from '@database/supabase'
 import { addChangelog } from '@src/lib/client/changelog'
-import type { Database } from '@src/lib/types/supabase'
 import type { TLevel } from '@src/lib/types'
 
 class Level {
