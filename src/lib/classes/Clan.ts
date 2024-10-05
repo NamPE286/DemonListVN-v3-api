@@ -107,7 +107,7 @@ class Clan {
 
         const tmp = this
         //@ts-ignore
-        delete tmp.data.players
+        delete tmp.players
         tmp.memberCount!++
         await tmp.update()
 
@@ -127,7 +127,7 @@ class Clan {
 
         const tmp = this
         //@ts-ignore
-        delete tmp.data.players
+        delete tmp.players
         tmp.memberCount!--
         await tmp.update()
 
