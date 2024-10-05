@@ -1,9 +1,9 @@
 import express from 'express'
 import Player from '@lib/classes/Player'
 import userAuth from '@src/middleware/userAuth'
-import { getHeatmap } from '@src/lib/client'
+import { getHeatmap } from '@src/lib/client/heatmap'
 import { getPlayerRecords } from '@src/lib/client/record'
-import { updateHeatmap } from '@src/lib/client'
+import { updateHeatmap } from '@src/lib/client/heatmap'
 import { getPlayerSubmissions } from '@src/lib/client/record'
 
 const router = express.Router()

@@ -1,5 +1,5 @@
 import supabase from '@database/supabase'
-import { addChangelog } from '@src/lib/client/addChangelog'
+import { addChangelog } from '@src/lib/client/changelog'
 import type { Database } from '@src/lib/types/supabase'
 
 type Data = Database['public']['Tables']['levels']['Update']

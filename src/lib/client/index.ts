@@ -1,5 +1,0 @@
-export * from './search'
-export * from './APIKey'
-export * from './heatmap'
-export * from './deathCount'
-export * from './getClans'

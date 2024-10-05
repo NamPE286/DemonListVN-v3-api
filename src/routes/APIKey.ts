@@ -1,6 +1,6 @@
 import express from 'express'
 import userAuth from '@src/middleware/userAuth'
-import { createAPIKey, deleteAPIKey, getAllAPIKey } from '@src/lib/client'
+import { createAPIKey, deleteAPIKey, getAllAPIKey } from '@src/lib/client/APIKey'
 
 const router = express.Router()
 

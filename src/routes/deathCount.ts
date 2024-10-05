@@ -1,5 +1,5 @@
 import express from 'express'
-import { getDeathCount, updateDeathCount } from '@src/lib/client'
+import { getDeathCount, updateDeathCount } from '@src/lib/client/deathCount'
 import userAuth from '@src/middleware/userAuth'
 
 const router = express.Router()
