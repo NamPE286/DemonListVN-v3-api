@@ -1,7 +1,4 @@
 import supabase from '@database/supabase'
-import type { Database } from '@src/lib/types/supabase'
-
-export type Player = Database['public']['Tables']['players']['Update']
 
 export async function getPlayers({province = '', city = '', sortBy = 'rating', ascending = 'true'} = {}) {
     if(province == '') {

@@ -1,13 +1,13 @@
 import supabase from '@database/supabase'
 import type { Database } from '@src/lib/types/supabase'
 
-type Data = Database['public']['Tables']['players']['Update']
+export type TPlayer = Database['public']['Tables']['players']['Update']
 
 class Player {
     #synced = false
-    data: Data
+    data: TPlayer
 
-    constructor(data: Data) {
+    constructor(data: TPlayer) {
         this.data = data
     }
 

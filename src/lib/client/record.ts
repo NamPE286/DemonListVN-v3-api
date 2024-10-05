@@ -1,10 +1,6 @@
 import supabase from "@src/database/supabase";
-import type { Database } from '@src/lib/types/supabase'
-
 import RecordClass from "@src/lib/classes/Record";
 import Player from "@src/lib/classes/Player";
-
-export type Record = Database['public']['Tables']['records']['Update']
 
 export async function getDemonListRecords({ start = 0, end = 0, isChecked = false } = {}) {
     if (typeof isChecked == 'string') {

@@ -2,7 +2,7 @@ import supabase from '@database/supabase'
 import Level from '@src/lib/classes/Level'
 import type { Database } from '@src/lib/types/supabase'
 
-type Data = Database['public']['Tables']['records']['Update']
+export type TRecord = Database['public']['Tables']['records']['Update']
 
 async function isLevelExists(id: number) {
     const { data, error } = await supabase
@@ -20,9 +20,9 @@ async function isLevelExists(id: number) {
 
 class Record {
     #synced = false
-    data: Data
+    data: TRecord
 
-    constructor(data: Data) {
+    constructor(data: TRecord) {
         this.data = data
     }
 

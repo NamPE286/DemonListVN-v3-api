@@ -1,5 +1,4 @@
 import supabase from "@src/database/supabase"
-import type { Database } from '@src/lib/types/supabase'
 import type { TLevel } from "@src/lib/classes/Level"
 
 function convertToIDArray(levels: TLevel[]) {

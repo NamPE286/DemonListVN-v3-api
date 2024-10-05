@@ -2,12 +2,12 @@ import supabase from "@src/database/supabase";
 import Clan from "@src/lib/classes/Clan";
 import type { Database } from '@src/lib/types/supabase'
 
-type Data = Database['public']['Tables']['clanInvitations']['Update']
+export type TClanInvitation = Database['public']['Tables']['clanInvitations']['Update']
 
 class ClanInvitation {
-    data: Data
+    data: TClanInvitation
 
-    constructor(data: Data) {
+    constructor(data: TClanInvitation) {
         this.data = data
     }
 
