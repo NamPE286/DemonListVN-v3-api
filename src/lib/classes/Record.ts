@@ -33,7 +33,7 @@ class Record {
             throw error
         }
 
-        Object.assign(this, FormData)
+        Object.assign(this, data)
     }
 
     async submit() {
