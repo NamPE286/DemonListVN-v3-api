@@ -37,8 +37,8 @@ async function isEligible(levelID: number): Promise<boolean> {
     return data.difficulty == 'Extreme Demon' || data.difficulty == 'Insane Demon'
 }
 
-export async function getDeathCount(uid: string, year: number) {
-    return await fetchPlayerData(uid, year)
+export async function getDeathCount(uid: string, levelID: number) {
+    return await fetchPlayerData(uid, levelID)
 }
 
 export async function getLevelDeathCount(id: number) {
