@@ -156,13 +156,33 @@ export async function retrieveRecord(user: Player) {
         .limit(1)
         .single()
 
-    if (data == null) {
-        throw new Error("No avaliable record")
+    let res = data;
+
+    var { data, error } = await supabase
+        .from('records')
+        .select('*, levels!inner(*)')
+        .neq('levels.flPt', null)
+        .neq('userid', user.uid)
+        .eq('needMod', false)
+        .eq('isChecked', false)
+        .is('reviewer', null)
+        .order('timestamp', { ascending: true })
+        .limit(1)
+        .single()
+
+    if(res == null) {
+        res = data;
+    } else if(data != null && (new Date(res.timestamp!)) > (new Date(data.timestamp!))) {
+        res = data;
     }
 
-    const record = new RecordClass({ userid: data.userid, levelid: data.levelid })
+    if(res == null) {
+        throw new Error("No available record")
+    }
+
+    const record = new RecordClass({ userid: res.userid, levelid: res.levelid })
     await record.pull()
-    record.reviewer = data.reviewer = user.uid!
+    record.reviewer = res.reviewer = user.uid!
     record.update()
 
     return data
