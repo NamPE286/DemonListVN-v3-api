@@ -162,7 +162,7 @@ export async function retrieveRecord(user: Player) {
         .from('records')
         .select('*, levels!inner(*)')
         .not('levels.flPt', 'is', null)
-        .neq('userid', "3e788ac1-989c-4d2b-bfaf-f99059d258cf")
+        .neq('userid', user.uid)
         .eq('needMod', false)
         .eq('isChecked', false)
         .is('reviewer', null)
