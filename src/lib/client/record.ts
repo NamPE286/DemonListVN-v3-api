@@ -161,8 +161,8 @@ export async function retrieveRecord(user: Player) {
     var { data, error } = await supabase
         .from('records')
         .select('*, levels!inner(*)')
-        .neq('levels.flPt', null)
-        .neq('userid', user.uid)
+        .not('levels.flPt', 'is', null)
+        .neq('userid', "3e788ac1-989c-4d2b-bfaf-f99059d258cf")
         .eq('needMod', false)
         .eq('isChecked', false)
         .is('reviewer', null)
