@@ -22,6 +22,7 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
         .not('dlTop', 'is', null)
         .order(sortBy, { ascending: ascending })
         .range(start, end)
+        .eq('isPlatformer', false)
 
     if (a.error || !a.data) {
         throw a.error
