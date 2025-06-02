@@ -24,6 +24,11 @@ class Player {
 
     async update({ updateClan = false } = {}) {
         const updateData = this
+
+        if (updateData.isTrusted && !updateData.isAdmin) {
+            delete updateData.name
+        }
+
         delete updateData.isAdmin
         delete updateData.isTrusted
         delete updateData.isBanned
