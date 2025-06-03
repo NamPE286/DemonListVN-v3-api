@@ -1,4 +1,5 @@
 
+
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -10,29 +11,75 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+
 CREATE SCHEMA IF NOT EXISTS "levels";
+
 
 ALTER SCHEMA "levels" OWNER TO "postgres";
 
+
 CREATE EXTENSION IF NOT EXISTS "pg_net" WITH SCHEMA "extensions";
+
+
+
+
+
+
+
 
 ALTER SCHEMA "public" OWNER TO "postgres";
 
+
 COMMENT ON SCHEMA "public" IS 'standard public schema';
+
+
 
 CREATE EXTENSION IF NOT EXISTS "pg_graphql" WITH SCHEMA "graphql";
 
+
+
+
+
+
 CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
+
+
+
+
+
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";
 
+
+
+
+
+
 CREATE EXTENSION IF NOT EXISTS "pgjwt" WITH SCHEMA "extensions";
 
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "supabase_vault" WITH SCHEMA "vault";
+
+
+
+
+
+
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
+
+
+
+
+
 
 CREATE OR REPLACE FUNCTION "public"."updateList"() RETURNS "void"
     LANGUAGE "plpgsql"
     AS $$begin
+
 WITH
   v_table_name AS (
     SELECT
@@ -104,9 +151,14 @@ where true;
 update clans
 set "memberCount" = (select count(*) from players where players.clan = clans.id)
 where true;
+
+update levels set "flPt" = null where "flTop" is null;
+update levels set "dlTop" = null where "rating" is null;
 end$$;
 
+
 ALTER FUNCTION "public"."updateList"() OWNER TO "postgres";
+
 
 CREATE OR REPLACE FUNCTION "public"."updateRank"() RETURNS "void"
     LANGUAGE "plpgsql"
@@ -123,6 +175,7 @@ with
           userid
         order by
           case
+            when records."isChecked" = false then null
             when records.progress = 100 then levels.rating
             else levels.rating * records.progress / 150
           end desc nulls last
@@ -165,9 +218,17 @@ with
       records.levelid,
       case
         when records.no is null then null
-        when records.no = 1 then levels.rating * 7 / 10
-        when (records.no > 1 and records.no <= 20) then greatest(5, floor(levels.rating * (25 / records.no) / 100))
-        when (records.no > 20 and records.no <= 50) then 5
+        when records.no = 1 then levels.rating * 5 / 10
+        when records.no = 2 then levels.rating * 3 / 10
+        when records.no = 3 then levels.rating * 2 / 10
+        when (
+          records.no > 3
+          and records.no <= 15
+        ) then greatest(5, floor(levels.rating * (25 / records.no) / 100))
+        when (
+          records.no > 15
+          and records.no <= 25
+        ) then 5
         else 1
       end as pt
     FROM
@@ -193,9 +254,17 @@ with
       records.levelid,
       case
         when records.no is null then null
-        when records.no = 1 then levels.rating * 7 / 10
-        when (records.no > 1 and records.no <= 20) then greatest(5, floor(levels.rating * (25 / records.no) / 100))
-        when (records.no > 20 and records.no <= 50) then 5
+        when records.no = 1 then levels.rating * 5 / 10
+        when records.no = 2 then levels.rating * 3 / 10
+        when records.no = 3 then levels.rating * 2 / 10
+        when (
+          records.no > 1
+          and records.no <= 15
+        ) then greatest(5, floor(levels.rating * (25 / records.no) / 100))
+        when (
+          records.no > 15
+          and records.no <= 25
+        ) then 5
         else 1
       end as pt
     FROM
@@ -367,13 +436,86 @@ FROM
   v_table_name
 WHERE
   players.uid = v_table_name.uid;
+
+with
+  v_table_a as (
+    select
+      userid,
+      count(*)
+    from
+      records
+    where
+      "isChecked" = true
+    group by
+      userid
+  )
+update players
+set
+  "recordCount" = v_table_a.count
+from
+  v_table_a
+where
+  players.uid = v_table_a.userid;
+
+with
+  v_table_a as (
+    select
+      records.userid,
+      coalesce(sum(levels.rating), 0) as sum,
+      count(*)
+    from
+      records,
+      levels
+    where
+      levels.id = records.levelid
+      and records."isChecked" = true
+    group by
+      records.userid
+  )
+update players
+set
+  exp = v_table_a.count * 50 + v_table_a.sum
+from
+  v_table_a
+where
+  uid = v_table_a.userid;
+
+update players
+set
+  "extraExp" = 0
+where
+  true;
+
+with
+  v_table_a as (
+    select
+      "eventProofs".userid,
+      sum(events.exp)
+    from
+      events,
+      "eventProofs"
+    where
+      events.id = "eventProofs"."eventID"
+      and "eventProofs".accepted = true
+    group by
+      "eventProofs".userid
+  )
+update players
+set
+  "extraExp" = v_table_a.sum
+from
+  v_table_a
+where
+  players.uid = v_table_a.userid;
 end$$;
+
 
 ALTER FUNCTION "public"."updateRank"() OWNER TO "postgres";
 
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
+
 
 CREATE TABLE IF NOT EXISTS "levels"."79484035" (
     "id" bigint DEFAULT '79484035'::bigint,
@@ -385,7 +527,9 @@ CREATE TABLE IF NOT EXISTS "levels"."79484035" (
     "top" bigint
 );
 
+
 ALTER TABLE "levels"."79484035" OWNER TO "postgres";
+
 
 CREATE TABLE IF NOT EXISTS "public"."APIKey" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -393,15 +537,19 @@ CREATE TABLE IF NOT EXISTS "public"."APIKey" (
     "uid" "uuid" NOT NULL
 );
 
+
 ALTER TABLE "public"."APIKey" OWNER TO "postgres";
 
+
 CREATE TABLE IF NOT EXISTS "public"."PVPPlayers" (
-    "joined_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "joined_at" timestamp with time zone DEFAULT "now"(),
     "player" "uuid" NOT NULL,
     "room" bigint NOT NULL
 );
 
+
 ALTER TABLE "public"."PVPPlayers" OWNER TO "postgres";
+
 
 CREATE TABLE IF NOT EXISTS "public"."PVPRooms" (
     "id" bigint NOT NULL,
@@ -413,7 +561,9 @@ CREATE TABLE IF NOT EXISTS "public"."PVPRooms" (
     "host" "uuid"
 );
 
+
 ALTER TABLE "public"."PVPRooms" OWNER TO "postgres";
+
 
 ALTER TABLE "public"."PVPRooms" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME "public"."PVPRoom_id_seq"
@@ -424,6 +574,8 @@ ALTER TABLE "public"."PVPRooms" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS ID
     CACHE 1
 );
 
+
+
 CREATE TABLE IF NOT EXISTS "public"."achievement" (
     "id" bigint NOT NULL,
     "name" character varying DEFAULT 'defaultname'::character varying NOT NULL,
@@ -431,7 +583,9 @@ CREATE TABLE IF NOT EXISTS "public"."achievement" (
     "image" character varying
 );
 
+
 ALTER TABLE "public"."achievement" OWNER TO "postgres";
+
 
 ALTER TABLE "public"."achievement" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME "public"."achievement_id_seq"
@@ -442,13 +596,41 @@ ALTER TABLE "public"."achievement" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS
     CACHE 1
 );
 
+
+
+CREATE TABLE IF NOT EXISTS "public"."changelogs" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "levelID" bigint NOT NULL,
+    "old" "json",
+    "new" "json" NOT NULL,
+    "published" boolean DEFAULT false
+);
+
+
+ALTER TABLE "public"."changelogs" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."changelogs" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."changelogs_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."clanBan" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "userid" "uuid" NOT NULL,
     "clan" bigint NOT NULL
 );
 
+
 ALTER TABLE "public"."clanBan" OWNER TO "postgres";
+
 
 CREATE TABLE IF NOT EXISTS "public"."clanInvitations" (
     "id" bigint NOT NULL,
@@ -457,7 +639,9 @@ CREATE TABLE IF NOT EXISTS "public"."clanInvitations" (
     "clan" bigint NOT NULL
 );
 
+
 ALTER TABLE "public"."clanInvitations" OWNER TO "postgres";
+
 
 ALTER TABLE "public"."clanInvitations" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME "public"."clanInvitations_id_seq"
@@ -467,6 +651,8 @@ ALTER TABLE "public"."clanInvitations" ALTER COLUMN "id" ADD GENERATED BY DEFAUL
     NO MAXVALUE
     CACHE 1
 );
+
+
 
 CREATE TABLE IF NOT EXISTS "public"."clans" (
     "id" bigint NOT NULL,
@@ -482,10 +668,13 @@ CREATE TABLE IF NOT EXISTS "public"."clans" (
     "rank" bigint,
     "memberLimit" bigint DEFAULT '50'::bigint NOT NULL,
     CONSTRAINT "clans_memberLimit_check" CHECK (("memberLimit" <= 500)),
+    CONSTRAINT "clans_name_check" CHECK (("length"("name") <= 30)),
     CONSTRAINT "clans_tag_check" CHECK ((("length"("tag") <= 6) AND ("length"("tag") >= 2)))
 );
 
+
 ALTER TABLE "public"."clans" OWNER TO "postgres";
+
 
 ALTER TABLE "public"."clans" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME "public"."clans_id_seq"
@@ -496,6 +685,8 @@ ALTER TABLE "public"."clans" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENT
     CACHE 1
 );
 
+
+
 CREATE TABLE IF NOT EXISTS "public"."deathCount" (
     "levelID" bigint NOT NULL,
     "count" bigint[] NOT NULL,
@@ -504,7 +695,9 @@ CREATE TABLE IF NOT EXISTS "public"."deathCount" (
     CONSTRAINT "deathCount_count_check" CHECK (("cardinality"("count") = 100))
 );
 
+
 ALTER TABLE "public"."deathCount" OWNER TO "postgres";
+
 
 ALTER TABLE "public"."deathCount" ALTER COLUMN "levelID" ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME "public"."deathCount_levelID_seq"
@@ -515,6 +708,39 @@ ALTER TABLE "public"."deathCount" ALTER COLUMN "levelID" ADD GENERATED BY DEFAUL
     CACHE 1
 );
 
+
+
+CREATE TABLE IF NOT EXISTS "public"."eventProofs" (
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "userid" "uuid" NOT NULL,
+    "eventID" bigint NOT NULL,
+    "content" "text" DEFAULT ''::"text" NOT NULL,
+    "accepted" boolean DEFAULT false NOT NULL
+);
+
+
+ALTER TABLE "public"."eventProofs" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."events" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "start" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "end" timestamp with time zone,
+    "title" "text" NOT NULL,
+    "description" "text" NOT NULL,
+    "imgUrl" "text" NOT NULL,
+    "exp" bigint,
+    "content" "text",
+    "redirect" "text",
+    "minExp" bigint DEFAULT '0'::bigint NOT NULL,
+    "needProof" boolean DEFAULT true NOT NULL
+);
+
+
+ALTER TABLE "public"."events" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."heatmap" (
     "uid" "uuid" NOT NULL,
     "year" bigint NOT NULL,
@@ -522,7 +748,9 @@ CREATE TABLE IF NOT EXISTS "public"."heatmap" (
     CONSTRAINT "attempts_days_check" CHECK (("cardinality"("days") = 366))
 );
 
+
 ALTER TABLE "public"."heatmap" OWNER TO "postgres";
+
 
 CREATE TABLE IF NOT EXISTS "public"."levelDeathCount" (
     "levelID" bigint NOT NULL,
@@ -530,7 +758,9 @@ CREATE TABLE IF NOT EXISTS "public"."levelDeathCount" (
     CONSTRAINT "deathCount_count_check" CHECK (("cardinality"("count") = 100))
 );
 
+
 ALTER TABLE "public"."levelDeathCount" OWNER TO "postgres";
+
 
 ALTER TABLE "public"."levelDeathCount" ALTER COLUMN "levelID" ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME "public"."levelDeathCount_levelID_seq"
@@ -540,6 +770,8 @@ ALTER TABLE "public"."levelDeathCount" ALTER COLUMN "levelID" ADD GENERATED BY D
     NO MAXVALUE
     CACHE 1
 );
+
+
 
 CREATE TABLE IF NOT EXISTS "public"."levels" (
     "id" bigint NOT NULL,
@@ -554,10 +786,13 @@ CREATE TABLE IF NOT EXISTS "public"."levels" (
     "rating" bigint,
     "songID" bigint,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "avgSuggestedRating" bigint
+    "avgSuggestedRating" bigint,
+    "isPlatformer" boolean DEFAULT false NOT NULL
 );
 
+
 ALTER TABLE "public"."levels" OWNER TO "postgres";
+
 
 CREATE TABLE IF NOT EXISTS "public"."notifications" (
     "id" bigint NOT NULL,
@@ -568,7 +803,9 @@ CREATE TABLE IF NOT EXISTS "public"."notifications" (
     "redirect" "text"
 );
 
+
 ALTER TABLE "public"."notifications" OWNER TO "postgres";
+
 
 ALTER TABLE "public"."notifications" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME "public"."notifications_id_seq"
@@ -579,9 +816,35 @@ ALTER TABLE "public"."notifications" ALTER COLUMN "id" ADD GENERATED BY DEFAULT 
     CACHE 1
 );
 
+
+
+CREATE TABLE IF NOT EXISTS "public"."orders" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "userID" "uuid" NOT NULL,
+    "state" "text" NOT NULL,
+    "amount" bigint NOT NULL,
+    "productID" bigint
+);
+
+
+ALTER TABLE "public"."orders" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."orders" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."orders_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."players" (
     "id" bigint NOT NULL,
-    "name" character varying NOT NULL,
+    "name" "text" NOT NULL,
     "email" character varying,
     "avatar" character varying,
     "facebook" character varying,
@@ -605,10 +868,16 @@ CREATE TABLE IF NOT EXISTS "public"."players" (
     "reviewCooldown" timestamp with time zone,
     "renameCooldown" timestamp with time zone DEFAULT '2020-06-09 14:03:33.297+00'::timestamp with time zone NOT NULL,
     "clan" bigint,
-    CONSTRAINT "players_name_check" CHECK (("length"(("name")::"text") <= 35))
+    "recordCount" bigint DEFAULT '0'::bigint NOT NULL,
+    "exp" bigint DEFAULT '0'::bigint NOT NULL,
+    "extraExp" bigint,
+    "supporterUntil" timestamp with time zone,
+    CONSTRAINT "players_name_check" CHECK (("length"("name") <= 35))
 );
 
+
 ALTER TABLE "public"."players" OWNER TO "postgres";
+
 
 CREATE TABLE IF NOT EXISTS "public"."playersAchievement" (
     "id" bigint NOT NULL,
@@ -617,7 +886,9 @@ CREATE TABLE IF NOT EXISTS "public"."playersAchievement" (
     "timestamp" bigint
 );
 
+
 ALTER TABLE "public"."playersAchievement" OWNER TO "postgres";
+
 
 ALTER TABLE "public"."playersAchievement" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME "public"."playersAchievement_id_seq"
@@ -628,6 +899,8 @@ ALTER TABLE "public"."playersAchievement" ALTER COLUMN "id" ADD GENERATED BY DEF
     CACHE 1
 );
 
+
+
 ALTER TABLE "public"."players" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME "public"."players_id_seq"
     START WITH 1
@@ -636,6 +909,41 @@ ALTER TABLE "public"."players" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDE
     NO MAXVALUE
     CACHE 1
 );
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."products" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "name" "text",
+    "price" bigint
+);
+
+
+ALTER TABLE "public"."products" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."products" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."products_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
+ALTER TABLE "public"."events" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."promotions_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
 
 CREATE TABLE IF NOT EXISTS "public"."records" (
     "videoLink" character varying,
@@ -654,175 +962,413 @@ CREATE TABLE IF NOT EXISTS "public"."records" (
     "needMod" boolean DEFAULT false NOT NULL,
     "reviewerComment" "text",
     "no" bigint,
-    "raw" "text" DEFAULT ''::"text"
+    "raw" "text" DEFAULT ''::"text",
+    "time" bigint,
+    CONSTRAINT "records_progress_check" CHECK ((("progress" >= 0) AND ("progress" <= 100)))
 );
 
+
 ALTER TABLE "public"."records" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."records"."time" IS 'in ms';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."userSocial" (
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "platform" "text" NOT NULL,
+    "id" "text" NOT NULL,
+    "userid" "uuid" NOT NULL,
+    "isVisible" boolean DEFAULT false NOT NULL,
+    "name" "text"
+);
+
+
+ALTER TABLE "public"."userSocial" OWNER TO "postgres";
+
 
 ALTER TABLE ONLY "public"."levels"
     ADD CONSTRAINT "79484035_pkey" PRIMARY KEY ("id");
 
+
+
 ALTER TABLE ONLY "public"."APIKey"
     ADD CONSTRAINT "APIKey_key_key" UNIQUE ("key");
+
+
 
 ALTER TABLE ONLY "public"."APIKey"
     ADD CONSTRAINT "APIKey_pkey" PRIMARY KEY ("created_at");
 
+
+
 ALTER TABLE ONLY "public"."PVPPlayers"
     ADD CONSTRAINT "PVPPlayers_pkey" PRIMARY KEY ("player", "room");
+
+
 
 ALTER TABLE ONLY "public"."PVPRooms"
     ADD CONSTRAINT "PVPRoom_pkey" PRIMARY KEY ("id");
 
+
+
 ALTER TABLE ONLY "public"."achievement"
     ADD CONSTRAINT "achievement_name_key" UNIQUE ("name");
+
+
 
 ALTER TABLE ONLY "public"."achievement"
     ADD CONSTRAINT "achievement_pkey" PRIMARY KEY ("id");
 
+
+
 ALTER TABLE ONLY "public"."heatmap"
     ADD CONSTRAINT "attempts_pkey" PRIMARY KEY ("uid", "year");
+
+
+
+ALTER TABLE ONLY "public"."changelogs"
+    ADD CONSTRAINT "changelogs_pkey" PRIMARY KEY ("id");
+
+
 
 ALTER TABLE ONLY "public"."clanBan"
     ADD CONSTRAINT "clanBan_pkey" PRIMARY KEY ("userid", "clan");
 
+
+
 ALTER TABLE ONLY "public"."clanInvitations"
     ADD CONSTRAINT "clanInvitations_pkey" PRIMARY KEY ("to");
+
+
 
 ALTER TABLE ONLY "public"."clans"
     ADD CONSTRAINT "clans_owner_key" UNIQUE ("owner");
 
+
+
 ALTER TABLE ONLY "public"."clans"
     ADD CONSTRAINT "clans_pkey" PRIMARY KEY ("id");
+
+
 
 ALTER TABLE ONLY "public"."clans"
     ADD CONSTRAINT "clans_tag_key" UNIQUE ("tag");
 
+
+
 ALTER TABLE ONLY "public"."deathCount"
     ADD CONSTRAINT "deathCount_pkey" PRIMARY KEY ("levelID", "uid");
+
+
+
+ALTER TABLE ONLY "public"."eventProofs"
+    ADD CONSTRAINT "eventProofs_pkey" PRIMARY KEY ("userid", "eventID");
+
+
 
 ALTER TABLE ONLY "public"."levelDeathCount"
     ADD CONSTRAINT "levelDeathCount_pkey" PRIMARY KEY ("levelID");
 
+
+
 ALTER TABLE ONLY "public"."notifications"
     ADD CONSTRAINT "notifications_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."orders"
+    ADD CONSTRAINT "orders_pkey" PRIMARY KEY ("id");
+
+
 
 ALTER TABLE ONLY "public"."playersAchievement"
     ADD CONSTRAINT "playersAchievement_pkey" PRIMARY KEY ("id");
 
+
+
 ALTER TABLE ONLY "public"."players"
     ADD CONSTRAINT "players_email_key" UNIQUE ("email");
+
+
+
+ALTER TABLE ONLY "public"."players"
+    ADD CONSTRAINT "players_name_key" UNIQUE ("name");
+
+
 
 ALTER TABLE ONLY "public"."players"
     ADD CONSTRAINT "players_pkey" PRIMARY KEY ("uid");
 
+
+
 ALTER TABLE ONLY "public"."players"
     ADD CONSTRAINT "players_uid_key" UNIQUE ("uid");
+
+
+
+ALTER TABLE ONLY "public"."products"
+    ADD CONSTRAINT "products_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."events"
+    ADD CONSTRAINT "promotions_pkey" PRIMARY KEY ("id");
+
+
 
 ALTER TABLE ONLY "public"."records"
     ADD CONSTRAINT "records_pkey" PRIMARY KEY ("userid", "levelid");
 
+
+
+ALTER TABLE ONLY "public"."userSocial"
+    ADD CONSTRAINT "userSocial_pkey" PRIMARY KEY ("platform", "id");
+
+
+
 ALTER TABLE ONLY "public"."PVPPlayers"
     ADD CONSTRAINT "PVPPlayers_player_fkey" FOREIGN KEY ("player") REFERENCES "public"."players"("uid") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
 
 ALTER TABLE ONLY "public"."PVPPlayers"
     ADD CONSTRAINT "PVPPlayers_room_fkey" FOREIGN KEY ("room") REFERENCES "public"."PVPRooms"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
+
+
 ALTER TABLE ONLY "public"."PVPRooms"
     ADD CONSTRAINT "PVPRoom_host_fkey" FOREIGN KEY ("host") REFERENCES "public"."players"("uid") ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."changelogs"
+    ADD CONSTRAINT "changelogs_levelID_fkey" FOREIGN KEY ("levelID") REFERENCES "public"."levels"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
 
 ALTER TABLE ONLY "public"."clanBan"
     ADD CONSTRAINT "clanBan_clan_fkey" FOREIGN KEY ("clan") REFERENCES "public"."clans"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
+
+
 ALTER TABLE ONLY "public"."clanBan"
     ADD CONSTRAINT "clanBan_userid_fkey" FOREIGN KEY ("userid") REFERENCES "public"."players"("uid") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
 
 ALTER TABLE ONLY "public"."clanInvitations"
     ADD CONSTRAINT "clanInvitations_clan_fkey" FOREIGN KEY ("clan") REFERENCES "public"."clans"("id") ON DELETE CASCADE;
 
+
+
 ALTER TABLE ONLY "public"."clanInvitations"
     ADD CONSTRAINT "clanInvitations_to_fkey" FOREIGN KEY ("to") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
+
+
 
 ALTER TABLE ONLY "public"."clans"
     ADD CONSTRAINT "clans_owner_fkey" FOREIGN KEY ("owner") REFERENCES "public"."players"("uid");
 
+
+
+ALTER TABLE ONLY "public"."eventProofs"
+    ADD CONSTRAINT "eventProofs_eventID_fkey" FOREIGN KEY ("eventID") REFERENCES "public"."events"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."eventProofs"
+    ADD CONSTRAINT "eventProofs_userid_fkey" FOREIGN KEY ("userid") REFERENCES "public"."players"("uid") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."notifications"
     ADD CONSTRAINT "notifications_to_fkey" FOREIGN KEY ("to") REFERENCES "public"."players"("uid");
+
+
+
+ALTER TABLE ONLY "public"."orders"
+    ADD CONSTRAINT "orders_productID_fkey" FOREIGN KEY ("productID") REFERENCES "public"."products"("id");
+
+
+
+ALTER TABLE ONLY "public"."orders"
+    ADD CONSTRAINT "orders_userID_fkey" FOREIGN KEY ("userID") REFERENCES "public"."players"("uid");
+
+
 
 ALTER TABLE ONLY "public"."playersAchievement"
     ADD CONSTRAINT "playersAchievement_achievementid_fkey" FOREIGN KEY ("achievementid") REFERENCES "public"."achievement"("id");
 
+
+
 ALTER TABLE ONLY "public"."playersAchievement"
     ADD CONSTRAINT "playersAchievement_userid_fkey" FOREIGN KEY ("userid") REFERENCES "public"."players"("uid");
+
+
 
 ALTER TABLE ONLY "public"."players"
     ADD CONSTRAINT "players_clan_fkey" FOREIGN KEY ("clan") REFERENCES "public"."clans"("id") ON DELETE SET NULL;
 
+
+
 ALTER TABLE ONLY "public"."APIKey"
     ADD CONSTRAINT "public_APIKey_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
 
 ALTER TABLE ONLY "public"."heatmap"
     ADD CONSTRAINT "public_attempts_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON UPDATE CASCADE ON DELETE CASCADE;
 
+
+
 ALTER TABLE ONLY "public"."deathCount"
     ADD CONSTRAINT "public_deathCount_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
 
 ALTER TABLE ONLY "public"."records"
     ADD CONSTRAINT "public_records_levelid_fkey" FOREIGN KEY ("levelid") REFERENCES "public"."levels"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
+
+
 ALTER TABLE ONLY "public"."records"
     ADD CONSTRAINT "public_records_userid_fkey" FOREIGN KEY ("userid") REFERENCES "public"."players"("uid") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
 
 ALTER TABLE ONLY "public"."records"
     ADD CONSTRAINT "records_reviewer_fkey" FOREIGN KEY ("reviewer") REFERENCES "public"."players"("uid") ON UPDATE CASCADE ON DELETE SET NULL;
 
+
+
+ALTER TABLE ONLY "public"."userSocial"
+    ADD CONSTRAINT "userSocial_userid_fkey" FOREIGN KEY ("userid") REFERENCES "public"."players"("uid") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+
 ALTER TABLE "levels"."79484035" ENABLE ROW LEVEL SECURITY;
+
 
 ALTER TABLE "public"."APIKey" ENABLE ROW LEVEL SECURITY;
 
+
 CREATE POLICY "Enable delete for users based on user_id" ON "public"."records" FOR DELETE USING ((("auth"."uid"() = "userid") AND ("isChecked" = false)));
+
+
 
 CREATE POLICY "Enable read access for all users" ON "public"."achievement" FOR SELECT USING (true);
 
+
+
+CREATE POLICY "Enable read access for all users" ON "public"."clans" FOR SELECT USING (true);
+
+
+
+CREATE POLICY "Enable read access for all users" ON "public"."events" FOR SELECT USING (true);
+
+
+
 CREATE POLICY "Enable read access for all users" ON "public"."levels" FOR SELECT USING (true);
+
+
+
+CREATE POLICY "Enable read access for all users" ON "public"."notifications" FOR SELECT USING (true);
+
+
 
 CREATE POLICY "Enable read access for all users" ON "public"."players" FOR SELECT USING (true);
 
+
+
 CREATE POLICY "Enable read access for all users" ON "public"."playersAchievement" FOR SELECT USING (true);
+
+
 
 CREATE POLICY "Enable read access for all users" ON "public"."records" FOR SELECT USING (true);
 
+
+
 CREATE POLICY "Enable update for users based on uid" ON "public"."players" FOR INSERT WITH CHECK (("auth"."uid"() = "uid"));
+
+
 
 ALTER TABLE "public"."PVPPlayers" ENABLE ROW LEVEL SECURITY;
 
+
 ALTER TABLE "public"."PVPRooms" ENABLE ROW LEVEL SECURITY;
+
 
 ALTER TABLE "public"."achievement" ENABLE ROW LEVEL SECURITY;
 
+
+ALTER TABLE "public"."changelogs" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."clanBan" ENABLE ROW LEVEL SECURITY;
+
 
 ALTER TABLE "public"."clanInvitations" ENABLE ROW LEVEL SECURITY;
 
+
 ALTER TABLE "public"."clans" ENABLE ROW LEVEL SECURITY;
+
 
 ALTER TABLE "public"."deathCount" ENABLE ROW LEVEL SECURITY;
 
+
+ALTER TABLE "public"."eventProofs" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."events" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."heatmap" ENABLE ROW LEVEL SECURITY;
+
 
 ALTER TABLE "public"."levelDeathCount" ENABLE ROW LEVEL SECURITY;
 
+
 ALTER TABLE "public"."levels" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."notifications" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."orders" ENABLE ROW LEVEL SECURITY;
+
 
 ALTER TABLE "public"."players" ENABLE ROW LEVEL SECURITY;
 
+
 ALTER TABLE "public"."playersAchievement" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."products" ENABLE ROW LEVEL SECURITY;
+
 
 ALTER TABLE "public"."records" ENABLE ROW LEVEL SECURITY;
 
+
+ALTER TABLE "public"."userSocial" ENABLE ROW LEVEL SECURITY;
+
+
+
+
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
 
+
+
+
+
+
 ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."notifications";
+
+
+
+
+
 
 REVOKE USAGE ON SCHEMA "public" FROM PUBLIC;
 GRANT ALL ON SCHEMA "public" TO PUBLIC;
@@ -830,123 +1376,474 @@ GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 GRANT ALL ON FUNCTION "public"."updateList"() TO "anon";
 GRANT ALL ON FUNCTION "public"."updateList"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."updateList"() TO "service_role";
+
+
 
 GRANT ALL ON FUNCTION "public"."updateRank"() TO "anon";
 GRANT ALL ON FUNCTION "public"."updateRank"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."updateRank"() TO "service_role";
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 GRANT ALL ON TABLE "public"."APIKey" TO "anon";
 GRANT ALL ON TABLE "public"."APIKey" TO "authenticated";
 GRANT ALL ON TABLE "public"."APIKey" TO "service_role";
+
+
 
 GRANT ALL ON TABLE "public"."PVPPlayers" TO "anon";
 GRANT ALL ON TABLE "public"."PVPPlayers" TO "authenticated";
 GRANT ALL ON TABLE "public"."PVPPlayers" TO "service_role";
 
+
+
 GRANT ALL ON TABLE "public"."PVPRooms" TO "anon";
 GRANT ALL ON TABLE "public"."PVPRooms" TO "authenticated";
 GRANT ALL ON TABLE "public"."PVPRooms" TO "service_role";
+
+
 
 GRANT ALL ON SEQUENCE "public"."PVPRoom_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."PVPRoom_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."PVPRoom_id_seq" TO "service_role";
 
+
+
 GRANT ALL ON TABLE "public"."achievement" TO "anon";
 GRANT ALL ON TABLE "public"."achievement" TO "authenticated";
 GRANT ALL ON TABLE "public"."achievement" TO "service_role";
+
+
 
 GRANT ALL ON SEQUENCE "public"."achievement_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."achievement_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."achievement_id_seq" TO "service_role";
 
+
+
+GRANT ALL ON TABLE "public"."changelogs" TO "anon";
+GRANT ALL ON TABLE "public"."changelogs" TO "authenticated";
+GRANT ALL ON TABLE "public"."changelogs" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."changelogs_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."changelogs_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."changelogs_id_seq" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."clanBan" TO "anon";
 GRANT ALL ON TABLE "public"."clanBan" TO "authenticated";
 GRANT ALL ON TABLE "public"."clanBan" TO "service_role";
+
+
 
 GRANT ALL ON TABLE "public"."clanInvitations" TO "anon";
 GRANT ALL ON TABLE "public"."clanInvitations" TO "authenticated";
 GRANT ALL ON TABLE "public"."clanInvitations" TO "service_role";
 
+
+
 GRANT ALL ON SEQUENCE "public"."clanInvitations_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."clanInvitations_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."clanInvitations_id_seq" TO "service_role";
+
+
 
 GRANT ALL ON TABLE "public"."clans" TO "anon";
 GRANT ALL ON TABLE "public"."clans" TO "authenticated";
 GRANT ALL ON TABLE "public"."clans" TO "service_role";
 
+
+
 GRANT ALL ON SEQUENCE "public"."clans_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."clans_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."clans_id_seq" TO "service_role";
+
+
 
 GRANT ALL ON TABLE "public"."deathCount" TO "anon";
 GRANT ALL ON TABLE "public"."deathCount" TO "authenticated";
 GRANT ALL ON TABLE "public"."deathCount" TO "service_role";
 
+
+
 GRANT ALL ON SEQUENCE "public"."deathCount_levelID_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."deathCount_levelID_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."deathCount_levelID_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."eventProofs" TO "anon";
+GRANT ALL ON TABLE "public"."eventProofs" TO "authenticated";
+GRANT ALL ON TABLE "public"."eventProofs" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."events" TO "anon";
+GRANT ALL ON TABLE "public"."events" TO "authenticated";
+GRANT ALL ON TABLE "public"."events" TO "service_role";
+
+
 
 GRANT ALL ON TABLE "public"."heatmap" TO "anon";
 GRANT ALL ON TABLE "public"."heatmap" TO "authenticated";
 GRANT ALL ON TABLE "public"."heatmap" TO "service_role";
 
+
+
 GRANT ALL ON TABLE "public"."levelDeathCount" TO "anon";
 GRANT ALL ON TABLE "public"."levelDeathCount" TO "authenticated";
 GRANT ALL ON TABLE "public"."levelDeathCount" TO "service_role";
+
+
 
 GRANT ALL ON SEQUENCE "public"."levelDeathCount_levelID_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."levelDeathCount_levelID_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."levelDeathCount_levelID_seq" TO "service_role";
 
+
+
 GRANT ALL ON TABLE "public"."levels" TO "anon";
 GRANT ALL ON TABLE "public"."levels" TO "authenticated";
 GRANT ALL ON TABLE "public"."levels" TO "service_role";
+
+
 
 GRANT ALL ON TABLE "public"."notifications" TO "anon";
 GRANT ALL ON TABLE "public"."notifications" TO "authenticated";
 GRANT ALL ON TABLE "public"."notifications" TO "service_role";
 
+
+
 GRANT ALL ON SEQUENCE "public"."notifications_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."notifications_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."notifications_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."orders" TO "anon";
+GRANT ALL ON TABLE "public"."orders" TO "authenticated";
+GRANT ALL ON TABLE "public"."orders" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."orders_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."orders_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."orders_id_seq" TO "service_role";
+
+
 
 GRANT ALL ON TABLE "public"."players" TO "anon";
 GRANT ALL ON TABLE "public"."players" TO "authenticated";
 GRANT ALL ON TABLE "public"."players" TO "service_role";
 
+
+
 GRANT ALL ON TABLE "public"."playersAchievement" TO "anon";
 GRANT ALL ON TABLE "public"."playersAchievement" TO "authenticated";
 GRANT ALL ON TABLE "public"."playersAchievement" TO "service_role";
+
+
 
 GRANT ALL ON SEQUENCE "public"."playersAchievement_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."playersAchievement_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."playersAchievement_id_seq" TO "service_role";
 
+
+
 GRANT ALL ON SEQUENCE "public"."players_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."players_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."players_id_seq" TO "service_role";
 
+
+
+GRANT ALL ON TABLE "public"."products" TO "anon";
+GRANT ALL ON TABLE "public"."products" TO "authenticated";
+GRANT ALL ON TABLE "public"."products" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."products_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."products_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."products_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."promotions_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."promotions_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."promotions_id_seq" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."records" TO "anon";
 GRANT ALL ON TABLE "public"."records" TO "authenticated";
 GRANT ALL ON TABLE "public"."records" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."userSocial" TO "anon";
+GRANT ALL ON TABLE "public"."userSocial" TO "authenticated";
+GRANT ALL ON TABLE "public"."userSocial" TO "service_role";
+
+
+
+
+
+
+
+
 
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES  TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES  TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES  TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES  TO "service_role";
 
+
+
+
+
+
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS  TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS  TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS  TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS  TO "service_role";
 
+
+
+
+
+
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES  TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES  TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES  TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES  TO "service_role";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 RESET ALL;

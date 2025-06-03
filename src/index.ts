@@ -54,6 +54,7 @@ app.use('/deathCount', require(`./routes/deathCount`).default)
 app.use('/changelogs', require(`./routes/changelogs`).default)
 app.use('/events', require(`./routes/events`).default)
 app.use('/event', require(`./routes/event`).default)
+app.use('/payment', require(`./routes/payment`).default)
 
 app.listen(port, () => {
     console.log(`Server started on port ${port}`)

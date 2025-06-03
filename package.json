@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@payos/node": "^1.0.10",
     "@supabase/supabase-js": "^2.39.8",
     "@types/cors": "^2.8.17",
     "@types/jsonwebtoken": "^9.0.6",
@@ -31,6 +32,6 @@
     "start": "bun run src/index.ts",
     "build": "bun build --compile --minify --sourcemap ./src/index.ts --outfile app",
     "update-types": "supabase gen types typescript --local > ./src/lib/types/supabase.ts",
-    "sync": "echo y | supabase db pull; supabase db reset; supabase gen types typescript --local > ./src/lib/types/supabase.ts"
+    "sync": "echo y | supabase db pull --schema public; supabase db reset; supabase gen types typescript --local > ./src/lib/types/supabase.ts"
   }
 }
