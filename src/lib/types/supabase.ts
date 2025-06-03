@@ -480,26 +480,26 @@ export type Database = {
       }
       orders: {
         Row: {
-          amount: number
           created_at: string
           id: number
           productID: number
+          quantity: number
           state: string
           userID: string
         }
         Insert: {
-          amount: number
           created_at?: string
           id?: number
           productID: number
+          quantity: number
           state: string
           userID: string
         }
         Update: {
-          amount?: number
           created_at?: string
           id?: number
           productID?: number
+          quantity?: number
           state?: string
           userID?: string
         }

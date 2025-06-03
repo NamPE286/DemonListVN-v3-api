@@ -12,9 +12,6 @@ router.route('/getPaymentLink/:productID')
         const id = new Date().getTime();
 
         await addNewOrder(id, parseInt(productID), user);
-        res.status(200).send(await getProductByID(parseInt(productID)));
-
-        return;
 
         const body = {
             orderCode: id,
