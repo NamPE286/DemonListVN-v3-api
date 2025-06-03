@@ -20,7 +20,18 @@ export async function addNewOrder(orderID: number, productID: number, player: Pl
         .from("orders")
         .insert({ id: orderID, userID: player.uid!, state: "PENDING", quantity: 1, productID: productID })
 
-    if(error) {
+    if (error) {
+        throw error
+    }
+}
+
+export async function changeOrderState(orderID: number, state: string) {
+    const { error } = await supabase
+        .from("orders")
+        .update({ state: state })
+        .eq("id", orderID)
+
+    if (error) {
         throw error
     }
 }
