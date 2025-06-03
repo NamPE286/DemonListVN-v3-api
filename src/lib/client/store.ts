@@ -15,6 +15,20 @@ export async function getProductByID(id: number) {
     return data
 }
 
+export async function getOrderByID(id: number) {
+    const { data, error } = await supabase
+        .from("orders")
+        .select("*")
+        .eq('id', id)
+        .single()
+
+    if (error) {
+        throw error
+    }
+
+    return data
+}
+
 export async function addNewOrder(orderID: number, productID: number, player: Player) {
     const { error } = await supabase
         .from("orders")

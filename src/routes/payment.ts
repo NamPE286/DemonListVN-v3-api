@@ -1,7 +1,8 @@
 import express from 'express'
 import { payOS } from '@src/lib/classes/payOS';
-import { getProductByID, addNewOrder, changeOrderState } from '@src/lib/client/store';
+import { getProductByID, addNewOrder, changeOrderState, getOrderByID } from '@src/lib/client/store';
 import userAuth from '@src/middleware/userAuth';
+import Player from '@src/lib/classes/Player';
 
 const router = express.Router();
 
@@ -22,7 +23,7 @@ router.route('/getPaymentLink/:productID')
                     price: product.price!,
                 },
             ],
-            cancelUrl: "http://localhost:8080/payment/cancelled",
+            cancelUrl: "http://localhost:8080/payment/success",
             returnUrl: "http://localhost:8080/payment/success",
         });
 
@@ -34,12 +35,23 @@ router.route('/success')
     .get(async (req, res) => {
         const { orderCode } = req.query;
         const id = parseInt(String(orderCode));
-
-        res.redirect(`http://localhost:5173/supporter/success?id=${id}`)
-
         const paymentLink = await payOS.getPaymentLinkInformation(id);
 
         changeOrderState(id, paymentLink.status);
+
+        if (paymentLink.status != "PAID") {
+            console.log("cancelled")
+            res.redirect(`http://localhost:5173/supporter`)
+            return;
+        }
+
+        const order = await getOrderByID(id);
+        const player = new Player({ uid: order.userID })
+
+        await player.pull();
+        await player.extendSupporter(order.quantity);
+
+        res.redirect(`http://localhost:5173/supporter/success?id=${id}`)
     })
 
 router.route('/cancelled')

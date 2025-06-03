@@ -36,6 +36,7 @@ class Player {
         delete updateData.renameCooldown
         delete updateData.rating
         delete updateData.overallRank
+        delete updateData.supporterUntil
         //@ts-ignore
         delete updateData.clans
 
@@ -52,6 +53,25 @@ class Player {
         }
 
         await this.pull()
+    }
+
+    async extendSupporter(month: number) {
+        if (!this.supporterUntil) {
+            const supporterUntil = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+            this.supporterUntil = supporterUntil.toISOString();
+        } else {
+            const supporterUntil = new Date(new Date(this.supporterUntil).getTime() + 30 * 24 * 60 * 60 * 1000);
+            this.supporterUntil = supporterUntil.toISOString();
+        }
+
+        const { error } = await supabase
+            .from('players')
+            .update({ supporterUntil: this.supporterUntil })
+            .eq('uid', this.uid!)
+
+        if (error) {
+            throw error;
+        }
     }
 }
 
