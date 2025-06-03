@@ -6,25 +6,25 @@ import Player from '@src/lib/classes/Player';
 
 const router = express.Router();
 
-router.route('/getPaymentLink/:productID')
+router.route('/getPaymentLink/:productID/:quantity')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
-        const { productID } = req.params
+        const { productID, quantity } = req.params
         const id = new Date().getTime();
         const product = await getProductByID(parseInt(productID));
         const paymentLinkRes = await payOS.createPaymentLink({
             orderCode: id,
-            amount: 20000,
+            amount: product.price! * parseInt(quantity),
             description: "dlvn",
             items: [
                 {
                     name: product.name!,
-                    quantity: 1,
+                    quantity: parseInt(quantity),
                     price: product.price!,
                 },
             ],
-            cancelUrl: "http://localhost:8080/payment/success",
-            returnUrl: "http://localhost:8080/payment/success",
+            cancelUrl: "https://api.demonlistvn.com/payment/success",
+            returnUrl: "https://api.demonlistvn.com/payment/success",
         });
 
         await addNewOrder(id, parseInt(productID), user);
@@ -41,7 +41,7 @@ router.route('/success')
 
         if (paymentLink.status != "PAID") {
             console.log("cancelled")
-            res.redirect(`http://localhost:5173/supporter`)
+            res.redirect(`https://demonlistvn.com/supporter`)
             return;
         }
 
@@ -51,7 +51,7 @@ router.route('/success')
         await player.pull();
         await player.extendSupporter(order.quantity);
 
-        res.redirect(`http://localhost:5173/supporter/success?id=${id}`)
+        res.redirect(`https://demonlistvn.com/supporter/success?id=${id}`)
     })
 
 router.route('/cancelled')
@@ -59,7 +59,7 @@ router.route('/cancelled')
         const { orderCode } = req.query;
         const id = parseInt(String(orderCode));
 
-        res.redirect("http://localhost:5173/supporter")
+        res.redirect("https://demonlistvn.com/supporter")
 
         const paymentLink = await payOS.getPaymentLinkInformation(id);
 
