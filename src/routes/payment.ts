@@ -1,6 +1,6 @@
 import express from 'express'
 import { payOS } from '@src/lib/classes/payOS';
-import { getProductByID } from '@src/lib/client/store';
+import { getProductByID, addNewOrder } from '@src/lib/client/store';
 import userAuth from '@src/middleware/userAuth';
 
 const router = express.Router();
@@ -9,12 +9,13 @@ router.route('/getPaymentLink/:productID')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
         const { productID } = req.params
+        const id = new Date().getTime();
 
+        await addNewOrder(id, parseInt(productID), user);
         res.status(200).send(await getProductByID(parseInt(productID)));
 
         return;
 
-        const id = new Date().getTime();
         const body = {
             orderCode: id,
             amount: 20000,

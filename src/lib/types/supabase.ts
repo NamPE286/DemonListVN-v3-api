@@ -483,7 +483,7 @@ export type Database = {
           amount: number
           created_at: string
           id: number
-          productID: number | null
+          productID: number
           state: string
           userID: string
         }
@@ -491,7 +491,7 @@ export type Database = {
           amount: number
           created_at?: string
           id?: number
-          productID?: number | null
+          productID: number
           state: string
           userID: string
         }
@@ -499,7 +499,7 @@ export type Database = {
           amount?: number
           created_at?: string
           id?: number
-          productID?: number | null
+          productID?: number
           state?: string
           userID?: string
         }

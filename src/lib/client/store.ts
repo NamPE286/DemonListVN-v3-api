@@ -1,4 +1,5 @@
 import supabase from "@src/database/supabase";
+import Player from "@src/lib/classes/Player";
 
 export async function getProductByID(id: number) {
     const { data, error } = await supabase
@@ -14,6 +15,12 @@ export async function getProductByID(id: number) {
     return data
 }
 
-export async function addOrder(orderID: number, productID: number) {
+export async function addNewOrder(orderID: number, productID: number, player: Player) {
+    const { error } = await supabase
+        .from("orders")
+        .insert({ id: orderID, userID: player.uid!, state: "PENDING", amount: 1, productID: productID })
 
+    if(error) {
+        throw error
+    }
 }
