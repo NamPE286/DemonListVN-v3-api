@@ -23,7 +23,7 @@ router.route('/getPaymentLink/:productID/:quantity')
                     price: product.price!,
                 },
             ],
-            cancelUrl: "https://api.demonlistvn.com/payment/success",
+            cancelUrl: "https://api.demonlistvn.com/payment/cancelled",
             returnUrl: "https://api.demonlistvn.com/payment/success",
         });
 
