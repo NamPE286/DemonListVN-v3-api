@@ -3,6 +3,7 @@ import { payOS } from '@src/lib/classes/payOS';
 import { getProductByID, addNewOrder, changeOrderState, getOrderByID } from '@src/lib/client/store';
 import userAuth from '@src/middleware/userAuth';
 import Player from '@src/lib/classes/Player';
+import supabase from '@src/database/supabase';
 
 const router = express.Router();
 
@@ -54,6 +55,15 @@ router.route('/success')
 
         await player.pull();
         await player.extendSupporter(order.quantity);
+
+        const { error } = await supabase
+            .from("orders")
+            .update({ delivered: true })
+            .eq("id", order.id)
+
+        if (error) {
+            throw error
+        }
 
         res.redirect(`https://demonlistvn.com/supporter/success?id=${id}`)
     })
