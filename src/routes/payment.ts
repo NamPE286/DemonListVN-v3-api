@@ -29,7 +29,7 @@ router.route('/getPaymentLink/:productID/:quantity')
             returnUrl: "https://api.demonlistvn.com/payment/success",
         });
 
-        await addNewOrder(id, parseInt(productID), user.uid!, giftTo ? String(giftTo) : null);
+        await addNewOrder(id, parseInt(productID), user.uid!, parseInt(quantity), giftTo ? String(giftTo) : null);
         res.status(200).send(paymentLinkRes);
     })
 
