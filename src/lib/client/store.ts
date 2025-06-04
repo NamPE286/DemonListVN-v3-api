@@ -29,10 +29,10 @@ export async function getOrderByID(id: number) {
     return data
 }
 
-export async function addNewOrder(orderID: number, productID: number, player: Player) {
+export async function addNewOrder(orderID: number, productID: number, userID: string, giftTo: string | null = null) {
     const { error } = await supabase
         .from("orders")
-        .insert({ id: orderID, userID: player.uid!, state: "PENDING", quantity: 1, productID: productID })
+        .insert({ id: orderID, userID: userID, state: "PENDING", quantity: 1, productID: productID, giftTo: giftTo })
 
     if (error) {
         throw error

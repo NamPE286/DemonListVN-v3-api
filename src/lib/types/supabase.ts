@@ -482,6 +482,7 @@ export type Database = {
         Row: {
           created_at: string
           delivered: boolean
+          giftTo: string | null
           id: number
           productID: number
           quantity: number
@@ -491,6 +492,7 @@ export type Database = {
         Insert: {
           created_at?: string
           delivered?: boolean
+          giftTo?: string | null
           id?: number
           productID: number
           quantity: number
@@ -500,6 +502,7 @@ export type Database = {
         Update: {
           created_at?: string
           delivered?: boolean
+          giftTo?: string | null
           id?: number
           productID?: number
           quantity?: number
@@ -507,6 +510,13 @@ export type Database = {
           userID?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_giftTo_fkey"
+            columns: ["giftTo"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
           {
             foreignKeyName: "orders_productID_fkey"
             columns: ["productID"]
