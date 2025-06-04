@@ -4,6 +4,7 @@ import { getProductByID, addNewOrder, changeOrderState, getOrderByID } from '@sr
 import userAuth from '@src/middleware/userAuth';
 import Player from '@src/lib/classes/Player';
 import supabase from '@src/database/supabase';
+import { sendNotification } from '@src/lib/client/notification'
 
 const router = express.Router();
 
@@ -67,6 +68,13 @@ router.route('/success')
         }
 
         res.redirect(`https://demonlistvn.com/supporter/success?id=${id}`)
+
+        if(order.giftTo) {
+            await sendNotification({
+                content: `You have been gifted ${order.quantity} month${order.quantity > 1 ? "s" : ""} of Demon List Supporter Role`,
+                to: order.giftTo
+            })
+        }
     })
 
 router.route('/cancelled')
