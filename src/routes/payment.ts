@@ -64,7 +64,7 @@ router.route('/getPaymentLink/:productID/:quantity')
  *   get:
  *     tags:
  *       - Payment
- *     summary: Callback routes when payment is successful
+ *     summary: Callback route when payment is successful
  *     responses:
  *       200:
  *         description: Success
@@ -118,7 +118,7 @@ router.route('/success')
 *   get:
 *     tags:
 *       - Payment
-*     summary: Callback routes when payment is cancelled
+*     summary: Callback route when payment is cancelled
 *     responses:
 *       200:
 *         description: Success
@@ -133,15 +133,6 @@ router.route('/cancelled')
         const paymentLink = await payOS.getPaymentLinkInformation(id);
 
         changeOrderState(id, paymentLink.status);
-    })
-
-router.route('/getOrder/:id')
-    .get(async (req, res) => {
-        const { id } = req.params;
-        const { a } = req.query
-        const paymentLink = await payOS.getPaymentLinkInformation(parseInt(id));
-
-        res.status(200).send(paymentLink);
     })
 
 export default router;
