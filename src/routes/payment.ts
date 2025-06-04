@@ -8,6 +8,30 @@ import { sendNotification } from '@src/lib/client/notification'
 
 const router = express.Router();
 
+/**
+ * @openapi
+ * "/getPaymentLink/{productID}/{quantity}":
+ *   get:
+ *     tags:
+ *       - Payment
+ *     summary: Get payment link
+ *     parameters:
+ *       - name: productID
+ *         in: path
+ *         description: The ID of the product
+ *         required: true
+ *         schema:
+ *           type: number
+ *       - name: quantity
+ *         in: path
+ *         description: Number of product to buy
+ *         required: true
+ *         schema:
+ *           type: number
+ *     responses:
+ *       200:
+ *         description: Success
+ */
 router.route('/getPaymentLink/:productID/:quantity')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
@@ -34,6 +58,17 @@ router.route('/getPaymentLink/:productID/:quantity')
         res.status(200).send(paymentLinkRes);
     })
 
+/**
+ * @openapi
+ * "/success":
+ *   get:
+ *     tags:
+ *       - Payment
+ *     summary: Callback routes when payment is successful
+ *     responses:
+ *       200:
+ *         description: Success
+ */
 router.route('/success')
     .get(async (req, res) => {
         const { orderCode } = req.query;
@@ -69,7 +104,7 @@ router.route('/success')
 
         res.redirect(`https://demonlistvn.com/supporter/success?id=${id}`)
 
-        if(order.giftTo) {
+        if (order.giftTo) {
             await sendNotification({
                 content: `You have been gifted ${order.quantity} month${order.quantity > 1 ? "s" : ""} of Demon List Supporter Role`,
                 to: order.giftTo
@@ -77,6 +112,17 @@ router.route('/success')
         }
     })
 
+/**
+* @openapi
+* "/cancelled":
+*   get:
+*     tags:
+*       - Payment
+*     summary: Callback routes when payment is cancelled
+*     responses:
+*       200:
+*         description: Success
+*/
 router.route('/cancelled')
     .get(async (req, res) => {
         const { orderCode } = req.query;

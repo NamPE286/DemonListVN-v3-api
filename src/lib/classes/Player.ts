@@ -56,7 +56,7 @@ class Player {
     }
 
     async extendSupporter(month: number) {
-        if (!this.supporterUntil) {
+        if (!this.supporterUntil || new Date(this.supporterUntil) < new Date()) {
             const supporterUntil = new Date(new Date().getTime() + month * 30 * 24 * 60 * 60 * 1000);
             this.supporterUntil = supporterUntil.toISOString();
         } else {
