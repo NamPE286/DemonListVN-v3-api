@@ -50,7 +50,7 @@ router.route('/success')
         const player = new Player({ uid: order.giftTo ? order.giftTo : order.userID })
 
         if (order.delivered) {
-            res.redirect(`https://demonlistvn.com/supporter`)
+            res.redirect(`https://demonlistvn.com/supporter/success?id=${id}`)
             return;
         }
 
