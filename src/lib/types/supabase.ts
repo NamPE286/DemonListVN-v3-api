@@ -481,6 +481,7 @@ export type Database = {
       orders: {
         Row: {
           created_at: string
+          delivered: boolean
           id: number
           productID: number
           quantity: number
@@ -489,6 +490,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          delivered?: boolean
           id?: number
           productID: number
           quantity: number
@@ -497,6 +499,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          delivered?: boolean
           id?: number
           productID?: number
           quantity?: number
@@ -664,20 +667,20 @@ export type Database = {
         Row: {
           created_at: string
           id: number
-          name: string | null
-          price: number | null
+          name: string
+          price: number
         }
         Insert: {
           created_at?: string
           id?: number
-          name?: string | null
-          price?: number | null
+          name: string
+          price: number
         }
         Update: {
           created_at?: string
           id?: number
-          name?: string | null
-          price?: number | null
+          name?: string
+          price?: number
         }
         Relationships: []
       }

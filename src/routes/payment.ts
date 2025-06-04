@@ -40,13 +40,17 @@ router.route('/success')
         changeOrderState(id, paymentLink.status);
 
         if (paymentLink.status != "PAID") {
-            console.log("cancelled")
             res.redirect(`https://demonlistvn.com/supporter`)
             return;
         }
 
         const order = await getOrderByID(id);
         const player = new Player({ uid: order.userID })
+
+        if (order.delivered) {
+            res.redirect(`https://demonlistvn.com/supporter`)
+            return;
+        }
 
         await player.pull();
         await player.extendSupporter(order.quantity);
