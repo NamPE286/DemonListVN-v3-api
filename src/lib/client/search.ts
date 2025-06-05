@@ -50,7 +50,7 @@ export const search = {
     async players(query: string, { limit = 5} = {}) {
         const { data, error } = await supabase
             .from('players')
-            .select('name, uid, isHidden, isAvatarGif, clans!id(*)')
+            .select('name, uid, isHidden, supporterUntil, isAvatarGif, clans!id(*)')
             .ilike('name', `%${query}%`)
             .eq('isHidden', false)
             .limit(limit)
