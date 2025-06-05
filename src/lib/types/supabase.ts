@@ -315,6 +315,7 @@ export type Database = {
           exp: number | null
           id: number
           imgUrl: string
+          isSupporterOnly: boolean
           minExp: number
           needProof: boolean
           redirect: string | null
@@ -329,6 +330,7 @@ export type Database = {
           exp?: number | null
           id?: number
           imgUrl: string
+          isSupporterOnly?: boolean
           minExp?: number
           needProof?: boolean
           redirect?: string | null
@@ -343,6 +345,7 @@ export type Database = {
           exp?: number | null
           id?: number
           imgUrl?: string
+          isSupporterOnly?: boolean
           minExp?: number
           needProof?: boolean
           redirect?: string | null
@@ -551,6 +554,7 @@ export type Database = {
           isAdmin: boolean
           isAvatarGif: boolean
           isBanned: boolean
+          isBannerGif: boolean
           isHidden: boolean
           isTrusted: boolean
           name: string
@@ -583,6 +587,7 @@ export type Database = {
           isAdmin?: boolean
           isAvatarGif?: boolean
           isBanned?: boolean
+          isBannerGif?: boolean
           isHidden?: boolean
           isTrusted?: boolean
           name: string
@@ -615,6 +620,7 @@ export type Database = {
           isAdmin?: boolean
           isAvatarGif?: boolean
           isBanned?: boolean
+          isBannerGif?: boolean
           isHidden?: boolean
           isTrusted?: boolean
           name?: string

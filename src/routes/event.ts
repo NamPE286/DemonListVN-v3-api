@@ -2,6 +2,7 @@ import express from 'express'
 import { deleteEventProof, getEvent, getEventProof, getEventProofs, insertEventProof, upsertEventProof } from '@src/lib/client/event'
 import userAuth from '@src/middleware/userAuth'
 import adminAuth from '@src/middleware/adminAuth'
+import { isSupporterActive } from '@src/utils'
 
 const router = express.Router()
 
@@ -181,8 +182,17 @@ router.route('/proof')
      *             schema:
      */
     .post(userAuth, async (req, res) => {
+        const { user } = res.locals;
+
         req.body.userid = res.locals.user.uid
         req.body.accepted = false
+
+        const event = await getEvent(parseInt(req.body.eventID));
+
+        if(event.isSupporterOnly && isSupporterActive(user.supporterUntil!)) {
+            res.status(401).send();
+            return;
+        }
 
         try {
             res.send(await insertEventProof(req.body))
