@@ -13,7 +13,7 @@ supabase start
 supabase db reset
 ```
 
-In `Supabase > storage`, create bucket `avatars` for player's avatar and `songs` for level's song
+In `Supabase > storage`, create bucket `avatars`, `clanPhotos`, `banners` for storing image and GIF (8mb max) and `songs` for level's song
 
 ## Run REST API server
 
