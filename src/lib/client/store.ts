@@ -1,5 +1,4 @@
 import supabase from "@src/database/supabase";
-import Player from "@src/lib/classes/Player";
 
 export async function getProductByID(id: number) {
     const { data, error } = await supabase
@@ -48,4 +47,18 @@ export async function changeOrderState(orderID: number, state: string) {
     if (error) {
         throw error
     }
+}
+
+export async function getOrders(userID: string) {
+    const { data, error } = await supabase
+        .from("orders")
+        .select("*, products(*), coupons(*)")
+        .eq("userID", userID)
+        .order("created_at", { ascending: false })
+
+    if (error) {
+        throw error
+    }
+
+    return data
 }

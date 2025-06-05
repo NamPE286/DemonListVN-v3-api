@@ -1,6 +1,6 @@
 import express from 'express'
 import { payOS } from '@src/lib/classes/payOS';
-import { getProductByID, addNewOrder, changeOrderState, getOrderByID } from '@src/lib/client/store';
+import { getProductByID, addNewOrder, changeOrderState, getOrderByID, getOrders } from '@src/lib/client/store';
 import userAuth from '@src/middleware/userAuth';
 import Player from '@src/lib/classes/Player';
 import supabase from '@src/database/supabase';
@@ -78,7 +78,7 @@ router.route('/success')
         changeOrderState(id, paymentLink.status);
 
         if (paymentLink.status != "PAID") {
-            res.redirect(`https://demonlistvn.com/supporter`)
+            res.redirect(`https://demonlistvn.com/orders`)
             return;
         }
 
