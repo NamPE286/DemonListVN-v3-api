@@ -37,7 +37,7 @@ router.route('/ongoing')
 
 /**
  * @openapi
- * "/proofs":
+ * "/events/proofs":
  *   delete:
  *     tags:
  *       - Event

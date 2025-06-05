@@ -10,7 +10,7 @@ const router = express.Router();
 
 /**
  * @openapi
- * "/getPaymentLink/{productID}/{quantity}":
+ * "/payment/getPaymentLink/{productID}/{quantity}":
  *   get:
  *     tags:
  *       - Payment
@@ -60,7 +60,7 @@ router.route('/getPaymentLink/:productID/:quantity')
 
 /**
  * @openapi
- * "/success":
+ * "/payment/success":
  *   get:
  *     tags:
  *       - Payment
@@ -114,7 +114,7 @@ router.route('/success')
 
 /**
 * @openapi
-* "/cancelled":
+* "/payment/cancelled":
 *   get:
 *     tags:
 *       - Payment

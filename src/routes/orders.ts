@@ -7,7 +7,7 @@ const router = express.Router();
 
 /**
 * @openapi
-* "/":
+* "/orders":
 *   get:
 *     tags:
 *       - Orders
@@ -25,10 +25,10 @@ router.route('/')
 
 /**
 * @openapi
-* "/getPaymentLink/{id}":
+* "/orders/getPaymentLink/{id}":
 *   get:
 *     tags:
-*       - Payment
+*       - Orders
 *     summary: Get payment link
 *     parameters:
 *       - name: id
