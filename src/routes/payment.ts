@@ -128,7 +128,7 @@ router.route('/cancelled')
         const { orderCode } = req.query;
         const id = parseInt(String(orderCode));
 
-        res.redirect("https://demonlistvn.com/supporter")
+        res.redirect("https://demonlistvn.com/orders")
 
         const paymentLink = await payOS.getPaymentLinkInformation(id);
 
