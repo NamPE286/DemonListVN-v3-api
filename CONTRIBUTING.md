@@ -1,3 +1,6 @@
+# Resources
+- [Demon List VN Discord server](https://discord.gg/MnGVdtjq49)
+
 # Contribution Terms and Conditions
 
 By submitting a Pull Request (“PR”) to this repository, you (“Contributor”) acknowledge and agree to the following terms and conditions:
