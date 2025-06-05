@@ -238,6 +238,33 @@ export type Database = {
           },
         ]
       }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          deduct: number | null
+          percent: number | null
+          usageLeft: number
+          validUntil: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          deduct?: number | null
+          percent?: number | null
+          usageLeft?: number
+          validUntil: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          deduct?: number | null
+          percent?: number | null
+          usageLeft?: number
+          validUntil?: string
+        }
+        Relationships: []
+      }
       deathCount: {
         Row: {
           completedTime: string | null
@@ -483,8 +510,10 @@ export type Database = {
       }
       orders: {
         Row: {
+          coupon: string | null
           created_at: string
           delivered: boolean
+          discount: number
           giftTo: string | null
           id: number
           productID: number
@@ -493,8 +522,10 @@ export type Database = {
           userID: string
         }
         Insert: {
+          coupon?: string | null
           created_at?: string
           delivered?: boolean
+          discount?: number
           giftTo?: string | null
           id?: number
           productID: number
@@ -503,8 +534,10 @@ export type Database = {
           userID: string
         }
         Update: {
+          coupon?: string | null
           created_at?: string
           delivered?: boolean
+          discount?: number
           giftTo?: string | null
           id?: number
           productID?: number
@@ -513,6 +546,13 @@ export type Database = {
           userID?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_coupon_fkey"
+            columns: ["coupon"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["code"]
+          },
           {
             foreignKeyName: "orders_giftTo_fkey"
             columns: ["giftTo"]
@@ -539,6 +579,8 @@ export type Database = {
       players: {
         Row: {
           avatar: string | null
+          bgColor: string | null
+          borderColor: string | null
           city: string | null
           clan: number | null
           discord: string | null
@@ -572,6 +614,8 @@ export type Database = {
         }
         Insert: {
           avatar?: string | null
+          bgColor?: string | null
+          borderColor?: string | null
           city?: string | null
           clan?: number | null
           discord?: string | null
@@ -605,6 +649,8 @@ export type Database = {
         }
         Update: {
           avatar?: string | null
+          bgColor?: string | null
+          borderColor?: string | null
           city?: string | null
           clan?: number | null
           discord?: string | null
