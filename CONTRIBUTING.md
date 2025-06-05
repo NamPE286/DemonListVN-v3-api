@@ -21,6 +21,7 @@ Should the Contributor expressly agree in writing (including but not limited to 
 By submitting a PR, Contributor agrees to:  
 - Refrain from modifying or deleting any existing features or components related to payment functionalities.  
 - Not remove or alter credits attributed to other contributors, nor insert credits where not warranted.  
+- Not modify or remove core documentation or legal files such as `README.md`, `LICENSE.md`, or this `CONTRIBUTING.md` file.
 - Ensure that submitted features do not interfere with existing design, functionality, or visibility of other features. Contributor is encouraged to place credit in a discreet manner, such as within an easter egg.  
 - Contributor is responsible for any bugs or issues arising from their submitted contributions and agrees to address such problems if requested.  
 - Failure to comply with these obligations may result in immediate closure or rejection of the PR.
