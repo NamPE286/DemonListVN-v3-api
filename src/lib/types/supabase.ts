@@ -549,6 +549,7 @@ export type Database = {
           flrank: number | null
           id: number
           isAdmin: boolean
+          isAvatarGif: boolean
           isBanned: boolean
           isHidden: boolean
           isTrusted: boolean
@@ -580,6 +581,7 @@ export type Database = {
           flrank?: number | null
           id?: number
           isAdmin?: boolean
+          isAvatarGif?: boolean
           isBanned?: boolean
           isHidden?: boolean
           isTrusted?: boolean
@@ -611,6 +613,7 @@ export type Database = {
           flrank?: number | null
           id?: number
           isAdmin?: boolean
+          isAvatarGif?: boolean
           isBanned?: boolean
           isHidden?: boolean
           isTrusted?: boolean
