@@ -198,6 +198,7 @@ export async function getRecords({ start = 0, end = 50, isChecked = false } = {}
         .match({ isChecked: isChecked })
         .eq('players.isHidden', false)
         .order('needMod', { ascending: false })
+        .order('queueNo', { ascending: true })
         .order('timestamp', { ascending: true })
         .range(start, end)
 
