@@ -136,7 +136,7 @@ export async function retrieveRecord(user: Player) {
         .eq('needMod', false)
         .eq('isChecked', false)
         .eq('reviewer', user.uid!)
-        .order('timestamp', { ascending: true })
+        .order('queueNo', { ascending: true })
         .limit(1)
         .single()
 
@@ -152,7 +152,7 @@ export async function retrieveRecord(user: Player) {
         .eq('needMod', false)
         .eq('isChecked', false)
         .is('reviewer', null)
-        .order('timestamp', { ascending: true })
+        .order('queueNo', { ascending: true })
         .limit(1)
         .single()
 
@@ -166,7 +166,7 @@ export async function retrieveRecord(user: Player) {
         .eq('needMod', false)
         .eq('isChecked', false)
         .is('reviewer', null)
-        .order('timestamp', { ascending: true })
+        .order('queueNo', { ascending: true })
         .limit(1)
         .single()
 
