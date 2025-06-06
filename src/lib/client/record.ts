@@ -171,7 +171,7 @@ export async function retrieveRecord(user: Player) {
 
     if(res == null) {
         res = data;
-    } else if(data != null && (new Date(res.timestamp!)) > (new Date(data.timestamp!))) {
+    } else if(data != null && (new Date(res.queueNo!)) > (new Date(data.queueNo!))) {
         res = data;
     }
 
