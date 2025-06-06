@@ -136,7 +136,6 @@ export async function retrieveRecord(user: Player) {
         .eq('needMod', false)
         .eq('isChecked', false)
         .eq('reviewer', user.uid!)
-        .order('queueNo', { ascending: true })
         .limit(1)
         .single()
 
