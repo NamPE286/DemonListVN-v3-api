@@ -831,6 +831,7 @@ export type Database = {
           needMod: boolean
           no: number | null
           progress: number | null
+          queueNo: number | null
           raw: string | null
           refreshRate: number | null
           reviewer: string | null
@@ -851,6 +852,7 @@ export type Database = {
           needMod?: boolean
           no?: number | null
           progress?: number | null
+          queueNo?: number | null
           raw?: string | null
           refreshRate?: number | null
           reviewer?: string | null
@@ -871,6 +873,7 @@ export type Database = {
           needMod?: boolean
           no?: number | null
           progress?: number | null
+          queueNo?: number | null
           raw?: string | null
           refreshRate?: number | null
           reviewer?: string | null
