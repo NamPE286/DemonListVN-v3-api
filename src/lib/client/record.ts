@@ -152,7 +152,6 @@ export async function retrieveRecord(user: Player) {
         .eq('isChecked', false)
         .is('reviewer', null)
         .order('queueNo', { ascending: true, nullsFirst: false })
-
         .limit(1)
         .single()
 
@@ -161,13 +160,11 @@ export async function retrieveRecord(user: Player) {
     var { data, error } = await supabase
         .from('records')
         .select('*, levels!inner(*)')
-        .not('levels.flPt', 'is', null)
         .neq('userid', user.uid)
         .eq('needMod', false)
         .eq('isChecked', false)
         .is('reviewer', null)
         .order('queueNo', { ascending: true, nullsFirst: false })
-
         .limit(1)
         .single()
 
