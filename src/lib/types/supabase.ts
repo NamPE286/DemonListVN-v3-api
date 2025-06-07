@@ -432,6 +432,7 @@ export type Database = {
           flPt: number | null
           flTop: number | null
           id: number
+          insaneTier: number | null
           isPlatformer: boolean
           minProgress: number | null
           name: string | null
@@ -448,6 +449,7 @@ export type Database = {
           flPt?: number | null
           flTop?: number | null
           id: number
+          insaneTier?: number | null
           isPlatformer?: boolean
           minProgress?: number | null
           name?: string | null
@@ -464,6 +466,7 @@ export type Database = {
           flPt?: number | null
           flTop?: number | null
           id?: number
+          insaneTier?: number | null
           isPlatformer?: boolean
           minProgress?: number | null
           name?: string | null
@@ -510,8 +513,10 @@ export type Database = {
       }
       orders: {
         Row: {
+          amount: number
           coupon: string | null
           created_at: string
+          currency: string
           delivered: boolean
           discount: number
           giftTo: string | null
@@ -522,8 +527,10 @@ export type Database = {
           userID: string
         }
         Insert: {
+          amount?: number
           coupon?: string | null
           created_at?: string
+          currency?: string
           delivered?: boolean
           discount?: number
           giftTo?: string | null
@@ -534,8 +541,10 @@ export type Database = {
           userID: string
         }
         Update: {
+          amount?: number
           coupon?: string | null
           created_at?: string
+          currency?: string
           delivered?: boolean
           discount?: number
           giftTo?: string | null

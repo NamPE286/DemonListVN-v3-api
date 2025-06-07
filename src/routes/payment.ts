@@ -39,9 +39,10 @@ router.route('/getPaymentLink/:productID/:quantity')
         const { productID, quantity } = req.params
         const id = new Date().getTime();
         const product = await getProductByID(parseInt(productID));
+        const amount = product.price! * parseInt(quantity);
         const paymentLinkRes = await payOS.createPaymentLink({
             orderCode: id,
-            amount: product.price! * parseInt(quantity),
+            amount: amount,
             description: "dlvn",
             items: [
                 {
@@ -54,7 +55,7 @@ router.route('/getPaymentLink/:productID/:quantity')
             returnUrl: "https://api.demonlistvn.com/payment/success",
         });
 
-        await addNewOrder(id, parseInt(productID), user.uid!, parseInt(quantity), giftTo ? String(giftTo) : null);
+        await addNewOrder(id, parseInt(productID), user.uid!, parseInt(quantity), giftTo ? String(giftTo) : null, amount, "VND");
         res.status(200).send(paymentLinkRes);
     })
 
