@@ -107,7 +107,7 @@ router.route('/success')
 
         if (order.giftTo) {
             await sendNotification({
-                content: `You have been gifted ${order.quantity} month${order.quantity > 1 ? "s" : ""} of Demon List Supporter Role`,
+                content: `You have been gifted ${order.quantity} month${order.quantity > 1 ? "s" : ""} of Demon List VN Supporter Role`,
                 to: order.giftTo
             })
         }
