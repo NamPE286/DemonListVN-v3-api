@@ -49,7 +49,14 @@ class Player {
             .upsert(this as any)
 
         if (error) {
-            throw error
+            const { error } = await supabase
+                .from("players")
+                .update(this as any)
+                .eq("uid", this.uid!)
+
+            if (error) {
+                throw error
+            }
         }
 
         await this.pull()
