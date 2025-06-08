@@ -2,19 +2,29 @@ import express from 'express'
 import userAuth from '@src/middleware/userAuth'
 import { createAPIKey, deleteAPIKey, getAllAPIKey } from '@src/lib/client/APIKey'
 
+/**
+ * @openapi
+ * tags:
+ *   - name: API Key
+ *     description: Endpoints for managing API keys
+ */
 const router = express.Router()
 
 router.route('/')
     /**
      * @openapi
-     * "/APIKey":
+     * /APIKey:
      *   get:
      *     tags:
-        *       - API key
-     *     summary: Get all player API key
+     *       - API Key
+     *     summary: Get all API keys for the authenticated user
      *     responses:
      *       200:
-     *         description: Success
+     *         description: Success - returns an array of API keys
+     *       403:
+     *         description: Forbidden - API key authentication cannot be used for this endpoint
+     *       500:
+     *         description: Internal Server Error
      */
     .get(userAuth, async (req, res) => {
         if(res.locals.authType == 'key') {
@@ -30,14 +40,18 @@ router.route('/')
     })
     /**
      * @openapi
-     * "/APIKey":
+     * /APIKey:
      *   post:
      *     tags:
-     *       - API key
-     *     summary: Create a new API key
+     *       - API Key
+     *     summary: Create a new API key for the authenticated user
      *     responses:
      *       200:
-     *         description: Success
+     *         description: Success - a new API key has been created
+     *       403:
+     *         description: Forbidden - API key authentication cannot be used for this endpoint
+     *       500:
+     *         description: Internal Server Error
      */
     .post(userAuth, async (req, res) => {
         if(res.locals.authType == 'key') {
@@ -56,21 +70,25 @@ router.route('/')
 router.route('/:key')
     /**
      * @openapi
-     * "/APIKey/{key}":
+     * /APIKey/{key}:
      *   delete:
      *     tags:
-     *       - API key
-     *     summary: Delete an API key
+     *       - API Key
+     *     summary: Delete a specific API key for the authenticated user
      *     parameters:
      *       - name: key
      *         in: path
-     *         description: API key to delete
+     *         description: The API key to delete
      *         required: true
      *         schema:
      *           type: string
      *     responses:
      *       200:
-     *         description: Success
+     *         description: Success - the API key has been deleted
+     *       403:
+     *         description: Forbidden - API key authentication cannot be used for this endpoint
+     *       500:
+     *         description: Internal Server Error
      */
     .delete(userAuth, async (req, res) => {
         if(res.locals.authType == 'key') {

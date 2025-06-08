@@ -2,8 +2,34 @@ import { getAccessToken, getUserByToken } from "@src/lib/client/discord"
 import userAuth from "@src/middleware/userAuth"
 import express from "express"
 
+/**
+ * @swagger
+ * tags:
+ *   name: Auth
+ *   description: Authentication routes
+ */
+
 const router = express.Router()
 
+/**
+ * @swagger
+ * /auth/callback/discord:
+ *   get:
+ *     summary: Discord OAuth callback
+ *     tags: [Auth]
+ *     parameters:
+ *       - in: query
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Authorization code from Discord
+ *     responses:
+ *       200:
+ *         description: Redirects to the Discord link page with access token
+ *       401:
+ *         description: Unauthorized, invalid authorization code
+ */
 router.route("/callback/discord")
     .get(async (req, res) => {
         const { code } = req.query
@@ -20,6 +46,25 @@ router.route("/callback/discord")
         res.redirect(`https://demonlistvn.com/link/discord?access_token=${data.access_token}`)
     })
 
+/**
+ * @swagger
+ * /auth/link/discord:
+ *   patch:
+ *     summary: Link Discord account to user
+ *     tags: [Auth]
+ *     parameters:
+ *       - in: header
+ *         name: access_token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Discord access token
+ *     responses:
+ *       200:
+ *         description: Successfully linked Discord account
+ *       401:
+ *         description: Unauthorized, invalid access token
+ */
 router.route("/link/discord")
     .patch(userAuth, async (req, res) => {
         const { user } = res.locals
