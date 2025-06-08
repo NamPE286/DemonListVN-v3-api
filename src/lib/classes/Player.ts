@@ -39,6 +39,7 @@ class Player {
         delete updateData.supporterUntil
         //@ts-ignore
         delete updateData.clans
+        delete updateData.discord
 
         if (!updateClan) {
             delete this.clan
@@ -79,6 +80,10 @@ class Player {
         if (error) {
             throw error;
         }
+    }
+
+    async updateDiscord(id: number) {
+        // TODO
     }
 }
 

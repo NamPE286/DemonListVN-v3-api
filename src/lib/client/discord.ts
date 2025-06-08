@@ -29,7 +29,7 @@ export async function getUserByToken(token: string) {
             "Content-Type": "application/json"
         }
     });
-    const data = await response.json();
+    const data: any = await response.json();
 
     return data;
 }
