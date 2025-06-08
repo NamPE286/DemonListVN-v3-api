@@ -83,7 +83,14 @@ class Player {
     }
 
     async updateDiscord(id: number) {
-        // TODO
+        const { error } = await supabase
+            .from("players")
+            .update({ discord: id})
+            .eq("uid", this.uid!)
+
+        if(error) {
+            throw error;
+        }
     }
 }
 
