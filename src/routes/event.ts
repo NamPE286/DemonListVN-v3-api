@@ -2,7 +2,6 @@ import express from 'express'
 import { deleteEventProof, getEvent, getEventProof, getEventProofs, insertEventProof, upsertEventProof } from '@src/lib/client/event'
 import userAuth from '@src/middleware/userAuth'
 import adminAuth from '@src/middleware/adminAuth'
-import { isSupporterActive } from '@src/utils'
 
 const router = express.Router()
 
@@ -189,7 +188,7 @@ router.route('/proof')
 
         const event = await getEvent(parseInt(req.body.eventID));
 
-        if(event.isSupporterOnly && isSupporterActive(user.supporterUntil!)) {
+        if(event.isSupporterOnly && user.isSupporterActive()) {
             res.status(401).send();
             return;
         }

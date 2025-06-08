@@ -1,4 +1,5 @@
 import supabase from "@src/database/supabase"
+import { sendDirectMessage } from "@src/lib/client/discord"
 import type { TNotification } from "@src/lib/types"
 
 export async function getPlayerNotifications(uid: string) {
@@ -34,4 +35,6 @@ export async function sendNotification(notification: TNotification) {
     if (error) {
         throw error
     }
+
+    await sendDirectMessage(notification.to!, notification.content!)
 }

@@ -592,8 +592,8 @@ export type Database = {
           borderColor: string | null
           city: string | null
           clan: number | null
-          discord: number | null
-          DiscordDMChannelID: number | null
+          discord: string | null
+          DiscordDMChannelID: string | null
           dlMaxPt: number | null
           dlrank: number | null
           email: string | null
@@ -628,8 +628,8 @@ export type Database = {
           borderColor?: string | null
           city?: string | null
           clan?: number | null
-          discord?: number | null
-          DiscordDMChannelID?: number | null
+          discord?: string | null
+          DiscordDMChannelID?: string | null
           dlMaxPt?: number | null
           dlrank?: number | null
           email?: string | null
@@ -664,8 +664,8 @@ export type Database = {
           borderColor?: string | null
           city?: string | null
           clan?: number | null
-          discord?: number | null
-          DiscordDMChannelID?: number | null
+          discord?: string | null
+          DiscordDMChannelID?: string | null
           dlMaxPt?: number | null
           dlrank?: number | null
           email?: string | null

@@ -1,4 +1,4 @@
-import { getAccessToken, getUserByToken } from "@src/lib/client/discord"
+import { createDirectMessageChannel, getAccessToken, getUserByToken } from "@src/lib/client/discord"
 import userAuth from "@src/middleware/userAuth"
 import express from "express"
 
@@ -41,9 +41,7 @@ router.route("/callback/discord")
             return;
         }
 
-        console.log(data.access_token)
-
-        res.redirect(`https://demonlistvn.com/link/discord?access_token=${data.access_token}`)
+        res.redirect(`https://www.demonlistvn.com/link/discord?token=${data.access_token}`)
     })
 
 /**
@@ -53,8 +51,8 @@ router.route("/callback/discord")
  *     summary: Link Discord account to user
  *     tags: [Auth]
  *     parameters:
- *       - in: header
- *         name: access_token
+ *       - in: body
+ *         name: token
  *         required: true
  *         schema:
  *           type: string
@@ -68,8 +66,15 @@ router.route("/callback/discord")
 router.route("/link/discord")
     .patch(userAuth, async (req, res) => {
         const { user } = res.locals
-        const { access_token } = req.headers
-        const data = await getUserByToken(String(access_token));
+        const { token } = req.body
+        const data = await getUserByToken(String(token));
+
+        if (data.id == undefined) {
+            res.status(401).send(data);
+
+            return;
+        }
+
         const id: number = data.id
 
         await user.updateDiscord(id);

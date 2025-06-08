@@ -82,13 +82,21 @@ class Player {
         }
     }
 
+    isSupporterActive() {
+        if (!this.supporterUntil) {
+            return false;
+        }
+
+        return new Date(this.supporterUntil) > new Date();
+    }
+
     async updateDiscord(id: number) {
         const { error } = await supabase
             .from("players")
-            .update({ discord: id})
+            .update({ discord: id })
             .eq("uid", this.uid!)
 
-        if(error) {
+        if (error) {
             throw error;
         }
     }

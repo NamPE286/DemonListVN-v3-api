@@ -79,7 +79,7 @@ router.route('/success')
         changeOrderState(id, paymentLink.status);
 
         if (paymentLink.status != "PAID") {
-            res.redirect(`https://demonlistvn.com/orders`)
+            res.redirect(`https://www.demonlistvn.com/orders`)
             return;
         }
 
@@ -87,7 +87,7 @@ router.route('/success')
         const player = new Player({ uid: order.giftTo ? order.giftTo : order.userID })
 
         if (order.delivered) {
-            res.redirect(`https://demonlistvn.com/supporter/success?id=${id}`)
+            res.redirect(`https://www.demonlistvn.com/supporter/success?id=${id}`)
             return;
         }
 
@@ -103,7 +103,7 @@ router.route('/success')
             throw error
         }
 
-        res.redirect(`https://demonlistvn.com/supporter/success?id=${id}`)
+        res.redirect(`https://www.demonlistvn.com/supporter/success?id=${id}`)
 
         if (order.giftTo) {
             await sendNotification({
@@ -129,7 +129,7 @@ router.route('/cancelled')
         const { orderCode } = req.query;
         const id = parseInt(String(orderCode));
 
-        res.redirect("https://demonlistvn.com/orders")
+        res.redirect("https://www.demonlistvn.com/orders")
 
         const paymentLink = await payOS.getPaymentLinkInformation(id);
 

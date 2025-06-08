@@ -1,3 +1,5 @@
+import Player from "@src/lib/classes/Player";
+
 export async function getAccessToken(code: string) {
     const response = await fetch("https://discord.com/api/v10/oauth2/token", {
         method: "POST",
@@ -47,7 +49,8 @@ export async function getUserByID(id: number) {
     return data;
 }
 
-export async function createDirectMessageChannel(userID: number): Promise<number> {
+export async function createDirectMessageChannel(userID: string): Promise<string> {
+    console.log(userID)
     const response = await fetch("https://discord.com/api/v10/users/@me/channels", {
         method: "POST",
         body: JSON.stringify({
@@ -63,8 +66,26 @@ export async function createDirectMessageChannel(userID: number): Promise<number
     return data.id;
 }
 
-export async function sendDirectMessage(channelID: number, content: string) {
-    const response = await fetch(`https://discord.com/api/v10/channels/${channelID}/messages`, {
+export async function sendDirectMessage(uid: string, content: string) {
+    const player = new Player({ uid: uid })
+
+    await player.pull();
+
+    if (!player.isSupporterActive()) {
+        return;
+    }
+
+    if (player.DiscordDMChannelID == null) {
+        player.DiscordDMChannelID = await createDirectMessageChannel(player.discord!)
+        
+        if(player.DiscordDMChannelID == null) {
+            throw new Error("Failed to create channel")
+        }
+
+        await player.update();
+    }
+
+    await fetch(`https://discord.com/api/v10/channels/${player.DiscordDMChannelID}/messages`, {
         method: "POST",
         body: JSON.stringify({
             "content": content
@@ -74,6 +95,4 @@ export async function sendDirectMessage(channelID: number, content: string) {
             "Content-Type": "application/json"
         }
     });
-
-    await response.json();
 }
