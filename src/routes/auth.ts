@@ -6,10 +6,17 @@ const router = express.Router()
 router.route("/callback/discord")
     .get(async (req, res) => {
         const { code } = req.query
+        const data = await getAccessToken(String(code));
 
-        res.send({
-            access_token: await getAccessToken(String(code))
-        })
+        if(data.access_token == undefined) {
+            res.status(401).send(data);
+            
+            return;
+        }
+
+        console.log(data.access_token)
+
+        res.redirect(`https://demonlistvn.com/link/discord?access_token=${data.access_token}`)
     })
 
 export default router

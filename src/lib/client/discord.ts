@@ -1,4 +1,4 @@
-export async function getAccessToken(code: string): Promise<string> {
+export async function getAccessToken(code: string) {
     const response = await fetch("https://discord.com/api/v10/oauth2/token", {
         method: "POST",
         body: new URLSearchParams({
