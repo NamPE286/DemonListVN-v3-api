@@ -527,7 +527,7 @@ export type Database = {
           userID: string
         }
         Insert: {
-          amount?: number
+          amount: number
           coupon?: string | null
           created_at?: string
           currency?: string
@@ -593,6 +593,7 @@ export type Database = {
           city: string | null
           clan: number | null
           discord: string | null
+          DiscordDMChannelID: number | null
           dlMaxPt: number | null
           dlrank: number | null
           email: string | null
@@ -628,6 +629,7 @@ export type Database = {
           city?: string | null
           clan?: number | null
           discord?: string | null
+          DiscordDMChannelID?: number | null
           dlMaxPt?: number | null
           dlrank?: number | null
           email?: string | null
@@ -663,6 +665,7 @@ export type Database = {
           city?: string | null
           clan?: number | null
           discord?: string | null
+          DiscordDMChannelID?: number | null
           dlMaxPt?: number | null
           dlrank?: number | null
           email?: string | null
