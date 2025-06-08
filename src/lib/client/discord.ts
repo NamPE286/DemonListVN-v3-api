@@ -14,7 +14,11 @@ export async function getAccessToken(code: string): Promise<string> {
     });
     const data: any = await response.json();
 
-    return data.access_token;
+    if (data.access_token == undefined) {
+        console.error(data)
+    }
+
+    return data;
 }
 
 export async function getUserByToken(token: string) {
