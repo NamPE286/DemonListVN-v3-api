@@ -90,10 +90,10 @@ class Player {
         return new Date(this.supporterUntil) > new Date();
     }
 
-    async updateDiscord(id: number) {
+    async updateDiscord(id: string) {
         const { error } = await supabase
             .from("players")
-            .update({ discord: id })
+            .update({ discord: id, DiscordDMChannelID: null })
             .eq("uid", this.uid!)
 
         if (error) {

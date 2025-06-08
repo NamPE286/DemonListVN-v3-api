@@ -75,7 +75,7 @@ router.route("/link/discord")
             return;
         }
 
-        const id: number = data.id
+        const id: string = String(data.id)
 
         await user.updateDiscord(id);
 
