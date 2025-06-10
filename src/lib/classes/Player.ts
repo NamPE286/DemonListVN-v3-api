@@ -25,6 +25,10 @@ class Player {
     async update({ updateClan = false } = {}) {
         const updateData = this
 
+        if(!/^[A-Za-z0-9]+$/.test(updateData.name!)) {
+            throw new Error("Invalid name format")
+        }
+
         if (updateData.isTrusted && !updateData.isAdmin) {
             delete updateData.name
         }
