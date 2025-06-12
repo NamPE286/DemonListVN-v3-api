@@ -9,8 +9,6 @@ async function getPlayerByDiscordID(id: string) {
         .from("players")
         .select("*")
         .eq("discord", id)
-        .limit(1)
-        .single()
 
     if (error) {
         throw error
