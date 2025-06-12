@@ -150,6 +150,7 @@ export async function retrieveRecord(user: Player) {
         .neq('userid', user.uid)
         .eq('needMod', false)
         .eq('isChecked', false)
+        .eq("levels.isPlatformer", false)
         .is('reviewer', null)
         .order('queueNo', { ascending: true, nullsFirst: false })
         .limit(1)
@@ -163,18 +164,19 @@ export async function retrieveRecord(user: Player) {
         .neq('userid', user.uid)
         .eq('needMod', false)
         .eq('isChecked', false)
+        .eq("levels.isPlatformer", false)
         .is('reviewer', null)
         .order('queueNo', { ascending: true, nullsFirst: false })
         .limit(1)
         .single()
 
-    if(res == null) {
+    if (res == null) {
         res = data;
-    } else if(data != null && (new Date(res.queueNo!)) > (new Date(data.queueNo!))) {
+    } else if (data != null && (new Date(res.queueNo!)) > (new Date(data.queueNo!))) {
         res = data;
     }
 
-    if(res == null) {
+    if (res == null) {
         throw new Error("No available record")
     }
 
