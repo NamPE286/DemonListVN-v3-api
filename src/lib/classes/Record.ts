@@ -63,7 +63,8 @@ class Record {
             const level = new Level({
                 id: this.levelid,
                 name: apiLevel.name,
-                creator: apiLevel.author
+                creator: apiLevel.author,
+                isPlatformer: apiLevel.length == "Plat"
             })
 
             await level.update()
