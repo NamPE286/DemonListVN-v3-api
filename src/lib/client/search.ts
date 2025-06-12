@@ -1,13 +1,30 @@
 import supabase from "@src/database/supabase";
-import Level from "@src/lib/classes/Level";
-import Player from "@src/lib/classes/Player";
 
 function isNumeric(value: string) {
     return /^-?\d+$/.test(value);
 }
 
+async function getPlayerByDiscordID(id: string) {
+    const { data, error } = await supabase
+        .from("players")
+        .select("*")
+        .eq("discord", id)
+        .limit(1)
+        .single()
+
+    if (error) {
+        throw error
+    }
+
+    return data;
+}
+
 export const search = {
-    async levels(query: string, { limit = 5} = {}) {
+    async levels(query: string, { limit = 5 } = {}) {
+        if (query.startsWith("discord:")) {
+            return [];
+        }
+
         if (isNumeric(query)) {
             const { data, error } = await supabase
                 .from('levels')
@@ -19,13 +36,7 @@ export const search = {
                 throw error
             }
 
-            const res: Level[] = []
-
-            for (const i of data) {
-                res.push(new Level(i));
-            }
-
-            return res
+            return data;
         }
 
         const { data, error } = await supabase
@@ -38,19 +49,19 @@ export const search = {
             throw error
         }
 
-        const res: Level[] = []
-
-        for (const i of data) {
-            res.push(new Level(i));
-        }
-
-        return res
+        return data
     },
 
-    async players(query: string, { limit = 5} = {}) {
+    async players(query: string, { limit = 5 } = {}) {
+        if (query.startsWith("discord:")) {
+            const id = query.split(":")[1];
+
+            return await getPlayerByDiscordID(id);
+        }
+
         const { data, error } = await supabase
             .from('players')
-            .select('name, uid, isHidden, supporterUntil, isAvatarGif, clans!id(*)')
+            .select('*')
             .ilike('name', `%${query}%`)
             .eq('isHidden', false)
             .limit(limit)
@@ -59,12 +70,6 @@ export const search = {
             throw error
         }
 
-        const res: Player[] = []
-
-        for (const i of data) {
-            res.push(new Player(i));
-        }
-
-        return res
+        return data
     }
 }
