@@ -71,14 +71,24 @@ class Record {
         }
 
         const record = new Record(this)
+        const level = new Level({ id: this.levelid })
+
+        await level.pull()
 
         try {
             await record.pull()
+        } catch {
+            await this.update()
+            return
+        }
 
-            if (record.progress! >= this.progress!) {
-                throw new Error('Better record is submitted')
-            }
-        } catch (err) { }
+        if (!level.isPlatformer && (record.progress! >= this.progress!)) {
+            throw new Error('Better record is submitted')
+        }
+
+        if (level.isPlatformer && (record.progress! <= this.progress!)) {
+            throw new Error('Better record is submitted')
+        }
 
         await this.update()
     }
