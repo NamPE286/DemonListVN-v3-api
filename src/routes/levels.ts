@@ -4,7 +4,7 @@ import supabase from '@src/database/supabase'
 const router = express.Router()
 
 /**
- * @swagger
+ * @openapi
  * /levels/new:
  *   get:
  *     summary: Retrieve new levels with null ratings, flTop, and insaneTier.
