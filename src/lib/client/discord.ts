@@ -71,7 +71,7 @@ export async function sendDirectMessage(uid: string, content: string) {
 
     await player.pull();
 
-    if (!player.isSupporterActive()) {
+    if (!player.isSupporterActive() || !player.discord) {
         return;
     }
 
