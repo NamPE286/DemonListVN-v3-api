@@ -147,5 +147,11 @@ export async function syncRole(uid: string) {
         s.delete(value);
     }
 
+    const s1 = new Set(playerRoles)
+
+    if(s1.isSubsetOf(s) && s1.isSupersetOf(s)) {
+        return;
+    }
+
     await updateRole(guildID, player.discord!, Array.from(s));
 }
