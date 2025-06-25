@@ -121,7 +121,7 @@ export async function updateRole(guildID: string, userID: string, roles: string[
         })
     })
 
-    if(!res.ok) {
+    if (!res.ok) {
         throw await res.json()
     }
 }
@@ -164,7 +164,7 @@ export async function syncRoleDLVN(player: Player) {
         s.add(roles[title.title])
     }
 
-    if(player.isTrusted) {
+    if (player.isTrusted) {
         s.add(roles.trusted)
     }
 
@@ -179,7 +179,12 @@ export async function syncRoleDLVN(player: Player) {
 
 export async function syncRoleGDVN(player: Player) {
     const roles = {
-        supporter: "1387306487168106568"
+        supporter: "1387306487168106568",
+        LGM: "1387311470257111051",
+        GM: "1387352354604584970",
+        M: "1387352402939744368",
+        EX: "1387352624483012768",
+        SP: "1387347034960564298",
     }
     const guildID = "1387099091028152392";
 
@@ -200,9 +205,15 @@ export async function syncRoleGDVN(player: Player) {
 
     const title = player.getTitle('dl')
 
-    if (title != null && player.rating! >= 2500) {
-        // @ts-ignore
-        s.add(roles[title.title])
+    if (title != null) {
+        if (title.title == "SP" || title.title == "C" || title.title == "B" || title.title == "A") {
+            s.add(roles['SP'])
+        } else if (title.title == 'CM' || title.title == 'M') {
+            s.add(roles['M'])
+        } else {
+            // @ts-ignore
+            s.add(roles[title.title])
+        }
     }
 
     const s1 = new Set(playerRoles)
