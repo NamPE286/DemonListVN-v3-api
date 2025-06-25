@@ -25,7 +25,7 @@ class Player {
     async update({ updateClan = false } = {}) {
         const updateData = this
 
-        if(!/^[A-Za-z0-9]+$/.test(updateData.name!)) {
+        if (!/^[A-Za-z0-9]+$/.test(updateData.name!)) {
             throw new Error("Invalid name format")
         }
 
@@ -92,6 +92,66 @@ class Player {
         }
 
         return new Date(this.supporterUntil) > new Date();
+    }
+
+    getTitle(list: string) {
+        if (list == 'dl') {
+            if (this.rating! >= 5200)
+                return {
+                    title: 'LGM',
+                    fullTitle: 'Legendary Grandmaster',
+                    color: 'darkred'
+                };
+            if (this.rating! >= 4500)
+                return {
+                    title: 'GM',
+                    fullTitle: 'Grandmaster',
+                    color: 'red'
+                };
+            if (this.rating! >= 3900)
+                return {
+                    title: 'M',
+                    fullTitle: 'Master',
+                    color: 'hsla(321, 100%, 50%, 1)'
+                };
+            if (this.rating! >= 3500)
+                return {
+                    title: 'CM',
+                    fullTitle: 'Candidate Master',
+                    color: 'purple'
+                };
+            if (this.rating! >= 2500)
+                return {
+                    title: 'EX',
+                    fullTitle: 'Expert',
+                    color: 'blue'
+                };
+            if (this.rating! >= 1800)
+                return {
+                    title: 'SP',
+                    fullTitle: 'Specialist',
+                    color: 'darkcyan'
+                };
+            if (this.rating! >= 1000)
+                return {
+                    title: 'A',
+                    fullTitle: 'A',
+                    color: 'green'
+                };
+            if (this.rating! >= 500)
+                return {
+                    title: 'B',
+                    fullTitle: 'B',
+                    color: '#413cde'
+                };
+            if (this.rating! > 0)
+                return {
+                    title: 'C',
+                    fullTitle: 'C',
+                    color: 'gray'
+                };
+            return null;
+        }
     }
 
     async updateDiscord(id: string) {

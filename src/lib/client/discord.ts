@@ -77,8 +77,8 @@ export async function sendDirectMessage(uid: string, content: string) {
 
     if (player.DiscordDMChannelID == null) {
         player.DiscordDMChannelID = await createDirectMessageChannel(player.discord!)
-        
-        if(player.DiscordDMChannelID == null) {
+
+        if (player.DiscordDMChannelID == null) {
             throw new Error("Failed to create channel")
         }
 
@@ -95,4 +95,57 @@ export async function sendDirectMessage(uid: string, content: string) {
             "Content-Type": "application/json"
         }
     });
+}
+
+export async function fetchMember(guildID: string, userID: string): Promise<any> {
+    const res = await (await fetch(`https://discord.com/api/v10/guilds/${guildID}/members/${userID}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+            'Content-Type': 'application/json'
+        }
+    })).json()
+
+    return res;
+}
+
+export async function updateRole(guildID: string, userID: string, roles: string[]) {
+    await fetch(`https://discord.com/api/v10/guilds/${guildID}/members/${userID}`, {
+        method: 'PATCH',
+        headers: {
+            'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            roles: roles
+        })
+    })
+}
+
+export async function syncRole(uid: string) {
+    const roles = {
+        trusted: "1246843095593517066",
+        supporter: "1004356961309032549",
+        LGM: "1058866853038010390",
+        GM: "1058866865222463548",
+        M: "1058866902627262564",
+        CM: "1058924959122075698",
+        EX: "1058867472595439763",
+        SP: "1058867025528750130",
+        A: "1387277818823577741",
+        B: "1387278083907915866",
+        C: "1387278263940026419"
+    }
+    const player = new Player({ uid: uid });
+    const guildID = "877546680801697813";
+    await player.pull();
+
+    const playerRoles: string[] = (await fetchMember(guildID, player.discord!)).roles;
+    const s = new Set(playerRoles)
+
+    for (const [key, value] of Object.entries(roles)) {
+        s.delete(value);
+    }
+
+    await updateRole(guildID, player.discord!, Array.from(s));
 }

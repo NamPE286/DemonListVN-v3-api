@@ -5,6 +5,7 @@ import { getHeatmap } from '@src/lib/client/heatmap'
 import { getPlayerRecords } from '@src/lib/client/record'
 import { updateHeatmap } from '@src/lib/client/heatmap'
 import { getPlayerSubmissions } from '@src/lib/client/record'
+import { syncRole } from '@src/lib/client/discord'
 
 const router = express.Router()
 
@@ -227,6 +228,18 @@ router.route('/:uid/submissions')
             res.send(await getPlayerSubmissions(uid))
         } catch {
             res.status(500).send()
+        }
+    })
+
+router.route('/syncRole')
+    .patch(userAuth, async (req, res) => {
+        const { user } = res.locals
+
+        try {
+            await syncRole(user.uid!);
+            res.send();
+        } catch {
+            res.status(500).send();
         }
     })
 
