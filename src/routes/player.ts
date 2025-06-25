@@ -231,7 +231,21 @@ router.route('/:uid/submissions')
         }
     })
 
+
 router.route('/syncRole')
+    /**
+     * @openapi
+     * "/player/syncRole":
+     *   patch:
+     *     tags:
+     *       - Player
+     *     summary: Synchronize the player's role to Discord
+     *     responses:
+     *       200:
+     *         description: Role synchronized successfully
+     *       500:
+     *         description: Internal server error
+     */
     .patch(userAuth, async (req, res) => {
         const { user } = res.locals
 
