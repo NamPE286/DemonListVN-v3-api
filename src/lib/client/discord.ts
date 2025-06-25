@@ -208,8 +208,8 @@ export async function syncRoleGDVN(player: Player) {
     if (title != null) {
         if (title.title == "SP" || title.title == "C" || title.title == "B" || title.title == "A") {
             s.add(roles['SP'])
-        } else if (title.title == 'CM' || title.title == 'M') {
-            s.add(roles['M'])
+        } else if (title.title == 'EX' || title.title == 'CM') {
+            s.add(roles['EX'])
         } else {
             // @ts-ignore
             s.add(roles[title.title])
