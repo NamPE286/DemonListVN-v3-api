@@ -252,8 +252,10 @@ router.route('/syncRole')
         try {
             await syncRoleDLVN(user);
             await syncRoleGDVN(user);
+            
             res.send();
-        } catch {
+        } catch(err) {
+            console.error(err)
             res.status(500).send();
         }
     })

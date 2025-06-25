@@ -110,7 +110,7 @@ export async function fetchMember(guildID: string, userID: string): Promise<any>
 }
 
 export async function updateRole(guildID: string, userID: string, roles: string[]) {
-    await fetch(`https://discord.com/api/v10/guilds/${guildID}/members/${userID}`, {
+    const res = await fetch(`https://discord.com/api/v10/guilds/${guildID}/members/${userID}`, {
         method: 'PATCH',
         headers: {
             'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
@@ -120,6 +120,10 @@ export async function updateRole(guildID: string, userID: string, roles: string[
             roles: roles
         })
     })
+
+    if(!res.ok) {
+        throw await res.json()
+    }
 }
 
 export async function syncRoleDLVN(player: Player) {
@@ -138,7 +142,7 @@ export async function syncRoleDLVN(player: Player) {
     }
     const guildID = "877546680801697813";
 
-    if(!player.discord) {
+    if (!player.discord) {
         return;
     }
 
@@ -149,20 +153,24 @@ export async function syncRoleDLVN(player: Player) {
         s.delete(value);
     }
 
-    if(player.isSupporterActive()) {
+    if (player.isSupporterActive()) {
         s.add(roles.supporter)
     }
 
     const title = player.getTitle('dl')
 
-    if(title != null) {
+    if (title != null) {
         // @ts-ignore
         s.add(roles[title.title])
     }
 
+    if(player.isTrusted) {
+        s.add(roles.trusted)
+    }
+
     const s1 = new Set(playerRoles)
 
-    if(s1.isSubsetOf(s) && s1.isSupersetOf(s)) {
+    if (s1.isSubsetOf(s) && s1.isSupersetOf(s)) {
         return;
     }
 
@@ -170,5 +178,38 @@ export async function syncRoleDLVN(player: Player) {
 }
 
 export async function syncRoleGDVN(player: Player) {
-    
+    const roles = {
+        supporter: "1387306487168106568"
+    }
+    const guildID = "1387099091028152392";
+
+    if (!player.discord) {
+        return;
+    }
+
+    const playerRoles: string[] = (await fetchMember(guildID, player.discord!)).roles;
+    const s = new Set(playerRoles)
+
+    for (const [key, value] of Object.entries(roles)) {
+        s.delete(value);
+    }
+
+    if (player.isSupporterActive()) {
+        s.add(roles.supporter)
+    }
+
+    const title = player.getTitle('dl')
+
+    if (title != null && player.rating! >= 2500) {
+        // @ts-ignore
+        s.add(roles[title.title])
+    }
+
+    const s1 = new Set(playerRoles)
+
+    if (s1.isSubsetOf(s) && s1.isSupersetOf(s)) {
+        return;
+    }
+
+    await updateRole(guildID, player.discord!, Array.from(s));
 }
