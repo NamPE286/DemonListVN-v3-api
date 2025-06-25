@@ -140,6 +140,10 @@ export async function syncRole(uid: string) {
     const guildID = "877546680801697813";
     await player.pull();
 
+    if(!player.discord) {
+        return;
+    }
+
     const playerRoles: string[] = (await fetchMember(guildID, player.discord!)).roles;
     const s = new Set(playerRoles)
 
