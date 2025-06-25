@@ -147,6 +147,17 @@ export async function syncRole(uid: string) {
         s.delete(value);
     }
 
+    if(player.isSupporterActive()) {
+        s.add(roles.supporter)
+    }
+
+    const title = player.getTitle('dl')
+
+    if(title != null) {
+        // @ts-ignore
+        s.add(roles[title.title])
+    }
+
     const s1 = new Set(playerRoles)
 
     if(s1.isSubsetOf(s) && s1.isSupersetOf(s)) {
