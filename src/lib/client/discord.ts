@@ -122,7 +122,7 @@ export async function updateRole(guildID: string, userID: string, roles: string[
     })
 }
 
-export async function syncRole(uid: string) {
+export async function syncRoleDLVN(player: Player) {
     const roles = {
         trusted: "1246843095593517066",
         supporter: "1004356961309032549",
@@ -136,9 +136,7 @@ export async function syncRole(uid: string) {
         B: "1387278083907915866",
         C: "1387278263940026419"
     }
-    const player = new Player({ uid: uid });
     const guildID = "877546680801697813";
-    await player.pull();
 
     if(!player.discord) {
         return;
@@ -169,4 +167,8 @@ export async function syncRole(uid: string) {
     }
 
     await updateRole(guildID, player.discord!, Array.from(s));
+}
+
+export async function syncRoleGDVN(player: Player) {
+    
 }

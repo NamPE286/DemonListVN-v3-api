@@ -5,7 +5,7 @@ import { getHeatmap } from '@src/lib/client/heatmap'
 import { getPlayerRecords } from '@src/lib/client/record'
 import { updateHeatmap } from '@src/lib/client/heatmap'
 import { getPlayerSubmissions } from '@src/lib/client/record'
-import { syncRole } from '@src/lib/client/discord'
+import { syncRoleDLVN, syncRoleGDVN } from '@src/lib/client/discord'
 
 const router = express.Router()
 
@@ -250,7 +250,8 @@ router.route('/syncRole')
         const { user } = res.locals
 
         try {
-            await syncRole(user.uid!);
+            await syncRoleDLVN(user);
+            await syncRoleGDVN(user);
             res.send();
         } catch {
             res.status(500).send();
