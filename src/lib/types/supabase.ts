@@ -189,6 +189,7 @@ export type Database = {
         Row: {
           created_at: string
           id: number
+          imageVersion: number
           isPublic: boolean
           memberCount: number
           memberLimit: number
@@ -203,6 +204,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: number
+          imageVersion?: number
           isPublic?: boolean
           memberCount?: number
           memberLimit?: number
@@ -217,6 +219,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: number
+          imageVersion?: number
           isPublic?: boolean
           memberCount?: number
           memberLimit?: number
@@ -299,6 +302,7 @@ export type Database = {
           accepted: boolean
           content: string
           created_at: string
+          data: Json | null
           eventID: number
           userid: string
         }
@@ -306,6 +310,7 @@ export type Database = {
           accepted?: boolean
           content?: string
           created_at?: string
+          data?: Json | null
           eventID: number
           userid: string
         }
@@ -313,6 +318,7 @@ export type Database = {
           accepted?: boolean
           content?: string
           created_at?: string
+          data?: Json | null
           eventID?: number
           userid?: string
         }
@@ -424,10 +430,9 @@ export type Database = {
       }
       levels: {
         Row: {
-          avgSuggestedRating: number | null
+          accepted: boolean
           created_at: string
           creator: string | null
-          dlPt: number | null
           dlTop: number | null
           flPt: number | null
           flTop: number | null
@@ -437,14 +442,12 @@ export type Database = {
           minProgress: number | null
           name: string | null
           rating: number | null
-          songID: number | null
           videoID: string | null
         }
         Insert: {
-          avgSuggestedRating?: number | null
+          accepted?: boolean
           created_at?: string
           creator?: string | null
-          dlPt?: number | null
           dlTop?: number | null
           flPt?: number | null
           flTop?: number | null
@@ -454,14 +457,12 @@ export type Database = {
           minProgress?: number | null
           name?: string | null
           rating?: number | null
-          songID?: number | null
           videoID?: string | null
         }
         Update: {
-          avgSuggestedRating?: number | null
+          accepted?: boolean
           created_at?: string
           creator?: string | null
-          dlPt?: number | null
           dlTop?: number | null
           flPt?: number | null
           flTop?: number | null
@@ -471,7 +472,6 @@ export type Database = {
           minProgress?: number | null
           name?: string | null
           rating?: number | null
-          songID?: number | null
           videoID?: string | null
         }
         Relationships: []
@@ -587,7 +587,8 @@ export type Database = {
       }
       players: {
         Row: {
-          avatar: string | null
+          avatarVersion: number
+          bannerVersion: number
           bgColor: string | null
           borderColor: string | null
           city: string | null
@@ -611,6 +612,8 @@ export type Database = {
           isTrusted: boolean
           name: string
           overallRank: number | null
+          platformerRank: number | null
+          platformerRating: number | null
           province: string | null
           rating: number | null
           recordCount: number
@@ -623,7 +626,8 @@ export type Database = {
           youtube: string | null
         }
         Insert: {
-          avatar?: string | null
+          avatarVersion?: number
+          bannerVersion?: number
           bgColor?: string | null
           borderColor?: string | null
           city?: string | null
@@ -647,6 +651,8 @@ export type Database = {
           isTrusted?: boolean
           name: string
           overallRank?: number | null
+          platformerRank?: number | null
+          platformerRating?: number | null
           province?: string | null
           rating?: number | null
           recordCount?: number
@@ -659,7 +665,8 @@ export type Database = {
           youtube?: string | null
         }
         Update: {
-          avatar?: string | null
+          avatarVersion?: number
+          bannerVersion?: number
           bgColor?: string | null
           borderColor?: string | null
           city?: string | null
@@ -683,6 +690,8 @@ export type Database = {
           isTrusted?: boolean
           name?: string
           overallRank?: number | null
+          platformerRank?: number | null
+          platformerRating?: number | null
           province?: string | null
           rating?: number | null
           recordCount?: number
@@ -842,7 +851,7 @@ export type Database = {
           mobile: boolean
           needMod: boolean
           no: number | null
-          progress: number | null
+          progress: number
           queueNo: number | null
           raw: string | null
           refreshRate: number | null
@@ -863,7 +872,7 @@ export type Database = {
           mobile?: boolean
           needMod?: boolean
           no?: number | null
-          progress?: number | null
+          progress?: number
           queueNo?: number | null
           raw?: string | null
           refreshRate?: number | null
@@ -884,7 +893,7 @@ export type Database = {
           mobile?: boolean
           needMod?: boolean
           no?: number | null
-          progress?: number | null
+          progress?: number
           queueNo?: number | null
           raw?: string | null
           refreshRate?: number | null
