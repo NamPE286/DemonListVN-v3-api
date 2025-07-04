@@ -5,6 +5,8 @@ import adminAuth from '@src/middleware/adminAuth'
 
 const router = express.Router()
 
+router.use('/8', require(`./8`).default)
+
 router.route('/:id')
     /**
      * @openapi
