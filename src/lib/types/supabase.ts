@@ -341,6 +341,7 @@ export type Database = {
       }
       eventRecords: {
         Row: {
+          accepted: boolean
           created_at: string
           eventID: number
           levelID: number
@@ -348,6 +349,7 @@ export type Database = {
           userID: string
         }
         Insert: {
+          accepted?: boolean
           created_at?: string
           eventID: number
           levelID: number
@@ -355,6 +357,7 @@ export type Database = {
           userID: string
         }
         Update: {
+          accepted?: boolean
           created_at?: string
           eventID?: number
           levelID?: number
