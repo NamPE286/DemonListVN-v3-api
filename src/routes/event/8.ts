@@ -83,20 +83,20 @@ router.route('/leaderboard')
         for (const player of data) {
             const res = []
 
-            for (let i = 0; i < player.eventRecords.length;) {
-                if (player.eventRecords[i].levelID == levelIDs[res.length]) {
-                    res.push(player.eventRecords[i++])
-                } else {
+            while(res.length < levelIDs.length) {
+                let found = false;
+
+                for(const record of player.eventRecords) {
+                    if(record.levelID == levelIDs[res.length]) {
+                        res.push(record)
+                        found = true;
+                        break
+                    }
+                }
+
+                if(!found) {
                     res.push(null)
                 }
-
-                if (res.length == levelIDs.length) {
-                    break
-                }
-            }
-
-            while (res.length < levelIDs.length) {
-                res.push(null)
             }
 
             // @ts-ignore
