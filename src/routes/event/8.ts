@@ -83,18 +83,18 @@ router.route('/leaderboard')
         for (const player of data) {
             const res = []
 
-            while(res.length < levelIDs.length) {
+            while (res.length < levelIDs.length) {
                 let found = false;
 
-                for(const record of player.eventRecords) {
-                    if(record.levelID == levelIDs[res.length]) {
+                for (const record of player.eventRecords) {
+                    if (record.levelID == levelIDs[res.length]) {
                         res.push(record)
                         found = true;
                         break
                     }
                 }
 
-                if(!found) {
+                if (!found) {
                     res.push(null)
                 }
             }
@@ -111,6 +111,11 @@ router.route('/leaderboard')
             const y = b.eventRecords.reduce((sum, record, index) => {
                 return sum + (record ? levelPts[index] * record.progress : 0);
             }, 0);
+
+            if (x == y) {
+                return Math.min(...b.eventRecords.map(r => (r ? new Date(r.created_at).getTime() : Infinity)))
+                    - Math.min(...a.eventRecords.map(r => (r ? new Date(r.created_at).getTime() : Infinity)));
+            }
 
             return y - x;
         });
