@@ -1,6 +1,7 @@
 import userAuth from '@src/middleware/userAuth'
 import express from 'express'
 import supabase from '@src/database/supabase'
+import { plugin } from 'bun'
 
 const router = express.Router()
 
@@ -65,7 +66,56 @@ router.route('/cancel/:levelID')
 
 router.route('/leaderboard')
     .get(async (req, res) => {
-        // TODO
+        const levelIDs = [123, 234, 345, 456, 567]
+        const levelPts = [100, 200, 300, 400, 500]
+        const { data, error } = await supabase
+            .from("players")
+            .select("*, eventRecords!inner(*)")
+            .eq("eventRecords.eventID", 8)
+
+        if (error) {
+            console.error(error)
+            res.status(500).send()
+
+            return;
+        }
+
+        for (const player of data) {
+            const res = []
+
+            for (let i = 0; i < player.eventRecords.length;) {
+                if (player.eventRecords[i].levelID == levelIDs[res.length]) {
+                    res.push(player.eventRecords[i++])
+                } else {
+                    res.push(null)
+                }
+
+                if (res.length == levelIDs.length) {
+                    break
+                }
+            }
+
+            while (res.length < levelIDs.length) {
+                res.push(null)
+            }
+
+            // @ts-ignore
+            player.eventRecords = res;
+        }
+
+        data.sort((a, b) => {
+            const x = a.eventRecords.reduce((sum, record, index) => {
+                return sum + (record ? levelPts[index] * record.progress : 0);
+            }, 0);
+
+            const y = b.eventRecords.reduce((sum, record, index) => {
+                return sum + (record ? levelPts[index] * record.progress : 0);
+            }, 0);
+
+            return y - x;
+        });
+
+        res.send(data)
     })
 
 export default router
