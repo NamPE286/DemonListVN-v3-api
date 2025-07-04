@@ -70,7 +70,7 @@ router.route('/leaderboard')
         const levelPts = [100, 200, 300, 400, 500]
         const { data, error } = await supabase
             .from("players")
-            .select("*, eventRecords!inner(*)")
+            .select("*, clans!id(*), eventRecords!inner(*)")
             .eq("eventRecords.eventID", 8)
 
         if (error) {
