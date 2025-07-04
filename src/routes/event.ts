@@ -188,7 +188,17 @@ router.route('/proof')
 
         const event = await getEvent(parseInt(req.body.eventID));
 
-        if(event.isSupporterOnly && user.isSupporterActive()) {
+        if (event.isSupporterOnly && user.isSupporterActive()) {
+            res.status(401).send();
+            return;
+        }
+
+        // if (event.end && !(new Date(event.start) <= new Date() && new Date() < new Date(event.end))) {
+        //     res.status(401).send();
+        //     return;
+        // }
+
+        if (event.end && !(new Date() < new Date(event.end))) {
             res.status(401).send();
             return;
         }
