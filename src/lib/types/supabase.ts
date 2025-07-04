@@ -339,6 +339,45 @@ export type Database = {
           },
         ]
       }
+      eventRecords: {
+        Row: {
+          created_at: string
+          eventID: number
+          levelID: number
+          progress: number
+          userID: string
+        }
+        Insert: {
+          created_at?: string
+          eventID: number
+          levelID: number
+          progress: number
+          userID: string
+        }
+        Update: {
+          created_at?: string
+          eventID?: number
+          levelID?: number
+          progress?: number
+          userID?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventRecords_eventID_fkey"
+            columns: ["eventID"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qualifier_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       events: {
         Row: {
           content: string | null
@@ -835,35 +874,6 @@ export type Database = {
           {
             foreignKeyName: "PVPRoom_host_fkey"
             columns: ["host"]
-            isOneToOne: false
-            referencedRelation: "players"
-            referencedColumns: ["uid"]
-          },
-        ]
-      }
-      qualifiers: {
-        Row: {
-          created_at: string
-          levelID: number
-          progress: number
-          userID: string
-        }
-        Insert: {
-          created_at?: string
-          levelID: number
-          progress: number
-          userID: string
-        }
-        Update: {
-          created_at?: string
-          levelID?: number
-          progress?: number
-          userID?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "qualifier_userID_fkey"
-            columns: ["userID"]
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["uid"]
