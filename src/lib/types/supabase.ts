@@ -841,6 +841,35 @@ export type Database = {
           },
         ]
       }
+      qualifiers: {
+        Row: {
+          created_at: string
+          levelID: number
+          progress: number
+          userID: string
+        }
+        Insert: {
+          created_at?: string
+          levelID: number
+          progress: number
+          userID: string
+        }
+        Update: {
+          created_at?: string
+          levelID?: number
+          progress?: number
+          userID?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qualifier_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       records: {
         Row: {
           comment: string | null
