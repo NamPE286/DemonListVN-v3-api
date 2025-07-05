@@ -1,7 +1,6 @@
 import userAuth from '@src/middleware/userAuth'
 import express from 'express'
 import supabase from '@src/database/supabase'
-import { plugin } from 'bun'
 
 const router = express.Router()
 
