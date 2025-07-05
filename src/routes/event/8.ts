@@ -1,6 +1,7 @@
 import userAuth from '@src/middleware/userAuth'
 import express from 'express'
 import supabase from '@src/database/supabase'
+import { getEvent } from '@src/lib/client/event'
 
 const router = express.Router()
 
@@ -46,6 +47,13 @@ router.route('/submissions')
 
 router.route('/submit')
     .post(userAuth, async (req, res) => {
+        const event = await getEvent(8)
+
+        if (new Date(event.end!) < new Date()) {
+            res.status(401).send();
+            return;
+        }
+
         const { user } = res.locals
 
         req.body.userID = user.uid
@@ -66,6 +74,13 @@ router.route('/submit')
 
 router.route('/submission/:levelID')
     .delete(userAuth, async (req, res) => {
+        const event = await getEvent(8)
+
+        if (new Date(event.end!) < new Date()) {
+            res.status(401).send();
+            return;
+        }
+        
         const { user } = res.locals
         const { levelID } = req.params
 
