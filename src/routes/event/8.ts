@@ -7,6 +7,7 @@ const router = express.Router()
 router.route('/submissions')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
+        const levelIDs = [123, 234, 345, 456, 567]
 
         const { data, error } = await supabase
             .from("eventRecords")
@@ -20,7 +21,27 @@ router.route('/submissions')
             return;
         }
 
-        res.send(data)
+        const result = []
+
+        while (result.length < levelIDs.length) {
+            let found = false;
+
+            for (const record of data) {
+                if (record.levelID == levelIDs[result.length]) {
+                    result.push(record)
+                    found = true;
+                    break
+                }
+            }
+
+            if (!found) {
+                result.push(null)
+            }
+
+        }
+
+        res.send(result)
+
     })
 
 router.route('/submit')
@@ -43,7 +64,7 @@ router.route('/submit')
         res.send()
     })
 
-router.route('/cancel/:levelID')
+router.route('/submission/:levelID')
     .delete(userAuth, async (req, res) => {
         const { user } = res.locals
         const { levelID } = req.params
