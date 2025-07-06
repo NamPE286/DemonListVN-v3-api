@@ -4,11 +4,12 @@ import supabase from '@src/database/supabase'
 import { getEvent } from '@src/lib/client/event'
 
 const router = express.Router()
+const levelIDs = [121184864, 120313852, 120866069, 120552432, 121537017]
+const levelPts = [100, 200, 300, 400, 500]
 
 router.route('/submissions')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
-        const levelIDs = [123, 234, 345, 456, 567]
 
         const { data, error } = await supabase
             .from("eventRecords")
@@ -80,7 +81,7 @@ router.route('/submission/:levelID')
             res.status(401).send();
             return;
         }
-        
+
         const { user } = res.locals
         const { levelID } = req.params
 
@@ -101,8 +102,6 @@ router.route('/submission/:levelID')
 
 router.route('/leaderboard')
     .get(async (req, res) => {
-        const levelIDs = [123, 234, 345, 456, 567]
-        const levelPts = [100, 200, 300, 400, 500]
         const { data, error } = await supabase
             .from("players")
             .select("*, clans!id(*), eventRecords!inner(*)")
