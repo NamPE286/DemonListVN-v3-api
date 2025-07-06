@@ -7,6 +7,20 @@ const router = express.Router()
 const levelIDs = [121184864, 120313852, 120866069, 120552432, 121537017]
 const levelPts = [100, 200, 300, 400, 500]
 
+function getPenalty(records: any[]) {
+    let res: number = 0;
+
+    for (const i of records) {
+        if (i == null) {
+            continue;
+        }
+
+        res += new Date(i.created_at).getTime()
+    }
+
+    return res
+}
+
 router.route('/submissions')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
@@ -147,32 +161,7 @@ router.route('/leaderboard')
             }, 0);
 
             if (x == y && x != 0) {
-                let amx: Date | null = null;
-                let bmx: Date | null = null;
-
-                for (const i of a.eventRecords) {
-                    if (i && i.created_at) {
-                        const date = new Date(i.created_at);
-
-                        if (amx === null || date > amx) {
-                            amx = date;
-                        }
-                    }
-                }
-
-                for (const i of b.eventRecords) {
-                    if (i && i.created_at) {
-                        const date = new Date(i.created_at);
-
-                        if (bmx === null || date > bmx) {
-                            bmx = date;
-                        }
-                    }
-                }
-
-                if (amx && bmx) {
-                    return amx < bmx ? -1 : 1;
-                }
+                return getPenalty(a.eventRecords) - getPenalty(b.eventRecords)
             }
 
             return y - x;
