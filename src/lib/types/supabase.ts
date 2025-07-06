@@ -297,6 +297,42 @@ export type Database = {
           },
         ]
       }
+      eventLevels: {
+        Row: {
+          eventID: number
+          levelID: number
+          needRaw: boolean
+          point: number
+        }
+        Insert: {
+          eventID: number
+          levelID: number
+          needRaw: boolean
+          point: number
+        }
+        Update: {
+          eventID?: number
+          levelID?: number
+          needRaw?: boolean
+          point?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventLevels_eventID_fkey"
+            columns: ["eventID"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventLevels_levelID_fkey"
+            columns: ["levelID"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eventProofs: {
         Row: {
           accepted: boolean
@@ -346,7 +382,9 @@ export type Database = {
           eventID: number
           levelID: number
           progress: number
+          raw: string | null
           userID: string
+          videoLink: string
         }
         Insert: {
           accepted?: boolean
@@ -354,7 +392,9 @@ export type Database = {
           eventID: number
           levelID: number
           progress: number
+          raw?: string | null
           userID: string
+          videoLink: string
         }
         Update: {
           accepted?: boolean
@@ -362,7 +402,9 @@ export type Database = {
           eventID?: number
           levelID?: number
           progress?: number
+          raw?: string | null
           userID?: string
+          videoLink?: string
         }
         Relationships: [
           {
@@ -390,6 +432,7 @@ export type Database = {
           exp: number | null
           id: number
           imgUrl: string
+          isContest: boolean
           isSupporterOnly: boolean
           minExp: number
           needProof: boolean
@@ -405,6 +448,7 @@ export type Database = {
           exp?: number | null
           id?: number
           imgUrl: string
+          isContest?: boolean
           isSupporterOnly?: boolean
           minExp?: number
           needProof?: boolean
@@ -420,6 +464,7 @@ export type Database = {
           exp?: number | null
           id?: number
           imgUrl?: string
+          isContest?: boolean
           isSupporterOnly?: boolean
           minExp?: number
           needProof?: boolean
@@ -480,6 +525,7 @@ export type Database = {
           flTop: number | null
           id: number
           insaneTier: number | null
+          isNonList: boolean
           isPlatformer: boolean
           minProgress: number | null
           name: string | null
@@ -495,6 +541,7 @@ export type Database = {
           flTop?: number | null
           id: number
           insaneTier?: number | null
+          isNonList?: boolean
           isPlatformer?: boolean
           minProgress?: number | null
           name?: string | null
@@ -510,6 +557,7 @@ export type Database = {
           flTop?: number | null
           id?: number
           insaneTier?: number | null
+          isNonList?: boolean
           isPlatformer?: boolean
           minProgress?: number | null
           name?: string | null

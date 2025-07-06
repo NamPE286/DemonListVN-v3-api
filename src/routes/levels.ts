@@ -28,6 +28,7 @@ router.route("/new")
             .is("rating", null)
             .is("flTop", null)
             .is("insaneTier", null)
+            .is("isNonList", false)
 
         if (error) {
             res.status(500).send();
