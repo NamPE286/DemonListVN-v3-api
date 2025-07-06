@@ -146,9 +146,33 @@ router.route('/leaderboard')
                 return sum + (record ? levelPts[index] * record.progress : 0);
             }, 0);
 
-            if (x == y) {
-                return Math.min(...a.eventRecords.map(r => (r ? new Date(r.created_at).getTime() : Infinity)))
-                    - Math.min(...b.eventRecords.map(r => (r ? new Date(r.created_at).getTime() : Infinity)))
+            if (x == y && x != 0) {
+                let amx: Date | null = null;
+                let bmx: Date | null = null;
+
+                for (const i of a.eventRecords) {
+                    if (i && i.created_at) {
+                        const date = new Date(i.created_at);
+
+                        if (amx === null || date > amx) {
+                            amx = date;
+                        }
+                    }
+                }
+
+                for (const i of b.eventRecords) {
+                    if (i && i.created_at) {
+                        const date = new Date(i.created_at);
+
+                        if (bmx === null || date > bmx) {
+                            bmx = date;
+                        }
+                    }
+                }
+
+                if (amx && bmx) {
+                    return amx < bmx ? -1 : 1;
+                }
             }
 
             return y - x;
