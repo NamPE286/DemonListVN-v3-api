@@ -147,8 +147,8 @@ router.route('/leaderboard')
             }, 0);
 
             if (x == y) {
-                return Math.min(...b.eventRecords.map(r => (r ? new Date(r.created_at).getTime() : Infinity)))
-                    - Math.min(...a.eventRecords.map(r => (r ? new Date(r.created_at).getTime() : Infinity)));
+                return Math.min(...a.eventRecords.map(r => (r ? new Date(r.created_at).getTime() : Infinity)))
+                    - Math.min(...b.eventRecords.map(r => (r ? new Date(r.created_at).getTime() : Infinity)))
             }
 
             return y - x;
