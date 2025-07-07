@@ -430,6 +430,7 @@ export type Database = {
           description: string
           end: string | null
           exp: number | null
+          hidden: boolean
           id: number
           imgUrl: string
           isContest: boolean
@@ -446,6 +447,7 @@ export type Database = {
           description: string
           end?: string | null
           exp?: number | null
+          hidden?: boolean
           id?: number
           imgUrl: string
           isContest?: boolean
@@ -462,6 +464,7 @@ export type Database = {
           description?: string
           end?: string | null
           exp?: number | null
+          hidden?: boolean
           id?: number
           imgUrl?: string
           isContest?: boolean

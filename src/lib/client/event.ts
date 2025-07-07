@@ -61,10 +61,9 @@ export async function getOngoingEvents() {
     var { data, error } = await supabase
         .from('events')
         .select('*')
-        .lte('start', cur)
         .gte('end', cur)
+        .eq('hidden', false)
         .order('start', { ascending: false })
-
     if (error) {
         throw error
     }
