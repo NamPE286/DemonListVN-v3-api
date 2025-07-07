@@ -18,6 +18,27 @@ import adminAuth from '@src/middleware/adminAuth'
 const router = express.Router()
 
 router.route('/:id/levels')
+    /**
+     * @openapi
+     * "/event/{id}/levels":
+     *   get:
+     *     tags:
+     *       - Event
+     *     summary: Get levels of an event
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the event
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
     .get(async (req, res) => {
         const { id } = req.params
 
@@ -30,6 +51,27 @@ router.route('/:id/levels')
     })
 
 router.route('/:id/submissions')
+    /**
+     * @openapi
+     * "/event/{id}/submissions":
+     *   get:
+     *     tags:
+     *       - Event
+     *     summary: Get submissions of an event
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the event
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
     .get(userAuth, async (req, res) => {
         const { id } = req.params
         const { user } = res.locals
@@ -43,6 +85,31 @@ router.route('/:id/submissions')
     })
 
 router.route('/:id/submit')
+    /**
+     * @openapi
+     * "/event/{id}/submit":
+     *   post:
+     *     tags:
+     *       - Event
+     *     summary: Submit an event
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the event
+     *         required: true
+     *         schema:
+     *           type: number
+     *     requestBody:
+     *         required: true
+     *         content:
+     *             application/json:
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
     .post(userAuth, async (req, res) => {
         const { id } = req.params
         const event = await getEvent(parseInt(id))
@@ -67,6 +134,33 @@ router.route('/:id/submit')
     })
 
 router.route('/:id/submission/:levelID')
+    /**
+     * @openapi
+     * "/event/{id}/submission/{levelID}":
+     *   delete:
+     *     tags:
+     *       - Event
+     *     summary: Delete a submission for a specific level in an event
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the event
+     *         required: true
+     *         schema:
+     *           type: number
+     *       - name: levelID
+     *         in: path
+     *         description: The id of the level
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
     .delete(userAuth, async (req, res) => {
         const { id } = req.params
         const event = await getEvent(parseInt(id))
@@ -89,6 +183,27 @@ router.route('/:id/submission/:levelID')
     })
 
 router.route('/:id/leaderboard')
+    /**
+     * @openapi
+     * "/event/{id}/leaderboard":
+     *   get:
+     *     tags:
+     *       - Event
+     *     summary: Get leaderboard of an event
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the event
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
     .get(async (req, res) => {
         const { id } = req.params
 
