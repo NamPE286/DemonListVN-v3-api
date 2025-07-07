@@ -41,9 +41,16 @@ router.route('/:id/levels')
      */
     .get(async (req, res) => {
         const { id } = req.params
+        const event = await getEvent(parseInt(id))
 
         try {
-            res.send(await getEventLevels(parseInt(id)))
+            const result = await getEventLevels(parseInt(id));
+
+            if (new Date(event.start) >= new Date()) {
+                res.send(Array(result.length).fill(null))
+            } else {
+                res.send(result);
+            }
         } catch (err) {
             console.error(err)
             res.status(500).send()

@@ -172,7 +172,6 @@ export async function getEventLevels(eventID: number) {
         };
     });
 
-
     return flattened
 }
 
