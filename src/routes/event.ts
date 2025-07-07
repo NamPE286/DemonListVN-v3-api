@@ -410,12 +410,12 @@ router.route('/proof')
             return;
         }
 
-        // if (event.end && !(new Date(event.start) <= new Date() && new Date() < new Date(event.end))) {
-        //     res.status(401).send();
-        //     return;
-        // }
+        if (event.isContest && !user.discord) {
+            res.status(401).send();
+            return;
+        }
 
-        if (event.end && !(new Date() < new Date(event.end))) {
+        if (event.end && new Date() >= new Date(event.end)) {
             res.status(401).send();
             return;
         }
