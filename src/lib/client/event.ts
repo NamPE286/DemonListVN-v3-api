@@ -128,7 +128,6 @@ export async function getEventLevels(eventID: number) {
 
     const flattened = data.map(item => {
         const { levels, ...rest } = item;
-
         const { id: levelsId, ...flattenedLevels } = levels || {};
 
         return {
@@ -137,9 +136,40 @@ export async function getEventLevels(eventID: number) {
         };
     });
 
+
     return flattened
 }
 
-export async function getEventSubmission(eventID: number) {
+export async function getEventSubmissions(eventID: number, userID: string) {
+    const levels = await getEventLevels(8)
 
+    const { data, error } = await supabase
+        .from("eventRecords")
+        .select("*, eventLevels!inner(*)")
+        .eq("userID", userID)
+        .eq("eventLevels.eventID", 8)
+
+    if (error) {
+        throw error
+    }
+
+    const result = []
+
+    while (result.length < levels.length) {
+        let found = false;
+
+        for (const record of data!) {
+            if (record.levelID == levels[result.length].id) {
+                result.push(record)
+                found = true;
+                break
+            }
+        }
+
+        if (!found) {
+            result.push(null)
+        }
+    }
+
+    return result
 }

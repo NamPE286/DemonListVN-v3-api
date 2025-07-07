@@ -1,7 +1,7 @@
 import userAuth from '@src/middleware/userAuth'
 import express from 'express'
 import supabase from '@src/database/supabase'
-import { getEvent, getEventLevels } from '@src/lib/client/event'
+import { getEvent, getEventLevels, getEventSubmissions } from '@src/lib/client/event'
 
 const router = express.Router()
 const levelIDs = [121184864, 120313852, 120866069, 120552432, 121537017]
@@ -24,52 +24,22 @@ function getPenalty(records: any[]) {
 router.route('/levels')
     .get(async (req, res) => {
         try {
-            const data = await getEventLevels(8)
-            res.send(data)
+            res.send(await getEventLevels(8))
         } catch (err) {
             console.error(err)
-            res.status(500).send(err)
+            res.status(500).send()
         }
     })
 
 router.route('/submissions')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
-
-        const { data, error } = await supabase
-            .from("eventRecords")
-            .select("*, eventLevels!inner(*)")
-            .eq("userID", user.uid!)
-            .eq("eventLevels.eventID", 8)
-
-        if (error) {
-            console.error(error)
+        try {
+            res.send(await getEventSubmissions(8, user.uid!))
+        } catch (err) {
+            console.error(err)
             res.status(500).send()
-
-            return;
         }
-
-        const result = []
-
-        while (result.length < levelIDs.length) {
-            let found = false;
-
-            for (const record of data!) {
-                if (record.levelID == levelIDs[result.length]) {
-                    result.push(record)
-                    found = true;
-                    break
-                }
-            }
-
-            if (!found) {
-                result.push(null)
-            }
-
-        }
-
-        res.send(result)
-
     })
 
 router.route('/submit')
@@ -133,6 +103,7 @@ router.route('/leaderboard')
             .from("players")
             .select("*, clans!id(*), eventRecords!inner(*, eventLevels!inner(*))")
             .eq("eventRecords.eventLevels.eventID", 8)
+
 
         if (error) {
             console.error(error)
