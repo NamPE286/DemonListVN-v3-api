@@ -195,11 +195,11 @@ export async function getEventSubmissions(eventID: number, userID: string) {
 }
 
 export async function getEventLeaderboard(eventID: number) {
-    const levels = await getEventLevels(8)
+    const levels = await getEventLevels(eventID)
     const { data, error } = await supabase
         .from("players")
         .select("*, clans!id(*), eventRecords!inner(*, eventLevels!inner(*))")
-        .eq("eventRecords.eventLevels.eventID", 8)
+        .eq("eventRecords.eventLevels.eventID", eventID)
 
     if (error) {
         throw error
