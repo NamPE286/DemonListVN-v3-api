@@ -228,3 +228,24 @@ export async function getEventLeaderboard(eventID: number) {
 
     return data
 }
+
+export async function deleteEventSubmission(levelID: number, userID: string) {
+    const { error } = await supabase
+        .from('eventRecords')
+        .delete()
+        .match({ userID: userID, levelID: levelID })
+
+    if (error) {
+        throw error
+    }
+}
+
+export async function insertEventSubmission(data: any) {
+    const { error } = await supabase
+        .from("eventRecords")
+        .insert(data)
+
+    if (error) {
+        throw error
+    }
+}

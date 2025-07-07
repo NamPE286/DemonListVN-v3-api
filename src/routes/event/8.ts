@@ -1,7 +1,7 @@
 import userAuth from '@src/middleware/userAuth'
 import express from 'express'
 import supabase from '@src/database/supabase'
-import { getEvent, getEventLeaderboard, getEventLevels, getEventSubmissions } from '@src/lib/client/event'
+import { deleteEventSubmission, getEvent, getEventLeaderboard, getEventLevels, getEventSubmissions, insertEventSubmission } from '@src/lib/client/event'
 
 const router = express.Router()
 
@@ -40,18 +40,13 @@ router.route('/submit')
         req.body.userID = user.uid
         req.body.accepted = false
 
-        const { error } = await supabase
-            .from("eventRecords")
-            .insert(req.body)
-
-        if (error) {
-            console.error(error)
+        try {
+            await insertEventSubmission(req.body)
+            res.send()
+        } catch (err) {
+            console.error(err)
             res.status(500).send()
-
-            return;
         }
-
-        res.send()
     })
 
 router.route('/submission/:levelID')
@@ -66,19 +61,13 @@ router.route('/submission/:levelID')
         const { user } = res.locals
         const { levelID } = req.params
 
-        const { error } = await supabase
-            .from('eventRecords')
-            .delete()
-            .match({ userID: user.uid!, levelID: parseInt(levelID) })
-
-        if (error) {
-            console.error(error)
+        try {
+            await deleteEventSubmission(parseInt(levelID), user.uid!)
+            res.send()
+        } catch (err) {
+            console.error(err)
             res.status(500).send()
-
-            return;
         }
-
-        res.send()
     })
 
 router.route('/leaderboard')
