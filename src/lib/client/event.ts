@@ -177,13 +177,13 @@ export async function getEventLevels(eventID: number) {
 
 
 export async function getEventSubmissions(eventID: number, userID: string) {
-    const levels = await getEventLevels(8)
+    const levels = await getEventLevels(eventID)
 
     const { data, error } = await supabase
         .from("eventRecords")
         .select("*, eventLevels!inner(*)")
         .eq("userID", userID)
-        .eq("eventLevels.eventID", 8)
+        .eq("eventLevels.eventID", eventID)
 
     if (error) {
         throw error
