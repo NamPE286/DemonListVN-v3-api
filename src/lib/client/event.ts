@@ -1,4 +1,41 @@
 import supabase from "@src/database/supabase";
+import type { Tables } from "@src/lib/types/supabase";
+
+function getPenalty(records: any[]) {
+    let res: number = 0;
+
+    for (const i of records) {
+        if (i == null) {
+            continue;
+        }
+
+        res += new Date(i.created_at).getTime()
+    }
+
+    return res
+}
+
+function formatEventSubmissions(submissions: Tables<"eventRecords">[], levels: Tables<"eventLevels" | "levels">[]) {
+    const result = []
+
+    while (result.length < levels.length) {
+        let found = false;
+
+        for (const record of submissions) {
+            if (record.levelID == levels[result.length].id) {
+                result.push(record)
+                found = true;
+                break
+            }
+        }
+
+        if (!found) {
+            result.push(null)
+        }
+    }
+
+    return result
+}
 
 export async function getEvents() {
 
@@ -140,6 +177,7 @@ export async function getEventLevels(eventID: number) {
     return flattened
 }
 
+
 export async function getEventSubmissions(eventID: number, userID: string) {
     const levels = await getEventLevels(8)
 
@@ -153,23 +191,40 @@ export async function getEventSubmissions(eventID: number, userID: string) {
         throw error
     }
 
-    const result = []
+    return formatEventSubmissions(data, levels)
+}
 
-    while (result.length < levels.length) {
-        let found = false;
+export async function getEventLeaderboard(eventID: number) {
+    const levels = await getEventLevels(8)
+    const { data, error } = await supabase
+        .from("players")
+        .select("*, clans!id(*), eventRecords!inner(*, eventLevels!inner(*))")
+        .eq("eventRecords.eventLevels.eventID", 8)
 
-        for (const record of data!) {
-            if (record.levelID == levels[result.length].id) {
-                result.push(record)
-                found = true;
-                break
-            }
-        }
-
-        if (!found) {
-            result.push(null)
-        }
+    if (error) {
+        throw error
     }
 
-    return result
+    for (const player of data) {
+        // @ts-ignore
+        player.eventRecords = formatEventSubmissions(player.eventRecords, levels);
+    }
+
+    data.sort((a, b) => {
+        const x = a.eventRecords.reduce((sum, record, index) => {
+            return sum + (record ? levels[index].point * record.progress : 0);
+        }, 0);
+
+        const y = b.eventRecords.reduce((sum, record, index) => {
+            return sum + (record ? levels[index].point * record.progress : 0);
+        }, 0);
+
+        if (x == y && x != 0) {
+            return getPenalty(a.eventRecords) - getPenalty(b.eventRecords)
+        }
+
+        return y - x;
+    });
+
+    return data
 }
