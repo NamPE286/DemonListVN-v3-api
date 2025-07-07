@@ -1,11 +1,104 @@
 import express from 'express'
-import { deleteEventProof, getEvent, getEventProof, getEventProofs, insertEventProof, upsertEventProof } from '@src/lib/client/event'
+import {
+    deleteEventProof,
+    getEvent,
+    getEventProof,
+    getEventProofs,
+    insertEventProof,
+    upsertEventProof,
+    deleteEventSubmission,
+    getEventLeaderboard,
+    getEventLevels,
+    getEventSubmissions,
+    insertEventSubmission
+} from '@src/lib/client/event'
 import userAuth from '@src/middleware/userAuth'
 import adminAuth from '@src/middleware/adminAuth'
 
 const router = express.Router()
 
-router.use('/8', require(`./8`).default)
+router.route('/:id/levels')
+    .get(async (req, res) => {
+        const { id } = req.params
+
+        try {
+            res.send(await getEventLevels(parseInt(id)))
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/submissions')
+    .get(userAuth, async (req, res) => {
+        const { id } = req.params
+        const { user } = res.locals
+
+        try {
+            res.send(await getEventSubmissions(parseInt(id), user.uid!))
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/submit')
+    .post(userAuth, async (req, res) => {
+        const { id } = req.params
+        const event = await getEvent(parseInt(id))
+
+        if (new Date(event.end!) < new Date()) {
+            res.status(401).send();
+            return;
+        }
+
+        const { user } = res.locals
+
+        req.body.userID = user.uid
+        req.body.accepted = false
+
+        try {
+            await insertEventSubmission(req.body)
+            res.send()
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/submission/:levelID')
+    .delete(userAuth, async (req, res) => {
+        const { id } = req.params
+        const event = await getEvent(parseInt(id))
+
+        if (new Date(event.end!) < new Date()) {
+            res.status(401).send();
+            return;
+        }
+
+        const { user } = res.locals
+        const { levelID } = req.params
+
+        try {
+            await deleteEventSubmission(parseInt(levelID), user.uid!)
+            res.send()
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/leaderboard')
+    .get(async (req, res) => {
+        const { id } = req.params
+
+        try {
+            res.send(await getEventLeaderboard(parseInt(id)))
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
 
 router.route('/:id')
     /**
