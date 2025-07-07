@@ -114,3 +114,11 @@ export async function deleteEventProof(eventID: number, uid: string) {
         throw error
     }
 }
+
+export async function getEventLevels(eventID: number) {
+    
+}
+
+export async function getEventSubmission(eventID: number) {
+
+}

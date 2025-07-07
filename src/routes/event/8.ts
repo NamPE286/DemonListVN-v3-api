@@ -27,8 +27,9 @@ router.route('/submissions')
 
         const { data, error } = await supabase
             .from("eventRecords")
-            .select("*")
-            .match({ userID: user.uid!, eventID: 8 })
+            .select("*, eventLevels!inner(*)")
+            .eq("userID", user.uid!)
+            .eq("eventLevels.eventID", 8)
 
         if (error) {
             console.error(error)
@@ -42,7 +43,7 @@ router.route('/submissions')
         while (result.length < levelIDs.length) {
             let found = false;
 
-            for (const record of data) {
+            for (const record of data!) {
                 if (record.levelID == levelIDs[result.length]) {
                     result.push(record)
                     found = true;
@@ -72,6 +73,7 @@ router.route('/submit')
         const { user } = res.locals
 
         req.body.userID = user.uid
+        req.body.accepted = false
 
         const { error } = await supabase
             .from("eventRecords")
@@ -118,8 +120,8 @@ router.route('/leaderboard')
     .get(async (req, res) => {
         const { data, error } = await supabase
             .from("players")
-            .select("*, clans!id(*), eventRecords!inner(*)")
-            .eq("eventRecords.eventID", 8)
+            .select("*, clans!id(*), eventRecords!inner(*, eventLevels!inner(*))")
+            .eq("eventRecords.eventLevels.eventID", 8)
 
         if (error) {
             console.error(error)

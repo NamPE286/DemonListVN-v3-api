@@ -300,18 +300,21 @@ export type Database = {
       eventLevels: {
         Row: {
           eventID: number
+          id: number
           levelID: number
           needRaw: boolean
           point: number
         }
         Insert: {
           eventID: number
+          id?: number
           levelID: number
           needRaw: boolean
           point: number
         }
         Update: {
           eventID?: number
+          id?: number
           levelID?: number
           needRaw?: boolean
           point?: number
@@ -379,7 +382,6 @@ export type Database = {
         Row: {
           accepted: boolean
           created_at: string
-          eventID: number
           levelID: number
           progress: number
           raw: string | null
@@ -389,7 +391,6 @@ export type Database = {
         Insert: {
           accepted?: boolean
           created_at?: string
-          eventID: number
           levelID: number
           progress: number
           raw?: string | null
@@ -399,7 +400,6 @@ export type Database = {
         Update: {
           accepted?: boolean
           created_at?: string
-          eventID?: number
           levelID?: number
           progress?: number
           raw?: string | null
@@ -408,10 +408,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "eventRecords_eventID_fkey"
-            columns: ["eventID"]
+            foreignKeyName: "eventRecords_levelID_fkey"
+            columns: ["levelID"]
             isOneToOne: false
-            referencedRelation: "events"
+            referencedRelation: "eventLevels"
             referencedColumns: ["id"]
           },
           {
