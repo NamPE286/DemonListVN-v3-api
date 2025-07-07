@@ -1,7 +1,7 @@
 import userAuth from '@src/middleware/userAuth'
 import express from 'express'
 import supabase from '@src/database/supabase'
-import { getEvent } from '@src/lib/client/event'
+import { getEvent, getEventLevels } from '@src/lib/client/event'
 
 const router = express.Router()
 const levelIDs = [121184864, 120313852, 120866069, 120552432, 121537017]
@@ -20,6 +20,17 @@ function getPenalty(records: any[]) {
 
     return res
 }
+
+router.route('/levels')
+    .get(async (req, res) => {
+        try {
+            const data = await getEventLevels(8)
+            res.send(data)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send(err)
+        }
+    })
 
 router.route('/submissions')
     .get(userAuth, async (req, res) => {

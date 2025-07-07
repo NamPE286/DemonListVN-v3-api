@@ -116,7 +116,28 @@ export async function deleteEventProof(eventID: number, uid: string) {
 }
 
 export async function getEventLevels(eventID: number) {
-    
+    const { data, error } = await supabase
+        .from('eventLevels')
+        .select('*, levels(*)')
+        .eq("eventID", eventID)
+        .order("id")
+
+    if (error) {
+        throw error;
+    }
+
+    const flattened = data.map(item => {
+        const { levels, ...rest } = item;
+
+        const { id: levelsId, ...flattenedLevels } = levels || {};
+
+        return {
+            ...rest,
+            ...flattenedLevels,
+        };
+    });
+
+    return flattened
 }
 
 export async function getEventSubmission(eventID: number) {
