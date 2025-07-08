@@ -195,20 +195,34 @@ export async function getEventSubmissions(eventID: number, userID: string) {
 export async function getEventLeaderboard(eventID: number) {
     const levels = await getEventLevels(eventID)
     const { data, error } = await supabase
-        .from("players")
-        .select("*, clans!id(*), eventRecords!inner(*, eventLevels!inner(*))")
-        .eq("eventRecords.eventLevels.eventID", eventID)
+        .from("eventProofs")
+        .select("userid, eventID, players(*, clans!id(*), eventRecords(*, eventLevels(*)))")
+        .eq("eventID", eventID)
 
     if (error) {
         throw error
     }
 
-    for (const player of data) {
+    const res = []
+
+    for (let i of data) {
+        if (!i.players) {
+            continue
+        }
+
+        if(!i.players.eventRecords === null) {
+            i.players.eventRecords = []
+        }
+
+        res.push(i.players)
+    }
+
+    for (const player of res) {
         // @ts-ignore
         player.eventRecords = formatEventSubmissions(player.eventRecords, levels);
     }
 
-    data.sort((a, b) => {
+    res.sort((a, b) => {
         const x = a.eventRecords.reduce((sum, record, index) => {
             return sum + (record ? levels[index].point * record.progress : 0);
         }, 0);
@@ -224,7 +238,7 @@ export async function getEventLeaderboard(eventID: number) {
         return y - x;
     });
 
-    return data
+    return res
 }
 
 export async function deleteEventSubmission(levelID: number, userID: string) {
@@ -238,12 +252,31 @@ export async function deleteEventSubmission(levelID: number, userID: string) {
     }
 }
 
-export async function insertEventSubmission(data: any) {
-    const { error } = await supabase
+export async function insertEventSubmission(submission: any) {
+    var { error } = await supabase
         .from("eventRecords")
-        .insert(data)
+        .insert(submission)
 
     if (error) {
         throw error
+    }
+
+    var { data, error } = await supabase
+        .from("eventLevels")
+        .select("id, eventID")
+        .eq("id", submission.levelID)
+        .single()
+
+    if (error) {
+        throw error
+    }
+
+    try {
+        await insertEventProof({
+            userid: submission.userID,
+            eventID: data?.eventID
+        })
+    } catch (err) {
+        console.warn(err)
     }
 }
