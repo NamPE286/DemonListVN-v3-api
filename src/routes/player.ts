@@ -6,6 +6,7 @@ import { getPlayerRecords } from '@src/lib/client/record'
 import { updateHeatmap } from '@src/lib/client/heatmap'
 import { getPlayerSubmissions } from '@src/lib/client/record'
 import { syncRoleDLVN, syncRoleGDVN } from '@src/lib/client/discord'
+import { getPlayerMedals } from '@src/lib/client/player'
 
 const router = express.Router()
 
@@ -252,11 +253,23 @@ router.route('/syncRole')
         try {
             await syncRoleDLVN(user);
             await syncRoleGDVN(user);
-            
+
             res.send();
-        } catch(err) {
+        } catch (err) {
             console.error(err)
             res.status(500).send();
+        }
+    })
+
+router.route('/:id/medals')
+    .get(async (req, res) => {
+        const { id } = req.params
+
+        try {
+            res.send(await getPlayerMedals(id))
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
         }
     })
 

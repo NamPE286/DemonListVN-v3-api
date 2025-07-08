@@ -1,24 +1,24 @@
 import supabase from '@database/supabase'
 
-export async function getPlayers({province = '', city = '', sortBy = 'rating', ascending = 'true'} = {}) {
-    if(province == '') {
+export async function getPlayers({ province = '', city = '', sortBy = 'rating', ascending = 'true' } = {}) {
+    if (province == '') {
         throw new Error('Provinces is required')
     }
 
     let query = supabase
         .from('players')
         .select('*, clans!id(*)')
-        .order(sortBy, {ascending: ascending == 'true', nullsFirst: false})
+        .order(sortBy, { ascending: ascending == 'true', nullsFirst: false })
         .eq('province', province)
         .eq('isHidden', false)
-    
-    if(city) {
+
+    if (city) {
         query = query.eq('city', city)
     }
 
     const { data, error } = await query
 
-    if(error) {
+    if (error) {
         throw error
     }
 
@@ -60,6 +60,29 @@ export async function getFeaturedListLeaderboard({ start = 0, end = 50, sortBy =
 
     if (error) {
         throw error
+    }
+
+    return data
+}
+
+export async function getPlayerMedals(userID: string) {
+    const { data, error } = await supabase
+        .from("playerMedals")
+        .select("*, medals(*)")
+        .eq("userID", userID)
+
+    if (error) {
+        throw error
+    }
+
+    if (data) {
+        data.forEach((item: any) => {
+            if (item.medals) {
+                Object.assign(item, item.medals);
+                delete item.medals;
+                delete item.id;
+            }
+        });
     }
 
     return data

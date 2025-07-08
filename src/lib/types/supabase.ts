@@ -672,7 +672,7 @@ export type Database = {
           },
         ]
       }
-      playerMedal: {
+      playerMedals: {
         Row: {
           content: string | null
           medalID: number
