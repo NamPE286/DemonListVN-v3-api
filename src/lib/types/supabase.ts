@@ -34,27 +34,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      achievement: {
-        Row: {
-          id: number
-          image: string | null
-          name: string
-          timestamp: number
-        }
-        Insert: {
-          id?: number
-          image?: string | null
-          name?: string
-          timestamp?: number
-        }
-        Update: {
-          id?: number
-          image?: string | null
-          name?: string
-          timestamp?: number
-        }
-        Relationships: []
-      }
       APIKey: {
         Row: {
           created_at: string
@@ -569,6 +548,21 @@ export type Database = {
         }
         Relationships: []
       }
+      medals: {
+        Row: {
+          id: number
+          name: string
+        }
+        Insert: {
+          id?: number
+          name?: string
+        }
+        Update: {
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           content: string | null
@@ -671,6 +665,39 @@ export type Database = {
           },
           {
             foreignKeyName: "orders_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      playerMedal: {
+        Row: {
+          content: string | null
+          medalID: number
+          userID: string
+        }
+        Insert: {
+          content?: string | null
+          medalID: number
+          userID: string
+        }
+        Update: {
+          content?: string | null
+          medalID?: number
+          userID?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playerMedal_medalID_fkey"
+            columns: ["medalID"]
+            isOneToOne: false
+            referencedRelation: "medals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playerMedal_userID_fkey"
             columns: ["userID"]
             isOneToOne: false
             referencedRelation: "players"
@@ -830,7 +857,7 @@ export type Database = {
             foreignKeyName: "playersAchievement_achievementid_fkey"
             columns: ["achievementid"]
             isOneToOne: false
-            referencedRelation: "achievement"
+            referencedRelation: "medals"
             referencedColumns: ["id"]
           },
           {
