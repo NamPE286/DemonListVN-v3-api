@@ -224,11 +224,11 @@ export async function getEventLeaderboard(eventID: number) {
 
     res.sort((a, b) => {
         const x = a.eventRecords.reduce((sum, record, index) => {
-            return sum + (record ? levels[index].point * record.progress : 0);
+            return sum + (record && (record.accepted === null || record.accepted === true) ? levels[index].point * record.progress : 0);
         }, 0);
 
         const y = b.eventRecords.reduce((sum, record, index) => {
-            return sum + (record ? levels[index].point * record.progress : 0);
+            return sum + (record && (record.accepted === null || record.accepted === true) ? levels[index].point * record.progress : 0);
         }, 0);
 
         if (x == y && x != 0) {
@@ -254,7 +254,7 @@ export async function deleteEventSubmission(levelID: number, userID: string) {
 
 export async function insertEventSubmission(submission: any) {
     delete submission.accepted
-    
+
     var { error } = await supabase
         .from("eventRecords")
         .insert(submission)

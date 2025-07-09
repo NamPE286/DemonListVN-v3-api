@@ -359,7 +359,7 @@ export type Database = {
       }
       eventRecords: {
         Row: {
-          accepted: boolean
+          accepted: boolean | null
           created_at: string
           levelID: number
           progress: number
@@ -368,7 +368,7 @@ export type Database = {
           videoLink: string
         }
         Insert: {
-          accepted?: boolean
+          accepted?: boolean | null
           created_at?: string
           levelID: number
           progress: number
@@ -377,7 +377,7 @@ export type Database = {
           videoLink: string
         }
         Update: {
-          accepted?: boolean
+          accepted?: boolean | null
           created_at?: string
           levelID?: number
           progress?: number
@@ -552,14 +552,17 @@ export type Database = {
         Row: {
           id: number
           name: string
+          redirect: string | null
         }
         Insert: {
           id?: number
           name?: string
+          redirect?: string | null
         }
         Update: {
           id?: number
           name?: string
+          redirect?: string | null
         }
         Relationships: []
       }
@@ -675,16 +678,19 @@ export type Database = {
       playerMedals: {
         Row: {
           content: string | null
+          created_at: string
           medalID: number
           userID: string
         }
         Insert: {
           content?: string | null
+          created_at?: string
           medalID: number
           userID: string
         }
         Update: {
           content?: string | null
+          created_at?: string
           medalID?: number
           userID?: string
         }
