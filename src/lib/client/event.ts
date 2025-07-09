@@ -253,6 +253,8 @@ export async function deleteEventSubmission(levelID: number, userID: string) {
 }
 
 export async function insertEventSubmission(submission: any) {
+    delete submission.accepted
+    
     var { error } = await supabase
         .from("eventRecords")
         .insert(submission)
