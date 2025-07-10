@@ -7,6 +7,7 @@ import { updateHeatmap } from '@src/lib/client/heatmap'
 import { getPlayerSubmissions } from '@src/lib/client/record'
 import { syncRoleDLVN, syncRoleGDVN } from '@src/lib/client/discord'
 import { getPlayerMedals } from '@src/lib/client/player'
+import supabase from '@src/database/supabase'
 
 const router = express.Router()
 
@@ -41,7 +42,21 @@ router.route('/')
                 data.uid = user.uid
             }
         }
-
+        /**
+         * @openapi
+         * "/player":
+         *   post:
+         *     tags:
+         *       - Player
+         *     summary: Add a Player
+         *     requestBody:
+         *       required: true
+         *       content:
+         *         application/json:
+         *     responses:
+         *       200:
+         *         description: Success
+         */
         if (user.uid != data.uid && !user.isAdmin) {
             res.status(403).send()
             return
@@ -55,6 +70,25 @@ router.route('/')
         } catch (err) {
             res.status(500).send()
         }
+    })
+
+    .post(userAuth, async (req, res) => {
+        const user = res.locals.user
+
+        const { error } = await supabase
+            .from("players")
+            .insert({
+                uid: user.uid!,
+                name: String(new Date().getTime())
+            })
+
+        if (error) {
+            console.error(error)
+            res.status(500).send()
+            return;
+        }
+
+        res.send();
     })
 
 router.route('/:uid')
@@ -262,6 +296,24 @@ router.route('/syncRole')
     })
 
 router.route('/:id/medals')
+    /**
+     * @openapi
+     * "/{uid}/medals":
+     *   get:
+     *     tags:
+     *       - Player
+     *     summary: Get player's medals
+     *     parameters:
+     *       - name: uid
+     *         in: path
+     *         description: The UID of the player
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Success
+     */
     .get(async (req, res) => {
         const { id } = req.params
 
