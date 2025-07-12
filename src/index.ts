@@ -58,6 +58,7 @@ app.use('/payment', require(`./routes/payment`).default)
 app.use('/orders', require(`./routes/orders`).default)
 app.use('/auth', require(`./routes/auth`).default)
 app.use('/levels', require(`./routes/levels`).default)
+app.use('/coupon', require(`./routes/coupon`).default)
 
 app.listen(port, () => {
     console.log(`Server started on port ${port}`)

@@ -1,4 +1,5 @@
 import supabase from "@src/database/supabase";
+import type Player from "@src/lib/classes/Player";
 
 export async function getProductByID(id: number) {
     const { data, error } = await supabase
@@ -61,4 +62,56 @@ export async function getOrders(userID: string) {
     }
 
     return data
+}
+
+export async function getCoupon(code: string) {
+    const { data, error } = await supabase
+        .from('coupons')
+        .select('*, products(*)')
+        .eq('code', code)
+        .single()
+
+    if (error) {
+        throw error
+    }
+
+    return data
+}
+
+export async function redeem(code: string, player: Player) {
+    const coupon = await getCoupon(code);
+    const product = coupon.products
+
+    if (product === null) {
+        throw new Error("Coupon is for discount only");
+    }
+
+    delete (coupon as { products?: any }).products
+
+
+    if (coupon.usageLeft == 0) {
+        throw new Error("Coupon is out of usage")
+    }
+
+    if (new Date(coupon.created_at) > new Date()) {
+        throw new Error("Coupon is expired")
+    }
+
+    let amount = product.price * coupon.quantity * (1 - coupon.percent) - coupon.deduct
+
+    if (amount > 0) {
+        return;
+    }
+
+    coupon.usageLeft--;
+
+    const { error } = await supabase
+        .from('coupons')
+        .upsert(coupon)
+
+    if (error) {
+        throw error
+    }
+
+    await player.extendSupporter(coupon.quantity)
 }

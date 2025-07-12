@@ -224,28 +224,42 @@ export type Database = {
         Row: {
           code: string
           created_at: string
-          deduct: number | null
-          percent: number | null
+          deduct: number
+          percent: number
+          productID: number | null
+          quantity: number
           usageLeft: number
           validUntil: string
         }
         Insert: {
           code: string
           created_at?: string
-          deduct?: number | null
-          percent?: number | null
+          deduct?: number
+          percent?: number
+          productID?: number | null
+          quantity?: number
           usageLeft?: number
           validUntil: string
         }
         Update: {
           code?: string
           created_at?: string
-          deduct?: number | null
-          percent?: number | null
+          deduct?: number
+          percent?: number
+          productID?: number | null
+          quantity?: number
           usageLeft?: number
           validUntil?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "coupons_productID_fkey"
+            columns: ["productID"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       deathCount: {
         Row: {
