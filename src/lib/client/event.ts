@@ -210,7 +210,7 @@ export async function getEventLeaderboard(eventID: number) {
             continue
         }
 
-        if(!i.players.eventRecords === null) {
+        if (!i.players.eventRecords === null) {
             i.players.eventRecords = []
         }
 
@@ -253,8 +253,6 @@ export async function deleteEventSubmission(levelID: number, userID: string) {
 }
 
 export async function insertEventSubmission(submission: any) {
-    delete submission.accepted
-
     var { error } = await supabase
         .from("eventRecords")
         .insert(submission)
@@ -281,4 +279,10 @@ export async function insertEventSubmission(submission: any) {
     } catch (err) {
         console.warn(err)
     }
+}
+
+export async function upsertEventSubmission(submission: any) {
+    var { error } = await supabase
+        .from("eventRecords")
+        .upsert(submission)
 }

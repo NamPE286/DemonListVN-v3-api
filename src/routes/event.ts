@@ -10,7 +10,8 @@ import {
     getEventLeaderboard,
     getEventLevels,
     getEventSubmissions,
-    insertEventSubmission
+    insertEventSubmission,
+    upsertEventSubmission
 } from '@src/lib/client/event'
 import userAuth from '@src/middleware/userAuth'
 import adminAuth from '@src/middleware/adminAuth'
@@ -129,10 +130,21 @@ router.route('/:id/submit')
         const { user } = res.locals
 
         req.body.userID = user.uid
-        req.body.accepted = false
+        req.body.accepted = null
 
         try {
             await insertEventSubmission(req.body)
+            res.send()
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+router.route('/submission')
+    .patch(adminAuth, async (req, res) => {
+        try {
+            await upsertEventSubmission(req.body)
             res.send()
         } catch (err) {
             console.error(err)
