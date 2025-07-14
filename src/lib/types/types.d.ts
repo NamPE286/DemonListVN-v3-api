@@ -4,7 +4,8 @@ declare global {
   namespace Express {
     interface Locals {
       user: Player,
-      authType: 'token' | 'key'
+      authType: 'token' | 'key',
+      authenticated: boolean
     }
   }
 }

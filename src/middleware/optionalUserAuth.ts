@@ -8,7 +8,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
     
     if (!req.headers.authorization ||
         !req.headers.authorization.startsWith('Bearer ')) {
-        res.status(401).send()
+        next()
         return
     }
 
@@ -23,7 +23,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
         } catch { }
 
         if (player.isBanned) {
-            res.status(401).send();
+            next();
             return;
         }
 
@@ -31,7 +31,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             if (req.originalUrl.endsWith('submission') && req.method == 'POST') { }
             else if (req.originalUrl.startsWith('/record') && req.method == 'DELETE') { }
             else {
-                res.status(401).send();
+                next();
                 return;
             }
         }
@@ -57,16 +57,16 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             res.locals.authType = 'key'
 
             if (res.locals.user.isBanned) {
-                res.status(401).send();
+                next();
                 return;
             }
 
             if (res.locals.user.recordCount === 0 && !(req.originalUrl.endsWith('submission') && req.method == 'POST') && !res.locals.user.isAdmin) {
-                res.status(401).send();
+                next();
                 return;
             }
         } catch {
-            res.status(403).send()
+            next()
             return
         }
     }

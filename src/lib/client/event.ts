@@ -192,14 +192,14 @@ export async function getEventSubmissions(eventID: number, userID: string) {
     return formatEventSubmissions(data, levels)
 }
 
-export async function getEventLeaderboard(eventID: number) {
+export async function getEventLeaderboard(eventID: number, ignoreFreeze: boolean) {
     const event = await getEvent(eventID)
     const levels = await getEventLevels(eventID)
     const { data, error } = await supabase
         .from("eventProofs")
         .select("userid, eventID, players!inner(*, clans!id(*), eventRecords!inner(*, eventLevels(*)))")
         .eq("eventID", eventID)
-        .lte("players.eventRecords.created_at", event.freeze ? event.freeze : new Date().toISOString());
+        .lte("players.eventRecords.created_at", event.freeze && !ignoreFreeze ? event.freeze : new Date().toISOString());
 
     if (error) {
         throw error

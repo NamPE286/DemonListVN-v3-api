@@ -15,6 +15,7 @@ import {
 } from '@src/lib/client/event'
 import userAuth from '@src/middleware/userAuth'
 import adminAuth from '@src/middleware/adminAuth'
+import optionalUserAuth from '@src/middleware/optionalUserAuth'
 
 const router = express.Router()
 
@@ -223,11 +224,13 @@ router.route('/:id/leaderboard')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
+    .get(optionalUserAuth, async (req, res) => {
         const { id } = req.params
+        const { user, authenticated } = res.locals
+        const ignoreFreeze = authenticated && (user && user.isAdmin!)
 
         try {
-            res.send(await getEventLeaderboard(parseInt(id)))
+            res.send(await getEventLeaderboard(parseInt(id), ignoreFreeze))
         } catch (err) {
             console.error(err)
             res.status(500).send()
