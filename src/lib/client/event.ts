@@ -197,7 +197,7 @@ export async function getEventLeaderboard(eventID: number, ignoreFreeze: boolean
     const levels = await getEventLevels(eventID)
     const { data, error } = await supabase
         .from("eventProofs")
-        .select("userid, eventID, players!inner(*, clans!id(*), eventRecords!inner(*, eventLevels(*)))")
+        .select("userid, eventID, players!inner(*, clans!id(*), eventRecords(*, eventLevels(*)))")
         .eq("eventID", eventID)
         .lte("players.eventRecords.created_at", event.freeze && !ignoreFreeze ? event.freeze : new Date().toISOString());
 
