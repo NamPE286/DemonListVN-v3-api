@@ -112,10 +112,11 @@ class Record {
 
         await level.pull()
 
-        const title = video.items[0].snippet.title
-        const desc = video.items[0].snippet.description
+        const name = level.name!.toLowerCase()
+        const title: string = video.items[0].snippet.title.toLowerCase()
+        const desc: string = video.items[0].snippet.description.toLowerCase()
 
-        if (!title.includes(level.name) && !desc.includes(level.name)) {
+        if (!title.includes(name) && !desc.includes(name)) {
             throw new Error("Level's name is not in the title or description of the video")
         }
 
