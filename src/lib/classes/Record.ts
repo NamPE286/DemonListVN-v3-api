@@ -15,6 +15,12 @@ async function isLevelExists(id: number) {
     return true
 }
 
+function getYouTubeVideoID(url: string) {
+    var regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+    var match = url.match(regExp);
+    return (match && match[7].length == 11) ? match[7] : false;
+}
+
 interface Record extends TRecord { }
 
 class Record {
@@ -78,7 +84,7 @@ class Record {
         try {
             await record.pull()
         } catch {
-            await this.update()
+            await this.update(true)
             return
         }
 
@@ -90,10 +96,43 @@ class Record {
             throw new Error('Better record is submitted')
         }
 
-        await this.update()
+        await this.update(true)
     }
 
-    async update() {
+    async validate() {
+        if (!this.videoLink) {
+            throw new Error("Missing videoLink")
+        }
+
+        const level = new Level({ id: this.levelid })
+        const id = getYouTubeVideoID(this.videoLink)
+        const video: any = await (
+            (await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${id}&key=${process.env.GOOGLE_API_KEY}`)).json()
+        )
+
+        await level.pull()
+
+        const title = video.items[0].snippet.title
+        const desc = video.items[0].snippet.description
+
+        if (!title.includes(level.name) && !desc.includes(level.name)) {
+            throw new Error("Level's name is not in the title or description of the video")
+        }
+
+        if(this.progress == 100 && !level.isPlatformer) {
+            return;
+        }
+
+        if (!title.includes(this.progress!.toString()) && !desc.includes(this.progress!.toString())) {
+            throw new Error("Progress is not 100% and is not in the title or description of the video");
+        }
+    }
+
+    async update(validate = false) {
+        if (validate) {
+            await this.validate()
+        }
+
         const { error } = await supabase
             .from('records')
             .upsert(this as any)
