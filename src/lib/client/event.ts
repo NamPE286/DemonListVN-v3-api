@@ -193,11 +193,13 @@ export async function getEventSubmissions(eventID: number, userID: string) {
 }
 
 export async function getEventLeaderboard(eventID: number) {
+    const event = await getEvent(eventID)
     const levels = await getEventLevels(eventID)
     const { data, error } = await supabase
         .from("eventProofs")
-        .select("userid, eventID, players(*, clans!id(*), eventRecords(*, eventLevels(*)))")
+        .select("userid, eventID, players!inner(*, clans!id(*), eventRecords!inner(*, eventLevels(*)))")
         .eq("eventID", eventID)
+        .lte("players.eventRecords.created_at", event.freeze ? event.freeze : new Date().toISOString());
 
     if (error) {
         throw error

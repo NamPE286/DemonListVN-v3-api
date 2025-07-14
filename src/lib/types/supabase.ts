@@ -444,6 +444,7 @@ export type Database = {
           description: string
           end: string | null
           exp: number | null
+          freeze: string | null
           hidden: boolean
           id: number
           imgUrl: string
@@ -461,6 +462,7 @@ export type Database = {
           description: string
           end?: string | null
           exp?: number | null
+          freeze?: string | null
           hidden?: boolean
           id?: number
           imgUrl: string
@@ -478,6 +480,7 @@ export type Database = {
           description?: string
           end?: string | null
           exp?: number | null
+          freeze?: string | null
           hidden?: boolean
           id?: number
           imgUrl?: string
