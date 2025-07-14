@@ -60,6 +60,27 @@ export type Database = {
           },
         ]
       }
+      cards: {
+        Row: {
+          activated: boolean
+          created_at: string
+          id: string
+          supporterIncluded: number
+        }
+        Insert: {
+          activated?: boolean
+          created_at?: string
+          id?: string
+          supporterIncluded?: number
+        }
+        Update: {
+          activated?: boolean
+          created_at?: string
+          id?: string
+          supporterIncluded?: number
+        }
+        Relationships: []
+      }
       changelogs: {
         Row: {
           created_at: string
@@ -751,6 +772,7 @@ export type Database = {
           isHidden: boolean
           isTrusted: boolean
           name: string
+          nameLocked: boolean
           overallRank: number | null
           platformerRank: number | null
           platformerRating: number | null
@@ -790,6 +812,7 @@ export type Database = {
           isHidden?: boolean
           isTrusted?: boolean
           name: string
+          nameLocked?: boolean
           overallRank?: number | null
           platformerRank?: number | null
           platformerRating?: number | null
@@ -829,6 +852,7 @@ export type Database = {
           isHidden?: boolean
           isTrusted?: boolean
           name?: string
+          nameLocked?: boolean
           overallRank?: number | null
           platformerRank?: number | null
           platformerRating?: number | null
