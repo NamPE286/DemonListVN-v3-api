@@ -29,7 +29,7 @@ class Player {
             throw new Error("Invalid name format")
         }
 
-        if (updateData.isTrusted && !updateData.isAdmin) {
+        if ((updateData.isTrusted && !updateData.isAdmin) || updateData.nameLocked) {
             delete updateData.name
         }
 
@@ -44,6 +44,7 @@ class Player {
         //@ts-ignore
         delete updateData.clans
         delete updateData.discord
+        delete updateData.nameLocked
 
         if (!updateClan) {
             delete this.clan
