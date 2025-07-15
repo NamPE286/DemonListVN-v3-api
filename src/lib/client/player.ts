@@ -70,7 +70,7 @@ export async function getPlayerMedals(userID: string) {
         .from("playerMedals")
         .select("*, medals(*)")
         .eq("userID", userID)
-        .order("created_at")
+        .order("created_at", { ascending: false })
 
     if (error) {
         throw error
