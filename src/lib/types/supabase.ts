@@ -62,24 +62,41 @@ export type Database = {
       }
       cards: {
         Row: {
-          activated: boolean
+          activationDate: string | null
           created_at: string
           id: string
+          img: string
+          name: string
+          owner: string | null
           supporterIncluded: number
         }
         Insert: {
-          activated?: boolean
+          activationDate?: string | null
           created_at?: string
           id?: string
+          img?: string
+          name?: string
+          owner?: string | null
           supporterIncluded?: number
         }
         Update: {
-          activated?: boolean
+          activationDate?: string | null
           created_at?: string
           id?: string
+          img?: string
+          name?: string
+          owner?: string | null
           supporterIncluded?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cards_owner_fkey"
+            columns: ["owner"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
       }
       changelogs: {
         Row: {
