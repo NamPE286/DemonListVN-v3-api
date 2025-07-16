@@ -63,6 +63,7 @@ export type Database = {
       cards: {
         Row: {
           activationDate: string | null
+          content: string
           created_at: string
           id: string
           img: string
@@ -72,6 +73,7 @@ export type Database = {
         }
         Insert: {
           activationDate?: string | null
+          content?: string
           created_at?: string
           id?: string
           img?: string
@@ -81,6 +83,7 @@ export type Database = {
         }
         Update: {
           activationDate?: string | null
+          content?: string
           created_at?: string
           id?: string
           img?: string
