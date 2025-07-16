@@ -7,9 +7,23 @@ export async function getCard(id: string) {
         .eq('id', id)
         .single()
 
-    if(error) {
+    if (error) {
         throw error
     }
 
     return data
+}
+
+export async function linkCard(id: string, userID: string) {
+    const { error } = await supabase
+        .from("cards")
+        .update({
+            id: id,
+            owner: userID
+        })
+        .eq('id', id)
+
+    if (error) {
+        throw error
+    }
 }
