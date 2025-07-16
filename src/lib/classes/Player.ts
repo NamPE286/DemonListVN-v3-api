@@ -166,7 +166,7 @@ class Player {
             throw error;
         }
 
-        await sendDirectMessage(this.uid!, `Your Discord account is linked to [${this.name}](https://demonlistvn.com/player/${this.uid!}) DLVN account.`)
+        await sendDirectMessage(this.uid!, `Your Discord account is linked to [${this.name}](https://demonlistvn.com/player/${this.uid!}) DLVN account.`, true)
     }
 }
 

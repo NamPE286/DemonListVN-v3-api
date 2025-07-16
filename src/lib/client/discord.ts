@@ -66,12 +66,12 @@ export async function createDirectMessageChannel(userID: string): Promise<string
     return data.id;
 }
 
-export async function sendDirectMessage(uid: string, content: string) {
+export async function sendDirectMessage(uid: string, content: string, bypass: boolean = false) {
     const player = new Player({ uid: uid })
 
     await player.pull();
 
-    if (!player.isSupporterActive() || !player.discord) {
+    if (!bypass && (!player.isSupporterActive() || !player.discord)) {
         return;
     }
 
