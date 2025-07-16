@@ -1,4 +1,5 @@
 import supabase from '@database/supabase'
+import { sendDirectMessage } from '@src/lib/client/discord'
 import type { TPlayer } from '@src/lib/types'
 
 interface Player extends TPlayer { }
@@ -164,6 +165,8 @@ class Player {
         if (error) {
             throw error;
         }
+
+        await sendDirectMessage(this.uid!, `Your Discord account is linked to [${this.name}](https://demonlistvn.com/player/${this.uid!}) DLVN account.`)
     }
 }
 
