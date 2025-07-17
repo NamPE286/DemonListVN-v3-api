@@ -95,7 +95,10 @@ router.route('/success')
 
         await buyer.pull();
         await recipent.pull();
-        await recipent.extendSupporter(order.quantity);
+
+        if (order.productID === 1) {
+            await recipent.extendSupporter(order.quantity);
+        }
 
         const { error } = await supabase
             .from("orders")
@@ -108,35 +111,37 @@ router.route('/success')
 
         res.redirect(`https://www.demonlistvn.com/supporter/success?id=${id}`)
 
-        let msg = ''
+        if (order.productID === 1) {
+            let msg = ''
 
-        if (buyer.discord) {
-            msg = `<@${buyer.discord}>`
-        } else {
-            msg = `[${buyer.name}](https://demonlistvn.com/player/${buyer.uid})`
-        }
-
-        if (order.giftTo) {
-            msg += ` gifted ${order.quantity} month${order.quantity > 1 ? "s" : ""} of Demon List VN Supporter Role to `
-
-            if (recipent.discord) {
-                msg = `<@${recipent.discord}>`
+            if (buyer.discord) {
+                msg = `<@${buyer.discord}>`
             } else {
-                msg = `[${recipent.name}](https://demonlistvn.com/player/${recipent.uid})`
+                msg = `[${buyer.name}](https://demonlistvn.com/player/${buyer.uid})`
             }
 
-            await sendNotification({
-                content: `You have been gifted ${order.quantity} month${order.quantity > 1 ? "s" : ""} of Demon List VN Supporter Role`,
-                to: order.giftTo
-            })
-        } else {
-            msg += ` purchased ${order.quantity} month${order.quantity > 1 ? "s" : ""} of Demon List VN Supporter Role`
+            if (order.giftTo) {
+                msg += ` gifted ${order.quantity} month${order.quantity > 1 ? "s" : ""} of Demon List VN Supporter Role to `
 
+                if (recipent.discord) {
+                    msg = `<@${recipent.discord}>`
+                } else {
+                    msg = `[${recipent.name}](https://demonlistvn.com/player/${recipent.uid})`
+                }
+
+                await sendNotification({
+                    content: `You have been gifted ${order.quantity} month${order.quantity > 1 ? "s" : ""} of Demon List VN Supporter Role`,
+                    to: order.giftTo
+                })
+            } else {
+                msg += ` purchased ${order.quantity} month${order.quantity > 1 ? "s" : ""} of Demon List VN Supporter Role`
+
+            }
+
+            msg += '!'
+
+            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
         }
-
-        msg += '!'
-
-        await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
     })
 
 /**
