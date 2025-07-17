@@ -47,11 +47,11 @@ router.route('/getPaymentLink/:productID/:quantity')
             description: "dlvn",
             expiredAt: Math.floor((Date.now() + 5 * 60 * 1000) / 1000),
             items: [
-            {
-                name: product.name!,
-                quantity: parseInt(quantity),
-                price: product.price!,
-            },
+                {
+                    name: product.name!,
+                    quantity: parseInt(quantity),
+                    price: product.price!,
+                },
             ],
             cancelUrl: "https://api.demonlistvn.com/payment/cancelled",
             returnUrl: "https://api.demonlistvn.com/payment/success",
@@ -76,23 +76,32 @@ router.route('/success')
     .get(async (req, res) => {
         const { orderCode } = req.query;
         const id = parseInt(String(orderCode));
-        const paymentLink = await payOS.getPaymentLinkInformation(id);
+        const order = await getOrderByID(id);
 
-        changeOrderState(id, paymentLink.status);
+        if (order.delivered) {
+            res.redirect(`https://www.demonlistvn.com/supporter/success?id=${id}`)
+            return;
+        }
+
+        if (order.state == 'CANCELLED') {
+            await payOS.cancelPaymentLink(order.id)
+            res.redirect(`https://www.demonlistvn.com/orders`)
+
+            return;
+        }
+
+        const paymentLink = await payOS.getPaymentLinkInformation(id);
+        order.state = paymentLink.status
+
+        await changeOrderState(id, paymentLink.status);
 
         if (paymentLink.status != "PAID") {
             res.redirect(`https://www.demonlistvn.com/orders`)
             return;
         }
 
-        const order = await getOrderByID(id);
         const buyer = new Player({ uid: order.userID })
         const recipent = new Player({ uid: order.giftTo ? order.giftTo : order.userID })
-
-        if (order.delivered) {
-            res.redirect(`https://www.demonlistvn.com/supporter/success?id=${id}`)
-            return;
-        }
 
         await buyer.pull();
         await recipent.pull();
