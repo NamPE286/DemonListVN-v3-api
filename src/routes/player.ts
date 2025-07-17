@@ -316,7 +316,6 @@ router.route('/:id/medals')
     .get(async (req, res) => {
         const { id } = req.params
         const player = new Player({ uid: id })
-        await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), "testtest")
         try {
             res.send(await player.getInventoryItems('medal'))
         } catch (err) {
