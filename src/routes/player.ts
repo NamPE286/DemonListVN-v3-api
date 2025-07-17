@@ -6,7 +6,6 @@ import { getPlayerRecords } from '@src/lib/client/record'
 import { updateHeatmap } from '@src/lib/client/heatmap'
 import { getPlayerSubmissions } from '@src/lib/client/record'
 import { syncRoleDLVN, syncRoleGDVN } from '@src/lib/client/discord'
-import { getPlayerMedals } from '@src/lib/client/player'
 import supabase from '@src/database/supabase'
 
 const router = express.Router()
@@ -316,9 +315,10 @@ router.route('/:id/medals')
      */
     .get(async (req, res) => {
         const { id } = req.params
+        const player = new Player({uid: id})
 
         try {
-            res.send(await getPlayerMedals(id))
+            res.send(await player.getInventoryItems('medal'))
         } catch (err) {
             console.error(err)
             res.status(500).send()

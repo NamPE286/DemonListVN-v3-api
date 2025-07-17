@@ -540,6 +540,63 @@ export type Database = {
           },
         ]
       }
+      inventory: {
+        Row: {
+          content: string | null
+          created_at: string
+          medalID: number
+          userID: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          medalID: number
+          userID: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          medalID?: number
+          userID?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playerMedal_medalID_fkey"
+            columns: ["medalID"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playerMedal_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      items: {
+        Row: {
+          id: number
+          name: string
+          redirect: string | null
+          type: string
+        }
+        Insert: {
+          id?: number
+          name?: string
+          redirect?: string | null
+          type?: string
+        }
+        Update: {
+          id?: number
+          name?: string
+          redirect?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
       levelDeathCount: {
         Row: {
           count: number[]
@@ -603,24 +660,6 @@ export type Database = {
           name?: string | null
           rating?: number | null
           videoID?: string | null
-        }
-        Relationships: []
-      }
-      medals: {
-        Row: {
-          id: number
-          name: string
-          redirect: string | null
-        }
-        Insert: {
-          id?: number
-          name?: string
-          redirect?: string | null
-        }
-        Update: {
-          id?: number
-          name?: string
-          redirect?: string | null
         }
         Relationships: []
       }
@@ -726,42 +765,6 @@ export type Database = {
           },
           {
             foreignKeyName: "orders_userID_fkey"
-            columns: ["userID"]
-            isOneToOne: false
-            referencedRelation: "players"
-            referencedColumns: ["uid"]
-          },
-        ]
-      }
-      playerMedals: {
-        Row: {
-          content: string | null
-          created_at: string
-          medalID: number
-          userID: string
-        }
-        Insert: {
-          content?: string | null
-          created_at?: string
-          medalID: number
-          userID: string
-        }
-        Update: {
-          content?: string | null
-          created_at?: string
-          medalID?: number
-          userID?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "playerMedal_medalID_fkey"
-            columns: ["medalID"]
-            isOneToOne: false
-            referencedRelation: "medals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "playerMedal_userID_fkey"
             columns: ["userID"]
             isOneToOne: false
             referencedRelation: "players"
@@ -924,7 +927,7 @@ export type Database = {
             foreignKeyName: "playersAchievement_achievementid_fkey"
             columns: ["achievementid"]
             isOneToOne: false
-            referencedRelation: "medals"
+            referencedRelation: "items"
             referencedColumns: ["id"]
           },
           {

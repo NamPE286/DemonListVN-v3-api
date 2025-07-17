@@ -168,6 +168,31 @@ class Player {
 
         await sendDirectMessage(this.uid!, `Your Discord account is linked to [${this.name}](https://demonlistvn.com/player/${this.uid!}) DLVN account.`, true)
     }
+
+    async getInventoryItems(type: string) {
+        const { data, error } = await supabase
+            .from("inventory")
+            .select("*, items(*)")
+            .eq("userID", this.uid!)
+            .eq("items.type", type)
+            .order("created_at", { ascending: false })
+
+        if (error) {
+            throw error
+        }
+
+        if (data) {
+            data.forEach((item: any) => {
+                if (item.items) {
+                    Object.assign(item, item.items);
+                    delete item.items;
+                    delete item.id;
+                }
+            });
+        }
+
+        return data
+    }
 }
 
 export default Player

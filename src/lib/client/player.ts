@@ -64,27 +64,3 @@ export async function getFeaturedListLeaderboard({ start = 0, end = 50, sortBy =
 
     return data
 }
-
-export async function getPlayerMedals(userID: string) {
-    const { data, error } = await supabase
-        .from("playerMedals")
-        .select("*, medals(*)")
-        .eq("userID", userID)
-        .order("created_at", { ascending: false })
-
-    if (error) {
-        throw error
-    }
-
-    if (data) {
-        data.forEach((item: any) => {
-            if (item.medals) {
-                Object.assign(item, item.medals);
-                delete item.medals;
-                delete item.id;
-            }
-        });
-    }
-
-    return data
-}
