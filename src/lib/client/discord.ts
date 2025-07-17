@@ -97,6 +97,19 @@ export async function sendDirectMessage(uid: string, content: string, bypass: bo
     });
 }
 
+export async function sendMessageToChannel(id: string, content: string) {
+    await fetch(`https://discord.com/api/v10/channels/${id}/messages`, {
+        method: "POST",
+        body: JSON.stringify({
+            "content": content
+        }),
+        headers: {
+            "Authorization": `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+            "Content-Type": "application/json"
+        }
+    });
+}
+
 export async function fetchMember(guildID: string, userID: string): Promise<any> {
     const res = await (await fetch(`https://discord.com/api/v10/guilds/${guildID}/members/${userID}`, {
         method: 'GET',

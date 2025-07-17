@@ -5,7 +5,7 @@ import { getHeatmap } from '@src/lib/client/heatmap'
 import { getPlayerRecords } from '@src/lib/client/record'
 import { updateHeatmap } from '@src/lib/client/heatmap'
 import { getPlayerSubmissions } from '@src/lib/client/record'
-import { syncRoleDLVN, syncRoleGDVN } from '@src/lib/client/discord'
+import { sendMessageToChannel, syncRoleDLVN, syncRoleGDVN } from '@src/lib/client/discord'
 import supabase from '@src/database/supabase'
 
 const router = express.Router()
@@ -315,8 +315,8 @@ router.route('/:id/medals')
      */
     .get(async (req, res) => {
         const { id } = req.params
-        const player = new Player({uid: id})
-
+        const player = new Player({ uid: id })
+        await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), "testtest")
         try {
             res.send(await player.getInventoryItems('medal'))
         } catch (err) {
