@@ -172,7 +172,7 @@ class Player {
     async getInventoryItems(type: string) {
         const { data, error } = await supabase
             .from("inventory")
-            .select("*, items(*)")
+            .select("*, items!inner(*)")
             .eq("userID", this.uid!)
             .eq("items.type", type)
             .order("created_at", { ascending: false })
