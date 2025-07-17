@@ -1,5 +1,6 @@
 import supabase from "@src/database/supabase";
 import type Player from "@src/lib/classes/Player";
+import type { Tables } from "@src/lib/types/supabase";
 
 export async function getProductByID(id: number) {
     const { data, error } = await supabase
@@ -114,4 +115,12 @@ export async function redeem(code: string, player: Player) {
     }
 
     await player.extendSupporter(coupon.quantity)
+}
+
+export async function validateCart(items: Tables<"orderItems">) {
+    // TODO
+}
+
+export async function addOrderItems(items: Tables<"orderItems">) {
+    // TODO
 }

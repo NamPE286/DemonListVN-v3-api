@@ -60,6 +60,7 @@ app.use('/auth', require(`./routes/auth`).default)
 app.use('/levels', require(`./routes/levels`).default)
 app.use('/coupon', require(`./routes/coupon`).default)
 app.use('/card', require(`./routes/card`).default)
+app.use('/store', require(`./routes/store`).default)
 
 app.listen(port, () => {
     console.log(`Server started on port ${port}`)

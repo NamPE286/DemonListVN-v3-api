@@ -331,6 +331,35 @@ export type Database = {
           },
         ]
       }
+      deliverySteps: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: number
+          orderID: number
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id: number
+          orderID: number
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: number
+          orderID?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deliverySteps_orderID_fkey"
+            columns: ["orderID"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eventLevels: {
         Row: {
           eventID: number
@@ -701,6 +730,52 @@ export type Database = {
           },
         ]
       }
+      orderItems: {
+        Row: {
+          created_at: string
+          id: number
+          orderID: number | null
+          productID: number
+          userID: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          orderID?: number | null
+          productID: number
+          userID: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          orderID?: number | null
+          productID?: number
+          userID?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orderItems_orderID_fkey"
+            columns: ["orderID"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orderItems_productID_fkey"
+            columns: ["productID"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orderItems_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       orders: {
         Row: {
           amount: number
@@ -711,8 +786,9 @@ export type Database = {
           discount: number
           giftTo: string | null
           id: number
-          productID: number
-          quantity: number
+          paymentMethod: string
+          productID: number | null
+          quantity: number | null
           state: string
           userID: string
         }
@@ -725,8 +801,9 @@ export type Database = {
           discount?: number
           giftTo?: string | null
           id?: number
-          productID: number
-          quantity: number
+          paymentMethod?: string
+          productID?: number | null
+          quantity?: number | null
           state: string
           userID: string
         }
@@ -739,8 +816,9 @@ export type Database = {
           discount?: number
           giftTo?: string | null
           id?: number
-          productID?: number
-          quantity?: number
+          paymentMethod?: string
+          productID?: number | null
+          quantity?: number | null
           state?: string
           userID?: string
         }
@@ -945,21 +1023,30 @@ export type Database = {
       products: {
         Row: {
           created_at: string
+          description: string | null
+          featured: boolean
           id: number
           name: string
           price: number
+          redirect: string | null
         }
         Insert: {
           created_at?: string
+          description?: string | null
+          featured?: boolean
           id?: number
           name: string
           price: number
+          redirect?: string | null
         }
         Update: {
           created_at?: string
+          description?: string | null
+          featured?: boolean
           id?: number
           name?: string
           price?: number
+          redirect?: string | null
         }
         Relationships: []
       }
