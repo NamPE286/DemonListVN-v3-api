@@ -95,10 +95,16 @@ router.route('/success')
 
         await changeOrderState(id, paymentLink.status);
 
+        if (paymentLink.status == 'PENDING') {
+            res.redirect(`https://pay.payos.vn/web/${paymentLink.id}`)
+            return;
+        }
+
         if (paymentLink.status != "PAID") {
             res.redirect(`https://www.demonlistvn.com/orders`)
             return;
         }
+
 
         const buyer = new Player({ uid: order.userID })
         const recipent = new Player({ uid: order.giftTo ? order.giftTo : order.userID })
