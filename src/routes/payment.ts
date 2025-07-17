@@ -114,15 +114,15 @@ router.route('/success')
 
         if (order.productID === 1) {
             await recipent.extendSupporter(order.quantity);
-        }
 
-        const { error } = await supabase
-            .from("orders")
-            .update({ delivered: true })
-            .eq("id", order.id)
+            const { error } = await supabase
+                .from("orders")
+                .update({ delivered: true })
+                .eq("id", order.id)
 
-        if (error) {
-            throw error
+            if (error) {
+                throw error
+            }
         }
 
         res.redirect(`https://www.demonlistvn.com/supporter/success?id=${id}`)
