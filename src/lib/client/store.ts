@@ -53,7 +53,7 @@ export async function changeOrderState(orderID: number, state: string) {
 export async function getOrders(userID: string) {
     const { data, error } = await supabase
         .from("orders")
-        .select("*, products(*), coupons(*)")
+        .select("*, products(*), coupons(*), players!giftTo(*, clans!id(*))")
         .eq("userID", userID)
         .order("created_at", { ascending: false })
 
