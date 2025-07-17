@@ -113,7 +113,7 @@ router.route('/success')
         await recipent.pull();
 
         if (order.productID === 1) {
-            await recipent.extendSupporter(order.quantity);
+            await recipent.extendSupporter(order.quantity!);
 
             const { error } = await supabase
                 .from("orders")
@@ -137,7 +137,7 @@ router.route('/success')
             }
 
             if (order.giftTo) {
-                msg += ` gifted ${order.quantity} month${order.quantity > 1 ? "s" : ""} of Demon List VN Supporter Role to `
+                msg += ` gifted ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role to `
 
                 if (recipent.discord) {
                     msg = `<@${recipent.discord}>`
@@ -146,11 +146,11 @@ router.route('/success')
                 }
 
                 await sendNotification({
-                    content: `You have been gifted ${order.quantity} month${order.quantity > 1 ? "s" : ""} of Demon List VN Supporter Role`,
+                    content: `You have been gifted ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role`,
                     to: order.giftTo
                 })
             } else {
-                msg += ` purchased ${order.quantity} month${order.quantity > 1 ? "s" : ""} of Demon List VN Supporter Role`
+                msg += ` purchased ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role`
 
             }
 

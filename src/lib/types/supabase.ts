@@ -736,6 +736,7 @@ export type Database = {
           id: number
           orderID: number | null
           productID: number
+          quantity: number
           userID: string
         }
         Insert: {
@@ -743,6 +744,7 @@ export type Database = {
           id?: number
           orderID?: number | null
           productID: number
+          quantity?: number
           userID: string
         }
         Update: {
@@ -750,6 +752,7 @@ export type Database = {
           id?: number
           orderID?: number | null
           productID?: number
+          quantity?: number
           userID?: string
         }
         Relationships: [
@@ -778,6 +781,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          address: string | null
           amount: number
           coupon: string | null
           created_at: string
@@ -793,6 +797,7 @@ export type Database = {
           userID: string
         }
         Insert: {
+          address?: string | null
           amount: number
           coupon?: string | null
           created_at?: string
@@ -808,6 +813,7 @@ export type Database = {
           userID: string
         }
         Update: {
+          address?: string | null
           amount?: number
           coupon?: string | null
           created_at?: string
@@ -1029,6 +1035,7 @@ export type Database = {
           name: string
           price: number
           redirect: string | null
+          stock: number | null
         }
         Insert: {
           created_at?: string
@@ -1038,6 +1045,7 @@ export type Database = {
           name: string
           price: number
           redirect?: string | null
+          stock?: number | null
         }
         Update: {
           created_at?: string
@@ -1047,6 +1055,7 @@ export type Database = {
           name?: string
           price?: number
           redirect?: string | null
+          stock?: number | null
         }
         Relationships: []
       }
