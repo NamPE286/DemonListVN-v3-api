@@ -419,6 +419,7 @@ export type Database = {
           levelID: number
           progress: number
           raw: string | null
+          rejectReason: string | null
           userID: string
           videoLink: string
         }
@@ -428,6 +429,7 @@ export type Database = {
           levelID: number
           progress: number
           raw?: string | null
+          rejectReason?: string | null
           userID: string
           videoLink: string
         }
@@ -437,6 +439,7 @@ export type Database = {
           levelID?: number
           progress?: number
           raw?: string | null
+          rejectReason?: string | null
           userID?: string
           videoLink?: string
         }
