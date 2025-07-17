@@ -45,12 +45,13 @@ router.route('/getPaymentLink/:productID/:quantity')
             orderCode: id,
             amount: amount,
             description: "dlvn",
+            expiredAt: Math.floor((Date.now() + 5 * 60 * 1000) / 1000),
             items: [
-                {
-                    name: product.name!,
-                    quantity: parseInt(quantity),
-                    price: product.price!,
-                },
+            {
+                name: product.name!,
+                quantity: parseInt(quantity),
+                price: product.price!,
+            },
             ],
             cancelUrl: "https://api.demonlistvn.com/payment/cancelled",
             returnUrl: "https://api.demonlistvn.com/payment/success",
