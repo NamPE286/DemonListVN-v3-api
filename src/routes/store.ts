@@ -23,8 +23,13 @@ router.route('/product/:id')
 
 router.route('/products')
     .get(async (req, res) => {
+        // @ts-ignore
+        const ids: number[] = JSON.parse(req.query.ids ? req.query.ids : "[]")
+
+        console.log(ids)
+
         try {
-            const products = await getProducts()
+            const products = await getProducts(ids)
             res.send(products)
         } catch (error) {
             console.error('Error fetching products:', error)
