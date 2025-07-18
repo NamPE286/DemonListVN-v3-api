@@ -2,12 +2,12 @@ import supabase from "@src/database/supabase";
 import type Player from "@src/lib/classes/Player";
 import type { Tables } from "@src/lib/types/supabase";
 
-export async function getProducts(ids: number[] = []) {
+export async function getProducts(ids: number[] | null = []) {
     const query = supabase
         .from("products")
         .select("*")
 
-    if (ids.length > 0) {
+    if (ids !== null) {
         query.in('id', ids)
     }
 
@@ -48,10 +48,28 @@ export async function getOrderByID(id: number) {
     return data
 }
 
-export async function addNewOrder(orderID: number, productID: number, userID: string, quantity: number, giftTo: string | null = null, amount: number, currency: string) {
+export async function addNewOrder(
+    orderID: number,
+    productID: number,
+    userID: string,
+    quantity: number,
+    giftTo: string | null,
+    amount: number,
+    currency: string,
+    paymentMethod: string = "Bank Transfer"
+) {
     const { error } = await supabase
         .from("orders")
-        .insert({ id: orderID, userID: userID, state: "PENDING", quantity: quantity, productID: productID, giftTo: giftTo, amount: amount, currency: currency })
+        .insert({
+            id: orderID,
+            userID: userID,
+            state: "PENDING",
+            quantity: quantity,
+            productID: productID,
+            giftTo: giftTo, amount: amount,
+            currency: currency,
+            paymentMethod: paymentMethod
+        })
 
     if (error) {
         throw error

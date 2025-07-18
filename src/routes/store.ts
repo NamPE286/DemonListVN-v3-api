@@ -23,10 +23,12 @@ router.route('/product/:id')
 
 router.route('/products')
     .get(async (req, res) => {
-        // @ts-ignore
-        const ids: number[] = JSON.parse(req.query.ids ? req.query.ids : "[]")
+        let ids: number[] | null = null
 
-        console.log(ids)
+        if (req.query.ids) {
+            // @ts-ignore
+            ids = JSON.parse(req.query.ids ? req.query.ids : "[]")
+        }
 
         try {
             const products = await getProducts(ids)
