@@ -2,6 +2,19 @@ import supabase from "@src/database/supabase";
 import type Player from "@src/lib/classes/Player";
 import type { Tables } from "@src/lib/types/supabase";
 
+export async function getProducts() {
+    const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false })
+
+    if (error) {
+        throw error
+    }
+
+    return data
+}
+
 export async function getProductByID(id: number) {
     const { data, error } = await supabase
         .from("products")
