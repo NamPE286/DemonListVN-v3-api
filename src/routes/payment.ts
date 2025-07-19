@@ -241,9 +241,11 @@ router.route('/cancelled')
             return
         }
 
-        try {
-            await payOS.cancelPaymentLink(id)
-        } catch { }
+        if (order.paymentMethod == 'Bank Transfer') {
+            try {
+                await payOS.cancelPaymentLink(id)
+            } catch { }
+        }
 
         changeOrderState(id, "CANCELLED");
 
@@ -268,12 +270,23 @@ router.route('/cancelled')
             upsertData.push(i.products)
         }
 
-        const { error } = await supabase
+        var { error } = await supabase
             .from("products")
             .upsert(upsertData)
 
         if (error) {
-            console.log(error)
+            console.error("Failed to update products", error)
+        }
+
+        var { error } = await supabase
+            .from('orderTracking')
+            .insert({
+                content: "Order cancelled",
+                orderID: id
+            })
+
+        if (error) {
+            console.error("Failed to update tracking", error)
         }
     })
 
