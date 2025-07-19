@@ -237,8 +237,14 @@ router.route('/cancelled')
 
         const order = await getOrder(id)
 
-        if (order.state == 'CANCELLED') {
+        if (order.state == 'CANCELLED' || order.state == 'PAID') {
             return
+        }
+
+        for (const i of order.orderTracking) {
+            if (i.delivering) {
+                return;
+            }
         }
 
         if (order.paymentMethod == 'Bank Transfer') {

@@ -833,6 +833,7 @@ export type Database = {
         Row: {
           content: string | null
           created_at: string
+          delivering: boolean
           id: number
           link: string | null
           orderID: number
@@ -840,6 +841,7 @@ export type Database = {
         Insert: {
           content?: string | null
           created_at?: string
+          delivering?: boolean
           id?: number
           link?: string | null
           orderID: number
@@ -847,6 +849,7 @@ export type Database = {
         Update: {
           content?: string | null
           created_at?: string
+          delivering?: boolean
           id?: number
           link?: string | null
           orderID?: number
@@ -1030,6 +1033,7 @@ export type Database = {
       }
       products: {
         Row: {
+          bannerTextColor: string
           created_at: string
           description: string | null
           featured: boolean
@@ -1042,6 +1046,7 @@ export type Database = {
           stock: number | null
         }
         Insert: {
+          bannerTextColor?: string
           created_at?: string
           description?: string | null
           featured?: boolean
@@ -1054,6 +1059,7 @@ export type Database = {
           stock?: number | null
         }
         Update: {
+          bannerTextColor?: string
           created_at?: string
           description?: string | null
           featured?: boolean
