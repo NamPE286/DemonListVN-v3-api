@@ -13,21 +13,12 @@ router.route('/')
         }
 
         const { user } = res.locals
-        const { items, address, phone, paymentMethod, recipentName } = req.body as {
+        const { items, address, phone, recipentName } = req.body as {
             items: Item[],
             address: string | undefined,
             phone: number | undefined,
-            paymentMethod: string | undefined,
             recipentName: string | undefined
         };
-
-        if (!paymentMethod || paymentMethod != 'COD') {
-            res.status(501).send({
-                message: "Payment method is not supported in this route"
-            })
-
-            return
-        }
 
         if (!address || !phone || !recipentName) {
             res.status(400).send({
@@ -36,7 +27,7 @@ router.route('/')
             return
         }
         try {
-            await addOrderItems(user, recipentName, items, address, phone, paymentMethod)
+            await addOrderItems(user, recipentName, items, address, phone, 'COD')
         } catch (err) {
             console.error(err)
             res.status(400).send({
