@@ -235,9 +235,43 @@ router.route('/cancelled')
 
         res.redirect("https://www.demonlistvn.com/orders")
 
-        const paymentLink = await payOS.getPaymentLinkInformation(id);
+        const order = await getOrder(id)
 
-        changeOrderState(id, paymentLink.status);
+        if (order.state == 'CANCELLED') {
+            return
+        }
+
+        await payOS.cancelPaymentLink(id)
+        changeOrderState(id, "CANCELLED");
+
+        const upsertData = []
+
+        if (order.productID == 1) {
+            res.send()
+            return
+        }
+
+        for (const i of order.orderItems) {
+            if (!i.products) {
+                continue
+            }
+
+            if (i.products.stock === null || i.products.stock == undefined) {
+                continue
+            }
+
+            i.products.stock += i.quantity
+
+            upsertData.push(i.products)
+        }
+
+        const { error } = await supabase
+            .from("products")
+            .upsert(upsertData)
+
+        if (error) {
+            console.log(error)
+        }
     })
 
 export default router;
