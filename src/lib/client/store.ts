@@ -64,7 +64,8 @@ export async function addNewOrder(
     paymentMethod: string = "Bank Transfer",
     address: string | null = null,
     phone: number | null = null,
-    fee: number = 0
+    fee: number = 0,
+    recipentName: string | null = null
 ) {
     const { error } = await supabase
         .from("orders")
@@ -79,7 +80,8 @@ export async function addNewOrder(
             paymentMethod: paymentMethod,
             address: address,
             phone: phone,
-            fee: fee
+            fee: fee,
+            recipentName: recipentName
         })
 
     if (error) {
@@ -184,6 +186,10 @@ export async function updateStock(items: TablesInsert<"orderItems">[], products:
             throw new Error(`Insufficient stock for product ID ${product.id}`);
         }
 
+        if(product.maxQuantity && product.maxQuantity < item.quantity!) {
+            throw new Error(`Quantity ${item.quantity} exceeds maximum allowed ${product.maxQuantity} for product ID ${product.id}`);
+        }
+
         product.stock -= item.quantity!;
     }
 
@@ -198,6 +204,7 @@ export async function updateStock(items: TablesInsert<"orderItems">[], products:
 
 export async function addOrderItems(
     buyer: Player,
+    recipentName: string,
     items: TablesInsert<"orderItems">[],
     address: string,
     phone: number,
@@ -236,7 +243,7 @@ export async function addOrderItems(
         amount += product.price * item.quantity!;
     }
 
-    await addNewOrder(orderID, null, buyer.uid!, null, null, amount, 'VND', paymentMethod, address, phone, fee)
+    await addNewOrder(orderID, null, buyer.uid!, null, null, amount, 'VND', paymentMethod, address, phone, fee, recipentName)
 
     const { error } = await supabase
         .from('orderItems')
@@ -250,12 +257,27 @@ export async function addOrderItems(
 export async function getOrder(id: number) {
     const { data, error } = await supabase
         .from("orders")
-        .select("*, orderItems(*), products(*), coupons(*), players!giftTo(*, clans!id(*)), orderTracking(*)")
+        .select("*, orderItems(*, products(*)), products(*), coupons(*), players!giftTo(*, clans!id(*)), orderTracking(*)")
         .eq("id", id)
         .single();
 
     if (error) {
         throw error;
+    }
+
+    if (data.orderTracking) {
+        data.orderTracking.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+
+    if (data.productID == 1) {
+        data.orderItems.push({
+            id: 1,
+            productID: 1,
+            orderID: data.id,
+            quantity: data.quantity || 1,
+            created_at: new Date().toISOString(),
+            products: await getProductByID(1)
+        });
     }
 
     return data;

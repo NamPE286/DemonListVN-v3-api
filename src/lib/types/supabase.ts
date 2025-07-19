@@ -756,6 +756,7 @@ export type Database = {
           phone: number | null
           productID: number | null
           quantity: number | null
+          recipentName: string | null
           state: string
           userID: string
         }
@@ -774,6 +775,7 @@ export type Database = {
           phone?: number | null
           productID?: number | null
           quantity?: number | null
+          recipentName?: string | null
           state: string
           userID: string
         }
@@ -792,6 +794,7 @@ export type Database = {
           phone?: number | null
           productID?: number | null
           quantity?: number | null
+          recipentName?: string | null
           state?: string
           userID?: string
         }
@@ -831,18 +834,21 @@ export type Database = {
           content: string | null
           created_at: string
           id: number
+          link: string | null
           orderID: number
         }
         Insert: {
           content?: string | null
           created_at?: string
-          id: number
+          id?: number
+          link?: string | null
           orderID: number
         }
         Update: {
           content?: string | null
           created_at?: string
           id?: number
+          link?: string | null
           orderID?: number
         }
         Relationships: [

@@ -13,14 +13,13 @@ router.route('/')
         }
 
         const { user } = res.locals
-        const { items, address, phone, paymentMethod } = req.body as {
+        const { items, address, phone, paymentMethod, recipentName } = req.body as {
             items: Item[],
             address: string | undefined,
             phone: number | undefined,
-            paymentMethod: string | undefined
+            paymentMethod: string | undefined,
+            recipentName: string | undefined
         };
-
-        console.log(items, address, phone, paymentMethod)
 
         if (!paymentMethod || paymentMethod != 'COD') {
             res.status(501).send({
@@ -30,12 +29,14 @@ router.route('/')
             return
         }
 
-        if (!address || !phone) {
-            res.status(400)
+        if (!address || !phone || !recipentName) {
+            res.status(400).send({
+                message: "Missing info"
+            })
             return
         }
         try {
-            await addOrderItems(user, items, address, phone, paymentMethod)
+            await addOrderItems(user, recipentName, items, address, phone, paymentMethod)
         } catch (err) {
             console.error(err)
             res.status(400).send({
