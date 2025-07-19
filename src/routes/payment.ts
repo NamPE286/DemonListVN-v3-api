@@ -241,7 +241,10 @@ router.route('/cancelled')
             return
         }
 
-        await payOS.cancelPaymentLink(id)
+        try {
+            await payOS.cancelPaymentLink(id)
+        } catch { }
+
         changeOrderState(id, "CANCELLED");
 
         const upsertData = []
