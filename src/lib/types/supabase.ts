@@ -331,35 +331,6 @@ export type Database = {
           },
         ]
       }
-      deliverySteps: {
-        Row: {
-          content: string | null
-          created_at: string
-          id: number
-          orderID: number
-        }
-        Insert: {
-          content?: string | null
-          created_at?: string
-          id: number
-          orderID: number
-        }
-        Update: {
-          content?: string | null
-          created_at?: string
-          id?: number
-          orderID?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "deliverySteps_orderID_fkey"
-            columns: ["orderID"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       eventLevels: {
         Row: {
           eventID: number
@@ -788,9 +759,11 @@ export type Database = {
           currency: string
           delivered: boolean
           discount: number
+          fee: number | null
           giftTo: string | null
           id: number
           paymentMethod: string
+          phone: number | null
           productID: number | null
           quantity: number | null
           state: string
@@ -804,9 +777,11 @@ export type Database = {
           currency?: string
           delivered?: boolean
           discount?: number
+          fee?: number | null
           giftTo?: string | null
           id?: number
           paymentMethod?: string
+          phone?: number | null
           productID?: number | null
           quantity?: number | null
           state: string
@@ -820,9 +795,11 @@ export type Database = {
           currency?: string
           delivered?: boolean
           discount?: number
+          fee?: number | null
           giftTo?: string | null
           id?: number
           paymentMethod?: string
+          phone?: number | null
           productID?: number | null
           quantity?: number | null
           state?: string
@@ -856,6 +833,35 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["uid"]
+          },
+        ]
+      }
+      orderTracking: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: number
+          orderID: number
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id: number
+          orderID: number
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: number
+          orderID?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deliverySteps_orderID_fkey"
+            columns: ["orderID"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1032,6 +1038,8 @@ export type Database = {
           description: string | null
           featured: boolean
           id: number
+          imgCount: number | null
+          maxQuantity: number | null
           name: string
           price: number
           redirect: string | null
@@ -1042,6 +1050,8 @@ export type Database = {
           description?: string | null
           featured?: boolean
           id?: number
+          imgCount?: number | null
+          maxQuantity?: number | null
           name: string
           price: number
           redirect?: string | null
@@ -1052,6 +1062,8 @@ export type Database = {
           description?: string | null
           featured?: boolean
           id?: number
+          imgCount?: number | null
+          maxQuantity?: number | null
           name?: string
           price?: number
           redirect?: string | null

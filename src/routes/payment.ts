@@ -61,6 +61,18 @@ router.route('/getPaymentLink/:productID/:quantity')
         res.status(200).send(paymentLinkRes);
     })
 
+router.route('/getPaymentLink')
+    .get(userAuth, async (req, res) => {
+        interface Item {
+            id: number;
+            quantity: number;
+        }
+        
+        const { items, paymentMethod } = req.body as { items: Item[]; paymentMethod: string };
+
+        // TODO
+    })
+
 /**
  * @openapi
  * "/payment/success":

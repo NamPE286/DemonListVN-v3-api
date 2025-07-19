@@ -2,6 +2,11 @@ import supabase from "@src/database/supabase";
 import type Player from "@src/lib/classes/Player";
 import type { Tables } from "@src/lib/types/supabase";
 
+interface Item {
+    id: number;
+    quantity: number;
+}
+
 export async function getProducts(ids: number[] | null = []) {
     const query = supabase
         .from("products")
@@ -154,9 +159,10 @@ export async function redeem(code: string, player: Player) {
 }
 
 export async function validateCart(items: Tables<"orderItems">) {
-    // TODO
+    // TODO   
 }
 
 export async function addOrderItems(items: Tables<"orderItems">) {
+    await validateCart(items)
     // TODO
 }
