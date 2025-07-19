@@ -246,3 +246,17 @@ export async function addOrderItems(
         throw error
     }
 }
+
+export async function getOrder(id: number) {
+    const { data, error } = await supabase
+        .from("orders")
+        .select("*, orderItems(*), products(*), coupons(*), players!giftTo(*, clans!id(*)), orderTracking(*)")
+        .eq("id", id)
+        .single();
+
+    if (error) {
+        throw error;
+    }
+
+    return data;
+}

@@ -1,4 +1,4 @@
-import { addOrderItems } from '@src/lib/client/store';
+import { addOrderItems, getOrder } from '@src/lib/client/store';
 import userAuth from '@src/middleware/userAuth'
 import express from 'express'
 
@@ -19,6 +19,8 @@ router.route('/')
             phone: number | undefined,
             paymentMethod: string | undefined
         };
+
+        console.log(items, address, phone, paymentMethod)
 
         if (!paymentMethod || paymentMethod != 'COD') {
             res.status(501).send({
@@ -45,6 +47,18 @@ router.route('/')
         }
 
         res.send()
+    })
+
+router.route('/:id')
+    .get(async (req, res) => {
+        const { id } = req.params
+
+        try {
+            res.send(await getOrder(parseInt(id)))
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
     })
 
 export default router
