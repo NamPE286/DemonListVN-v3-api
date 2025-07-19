@@ -705,26 +705,23 @@ export type Database = {
         Row: {
           created_at: string
           id: number
-          orderID: number | null
+          orderID: number
           productID: number
           quantity: number
-          userID: string
         }
         Insert: {
           created_at?: string
           id?: number
-          orderID?: number | null
+          orderID: number
           productID: number
           quantity?: number
-          userID: string
         }
         Update: {
           created_at?: string
           id?: number
-          orderID?: number | null
+          orderID?: number
           productID?: number
           quantity?: number
-          userID?: string
         }
         Relationships: [
           {
@@ -741,13 +738,6 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "orderItems_userID_fkey"
-            columns: ["userID"]
-            isOneToOne: false
-            referencedRelation: "players"
-            referencedColumns: ["uid"]
-          },
         ]
       }
       orders: {
@@ -759,7 +749,7 @@ export type Database = {
           currency: string
           delivered: boolean
           discount: number
-          fee: number | null
+          fee: number
           giftTo: string | null
           id: number
           paymentMethod: string
@@ -777,7 +767,7 @@ export type Database = {
           currency?: string
           delivered?: boolean
           discount?: number
-          fee?: number | null
+          fee?: number
           giftTo?: string | null
           id?: number
           paymentMethod?: string
@@ -795,7 +785,7 @@ export type Database = {
           currency?: string
           delivered?: boolean
           discount?: number
-          fee?: number | null
+          fee?: number
           giftTo?: string | null
           id?: number
           paymentMethod?: string

@@ -1,6 +1,6 @@
 import supabase from "@src/database/supabase";
 import type Player from "@src/lib/classes/Player";
-import type { Tables } from "@src/lib/types/supabase";
+import type { Tables, TablesInsert } from "@src/lib/types/supabase";
 
 interface Item {
     id: number;
@@ -55,13 +55,16 @@ export async function getOrderByID(id: number) {
 
 export async function addNewOrder(
     orderID: number,
-    productID: number,
+    productID: number | null,
     userID: string,
-    quantity: number,
+    quantity: number | null,
     giftTo: string | null,
     amount: number,
     currency: string,
-    paymentMethod: string = "Bank Transfer"
+    paymentMethod: string = "Bank Transfer",
+    address: string | null = null,
+    phone: number | null = null,
+    fee: number = 0
 ) {
     const { error } = await supabase
         .from("orders")
@@ -73,7 +76,10 @@ export async function addNewOrder(
             productID: productID,
             giftTo: giftTo, amount: amount,
             currency: currency,
-            paymentMethod: paymentMethod
+            paymentMethod: paymentMethod,
+            address: address,
+            phone: phone,
+            fee: fee
         })
 
     if (error) {
@@ -158,11 +164,85 @@ export async function redeem(code: string, player: Player) {
     await player.extendSupporter(coupon.quantity)
 }
 
-export async function validateCart(items: Tables<"orderItems">) {
-    // TODO   
+export async function updateStock(items: TablesInsert<"orderItems">[], products: Tables<"products">[]) {
+    const sortedProducts = products.sort((a, b) => a.id - b.id);
+    const sortedItems = items.sort((a, b) => a.productID - b.productID);
+
+    for (let i = 0; i < sortedItems.length; i++) {
+        const product = sortedProducts[i];
+        const item = sortedItems[i];
+
+        if (product.id !== item.productID) {
+            throw new Error("Product ID mismatch");
+        }
+
+        if (product.stock === null) {
+            continue
+        }
+
+        if (product.stock < item.quantity!) {
+            throw new Error(`Insufficient stock for product ID ${product.id}`);
+        }
+
+        product.stock -= item.quantity!;
+    }
+
+    const { error } = await supabase
+        .from("products")
+        .upsert(sortedProducts);
+
+    if (error) {
+        throw error;
+    }
 }
 
-export async function addOrderItems(items: Tables<"orderItems">) {
-    await validateCart(items)
-    // TODO
+export async function addOrderItems(
+    buyer: Player,
+    items: TablesInsert<"orderItems">[],
+    address: string,
+    phone: number,
+    paymentMethod: "Bank Transfer" | "COD"
+) {
+    items = items.sort((a, b) => a.productID - b.productID);
+
+    const ids: number[] = []
+    const orderID = new Date().getTime();
+
+    for (const i of items) {
+        i.orderID = orderID
+    }
+
+    for (const i of items) {
+        ids.push(i.productID)
+    }
+
+    const products = (await getProducts(ids)).sort((a, b) => a.id - b.id);
+    let amount = 0, fee = 0;
+
+    if (paymentMethod == 'COD') {
+        fee = 25000
+    }
+
+    await updateStock(items, products)
+
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const product = products[i];
+
+        if (product.price === null) {
+            throw new Error(`Product ID ${product.id} has no price`);
+        }
+
+        amount += product.price * item.quantity!;
+    }
+
+    await addNewOrder(orderID, null, buyer.uid!, null, null, amount, 'VND', paymentMethod, address, phone, fee)
+
+    const { error } = await supabase
+        .from('orderItems')
+        .insert(items)
+
+    if (error) {
+        throw error
+    }
 }
