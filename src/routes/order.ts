@@ -7,7 +7,7 @@ const router = express.Router()
 router.route('/')
     .post(userAuth, async (req, res) => {
         interface Item {
-            orderID: number
+            orderID: number;
             productID: number;
             quantity: number;
         }
@@ -26,6 +26,7 @@ router.route('/')
             })
             return
         }
+
         try {
             await addOrderItems(user, recipentName, items, address, phone, 'COD')
         } catch (err) {

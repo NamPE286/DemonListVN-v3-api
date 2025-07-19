@@ -1,6 +1,6 @@
 import express from 'express'
 import { payOS } from '@src/lib/classes/payOS';
-import { getProductByID, addNewOrder, changeOrderState, getOrderByID, getOrders } from '@src/lib/client/store';
+import { getProductByID, addNewOrder, changeOrderState, getOrderByID, getOrders, addOrderItems, getOrder } from '@src/lib/client/store';
 import userAuth from '@src/middleware/userAuth';
 import Player from '@src/lib/classes/Player';
 import supabase from '@src/database/supabase';
@@ -58,19 +58,64 @@ router.route('/getPaymentLink/:productID/:quantity')
         });
 
         await addNewOrder(id, parseInt(productID), user.uid!, parseInt(quantity), giftTo ? String(giftTo) : null, amount, "VND");
-        res.status(200).send(paymentLinkRes);
+        res.send(paymentLinkRes);
     })
 
 router.route('/getPaymentLink')
-    .get(userAuth, async (req, res) => {
+    .post(userAuth, async (req, res) => {
         interface Item {
-            id: number;
+            orderID: number
+            productID: number;
             quantity: number;
         }
-        
-        const { items, paymentMethod } = req.body as { items: Item[]; paymentMethod: string };
 
-        // TODO
+        interface PaymentItem {
+            name: string,
+            quantity: number,
+            price: number,
+        }
+
+        const { items, address, phone, recipentName } = req.body as {
+            items: Item[],
+            address: string | undefined,
+            phone: number | undefined,
+            recipentName: string | undefined
+        };
+        const { user } = res.locals
+
+        if (!address || !phone || !recipentName) {
+            res.status(400).send({
+                message: "Missing info"
+            })
+            return
+        }
+
+        const orderID = await addOrderItems(user, recipentName, items, address, phone, 'Bank Transfer')
+        const order = await getOrder(orderID)
+        const paymentItem: PaymentItem[] = []
+        let amount = order.fee
+
+        for (const i of order.orderItems) {
+            paymentItem.push({
+                name: i.products?.name!,
+                quantity: i.quantity,
+                price: i.quantity * i.products?.price!
+            })
+
+            amount += i.quantity * i.products?.price!
+        }
+
+        const paymentLinkRes = await payOS.createPaymentLink({
+            orderCode: orderID,
+            amount: amount,
+            description: "dlvn",
+            expiredAt: Math.floor((Date.now() + 5 * 60 * 1000) / 1000),
+            items: paymentItem,
+            cancelUrl: "https://api.demonlistvn.com/payment/cancelled",
+            returnUrl: "https://api.demonlistvn.com/payment/success",
+        });
+
+        res.send(paymentLinkRes);
     })
 
 /**
