@@ -142,7 +142,7 @@ router.route('/success')
 
         if (order.state == 'CANCELLED') {
             await payOS.cancelPaymentLink(order.id)
-            res.redirect(`https://www.demonlistvn.com/orders`)
+            res.redirect(`https://www.demonlistvn.com/orders/${id}`)
 
             return;
         }
@@ -158,7 +158,7 @@ router.route('/success')
         }
 
         if (paymentLink.status != "PAID") {
-            res.redirect(`https://www.demonlistvn.com/orders`)
+            res.redirect(`https://www.demonlistvn.com/orders/${id}`)
             return;
         }
 
@@ -233,7 +233,7 @@ router.route('/cancelled')
         const { orderCode } = req.query;
         const id = parseInt(String(orderCode));
 
-        res.redirect("https://www.demonlistvn.com/orders")
+        res.redirect(`https://www.demonlistvn.com/orders/${id}`)
 
         const order = await getOrder(id)
 
