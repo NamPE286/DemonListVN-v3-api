@@ -50,7 +50,7 @@ router.route('/:id')
         try {
             const order = await getOrder(parseInt(id))
 
-            if (order.userID != user.uid) {
+            if (!user.isAdmin && order.userID != user.uid) {
                 res.status(401).send()
                 return
             }
