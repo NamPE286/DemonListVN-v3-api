@@ -43,11 +43,19 @@ router.route('/')
     })
 
 router.route('/:id')
-    .get(async (req, res) => {
+    .get(userAuth, async (req, res) => {
         const { id } = req.params
+        const { user } = res.locals
 
         try {
-            res.send(await getOrder(parseInt(id)))
+            const order = await getOrder(parseInt(id))
+
+            if (order.userID != user.uid) {
+                res.status(401).send()
+                return
+            }
+
+            res.send(order)
         } catch (err) {
             console.error(err)
             res.status(500).send()
