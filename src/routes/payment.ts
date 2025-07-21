@@ -169,7 +169,7 @@ router.route('/cancelled')
             } catch { }
         }
 
-        if (order.state == 'PENDING') {
+        if (order.state == 'PENDING' && order.paymentMethod == 'COD') {
             await renewStock(order)
         }
 
