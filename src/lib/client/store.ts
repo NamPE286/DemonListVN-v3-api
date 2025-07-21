@@ -342,6 +342,22 @@ export async function handlePayment(id: number, res: Response | null = null) {
         await renewStock(order)
     }
 
+    if (order.state != 'PAID' && paymentLink.status == 'PAID') {
+        const products = []
+
+        for (const i of order.orderItems) {
+            if (!i.products) {
+                continue
+            }
+
+            products.push(i.products)
+            // @ts-ignore
+            delete i.products
+        }
+
+        await updateStock(order.orderItems, products)
+    }
+
     order.state = paymentLink.status
 
     await changeOrderState(id, paymentLink.status);
@@ -362,7 +378,6 @@ export async function handlePayment(id: number, res: Response | null = null) {
         return;
     }
 
-
     const buyer = new Player({ uid: order.userID })
     const recipient = new Player({ uid: order.giftTo ? order.giftTo : order.userID })
 
@@ -380,20 +395,6 @@ export async function handlePayment(id: number, res: Response | null = null) {
         if (error) {
             throw error
         }
-    } else {
-        const products = []
-
-        for (const i of order.orderItems) {
-            if (!i.products) {
-                continue
-            }
-
-            products.push(i.products)
-            // @ts-ignore
-            delete i.products
-        }
-
-        await updateStock(order.orderItems, products)
     }
 
     if (res) {
