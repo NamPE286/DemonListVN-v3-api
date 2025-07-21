@@ -6,11 +6,10 @@ import Player from '@src/lib/classes/Player';
 import supabase from '@src/database/supabase';
 import { sendNotification } from '@src/lib/client/notification'
 import { sendMessageToChannel } from '@src/lib/client/discord';
-import type { Tables } from '@src/lib/types/supabase';
 
 const router = express.Router();
 
-async function updateStock(order: Awaited<ReturnType<typeof getOrder>>) {
+async function renewStock(order: Awaited<ReturnType<typeof getOrder>>) {
     const upsertData = []
 
     if (order.productID == 1) {
@@ -192,7 +191,7 @@ router.route('/success')
         const paymentLink = await payOS.getPaymentLinkInformation(id);
 
         if (order.state != 'EXPIRED' && paymentLink.status == 'EXPIRED') {
-            await updateStock(order)
+            await renewStock(order)
         }
 
         order.state = paymentLink.status
@@ -301,7 +300,7 @@ router.route('/cancelled')
         }
 
         await changeOrderState(id, "CANCELLED");
-        await updateStock(order)
+        await renewStock(order)
     })
 
 export default router;
