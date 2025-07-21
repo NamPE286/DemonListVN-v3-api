@@ -28,7 +28,9 @@ router.route('/')
         }
 
         try {
-            await addOrderItems(user, recipientName, items, address, phone, 'COD')
+            res.send({
+                orderID: await addOrderItems(user, recipientName, items, address, phone, 'COD')
+            })
         } catch (err) {
             console.error(err)
             res.status(400).send({
@@ -38,8 +40,6 @@ router.route('/')
 
             return
         }
-
-        res.send()
     })
 
 router.route('/:id')
