@@ -2,6 +2,7 @@ import express from 'express'
 import { payOS } from '@src/lib/classes/payOS';
 import { getProductByID, addNewOrder, changeOrderState, addOrderItems, getOrder, renewStock, handlePayment } from '@src/lib/client/store';
 import userAuth from '@src/middleware/userAuth';
+import logger from '@src/utils/logger';
 
 const router = express.Router();
 
@@ -182,6 +183,8 @@ router.route('/webhook')
         if (paymentLink.status == 'EXPIRED') {
             await handlePayment(id)
         }
+
+        logger.log(JSON.stringify(req.body))
 
         res.send()
     })
