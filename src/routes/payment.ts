@@ -6,6 +6,7 @@ import Player from '@src/lib/classes/Player';
 import supabase from '@src/database/supabase';
 import { sendNotification } from '@src/lib/client/notification'
 import { sendMessageToChannel } from '@src/lib/client/discord';
+import logger from '@src/utils/logger';
 
 const router = express.Router();
 
@@ -305,7 +306,7 @@ router.route('/cancelled')
 
 router.route('/webhook')
     .post(async (req, res) => {
-        console.log(req.body)
+        logger.log("```" + JSON.stringify(req.body) + "```")
         res.send()
     })
 
