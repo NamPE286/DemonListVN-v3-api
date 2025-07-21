@@ -303,4 +303,10 @@ router.route('/cancelled')
         await renewStock(order)
     })
 
+router.route('/webhook')
+    .post(async (req, res) => {
+        console.log(req.body)
+        res.send()
+    })
+
 export default router;
