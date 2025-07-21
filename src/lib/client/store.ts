@@ -220,8 +220,6 @@ export async function addOrderItems(
         fee = 25000
     }
 
-    await updateStock(items, products)
-
     for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const product = products[i];
@@ -382,6 +380,20 @@ export async function handlePayment(id: number, res: Response | null = null) {
         if (error) {
             throw error
         }
+    } else {
+        const products = []
+
+        for (const i of order.orderItems) {
+            if (!i.products) {
+                continue
+            }
+
+            products.push(i.products)
+            // @ts-ignore
+            delete i.products
+        }
+
+        await updateStock(order.orderItems, products)
     }
 
     if (res) {
