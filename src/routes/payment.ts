@@ -169,8 +169,11 @@ router.route('/cancelled')
             } catch { }
         }
 
+        if (order.state == 'PENDING') {
+            await renewStock(order)
+        }
+
         await changeOrderState(id, "CANCELLED");
-        await renewStock(order)
     })
 
 router.route('/webhook')
