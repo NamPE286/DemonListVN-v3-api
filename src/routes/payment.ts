@@ -1,13 +1,55 @@
 import express from 'express'
 import { payOS } from '@src/lib/classes/payOS';
-import { getProductByID, addNewOrder, changeOrderState, getOrderByID, getOrders, addOrderItems, getOrder } from '@src/lib/client/store';
+import { getProductByID, addNewOrder, changeOrderState, addOrderItems, getOrder } from '@src/lib/client/store';
 import userAuth from '@src/middleware/userAuth';
 import Player from '@src/lib/classes/Player';
 import supabase from '@src/database/supabase';
 import { sendNotification } from '@src/lib/client/notification'
 import { sendMessageToChannel } from '@src/lib/client/discord';
+import type { Tables } from '@src/lib/types/supabase';
 
 const router = express.Router();
+
+async function updateStock(order: Awaited<ReturnType<typeof getOrder>>) {
+    const upsertData = []
+
+    if (order.productID == 1) {
+        return
+    }
+
+    for (const i of order.orderItems) {
+        if (!i.products) {
+            continue
+        }
+
+        if (i.products.stock === null || i.products.stock == undefined) {
+            continue
+        }
+
+        i.products.stock += i.quantity
+
+        upsertData.push(i.products)
+    }
+
+    var { error } = await supabase
+        .from("products")
+        .upsert(upsertData)
+
+    if (error) {
+        console.error("Failed to update products", error)
+    }
+
+    var { error } = await supabase
+        .from('orderTracking')
+        .insert({
+            content: "Order cancelled",
+            orderID: order.id
+        })
+
+    if (error) {
+        console.error("Failed to update tracking", error)
+    }
+}
 
 /**
  * @openapi
@@ -133,7 +175,7 @@ router.route('/success')
     .get(async (req, res) => {
         const { orderCode } = req.query;
         const id = parseInt(String(orderCode));
-        const order = await getOrderByID(id);
+        const order = await getOrder(id);
 
         if (order.delivered) {
             res.redirect(`https://www.demonlistvn.com/supporter/success?id=${id}`)
@@ -148,6 +190,11 @@ router.route('/success')
         }
 
         const paymentLink = await payOS.getPaymentLinkInformation(id);
+
+        if (order.state != 'EXPIRED' && paymentLink.status == 'EXPIRED') {
+            await updateStock(order)
+        }
+
         order.state = paymentLink.status
 
         await changeOrderState(id, paymentLink.status);
@@ -253,47 +300,8 @@ router.route('/cancelled')
             } catch { }
         }
 
-        changeOrderState(id, "CANCELLED");
-
-        const upsertData = []
-
-        if (order.productID == 1) {
-            res.send()
-            return
-        }
-
-        for (const i of order.orderItems) {
-            if (!i.products) {
-                continue
-            }
-
-            if (i.products.stock === null || i.products.stock == undefined) {
-                continue
-            }
-
-            i.products.stock += i.quantity
-
-            upsertData.push(i.products)
-        }
-
-        var { error } = await supabase
-            .from("products")
-            .upsert(upsertData)
-
-        if (error) {
-            console.error("Failed to update products", error)
-        }
-
-        var { error } = await supabase
-            .from('orderTracking')
-            .insert({
-                content: "Order cancelled",
-                orderID: id
-            })
-
-        if (error) {
-            console.error("Failed to update tracking", error)
-        }
+        await changeOrderState(id, "CANCELLED");
+        await updateStock(order)
     })
 
 export default router;
