@@ -13,14 +13,14 @@ router.route('/')
         }
 
         const { user } = res.locals
-        const { items, address, phone, recipentName } = req.body as {
+        const { items, address, phone, recipientName } = req.body as {
             items: Item[],
             address: string | undefined,
             phone: number | undefined,
-            recipentName: string | undefined
+            recipientName: string | undefined
         };
 
-        if (!address || !phone || !recipentName) {
+        if (!address || !phone || !recipientName) {
             res.status(400).send({
                 message: "Missing info"
             })
@@ -28,7 +28,7 @@ router.route('/')
         }
 
         try {
-            await addOrderItems(user, recipentName, items, address, phone, 'COD')
+            await addOrderItems(user, recipientName, items, address, phone, 'COD')
         } catch (err) {
             console.error(err)
             res.status(400).send({

@@ -75,22 +75,22 @@ router.route('/getPaymentLink')
             price: number,
         }
 
-        const { items, address, phone, recipentName } = req.body as {
+        const { items, address, phone, recipientName } = req.body as {
             items: Item[],
             address: string | undefined,
             phone: number | undefined,
-            recipentName: string | undefined
+            recipientName: string | undefined
         };
         const { user } = res.locals
 
-        if (!address || !phone || !recipentName) {
+        if (!address || !phone || !recipientName) {
             res.status(400).send({
                 message: "Missing info"
             })
             return
         }
 
-        const orderID = await addOrderItems(user, recipentName, items, address, phone, 'Bank Transfer')
+        const orderID = await addOrderItems(user, recipientName, items, address, phone, 'Bank Transfer')
         const order = await getOrder(orderID)
         const paymentItem: PaymentItem[] = []
         let amount = order.fee
@@ -164,13 +164,13 @@ router.route('/success')
 
 
         const buyer = new Player({ uid: order.userID })
-        const recipent = new Player({ uid: order.giftTo ? order.giftTo : order.userID })
+        const recipient = new Player({ uid: order.giftTo ? order.giftTo : order.userID })
 
         await buyer.pull();
-        await recipent.pull();
+        await recipient.pull();
 
         if (order.productID === 1) {
-            await recipent.extendSupporter(order.quantity!);
+            await recipient.extendSupporter(order.quantity!);
 
             const { error } = await supabase
                 .from("orders")
@@ -196,10 +196,10 @@ router.route('/success')
             if (order.giftTo) {
                 msg += ` gifted ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role to `
 
-                if (recipent.discord) {
-                    msg = `<@${recipent.discord}>`
+                if (recipient.discord) {
+                    msg = `<@${recipient.discord}>`
                 } else {
-                    msg = `[${recipent.name}](https://demonlistvn.com/player/${recipent.uid})`
+                    msg = `[${recipient.name}](https://demonlistvn.com/player/${recipient.uid})`
                 }
 
                 await sendNotification({

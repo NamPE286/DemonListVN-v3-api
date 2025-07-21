@@ -65,7 +65,7 @@ export async function addNewOrder(
     address: string | null = null,
     phone: number | null = null,
     fee: number = 0,
-    recipentName: string | null = null
+    recipientName: string | null = null
 ) {
     const { error } = await supabase
         .from("orders")
@@ -81,7 +81,7 @@ export async function addNewOrder(
             address: address,
             phone: phone,
             fee: fee,
-            recipentName: recipentName
+            recipientName: recipientName
         })
 
     if (error) {
@@ -204,7 +204,7 @@ export async function updateStock(items: TablesInsert<"orderItems">[], products:
 
 export async function addOrderItems(
     buyer: Player,
-    recipentName: string,
+    recipientName: string,
     items: TablesInsert<"orderItems">[],
     address: string,
     phone: number,
@@ -243,7 +243,7 @@ export async function addOrderItems(
         amount += product.price * item.quantity!;
     }
 
-    await addNewOrder(orderID, null, buyer.uid!, null, null, amount, 'VND', paymentMethod, address, phone, fee, recipentName)
+    await addNewOrder(orderID, null, buyer.uid!, null, null, amount, 'VND', paymentMethod, address, phone, fee, recipientName)
 
     const { error } = await supabase
         .from('orderItems')
