@@ -29,7 +29,7 @@ router.route('/')
 
         try {
             res.send({
-                orderID: await addOrderItems(user, recipientName, items, address, phone, 'COD')
+                orderID: await addOrderItems(user, recipientName, items, address, phone, 'COD', true)
             })
         } catch (err) {
             console.error(err)

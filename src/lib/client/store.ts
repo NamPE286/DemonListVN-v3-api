@@ -198,7 +198,8 @@ export async function addOrderItems(
     items: TablesInsert<"orderItems">[],
     address: string,
     phone: number,
-    paymentMethod: "Bank Transfer" | "COD"
+    paymentMethod: "Bank Transfer" | "COD",
+    pending: boolean = false
 ) {
     items = items.sort((a, b) => a.productID - b.productID);
 
@@ -218,6 +219,10 @@ export async function addOrderItems(
 
     if (paymentMethod == 'COD') {
         fee = 25000
+    }
+
+    if (pending) {
+        await updateStock(items, products)
     }
 
     for (let i = 0; i < items.length; i++) {
