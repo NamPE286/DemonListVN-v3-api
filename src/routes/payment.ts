@@ -7,6 +7,7 @@ import supabase from '@src/database/supabase';
 import { sendNotification } from '@src/lib/client/notification'
 import { sendMessageToChannel } from '@src/lib/client/discord';
 import logger from '@src/utils/logger';
+import type { Response } from 'express';
 
 const router = express.Router();
 
@@ -48,6 +49,110 @@ async function renewStock(order: Awaited<ReturnType<typeof getOrder>>) {
 
     if (error) {
         console.error("Failed to update tracking", error)
+    }
+}
+
+async function handlePayment(id: number, res: Response | null = null) {
+    const order = await getOrder(id);
+
+    if (order.delivered) {
+        if (res) {
+            res.redirect(`https://www.demonlistvn.com/supporter/success?id=${id}`)
+        }
+
+        return;
+    }
+
+    if (order.state == 'CANCELLED') {
+        await payOS.cancelPaymentLink(order.id)
+
+        if (res) {
+            res.redirect(`https://www.demonlistvn.com/orders/${id}`)
+        }
+
+        return;
+    }
+
+    const paymentLink = await payOS.getPaymentLinkInformation(id);
+
+    if (order.state != 'EXPIRED' && paymentLink.status == 'EXPIRED') {
+        await renewStock(order)
+    }
+
+    order.state = paymentLink.status
+
+    await changeOrderState(id, paymentLink.status);
+
+    if (paymentLink.status == 'PENDING') {
+        if (res) {
+            res.redirect(`https://pay.payos.vn/web/${paymentLink.id}`)
+        }
+
+        return;
+    }
+
+    if (paymentLink.status != "PAID") {
+        if (res) {
+            res.redirect(`https://www.demonlistvn.com/orders/${id}`)
+        }
+
+        return;
+    }
+
+
+    const buyer = new Player({ uid: order.userID })
+    const recipient = new Player({ uid: order.giftTo ? order.giftTo : order.userID })
+
+    await buyer.pull();
+    await recipient.pull();
+
+    if (order.productID === 1) {
+        await recipient.extendSupporter(order.quantity!);
+
+        const { error } = await supabase
+            .from("orders")
+            .update({ delivered: true })
+            .eq("id", order.id)
+
+        if (error) {
+            throw error
+        }
+    }
+
+    if (res) {
+        res.redirect(`https://www.demonlistvn.com/supporter/success?id=${id}`)
+    }
+
+    if (order.productID === 1) {
+        let msg = ''
+
+        if (buyer.discord) {
+            msg = `<@${buyer.discord}>`
+        } else {
+            msg = `[${buyer.name}](https://demonlistvn.com/player/${buyer.uid})`
+        }
+
+        if (order.giftTo) {
+            msg += ` gifted ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role to `
+
+            if (recipient.discord) {
+                msg = `<@${recipient.discord}>`
+            } else {
+                msg = `[${recipient.name}](https://demonlistvn.com/player/${recipient.uid})`
+            }
+
+            await sendNotification({
+                content: `You have been gifted ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role`,
+                to: order.giftTo
+            })
+        } else {
+            msg += ` purchased ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role`
+
+        }
+
+        msg += '!'
+
+        await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
     }
 }
 
@@ -175,93 +280,8 @@ router.route('/success')
     .get(async (req, res) => {
         const { orderCode } = req.query;
         const id = parseInt(String(orderCode));
-        const order = await getOrder(id);
 
-        if (order.delivered) {
-            res.redirect(`https://www.demonlistvn.com/supporter/success?id=${id}`)
-            return;
-        }
-
-        if (order.state == 'CANCELLED') {
-            await payOS.cancelPaymentLink(order.id)
-            res.redirect(`https://www.demonlistvn.com/orders/${id}`)
-
-            return;
-        }
-
-        const paymentLink = await payOS.getPaymentLinkInformation(id);
-
-        if (order.state != 'EXPIRED' && paymentLink.status == 'EXPIRED') {
-            await renewStock(order)
-        }
-
-        order.state = paymentLink.status
-
-        await changeOrderState(id, paymentLink.status);
-
-        if (paymentLink.status == 'PENDING') {
-            res.redirect(`https://pay.payos.vn/web/${paymentLink.id}`)
-            return;
-        }
-
-        if (paymentLink.status != "PAID") {
-            res.redirect(`https://www.demonlistvn.com/orders/${id}`)
-            return;
-        }
-
-
-        const buyer = new Player({ uid: order.userID })
-        const recipient = new Player({ uid: order.giftTo ? order.giftTo : order.userID })
-
-        await buyer.pull();
-        await recipient.pull();
-
-        if (order.productID === 1) {
-            await recipient.extendSupporter(order.quantity!);
-
-            const { error } = await supabase
-                .from("orders")
-                .update({ delivered: true })
-                .eq("id", order.id)
-
-            if (error) {
-                throw error
-            }
-        }
-
-        res.redirect(`https://www.demonlistvn.com/supporter/success?id=${id}`)
-
-        if (order.productID === 1) {
-            let msg = ''
-
-            if (buyer.discord) {
-                msg = `<@${buyer.discord}>`
-            } else {
-                msg = `[${buyer.name}](https://demonlistvn.com/player/${buyer.uid})`
-            }
-
-            if (order.giftTo) {
-                msg += ` gifted ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role to `
-
-                if (recipient.discord) {
-                    msg = `<@${recipient.discord}>`
-                } else {
-                    msg = `[${recipient.name}](https://demonlistvn.com/player/${recipient.uid})`
-                }
-
-                await sendNotification({
-                    content: `You have been gifted ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role`,
-                    to: order.giftTo
-                })
-            } else {
-                msg += ` purchased ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role`
-
-            }
-
-            msg += '!'
-
-            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
-        }
+        await handlePayment(id, res)
     })
 
 /**
@@ -306,7 +326,14 @@ router.route('/cancelled')
 
 router.route('/webhook')
     .post(async (req, res) => {
-        logger.log("```" + JSON.stringify(req.body) + "```")
+        const { orderCode } = req.body.data
+        const id = parseInt(String(orderCode))
+        const paymentLink = await payOS.getPaymentLinkInformation(id);
+
+        if (paymentLink.status == 'EXPIRED') {
+            await handlePayment(id)
+        }
+
         res.send()
     })
 
