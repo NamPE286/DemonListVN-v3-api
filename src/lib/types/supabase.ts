@@ -472,6 +472,7 @@ export type Database = {
           id: number
           imgUrl: string
           isContest: boolean
+          isExternal: boolean
           isSupporterOnly: boolean
           minExp: number
           needProof: boolean
@@ -490,6 +491,7 @@ export type Database = {
           id?: number
           imgUrl: string
           isContest?: boolean
+          isExternal?: boolean
           isSupporterOnly?: boolean
           minExp?: number
           needProof?: boolean
@@ -508,6 +510,7 @@ export type Database = {
           id?: number
           imgUrl?: string
           isContest?: boolean
+          isExternal?: boolean
           isSupporterOnly?: boolean
           minExp?: number
           needProof?: boolean
@@ -756,7 +759,7 @@ export type Database = {
           phone: number | null
           productID: number | null
           quantity: number | null
-          recipentName: string | null
+          recipientName: string | null
           state: string
           userID: string
         }
@@ -775,7 +778,7 @@ export type Database = {
           phone?: number | null
           productID?: number | null
           quantity?: number | null
-          recipentName?: string | null
+          recipientName?: string | null
           state: string
           userID: string
         }
@@ -794,7 +797,7 @@ export type Database = {
           phone?: number | null
           productID?: number | null
           quantity?: number | null
-          recipentName?: string | null
+          recipientName?: string | null
           state?: string
           userID?: string
         }
