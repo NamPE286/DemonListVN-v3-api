@@ -1,6 +1,7 @@
 import supabase from '@database/supabase'
 import Level from '@src/lib/classes/Level'
 import type { TRecord } from '@src/lib/types'
+import getVideoId from 'get-video-id';
 
 async function isLevelExists(id: number) {
     const { data, error } = await supabase
@@ -13,12 +14,6 @@ async function isLevelExists(id: number) {
     }
 
     return true
-}
-
-function getYouTubeVideoID(url: string) {
-    var regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-    var match = url.match(regExp);
-    return (match && match[7].length == 11) ? match[7] : false;
 }
 
 interface Record extends TRecord { }
@@ -105,7 +100,16 @@ class Record {
         }
 
         const level = new Level({ id: this.levelid })
-        const id = getYouTubeVideoID(this.videoLink)
+        const { id, service } = getVideoId(this.videoLink)
+
+        if(!id || !service) {
+            throw new Error("Invalid video's link")
+        }
+
+        if(service != 'youtube') {
+            throw new Error("Video's link is not YouTube")
+        }
+
         const video: any = await (
             (await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${id}&key=${process.env.GOOGLE_API_KEY}`)).json()
         )
@@ -120,7 +124,7 @@ class Record {
             throw new Error("Level's name is not in the title or description of the video")
         }
 
-        if(this.progress == 100 && !level.isPlatformer) {
+        if (this.progress == 100 && !level.isPlatformer) {
             return;
         }
 
