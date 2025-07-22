@@ -1,5 +1,5 @@
 import express from 'express'
-import { getPlayers } from '@src/lib/client/player'
+import { getPlayers, getPlayersBatch } from '@src/lib/client/player'
 
 const router = express.Router()
 
@@ -50,6 +50,21 @@ router.route('/')
             res.send(await getPlayers(req.query))
         } catch {
             res.status(500).send()
+        }
+    })
+
+router.route('/')
+    .post(async (req, res) => {
+        const { batch } = req.body
+
+        if (batch) {
+            try {
+                res.send(await getPlayersBatch(batch))
+            } catch {
+                res.status(500).send()
+            }
+
+            return;
         }
     })
 

@@ -64,3 +64,16 @@ export async function getFeaturedListLeaderboard({ start = 0, end = 50, sortBy =
 
     return data
 }
+
+export async function getPlayersBatch(uid: string[]) {
+    const { data, error } = await supabase
+        .from('players')
+        .select('*, clans!id(*)')
+        .in('uid', uid)
+
+    if (error) {
+        throw error
+    }
+
+    return uid.map(id => data.find(player => player.uid === id)).filter(Boolean)
+}
