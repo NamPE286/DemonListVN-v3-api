@@ -25,7 +25,22 @@ router.route('/order/:id/tracking')
         const { content, link } = req.body
         const { id } = req.params
 
-        // TODO
+        console.log(req.body)
+
+        const { error } = await supabase
+            .from("orderTracking")
+            .insert({
+                orderID: parseInt(id),
+                content: content,
+                link: (link ? link : null)
+            })
+
+        if (error) {
+            console.error(error)
+            res.status(500).send()
+        }
+
+        res.send()
     })
 
 export default router
