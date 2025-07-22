@@ -66,6 +66,8 @@ router.route('/')
 
             return;
         }
+
+        res.send()
     })
 
 export default router
