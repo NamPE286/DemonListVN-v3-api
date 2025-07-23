@@ -24,12 +24,10 @@ router.route('/orders')
 
 router.route('/order/:id/tracking')
     .post(adminAuth, async (req, res) => {
-        const { content, link } = req.body
+        const { content, link } = req.body as { content: string; link?: string }
         const { id } = req.params
 
-        console.log(req.body)
-
-        const { error } = await supabase
+        var { error } = await supabase
             .from("orderTracking")
             .insert({
                 orderID: parseInt(id),
@@ -40,6 +38,18 @@ router.route('/order/:id/tracking')
         if (error) {
             console.error(error)
             res.status(500).send()
+        }
+
+        if (content.toLowerCase().includes("delivered")) {
+            var { error } = await supabase
+                .from("orders")
+                .update({ state: "PAID", delivered: true })
+                .eq('id', parseInt(id))
+
+            if (error) {
+                console.error(error)
+                res.status(500).send()
+            }
         }
 
         res.send()
