@@ -1,4 +1,6 @@
 import supabase from '@src/database/supabase'
+import { sendNotification } from '@src/lib/client/notification'
+import { getOrder } from '@src/lib/client/store'
 import adminAuth from '@src/middleware/adminAuth'
 import express from 'express'
 
@@ -41,6 +43,15 @@ router.route('/order/:id/tracking')
         }
 
         res.send()
+
+        const order = await getOrder(parseInt(id))
+
+        sendNotification({
+            content: content,
+            redirect: `https://demonlistvn.com/orders/${id}`,
+            to: order.userID
+        }, true)
+
     })
 
 export default router

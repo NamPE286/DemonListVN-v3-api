@@ -27,7 +27,7 @@ export async function clearPlayerNotifications(uid: string) {
     }
 }
 
-export async function sendNotification(notification: TNotification) {
+export async function sendNotification(notification: TNotification, bypass = false) {
     var { data, error } = await supabase
         .from('notifications')
         .insert(notification as any)
@@ -36,5 +36,9 @@ export async function sendNotification(notification: TNotification) {
         throw error
     }
 
-    await sendDirectMessage(notification.to!, notification.content!)
+    if (notification.redirect) {
+        notification.content += `. [Link](${notification.redirect})`
+    }
+
+    await sendDirectMessage(notification.to!, notification.content!, bypass)
 }
