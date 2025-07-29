@@ -408,11 +408,14 @@ export async function handlePayment(id: number, res: Response | null = null) {
 
     if (order.productID === 1) {
         let msg = ''
+        let buyerStr = ''
 
         if (buyer.discord) {
             msg = `<@${buyer.discord}>`
+            buyerStr = `<@${buyer.discord}>`
         } else {
             msg = `[${buyer.name}](https://demonlistvn.com/player/${buyer.uid})`
+            buyerStr = `[${buyer.name}](https://demonlistvn.com/player/${buyer.uid})`
         }
 
         if (order.giftTo) {
@@ -428,7 +431,7 @@ export async function handlePayment(id: number, res: Response | null = null) {
                 content: `You have been gifted ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role!`,
                 to: order.giftTo
             })
-            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), `You have been gifted ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role`)
+            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), `${buyerStr} gifted ${msg} ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role`)
         } else {
             msg += ` purchased ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role!`
             await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
