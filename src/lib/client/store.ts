@@ -425,16 +425,13 @@ export async function handlePayment(id: number, res: Response | null = null) {
             }
 
             await sendNotification({
-                content: `You have been gifted ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role`,
+                content: `You have been gifted ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role!`,
                 to: order.giftTo
             })
+            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), `You have been gifted ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role`)
         } else {
-            msg += ` purchased ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role`
-
+            msg += ` purchased ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role!`
+            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
         }
-
-        msg += '!'
-
-        await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
     }
 }
