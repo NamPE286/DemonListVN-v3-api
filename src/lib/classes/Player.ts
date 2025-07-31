@@ -97,80 +97,80 @@ class Player {
     }
 
     getTitle(list: string) {
-        if (list == "dl") {
-            if (this.rating! >= 8000) {
-                return {
-                    title: "AGM",
-                    fullTitle: "Ascended Grandmaster",
-                    color:
-                        "white;background: linear-gradient(to right, #ff00cc, #333399);",
-                };
-            }
-            if (this.rating! >= 5000) {
-                return {
-                    title: "LGM",
-                    fullTitle: "Legendary Grandmaster",
-                    color: "darkred",
-                };
-            }
-            if (this.rating! >= 3500) {
-                return {
-                    title: "GM",
-                    fullTitle: "Grandmaster",
-                    color: "red",
-                };
-            }
-            if (this.rating! >= 2000) {
-                return {
-                    title: "M",
-                    fullTitle: "Master",
-                    color: "hsla(321, 100%, 50%, 1)",
-                };
-            }
-            if (this.rating! >= 1500) {
-                return {
-                    title: "CM",
-                    fullTitle: "Candidate Master",
-                    color: "purple",
-                };
-            }
-            if (this.rating! >= 800) {
-                return {
-                    title: "EX",
-                    fullTitle: "Expert",
-                    color: "blue",
-                };
-            }
-            if (this.rating! >= 400) {
-                return {
-                    title: "SP",
-                    fullTitle: "Specialist",
-                    color: "darkcyan",
-                };
-            }
-            if (this.rating! >= 200) {
-                return {
-                    title: "A",
-                    fullTitle: "A",
-                    color: "green",
-                };
-            }
-            if (this.rating! >= 50) {
-                return {
-                    title: "B",
-                    fullTitle: "B",
-                    color: "#413cde",
-                };
-            }
-            if (this.rating! > 0) {
-                return {
-                    title: "C",
-                    fullTitle: "C",
-                    color: "gray",
-                };
-            }
-            return null;
+    if (list == "dl") {
+        if (this.rating! >= 10000) {
+            return {
+                title: "AGM",
+                fullTitle: "Ascended Grandmaster",
+                color:
+                    "white;background: linear-gradient(to right, #ff00cc, #333399);",
+            };
         }
+        if (this.rating! >= 5400) {
+            return {
+                title: "LGM",
+                fullTitle: "Legendary Grandmaster",
+                color: "darkred",
+            };
+        }
+        if (this.rating! >= 3000) {
+            return {
+                title: "GM",
+                fullTitle: "Grandmaster",
+                color: "red",
+            };
+        }
+        if (this.rating! >= 1500) {
+            return {
+                title: "M",
+                fullTitle: "Master",
+                color: "hsla(321, 100%, 50%, 1)",
+            };
+        }
+        if (this.rating! >= 1000) {
+            return {
+                title: "CM",
+                fullTitle: "Candidate Master",
+                color: "purple",
+            };
+        }
+        if (this.rating! >= 800) {
+            return {
+                title: "EX",
+                fullTitle: "Expert",
+                color: "blue",
+            };
+        }
+        if (this.rating! >= 400) {
+            return {
+                title: "SP",
+                fullTitle: "Specialist",
+                color: "darkcyan",
+            };
+        }
+        if (this.rating! >= 200) {
+            return {
+                title: "A",
+                fullTitle: "A",
+                color: "green",
+            };
+        }
+        if (this.rating! >= 50) {
+            return {
+                title: "B",
+                fullTitle: "B",
+                color: "#413cde",
+            };
+        }
+        if (this.rating! > 0) {
+            return {
+                title: "C",
+                fullTitle: "C",
+                color: "gray",
+            };
+        }
+        return null;
+    }
     }
 
     async updateDiscord(id: string) {
