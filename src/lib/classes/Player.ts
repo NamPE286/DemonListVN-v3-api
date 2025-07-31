@@ -98,7 +98,6 @@ class Player {
 
     getTitle(list: string) {
         if (list == "dl") {
-            return null
             if (this.rating! >= 10000) {
                 return {
                     title: "AGM",
