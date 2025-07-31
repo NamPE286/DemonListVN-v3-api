@@ -143,6 +143,7 @@ export async function syncRoleDLVN(player: Player) {
     const roles = {
         trusted: "1246843095593517066",
         supporter: "1004356961309032549",
+        AGM: "1400238211321823354",
         LGM: "1058866853038010390",
         GM: "1058866865222463548",
         M: "1058866902627262564",
