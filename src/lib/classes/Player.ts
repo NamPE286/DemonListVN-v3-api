@@ -98,7 +98,7 @@ class Player {
 
     getTitle(list: string) {
         if (list == "dl") {
-            if (this.rating! >= 10000) {
+            if (this.rating! >= 8000) {
                 return {
                     title: "AGM",
                     fullTitle: "Ascended Grandmaster",
