@@ -1,3 +1,4 @@
+import "@src/utils/instrument.ts"
 import express from 'express'
 import cors from 'cors'
 import rateLimit from 'express-rate-limit'
@@ -5,6 +6,7 @@ import swaggerDocs from '@src/utils/swagger.ts'
 import { version } from '../package.json'
 import cron from 'node-cron'
 import supabase from '@src/database/supabase'
+import * as Sentry from '@sentry/node'
 
 const app = express()
 const port = 8080
@@ -31,6 +33,10 @@ app.get('/', (req, res) => {
         version: version
     })
 })
+
+app.get("/debug-sentry", function mainHandler(req, res) {
+  throw new Error("My first Sentry error!");
+});
 
 app.use('/level', require(`./routes/level`).default)
 app.use('/list', require(`./routes/list`).default)
@@ -63,6 +69,8 @@ app.use('/card', require(`./routes/card`).default)
 app.use('/store', require(`./routes/store`).default)
 app.use('/order', require(`./routes/order`).default)
 app.use('/merchant', require(`./routes/merchant`).default)
+
+Sentry.setupExpressErrorHandler(app);
 
 app.listen(port, () => {
     console.log(`Server started on port ${port}`)
