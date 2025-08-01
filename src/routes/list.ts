@@ -116,6 +116,7 @@ router.route('/fl')
         try {
             res.send(await getFeaturedListLevels(req.query))
         } catch (err) {
+            console.error(err)
             res.status(500).send()
         }
     })
@@ -161,6 +162,7 @@ router.route('/dl/records')
         try {
             res.send(await getDemonListRecords(req.query))
         } catch (err) {
+            console.error(err)
             res.status(500).send()
         }
     })
@@ -206,6 +208,7 @@ router.route('/fl/records')
         try {
             res.send(await getFeaturedListRecords(req.query))
         } catch (err) {
+            console.error(err)
             res.status(500).send()
         }
     })
