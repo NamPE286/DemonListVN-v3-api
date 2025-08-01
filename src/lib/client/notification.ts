@@ -36,7 +36,9 @@ export async function sendNotification(notification: TNotification, bypass = fal
         throw error
     }
 
-    notification.content += `\n[Link](${notification.redirect})`
+    if (notification.redirect) {
+        notification.content += `\n[Link](${notification.redirect})`
+    }
 
     await sendDirectMessage(notification.to!, notification.content!, bypass)
 }
