@@ -97,61 +97,70 @@ class Player {
     }
 
     getTitle(list: string) {
-        if (list == 'dl') {
-            if (this.rating! >= 5200)
+        if (list == "dl") {
+            if (this.rating! >= 4800) {
                 return {
-                    title: 'LGM',
-                    fullTitle: 'Legendary Grandmaster',
-                    color: 'darkred'
+                    title: "LGM",
+                    fullTitle: "Legendary Grandmaster",
+                    color: "darkred",
                 };
-            if (this.rating! >= 4500)
+            }
+            if (this.rating! >= 4000) {
                 return {
-                    title: 'GM',
-                    fullTitle: 'Grandmaster',
-                    color: 'red'
+                    title: "GM",
+                    fullTitle: "Grandmaster",
+                    color: "red",
                 };
-            if (this.rating! >= 3900)
+            }
+            if (this.rating! >= 3000) {
                 return {
-                    title: 'M',
-                    fullTitle: 'Master',
-                    color: 'hsla(321, 100%, 50%, 1)'
+                    title: "M",
+                    fullTitle: "Master",
+                    color: "hsla(321, 100%, 50%, 1)",
                 };
-            if (this.rating! >= 3500)
+            }
+            if (this.rating! >= 2500) {
                 return {
-                    title: 'CM',
-                    fullTitle: 'Candidate Master',
-                    color: 'purple'
+                    title: "CM",
+                    fullTitle: "Candidate Master",
+                    color: "purple",
                 };
-            if (this.rating! >= 2500)
+            }
+            if (this.rating! >= 2000) {
                 return {
-                    title: 'EX',
-                    fullTitle: 'Expert',
-                    color: 'blue'
+                    title: "EX",
+                    fullTitle: "Expert",
+                    color: "blue",
                 };
-            if (this.rating! >= 1800)
+            }
+            if (this.rating! >= 1500) {
                 return {
-                    title: 'SP',
-                    fullTitle: 'Specialist',
-                    color: 'darkcyan'
+                    title: "SP",
+                    fullTitle: "Specialist",
+                    color: "darkcyan",
                 };
-            if (this.rating! >= 1000)
+            }
+            if (this.rating! >= 1000) {
                 return {
-                    title: 'A',
-                    fullTitle: 'A',
-                    color: 'green'
+                    title: "A",
+                    fullTitle: "A",
+                    color: "green",
                 };
-            if (this.rating! >= 500)
+            }
+            if (this.rating! >= 500) {
                 return {
-                    title: 'B',
-                    fullTitle: 'B',
-                    color: '#413cde'
+                    title: "B",
+                    fullTitle: "B",
+                    color: "#413cde",
                 };
-            if (this.rating! > 0)
+            }
+            if (this.rating! > 0) {
                 return {
-                    title: 'C',
-                    fullTitle: 'C',
-                    color: 'gray'
+                    title: "C",
+                    fullTitle: "C",
+                    color: "gray",
                 };
+            }
             return null;
         }
     }
