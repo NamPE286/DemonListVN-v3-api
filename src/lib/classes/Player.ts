@@ -106,7 +106,7 @@ class Player {
                         "white;background: linear-gradient(to right, #ff00cc, #333399);",
                 };
             }
-            if (this.rating! >= 4800) {
+            if (this.rating! >= 5000) {
                 return {
                     title: "LGM",
                     fullTitle: "Legendary Grandmaster",
