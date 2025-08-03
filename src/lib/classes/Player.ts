@@ -98,6 +98,14 @@ class Player {
 
     getTitle(list: string) {
         if (list == "dl") {
+            if (this.rating! >= 6000) {
+                return {
+                    title: "AGM",
+                    fullTitle: "Ascended Grandmaster",
+                    color:
+                        "white;background: linear-gradient(to right, #ff00cc, #333399);",
+                };
+            }
             if (this.rating! >= 4800) {
                 return {
                     title: "LGM",
