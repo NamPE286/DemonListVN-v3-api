@@ -45,21 +45,20 @@ export async function getFeaturedListRecords({ start = 0, end = 0, isChecked = f
 export async function getPlayerRecordRating(uid: string) {
     const { data, error } = await supabase
         .from('records')
-        .select('userid, levels!inner(id, rating), dlPt')
+        .select('userid, progress, no, levels!inner(id, rating), dlPt')
         .eq('userid', uid)
         .not('dlPt', 'is', null)
+        .order('no')
 
     if (error) {
         throw error
     }
 
-    const res: number[] = []
+    const res = []
 
     for (const i of data) {
-        res.push(i.levels?.rating!)
+        res.push({ progress: i.progress, rating: i.levels?.rating! })
     }
-
-    res.sort((a, b) => b - a)
 
     return res;
 }
