@@ -2,7 +2,7 @@ import express from 'express'
 import Player from '@lib/classes/Player'
 import userAuth from '@src/middleware/userAuth'
 import { getHeatmap } from '@src/lib/client/heatmap'
-import { getPlayerRecords } from '@src/lib/client/record'
+import { getPlayerRecordRating, getPlayerRecords } from '@src/lib/client/record'
 import { updateHeatmap } from '@src/lib/client/heatmap'
 import { getPlayerSubmissions } from '@src/lib/client/record'
 import { sendMessageToChannel, syncRoleDLVN, syncRoleGDVN } from '@src/lib/client/discord'
@@ -171,8 +171,13 @@ router.route('/:uid/records')
      *             schema:
      */
     .get(async (req, res) => {
+        const { ratingOnly } = req.query
         try {
-            res.send(await getPlayerRecords(req.params.uid, req.query))
+            if (ratingOnly) {
+                res.send(await getPlayerRecordRating(req.params.uid))
+            } else {
+                res.send(await getPlayerRecords(req.params.uid, req.query))
+            }
         } catch {
             res.status(404).send()
         }
