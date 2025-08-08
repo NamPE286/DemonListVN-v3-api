@@ -215,11 +215,7 @@ export async function addOrderItems(
     }
 
     const products = (await getProducts(ids)).sort((a, b) => a.id - b.id);
-    let amount = 0, fee = 0;
-
-    if (paymentMethod == 'COD') {
-        fee = 25000
-    }
+    let amount = 0, fee = 25000;
 
     if (pending) {
         await updateStock(items, products)
