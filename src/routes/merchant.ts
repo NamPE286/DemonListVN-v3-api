@@ -10,9 +10,10 @@ router.route('/orders')
     .get(adminAuth, async (req, res) => {
         const { data, error } = await supabase
             .from("orders")
-            .select("*")
+            .select("*, orderTracking(*)")
             .or("and(paymentMethod.eq.COD,state.eq.PENDING),and(paymentMethod.eq.Bank Transfer,state.eq.PAID,delivered.eq.false)")
             .order("created_at", { ascending: false })
+            .order("created_at", { referencedTable : "orderTracking", ascending: false })
 
         if (error) {
             console.error(error)
