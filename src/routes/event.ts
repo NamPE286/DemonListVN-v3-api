@@ -420,7 +420,7 @@ router.route('/proof')
 
         const event = await getEvent(parseInt(req.body.eventID));
 
-        if (event.isSupporterOnly && user.isSupporterActive()) {
+        if (event.isSupporterOnly && !user.isSupporterActive()) {
             res.status(401).send();
             return;
         }
@@ -431,13 +431,15 @@ router.route('/proof')
         }
 
         if (event.end && new Date() >= new Date(event.end)) {
+            console.log(new Date(), new Date(event.end))
             res.status(401).send();
             return;
         }
 
         try {
             res.send(await insertEventProof(req.body))
-        } catch {
+        } catch (err) {
+            console.error(err)
             res.status(500).send();
         }
     })
