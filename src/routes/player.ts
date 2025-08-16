@@ -5,7 +5,7 @@ import { getHeatmap } from '@src/lib/client/heatmap'
 import { getPlayerRecordRating, getPlayerRecords } from '@src/lib/client/record'
 import { updateHeatmap } from '@src/lib/client/heatmap'
 import { getPlayerSubmissions } from '@src/lib/client/record'
-import { sendMessageToChannel, syncRoleDLVN, syncRoleGDVN } from '@src/lib/client/discord'
+import { syncRoleDLVN, syncRoleGDVN } from '@src/lib/client/discord'
 import supabase from '@src/database/supabase'
 
 const router = express.Router()
