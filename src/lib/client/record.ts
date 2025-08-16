@@ -1,6 +1,7 @@
 import supabase from "@src/database/supabase";
 import RecordClass from "@src/lib/classes/Record";
 import Player from "@src/lib/classes/Player";
+import Level from "@src/lib/classes/Level";
 
 export async function getDemonListRecords({ start = 0, end = 0, isChecked = false } = {}) {
     if (typeof isChecked == 'string') {
@@ -113,13 +114,16 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, isCheck
         isChecked = (isChecked == 'true')
     }
 
+    const level = new Level({ id: id })
+    await level.pull()
+
     const { data, error } = await supabase
         .from('records')
         .select('*, players!userid!inner(*, clans!id(*)), reviewer:players!reviewer(*, clans!id(*))')
         .eq('players.isHidden', false)
         .eq('levelid', id)
         .eq('isChecked', isChecked)
-        .order('progress', { ascending: false })
+        .order('progress', { ascending: !level.isPlatformer })
         .order('timestamp')
         .range(start, end)
 

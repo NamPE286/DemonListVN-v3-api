@@ -128,7 +128,7 @@ class Record {
             return;
         }
 
-        if (!title.includes(this.progress!.toString()) && !desc.includes(this.progress!.toString())) {
+        if (!level.isPlatformer && !title.includes(this.progress!.toString()) && !desc.includes(this.progress!.toString())) {
             throw new Error("Progress is not 100% and is not in the title or description of the video");
         }
     }
