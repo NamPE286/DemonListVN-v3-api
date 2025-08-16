@@ -1,5 +1,5 @@
 import express from "express";
-import { getDemonListLevels, getFeaturedListLevels } from '@lib/client/level'
+import { getDemonListLevels, getFeaturedListLevels, getPlatformerListLevels } from '@lib/client/level'
 import { getDemonListRecords, getFeaturedListRecords } from "@src/lib/client/record";
 
 const router = express.Router()
@@ -63,6 +63,65 @@ router.route('/dl')
     .get(async (req, res) => {
         try {
             res.send(await getDemonListLevels(req.query))
+        } catch (err) {
+            res.status(500).send()
+        }
+    })
+
+router.route('/pl')
+    /**
+     * @openapi
+     * "/list/pl":
+     *   get:
+     *     tags:
+     *       - List
+     *     summary: Get all records of the Platformer List
+     *     parameters:
+     *       - name: start
+     *         in: query
+     *         description: Range start index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 0
+     *       - name: end
+     *         in: query
+     *         description: Range end index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 50
+     *       - name: sortBy
+     *         in: query
+     *         description: Property of level to sort by
+     *         required: false
+     *         schema:
+     *           type: string
+     *           default: dlTop
+     *       - name: ascending
+     *         in: query
+     *         description: Sort ascending
+     *         required: false
+     *         schema:
+     *           type: boolean
+     *           default: false
+     *       - name: uid
+     *         in: query
+     *         description: Progress of player
+     *         required: false
+     *         schema:
+     *           type: string
+     *           default: false
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
+    .get(async (req, res) => {
+        try {
+            res.send(await getPlatformerListLevels(req.query))
         } catch (err) {
             res.status(500).send()
         }

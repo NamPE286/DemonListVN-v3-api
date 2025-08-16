@@ -464,6 +464,7 @@ export type Database = {
         Row: {
           content: string | null
           created_at: string
+          data: Json | null
           description: string
           end: string | null
           exp: number | null
@@ -483,6 +484,7 @@ export type Database = {
         Insert: {
           content?: string | null
           created_at?: string
+          data?: Json | null
           description: string
           end?: string | null
           exp?: number | null
@@ -502,6 +504,7 @@ export type Database = {
         Update: {
           content?: string | null
           created_at?: string
+          data?: Json | null
           description?: string
           end?: string | null
           exp?: number | null
