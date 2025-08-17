@@ -57,7 +57,7 @@ class Record {
                 throw new Error()
             }
 
-            if (apiLevel.difficulty != 'Extreme Demon' && apiLevel.difficulty != 'Insane Demon') {
+            if (apiLevel.length != 'Plat' && apiLevel.difficulty != 'Extreme Demon' && apiLevel.difficulty != 'Insane Demon') {
                 throw new Error('Level is not hard enough')
             }
 
