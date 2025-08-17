@@ -141,7 +141,7 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, isCheck
         .eq('players.isHidden', false)
         .eq('levelid', id)
         .eq('isChecked', isChecked)
-        .order('progress', { ascending: !level.isPlatformer })
+        .order('progress', { ascending: level.isPlatformer })
         .order('timestamp')
         .range(start, end)
 
