@@ -54,37 +54,6 @@ class Level {
             throw error
         }
     }
-
-    getSongPublicURL() {
-        if (!this.songID) {
-            throw new Error("Not avaliable")
-        }
-
-        const { data } = supabase
-            .storage
-            .from('songs')
-            .getPublicUrl(`${this.songID}.mp3`)
-
-        return data.publicUrl
-    }
-
-    async deleteSong() {
-        if (!this.songID) {
-            return
-        }
-
-        const { data, error } = await supabase
-            .storage
-            .from('songs')
-            .remove([`${this.songID}.mp3`])
-
-        if (error) {
-            throw error
-        }
-
-        this.songID = null
-        this.update()
-    }
 }
 
 export default Level
