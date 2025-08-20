@@ -2,6 +2,7 @@
   "dependencies": {
     "@payos/node": "^1.0.10",
     "@sentry/node": "^10.0.0",
+    "@sodiumlabs/gdapi": "^1.0.1",
     "@supabase/supabase-js": "^2.39.8",
     "@types/cors": "^2.8.17",
     "@types/jsonwebtoken": "^9.0.6",

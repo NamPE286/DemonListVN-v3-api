@@ -82,12 +82,18 @@ router.route('/:id')
      */
     .get(checkID, async (req, res) => {
         const { id } = req.params
+        const { fromGD } = req.query
 
         try {
             const level = new Level({ id: parseInt(id) })
-            await level.pull()
 
-            res.send(level)
+            if (!fromGD) {
+                await level.pull()
+                res.send(level)
+            } else {
+                res.send(await level.fetchFromGD())
+            }
+
         } catch {
             res.status(404).send()
         }
@@ -205,4 +211,5 @@ router.route('/:id/deathCount')
             res.status(500).send()
         }
     })
+
 export default router

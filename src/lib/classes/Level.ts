@@ -1,4 +1,6 @@
 import supabase from '@database/supabase'
+import { SearchLevelsType } from '@sodiumlabs/gdapi'
+import { gdapi } from '@src/lib/classes/GDApi'
 import { addChangelog } from '@src/lib/client/changelog'
 import type { TLevel } from '@src/lib/types'
 
@@ -21,6 +23,28 @@ class Level {
         }
 
         Object.assign(this, data)
+    }
+
+    async fetchFromGD() {
+        const data = await gdapi.searchLevels({
+            type: SearchLevelsType.Query,
+            query: String(this.id)
+        })
+
+        type APILevel = typeof data.levels[0] & {
+            author: string,
+            difficulty: string
+        }
+
+        const level: APILevel = (data.levels[0] as any);
+        level.author = data.creators[0].username;
+
+        if (level.demon) {
+            const diffStr = ['Hard', '', '', 'Easy', 'Medium', 'Insane', 'Extreme']
+            level.difficulty = diffStr[level.demonDifficulty] + ' Demon'
+        }
+
+        return level;
     }
 
     async update() {
