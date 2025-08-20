@@ -1,4 +1,5 @@
 import supabase from "@src/database/supabase";
+import Level from "@src/lib/classes/Level";
 
 async function fetchPlayerData(uid: string, levelID: number): Promise<any> {
     let { data, error } = await supabase
@@ -32,7 +33,8 @@ async function fetchLevelData(levelID: number): Promise<any> {
 }
 
 async function isEligible(levelID: number): Promise<boolean> {
-    const data: any = await ((await fetch(`https://gdbrowser.com/api/level/${levelID}`)).json())
+    const level = new Level({ id: levelID })
+    const data = await level.fetchFromGD()
 
     return data.difficulty == 'Extreme Demon' || data.difficulty == 'Insane Demon'
 }

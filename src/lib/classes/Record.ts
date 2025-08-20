@@ -39,34 +39,18 @@ class Record {
 
     async submit() {
         if (!(await isLevelExists(this.levelid!))) {
-            let apiLevel: any
-            try {
-                apiLevel = await ((await fetch(`https://gdbrowser.com/api/level/${this.levelid}`)).json())
-            } catch {
-                const level = new Level({
-                    id: this.levelid,
-                    name: 'Failed to fetch',
-                    creator: 'Unknown'
-                })
+            const level = new Level({
+                id: this.levelid,
+            })
+            let apiLevel = await level.fetchFromGD()
 
-                await level.update()
-                return
-            }
-
-            if (apiLevel == -1) {
-                throw new Error()
-            }
-
-            if (apiLevel.length != 'Plat' && apiLevel.difficulty != 'Extreme Demon' && apiLevel.difficulty != 'Insane Demon') {
+            if (apiLevel.length != 5 && apiLevel.difficulty != 'Extreme Demon' && apiLevel.difficulty != 'Insane Demon') {
                 throw new Error('Level is not hard enough')
             }
 
-            const level = new Level({
-                id: this.levelid,
-                name: apiLevel.name,
-                creator: apiLevel.author,
-                isPlatformer: apiLevel.length == "Plat"
-            })
+            level.name = apiLevel.name
+            level.creator = apiLevel.author
+            level.isPlatformer = apiLevel.length == 5
 
             await level.update()
         }
@@ -102,11 +86,11 @@ class Record {
         const level = new Level({ id: this.levelid })
         const { id, service } = getVideoId(this.videoLink)
 
-        if(!id || !service) {
+        if (!id || !service) {
             throw new Error("Invalid video's link")
         }
 
-        if(service != 'youtube') {
+        if (service != 'youtube') {
             throw new Error("Video's link is not YouTube")
         }
 
