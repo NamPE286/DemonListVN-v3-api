@@ -42,6 +42,18 @@ class Level {
         if (level.demon) {
             const diffStr = ['Hard', '', '', 'Easy', 'Medium', 'Insane', 'Extreme']
             level.difficulty = diffStr[level.demonDifficulty] + ' Demon'
+        } else {
+            const mp = {
+                0: 'Unrated',
+                10: 'Easy',
+                20: 'Normal',
+                30: 'Hard',
+                40: 'Harder',
+                50: 'Insane'
+            }
+            
+            // @ts-ignore
+            level.difficulty = mp[level.difficultyNumerator]
         }
 
         return level;
