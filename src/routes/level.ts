@@ -94,7 +94,8 @@ router.route('/:id')
                 res.send(await level.fetchFromGD())
             }
 
-        } catch {
+        } catch (err) {
+            console.error(err)
             res.status(404).send()
         }
     })
