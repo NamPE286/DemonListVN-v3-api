@@ -69,6 +69,7 @@ app.use('/card', require(`./routes/card`).default)
 app.use('/store', require(`./routes/store`).default)
 app.use('/order', require(`./routes/order`).default)
 app.use('/merchant', require(`./routes/merchant`).default)
+app.use('/storage', require(`./routes/storage`).default)
 
 Sentry.setupExpressErrorHandler(app);
 
