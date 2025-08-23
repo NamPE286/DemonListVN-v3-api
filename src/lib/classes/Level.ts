@@ -26,8 +26,9 @@ class Level {
 
     async fetchFromGD() {
         const data = await gdapi.levels.get(this.id!)
-        
+
         return {
+            id: data.id,
             name: data.name,
             description: data.description,
             length: data.stats.length.raw,
