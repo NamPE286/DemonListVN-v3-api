@@ -54,7 +54,7 @@ router.route('/presign')
         }
 
         try {
-            res.send(await getSignedUrl(s3, command, { expiresIn: 120 }));
+            res.send(await getSignedUrl(s3, command, { expiresIn: 60 }));
         } catch (err) {
             console.error(err);
             res.status(500).send();
