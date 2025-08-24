@@ -10,7 +10,7 @@ function extractID(path: string) {
 }
 
 function validate(path: string, user: Player) {
-    if (path.startsWith('avatars') && user.uid == extractID(path)) {
+    if ((path.startsWith('avatars') || path.startsWith('banners')) && user.uid == extractID(path)) {
         return;
     }
 
