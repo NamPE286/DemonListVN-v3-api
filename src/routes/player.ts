@@ -117,14 +117,20 @@ router.route('/:uid')
         const { cached } = req.query
 
         try {
-            const player = new Player({ uid: uid })
+            const player = new Player({})
+
+            if (uid.startsWith('@')) {
+                player.name = uid.slice(1)
+            } else {
+                player.uid = uid
+            }
+
             await player.pull()
 
             res.send(player)
         } catch (err) {
             res.status(404).send()
         }
-
     })
 
 router.route('/:uid/records')

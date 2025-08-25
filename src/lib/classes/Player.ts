@@ -10,17 +10,31 @@ class Player {
     }
 
     async pull() {
-        const { data, error } = await supabase
-            .from('players')
-            .select('*, clans!id(*)')
-            .eq('uid', this.uid!)
-            .single()
+        if (this.uid) {
+            const { data, error } = await supabase
+                .from('players')
+                .select('*, clans!id(*)')
+                .eq('uid', this.uid)
+                .single()
 
-        if (error) {
-            throw error
+            if (error) {
+                throw error
+            }
+
+            Object.assign(this, data)
+        } else if (this.name) {
+            const { data, error } = await supabase
+                .from('players')
+                .select('*, clans!id(*)')
+                .eq('name', this.name)
+                .single()
+
+            if (error) {
+                throw error
+            }
+
+            Object.assign(this, data)
         }
-
-        Object.assign(this, data)
     }
 
     async update({ updateClan = false } = {}) {
