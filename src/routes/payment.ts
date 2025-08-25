@@ -32,7 +32,7 @@ const router = express.Router();
 router.route('/getPaymentLink/:productID/:quantity')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
-        const { giftTo } = req.query;
+        const { giftTo, targetClanID } = req.query;
         const { productID, quantity } = req.params
         const id = new Date().getTime();
         const product = await getProductByID(parseInt(productID));
@@ -53,7 +53,16 @@ router.route('/getPaymentLink/:productID/:quantity')
             returnUrl: "https://api.demonlistvn.com/payment/success",
         });
 
-        await addNewOrder(id, parseInt(productID), user.uid!, parseInt(quantity), giftTo ? String(giftTo) : null, amount, "VND");
+        await addNewOrder(
+            id,
+            parseInt(productID),
+            user.uid!,
+            parseInt(quantity),
+            giftTo ? String(giftTo) : null,
+            amount,
+            "VND",
+            targetClanID ? String(targetClanID) : ''
+        );
         res.send(paymentLinkRes);
     })
 

@@ -55,7 +55,9 @@ export async function addNewOrder(
     address: string | null = null,
     phone: number | null = null,
     fee: number = 0,
-    recipientName: string | null = null
+    recipientName: string | null = null,
+    targetClanID: number | null = null
+
 ) {
     const { error } = await supabase
         .from("orders")
@@ -71,7 +73,8 @@ export async function addNewOrder(
             address: address,
             phone: phone,
             fee: fee,
-            recipientName: recipientName
+            recipientName: recipientName,
+            targetClanID: targetClanID
         })
 
     if (error) {

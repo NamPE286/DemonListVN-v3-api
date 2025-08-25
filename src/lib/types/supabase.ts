@@ -207,7 +207,9 @@ export type Database = {
       }
       clans: {
         Row: {
+          boostedUntil: string
           created_at: string
+          homeContent: string | null
           id: number
           imageVersion: number
           isPublic: boolean
@@ -222,7 +224,9 @@ export type Database = {
           tagTextColor: string | null
         }
         Insert: {
+          boostedUntil?: string
           created_at?: string
+          homeContent?: string | null
           id?: number
           imageVersion?: number
           isPublic?: boolean
@@ -237,7 +241,9 @@ export type Database = {
           tagTextColor?: string | null
         }
         Update: {
+          boostedUntil?: string
           created_at?: string
+          homeContent?: string | null
           id?: number
           imageVersion?: number
           isPublic?: boolean
@@ -764,6 +770,7 @@ export type Database = {
           quantity: number | null
           recipientName: string | null
           state: string
+          targetClanID: number | null
           userID: string
         }
         Insert: {
@@ -783,6 +790,7 @@ export type Database = {
           quantity?: number | null
           recipientName?: string | null
           state: string
+          targetClanID?: number | null
           userID: string
         }
         Update: {
@@ -802,6 +810,7 @@ export type Database = {
           quantity?: number | null
           recipientName?: string | null
           state?: string
+          targetClanID?: number | null
           userID?: string
         }
         Relationships: [
@@ -824,6 +833,13 @@ export type Database = {
             columns: ["productID"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_targetClanID_fkey"
+            columns: ["targetClanID"]
+            isOneToOne: false
+            referencedRelation: "clans"
             referencedColumns: ["id"]
           },
           {

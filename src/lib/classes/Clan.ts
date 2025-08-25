@@ -55,12 +55,16 @@ class Clan {
         await player.pull()
 
         if (player.clan != this.id) {
-            throw new Error('Cannot give ownership. This player is not this clan\' member')
+            throw new Error("Cannot give ownership. This player is not this clan's member")
         }
 
         if (this.memberLimit && this.memberLimit < 0) {
             throw new Error('Invalid member limit')
         }
+
+        const updateData = structuredClone(this)
+
+        delete updateData.boostedUntil
 
         const { error } = await supabase
             .from('clans')
