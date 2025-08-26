@@ -391,6 +391,14 @@ export async function handlePayment(id: number, res: Response | null = null) {
     await buyer.pull();
     await recipient.pull();
 
+    if (handleProduct.has(order.productID!)) {
+        if (res) {
+            res.redirect(`https://www.demonlistvn.com/supporter/success?id=${id}`)
+        }
+
+        return
+    }
+
     const { pre, post } = handleProduct.get(order.productID!)!
 
     await pre(buyer, recipient, order)
