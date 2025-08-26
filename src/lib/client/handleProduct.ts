@@ -1,4 +1,5 @@
 import supabase from "@src/database/supabase";
+import Clan from "@src/lib/classes/Clan";
 import type Player from "@src/lib/classes/Player";
 import { sendMessageToChannel } from "@src/lib/client/discord";
 import { sendNotification } from "@src/lib/client/notification";
@@ -13,7 +14,6 @@ export const handleProduct: Map<number, HandleProduct> = new Map()
 
 handleProduct.set(1, {
     pre: async (buyer, recipient, order) => {
-        console.log('ok')
         await recipient.extendSupporter(order.quantity!);
 
         const { error } = await supabase
@@ -55,5 +55,38 @@ handleProduct.set(1, {
             msg += ` purchased ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role!`
             await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
         }
+    }
+})
+
+handleProduct.set(3, {
+    pre: async (buyer, recipient, order) => {
+        const clan = new Clan({ id: order.targetClanID! })
+
+        await clan.pull()
+        await clan.extendBoost(order.quantity!);
+
+        const { error } = await supabase
+            .from("orders")
+            .update({ delivered: true })
+            .eq("id", order.id)
+
+        if (error) {
+            throw error
+        }
+    },
+    post: async (buyer, recipient, order) => {
+        const clan = new Clan({ id: order.targetClanID! })
+        await clan.pull()
+
+        let msg = ''
+
+        if (buyer.discord) {
+            msg = `<@${buyer.discord}>`
+        } else {
+            msg = `[${buyer.name}](https://demonlistvn.com/player/${buyer.uid})`
+        }
+
+        msg += ` boosted [${clan.name}](https://demonlistvn.com/clan/${clan.id}) for ${order.quantity} day${order.quantity! > 1 ? "s" : ""}!`
+        await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
     }
 })
