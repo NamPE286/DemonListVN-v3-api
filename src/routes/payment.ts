@@ -61,7 +61,12 @@ router.route('/getPaymentLink/:productID/:quantity')
             giftTo ? String(giftTo) : null,
             amount,
             "VND",
-            targetClanID ? String(targetClanID) : ''
+            "Bank Transfer",
+            null,
+            null,
+            0,
+            null,
+            targetClanID ? Number(targetClanID) : null
         );
         res.send(paymentLinkRes);
     })

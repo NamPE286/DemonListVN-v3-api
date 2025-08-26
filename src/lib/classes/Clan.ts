@@ -64,6 +64,10 @@ class Clan {
 
         const updateData = structuredClone(this)
 
+        if (!this.isBoostActive()) {
+            delete updateData.homeContent
+        }
+
         delete updateData.boostedUntil
 
         const { error } = await supabase
@@ -181,13 +185,21 @@ class Clan {
         }
 
         const { error } = await supabase
-            .from('clan')
+            .from('clans')
             .update({ boostedUntil: this.boostedUntil })
             .eq('id', this.id!)
 
         if (error) {
             throw error;
         }
+    }
+
+    isBoostActive() {
+        if (!this.boostedUntil) {
+            return false;
+        }
+
+        return new Date(this.boostedUntil) > new Date();
     }
 }
 
