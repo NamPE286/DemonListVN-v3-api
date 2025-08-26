@@ -170,6 +170,25 @@ class Clan {
 
         return data
     }
+
+    async extendBoost(day: number) {
+        if (!this.boostedUntil || new Date(this.boostedUntil) < new Date()) {
+            const boostedUntil = new Date(new Date().getTime() + day * 24 * 60 * 60 * 1000);
+            this.boostedUntil = boostedUntil.toISOString();
+        } else {
+            const boostedUntil = new Date(new Date(this.boostedUntil).getTime() + day * 24 * 60 * 60 * 1000);
+            this.boostedUntil = boostedUntil.toISOString();
+        }
+
+        const { error } = await supabase
+            .from('clan')
+            .update({ boostedUntil: this.boostedUntil })
+            .eq('id', this.id!)
+
+        if (error) {
+            throw error;
+        }
+    }
 }
 
 export default Clan

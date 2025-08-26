@@ -5,6 +5,7 @@ import { sendNotification } from '@src/lib/client/notification'
 import { sendMessageToChannel } from '@src/lib/client/discord';
 import type { Response } from 'express';
 import { payOS } from '@src/lib/classes/payOS';
+import { handleProduct } from "@src/lib/client/handleProduct";
 
 interface Item {
     id: number;
@@ -319,6 +320,8 @@ export async function renewStock(order: Awaited<ReturnType<typeof getOrder>>) {
     }
 }
 
+
+
 export async function handlePayment(id: number, res: Response | null = null) {
     const order = await getOrder(id);
 
@@ -388,52 +391,13 @@ export async function handlePayment(id: number, res: Response | null = null) {
     await buyer.pull();
     await recipient.pull();
 
-    if (order.productID === 1) {
-        await recipient.extendSupporter(order.quantity!);
+    const { pre, post } = handleProduct.get(order.productID!)!
 
-        const { error } = await supabase
-            .from("orders")
-            .update({ delivered: true })
-            .eq("id", order.id)
-
-        if (error) {
-            throw error
-        }
-    }
+    await pre(buyer, recipient, order)
 
     if (res) {
         res.redirect(`https://www.demonlistvn.com/supporter/success?id=${id}`)
     }
 
-    if (order.productID === 1) {
-        let msg = ''
-        let buyerStr = ''
-
-        if (buyer.discord) {
-            msg = `<@${buyer.discord}>`
-            buyerStr = `<@${buyer.discord}>`
-        } else {
-            msg = `[${buyer.name}](https://demonlistvn.com/player/${buyer.uid})`
-            buyerStr = `[${buyer.name}](https://demonlistvn.com/player/${buyer.uid})`
-        }
-
-        if (order.giftTo) {
-            msg += ` gifted ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role to `
-
-            if (recipient.discord) {
-                msg = `<@${recipient.discord}>`
-            } else {
-                msg = `[${recipient.name}](https://demonlistvn.com/player/${recipient.uid})`
-            }
-
-            await sendNotification({
-                content: `You have been gifted ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role!`,
-                to: order.giftTo
-            })
-            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), `${buyerStr} gifted ${msg} ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role!`)
-        } else {
-            msg += ` purchased ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role!`
-            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
-        }
-    }
+    await post(buyer, recipient, order)
 }
