@@ -451,13 +451,21 @@ router.route('/:id/calc')
         const { id } = req.params
         const event = await getEvent(Number(id))
 
-        // if (event.isCalculated) {
-        //     res.send({
-        //         message: 'Calculated'
-        //     })
+        if (event.isCalculated) {
+            res.send({
+                message: 'Calculated'
+            })
 
-        //     return
-        // }
+            return
+        }
+
+        if (!event.isRanked) {
+            res.status(403).send({
+                message: 'This event is unranked'
+            })
+
+            return
+        }
 
         var { data, error } = await supabase
             .rpc('getEventLeaderboard', { event_id: Number(id) });
