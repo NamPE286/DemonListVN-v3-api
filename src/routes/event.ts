@@ -447,7 +447,7 @@ router.route('/proof')
     })
 
 router.route('/:id/calc')
-    .patch(async (req, res) => {
+    .patch(adminAuth, async (req, res) => {
         const { id } = req.params
         const event = await getEvent(Number(id))
 
