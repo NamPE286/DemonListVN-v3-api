@@ -16,6 +16,8 @@ import {
 import userAuth from '@src/middleware/userAuth'
 import adminAuth from '@src/middleware/adminAuth'
 import optionalUserAuth from '@src/middleware/optionalUserAuth'
+import supabase from '@src/database/supabase'
+import { calcLeaderboard } from '@src/lib/client/elo'
 
 const router = express.Router()
 
@@ -442,6 +444,66 @@ router.route('/proof')
             console.error(err)
             res.status(500).send();
         }
+    })
+
+router.route('/:id/calc')
+    .patch(async (req, res) => {
+        const { id } = req.params
+        const event = await getEvent(Number(id))
+
+        if (event.isCalculated) {
+            res.send({
+                message: 'Calculated'
+            })
+
+            return
+        }
+
+        var { data, error } = await supabase
+            .rpc('getEventLeaderboard', { event_id: Number(id) });
+
+        const newData = calcLeaderboard(data!)
+
+        for (const i of newData) {
+            // @ts-ignore
+            i.eventID = Number(id)
+        }
+
+        var { error } = await supabase
+            .from('players')
+            .upsert(newData.map(item => ({
+                uid: item.userID,
+                elo: item.elo
+            })))
+
+        if (error) {
+            console.error(error)
+            res.status(500).send()
+            return;
+        }
+
+        var { error } = await supabase
+            .from('eventProofs')
+            .upsert(newData.map((item) => ({
+                userid: item.userID,
+                eventID: Number(id),
+                diff: item.diff
+            })))
+
+        if (error) {
+            console.error(error)
+            res.status(500).send()
+            return;
+        }
+
+        event.isCalculated = true;
+
+        var { error } = await supabase
+            .from('events')
+            .update(event)
+            .eq('id', event.id)
+
+        res.send()
     })
 
 export default router

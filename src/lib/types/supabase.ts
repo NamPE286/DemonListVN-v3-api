@@ -215,6 +215,7 @@ export type Database = {
           isPublic: boolean
           memberCount: number
           memberLimit: number
+          mode: string
           name: string
           owner: string
           rank: number | null
@@ -232,6 +233,7 @@ export type Database = {
           isPublic?: boolean
           memberCount?: number
           memberLimit?: number
+          mode?: string
           name: string
           owner?: string
           rank?: number | null
@@ -249,6 +251,7 @@ export type Database = {
           isPublic?: boolean
           memberCount?: number
           memberLimit?: number
+          mode?: string
           name?: string
           owner?: string
           rank?: number | null
@@ -382,6 +385,7 @@ export type Database = {
           content: string
           created_at: string
           data: Json | null
+          diff: number | null
           eventID: number
           userid: string
         }
@@ -390,6 +394,7 @@ export type Database = {
           content?: string
           created_at?: string
           data?: Json | null
+          diff?: number | null
           eventID: number
           userid: string
         }
@@ -398,6 +403,7 @@ export type Database = {
           content?: string
           created_at?: string
           data?: Json | null
+          diff?: number | null
           eventID?: number
           userid?: string
         }
@@ -478,8 +484,10 @@ export type Database = {
           hidden: boolean
           id: number
           imgUrl: string
+          isCalculated: boolean
           isContest: boolean
           isExternal: boolean
+          isRanked: boolean
           isSupporterOnly: boolean
           minExp: number
           needProof: boolean
@@ -498,8 +506,10 @@ export type Database = {
           hidden?: boolean
           id?: number
           imgUrl: string
+          isCalculated?: boolean
           isContest?: boolean
           isExternal?: boolean
+          isRanked?: boolean
           isSupporterOnly?: boolean
           minExp?: number
           needProof?: boolean
@@ -518,8 +528,10 @@ export type Database = {
           hidden?: boolean
           id?: number
           imgUrl?: string
+          isCalculated?: boolean
           isContest?: boolean
           isExternal?: boolean
+          isRanked?: boolean
           isSupporterOnly?: boolean
           minExp?: number
           needProof?: boolean
@@ -898,6 +910,7 @@ export type Database = {
           DiscordDMChannelID: string | null
           dlMaxPt: number | null
           dlrank: number | null
+          elo: number
           email: string | null
           exp: number
           extraExp: number | null
@@ -911,7 +924,8 @@ export type Database = {
           isBannerGif: boolean
           isHidden: boolean
           isTrusted: boolean
-          name: string
+          matchCount: number
+          name: string | null
           nameLocked: boolean
           overallRank: number | null
           platformerRank: number | null
@@ -938,6 +952,7 @@ export type Database = {
           DiscordDMChannelID?: string | null
           dlMaxPt?: number | null
           dlrank?: number | null
+          elo?: number
           email?: string | null
           exp?: number
           extraExp?: number | null
@@ -951,7 +966,8 @@ export type Database = {
           isBannerGif?: boolean
           isHidden?: boolean
           isTrusted?: boolean
-          name: string
+          matchCount?: number
+          name?: string | null
           nameLocked?: boolean
           overallRank?: number | null
           platformerRank?: number | null
@@ -978,6 +994,7 @@ export type Database = {
           DiscordDMChannelID?: string | null
           dlMaxPt?: number | null
           dlrank?: number | null
+          elo?: number
           email?: string | null
           exp?: number
           extraExp?: number | null
@@ -991,7 +1008,8 @@ export type Database = {
           isBannerGif?: boolean
           isHidden?: boolean
           isTrusted?: boolean
-          name?: string
+          matchCount?: number
+          name?: string | null
           nameLocked?: boolean
           overallRank?: number | null
           platformerRank?: number | null
@@ -1294,6 +1312,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      getEventLeaderboard: {
+        Args: { event_id: number }
+        Returns: {
+          userID: string
+          elo: number
+          matchCount: number
+          point: number
+        }[]
+      }
       updateList: {
         Args: Record<PropertyKey, never>
         Returns: undefined
