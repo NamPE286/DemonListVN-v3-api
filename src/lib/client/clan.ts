@@ -3,7 +3,7 @@ import type { Database } from '@src/lib/types/supabase'
 
 type Clan = Database['public']['Tables']['clans']['Update']
 
-export async function getClans({ start = 0, end = 50, sortBy = 'name', ascending = 'true', searchQuery = '' } = {}) {
+export async function getClans({ start = 0, end = 50, sortBy = 'boostedUntil', ascending = 'false', searchQuery = '' } = {}) {
     let query = supabase
         .from('clans')
         .select('*, players!owner(*, clans!id(*))')
