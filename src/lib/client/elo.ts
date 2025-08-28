@@ -1,6 +1,7 @@
 interface Elo {
     elo: number;
     point: number;
+    penalty: number;
     matchCount: number;
 }
 
