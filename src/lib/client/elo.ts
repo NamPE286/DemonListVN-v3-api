@@ -36,7 +36,13 @@ export const calcElo = (playerA: Elo, playerB: Elo): { newPlayerA: Elo, newPlaye
     } else if (playerA.point < playerB.point) {
         scoreA = 0; scoreB = 1;
     } else {
-        scoreA = 0.5; scoreB = 0.5;
+        if (playerA.penalty < playerB.penalty) {
+            scoreA = 1; scoreB = 0;
+        } else if (playerA.penalty > playerB.penalty) {
+            scoreA = 0; scoreB = 1;
+        } else {
+            scoreA = 0.5; scoreB = 0.5;
+        }
     }
 
     const expectedScoreA = 1 / (1 + Math.pow(10, (eloB - eloA) / 400));
