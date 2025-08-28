@@ -4,6 +4,8 @@ import Level from '@lib/classes/Level'
 import adminAuth from '@src/middleware/adminAuth'
 import { getLevelDeathCount } from '@lib/client/deathCount'
 import { getLevelRecords } from '@src/lib/client/record'
+import userAuth from '@src/middleware/userAuth'
+import supabase from '@src/database/supabase'
 
 const router = express.Router()
 
@@ -211,6 +213,26 @@ router.route('/:id/deathCount')
         } catch {
             res.status(500).send()
         }
+    })
+
+router.route('/:id/inEvent')
+    .get(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { id } = req.params
+        const now = new Date().toISOString()
+        const { data, error } = await supabase
+            .from('eventProofs')
+            .select('userid, eventID, events!inner(start, end, eventLevels!inner(levelID))')
+            .eq('userid', user.uid!)
+            .eq('events.eventLevels.levelID', Number(id))
+            .lte('events.start', now)
+            .gte('events.end', now)
+
+        if (error) {
+            console.error(error)
+        }
+
+        res.send(data!.length ? '1' : '0')
     })
 
 export default router
