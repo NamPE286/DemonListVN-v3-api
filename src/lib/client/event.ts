@@ -1,4 +1,5 @@
 import supabase from "@src/database/supabase";
+import type Player from "@src/lib/classes/Player";
 import type { Tables } from "@src/lib/types/supabase";
 
 function getPenalty(records: any[]) {
@@ -197,7 +198,7 @@ export async function getEventLeaderboard(eventID: number, ignoreFreeze: boolean
     const levels = await getEventLevels(eventID)
     const { data, error } = await supabase
         .from("eventProofs")
-        .select("userid, eventID, players!inner(*, clans!id(*), eventRecords(*, eventLevels(*)))")
+        .select("userid, eventID, diff, players!inner(*, clans!id(*), eventRecords(*, eventLevels(*)))")
         .eq("eventID", eventID)
         .lte("players.eventRecords.created_at", event.freeze && !ignoreFreeze ? event.freeze : new Date().toISOString());
 
@@ -215,7 +216,8 @@ export async function getEventLeaderboard(eventID: number, ignoreFreeze: boolean
         if (!i.players.eventRecords === null) {
             i.players.eventRecords = []
         }
-
+        // @ts-ignore
+        i.players.diff = i.diff
         res.push(i.players)
     }
 
