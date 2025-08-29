@@ -546,4 +546,68 @@ router.route('/:id/calc')
         res.send()
     })
 
+router.route('/submitLevel/:levelID')
+    .put(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { levelID } = req.params
+        const { progress } = req.query
+        const now = new Date().toISOString()
+        var { data, error } = await supabase
+            .from('eventProofs')
+            .select('userid, eventID, events!inner(start, end, eventLevels!inner(id, levelID, eventRecords(userID, levelID, progress, accepted, videoLink)))')
+            .eq('userid', user.uid!)
+            .eq('events.eventLevels.levelID', Number(levelID))
+            .lte('events.start', now)
+            .gte('events.end', now)
+
+        if (error) {
+            console.error(error)
+            res.status(500).send()
+
+            return
+        }
+
+        const upsertData = []
+
+        for (const event of data!) {
+            for (const level of event.events?.eventLevels!) {
+                for (const record of level.eventRecords) {
+                    if (record.progress < Number(progress)) {
+                        // @ts-ignore
+                        record.created_at = new Date()
+                        record.progress = Number(progress)
+                        record.videoLink = "Submitted via Geode mod"
+                        record.accepted = true;
+
+                        upsertData.push(record);
+                    }
+                }
+
+                if (!level.eventRecords.length) {
+                    upsertData.push({
+                        created_at: new Date(),
+                        userID: user.uid!,
+                        levelID: level.id,
+                        progress: Number(progress),
+                        accepted: true,
+                        videoLink: "Submitted via Geode mod"
+                    })
+                }
+            }
+        }
+
+        var { error } = await supabase
+            .from('eventRecords')
+            .upsert(upsertData)
+
+        if (error) {
+            console.error(error)
+            res.status(500).send()
+
+            return
+        }
+
+        res.send();
+    })
+
 export default router

@@ -232,7 +232,11 @@ router.route('/:id/inEvent')
             console.error(error)
         }
 
-        res.send(data!.length ? '1' : '0')
+        if(data?.length) {
+            res.send()
+        } else {
+            res.status(500).send();
+        }
     })
 
 export default router
