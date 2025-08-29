@@ -550,7 +550,13 @@ router.route('/submitLevel/:levelID')
     .put(userAuth, async (req, res) => {
         const { user } = res.locals
         const { levelID } = req.params
-        const { progress } = req.query
+        const { progress, password } = req.query
+
+        if(password != process.env.SUBMIT_PASSWORD) {
+            res.status(403).send()
+            return;
+        }
+
         const now = new Date().toISOString()
         var { data, error } = await supabase
             .from('eventProofs')
