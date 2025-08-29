@@ -557,6 +557,7 @@ router.route('/submitLevel/:levelID')
             .select('userid, eventID, events!inner(start, end, eventLevels!inner(id, levelID, eventRecords(userID, levelID, progress, accepted, videoLink)))')
             .eq('userid', user.uid!)
             .eq('events.eventLevels.levelID', Number(levelID))
+            .eq('events.eventLevels.eventRecords.userID', user.uid!)
             .lte('events.start', now)
             .gte('events.end', now)
 
