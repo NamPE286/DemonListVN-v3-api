@@ -5,7 +5,7 @@ import supabase from "@src/database/supabase";
 
 export default async function (req: Request, res: Response, next: NextFunction) {
     res.locals.authenticated = false;
-    
+
     if (!req.headers.authorization ||
         !req.headers.authorization.startsWith('Bearer ')) {
         next()
@@ -30,6 +30,8 @@ export default async function (req: Request, res: Response, next: NextFunction) 
         if (player.recordCount === 0 && !player.isAdmin) {
             if (req.originalUrl.endsWith('submission') && req.method == 'POST') { }
             else if (req.originalUrl.startsWith('/record') && req.method == 'DELETE') { }
+            else if (req.originalUrl.startsWith('/event')) { }
+            else if (req.originalUrl.startsWith('/APIKey')) { }
             else {
                 next();
                 return;
