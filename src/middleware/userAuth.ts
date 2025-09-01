@@ -32,6 +32,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             else if (req.originalUrl.startsWith('/record') && req.method == 'DELETE') { }
             else if (req.originalUrl.startsWith('/event')) { }
             else if (req.originalUrl.startsWith('/APIKey')) { }
+            else if (req.originalUrl.startsWith('/auth')) { }
             else {
                 res.status(401).send();
                 return;
