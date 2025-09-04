@@ -1,6 +1,7 @@
 import express from "express";
 import { getDemonListLevels, getFeaturedListLevels, getPlatformerListLevels } from '@lib/client/level'
 import { getDemonListRecords, getFeaturedListRecords } from "@src/lib/client/record";
+import supabase from "@src/database/supabase";
 
 const router = express.Router()
 
@@ -270,6 +271,43 @@ router.route('/fl/records')
             console.error(err)
             res.status(500).send()
         }
+    })
+
+async function getIDBound(list: string, min: boolean) {
+    const { data, error } = await supabase
+        .from('levels')
+        .select('id')
+        .order('id', { ascending: min })
+        .not(list == 'fl' ? 'flTop' : 'dlTop', 'is', null)
+        .eq('isPlatformer', list == 'pl')
+        .limit(1)
+        .single()
+
+    if (error) {
+        throw error
+    }
+
+    return data.id
+}
+
+router.route('/:list/random')
+    .get(async (req, res) => {
+        const { list } = req.params
+        const maxID = await getIDBound(String(list), false)
+        const minID = await getIDBound(String(list), true) - 1000000
+        const random = Math.floor(Math.random() * (maxID - minID + 1)) + minID
+
+        var { data, error } = await supabase
+            .from('levels')
+            .select('*')
+            .not(list == 'fl' ? 'flTop' : 'dlTop', 'is', null)
+            .eq('isPlatformer', list == 'pl')
+            .order('id', { ascending: true })
+            .gte('id', random)
+            .limit(1)
+            .single()
+
+        res.send(data)
     })
 
 export default router
