@@ -134,6 +134,13 @@ export type Database = {
             referencedRelation: "levels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "changelogs_levelID_fkey"
+            columns: ["levelID"]
+            isOneToOne: false
+            referencedRelation: "randomLevel"
+            referencedColumns: ["id"]
+          },
         ]
       }
       clanBan: {
@@ -375,6 +382,13 @@ export type Database = {
             columns: ["levelID"]
             isOneToOne: false
             referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventLevels_levelID_fkey"
+            columns: ["levelID"]
+            isOneToOne: false
+            referencedRelation: "randomLevel"
             referencedColumns: ["id"]
           },
         ]
@@ -1257,6 +1271,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "public_records_levelid_fkey"
+            columns: ["levelid"]
+            isOneToOne: false
+            referencedRelation: "randomLevel"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "public_records_userid_fkey"
             columns: ["userid"]
             isOneToOne: false
@@ -1309,7 +1330,57 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      randomLevel: {
+        Row: {
+          accepted: boolean | null
+          created_at: string | null
+          creator: string | null
+          dlTop: number | null
+          flPt: number | null
+          flTop: number | null
+          id: number | null
+          insaneTier: number | null
+          isNonList: boolean | null
+          isPlatformer: boolean | null
+          minProgress: number | null
+          name: string | null
+          rating: number | null
+          videoID: string | null
+        }
+        Insert: {
+          accepted?: boolean | null
+          created_at?: string | null
+          creator?: string | null
+          dlTop?: number | null
+          flPt?: number | null
+          flTop?: number | null
+          id?: number | null
+          insaneTier?: number | null
+          isNonList?: boolean | null
+          isPlatformer?: boolean | null
+          minProgress?: number | null
+          name?: string | null
+          rating?: number | null
+          videoID?: string | null
+        }
+        Update: {
+          accepted?: boolean | null
+          created_at?: string | null
+          creator?: string | null
+          dlTop?: number | null
+          flPt?: number | null
+          flTop?: number | null
+          id?: number | null
+          insaneTier?: number | null
+          isNonList?: boolean | null
+          isPlatformer?: boolean | null
+          minProgress?: number | null
+          name?: string | null
+          rating?: number | null
+          videoID?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       getEventLeaderboard: {
@@ -1319,7 +1390,12 @@ export type Database = {
           elo: number
           matchCount: number
           point: number
+          penalty: number
         }[]
+      }
+      update_supporter_until: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       updateList: {
         Args: Record<PropertyKey, never>
