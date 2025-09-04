@@ -293,6 +293,7 @@ async function getIDBound(list: string, min: boolean) {
 router.route('/:list/random')
     .get(async (req, res) => {
         const { list } = req.params
+        const { exclude } = req.query
         const maxID = await getIDBound(String(list), false)
         const minID = await getIDBound(String(list), true) - 1000000
         const random = Math.floor(Math.random() * (maxID - minID + 1)) + minID
@@ -302,6 +303,7 @@ router.route('/:list/random')
             .select('*')
             .not(list == 'fl' ? 'flTop' : 'dlTop', 'is', null)
             .eq('isPlatformer', list == 'pl')
+            .not('id', 'in', exclude ? exclude : '()')
             .order('id', { ascending: true })
             .gte('id', random)
             .limit(1)
