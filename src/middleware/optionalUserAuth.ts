@@ -28,12 +28,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
         }
 
         if (player.recordCount === 0 && !player.isAdmin) {
-            if (req.originalUrl.endsWith('submission') && req.method == 'POST') { }
-            else if (req.originalUrl.startsWith('/record') && req.method == 'DELETE') { }
-            else if (req.originalUrl.startsWith('/event')) { }
-            else if (req.originalUrl.startsWith('/APIKey')) { }
-            else if (req.originalUrl.startsWith('/auth')) { }
-            else {
+            if (req.originalUrl.startsWith('/clan') && req.method != 'GET') {
                 next();
                 return;
             }
