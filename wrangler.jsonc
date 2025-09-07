@@ -1,0 +1,5 @@
+{
+	"name": "dlvn-api",
+	"compatibility_date": "2025-09-07",
+	"main": "src/index.ts"
+}
