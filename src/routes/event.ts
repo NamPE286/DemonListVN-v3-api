@@ -537,6 +537,7 @@ router.route('/:id/calc')
         }
 
         event.isCalculated = true;
+        event.freeze = null;
 
         var { error } = await supabase
             .from('events')
