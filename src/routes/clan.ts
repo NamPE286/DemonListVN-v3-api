@@ -705,6 +705,7 @@ router.route('/:id/ban/:uid')
 router.route('/:id/list/:list')
     .get(async (req, res) => {
         const { id, list } = req.params;
+        const { from, to } = req.query
         let x = '', isPlat = false;
 
         if (list == 'dl') {
@@ -722,7 +723,7 @@ router.route('/:id/list/:list')
             .eq('isPlatformer', isPlat)
             .not(x, 'is', null)
             .order(x, { ascending: false })
-            .limit(10)
+            .range(from ? Number(from) : 0, to ? Number(to) : 49)
 
         if (error) {
             throw error;
