@@ -702,4 +702,38 @@ router.route('/:id/ban/:uid')
 
     })
 
+router.route('/:id/list/:list')
+    .get(async (req, res) => {
+        const { id, list } = req.params;
+        let x = '', isPlat = false;
+
+        if (list == 'dl') {
+            x = 'rating', isPlat = false;
+        } else if (list == 'pl') {
+            x = 'rating', isPlat = true;
+        } else if (list == 'fl') {
+            x = 'flPt', isPlat = false;
+        }
+
+        const { data, error } = await supabase
+            .from('levels')
+            .select('*, records!inner(userid, levelid, players!public_records_userid_fkey!inner(uid, clan))')
+            .eq("records.players.clan", Number(id))
+            .eq('isPlatformer', isPlat)
+            .not(x, 'is', null)
+            .order(x, { ascending: false })
+            .limit(10)
+
+        if (error) {
+            throw error;
+        }
+
+        for (const i of data) {
+            // @ts-ignore
+            delete i.records;
+        }
+
+        res.send(data)
+    })
+
 export default router
