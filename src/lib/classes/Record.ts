@@ -45,7 +45,10 @@ class Record {
             let apiLevel = await level.fetchFromGD()
 
             if (apiLevel.length != 5 && apiLevel.difficulty != 'Extreme Demon' && apiLevel.difficulty != 'Insane Demon') {
-                throw new Error('Level is not hard enough')
+                throw {
+                    en: 'Level is not hard enough',
+                    vi: 'Level không đủ khó'
+                }
             }
 
             level.name = apiLevel.name
@@ -68,11 +71,17 @@ class Record {
         }
 
         if (!level.isPlatformer && (record.progress! >= this.progress!)) {
-            throw new Error('Better record is submitted')
+            throw {
+                en: 'Better record is submitted',
+                vi: "Đã có bản ghi tốt hơn"
+            }
         }
 
         if (level.isPlatformer && (record.progress! <= this.progress!)) {
-            throw new Error('Better record is submitted')
+            throw {
+                en: 'Better record is submitted',
+                vi: "Đã có bản ghi tốt hơn"
+            }
         }
 
         await this.update(true)
@@ -80,18 +89,27 @@ class Record {
 
     async validate() {
         if (!this.videoLink) {
-            throw new Error("Missing videoLink")
+            throw {
+                en: "Missing video's link",
+                vi: "Thiếu liên kết video"
+            }
         }
 
         const level = new Level({ id: this.levelid })
         const { id, service } = getVideoId(this.videoLink)
 
         if (!id || !service) {
-            throw new Error("Invalid video's link")
+            throw {
+                en: "Invalid video's link",
+                vi: "Liên kết video không hợp lệ"
+            }
         }
 
         if (service != 'youtube') {
-            throw new Error("Video's link is not YouTube")
+            throw {
+                en: "Video's link is not YouTube",
+                vi: "Liên kết video không phải YouTube"
+            }
         }
 
         const video: any = await (
@@ -105,7 +123,10 @@ class Record {
         const desc: string = video.items[0].snippet.description.toLowerCase()
 
         if (!title.includes(name) && !desc.includes(name)) {
-            throw new Error("Level's name is not in the title or description of the video")
+            throw {
+                en: "Level's name is not in the title or description of the video",
+                vi: "Tên level không có trong tiêu đề hay mô tả của video"
+            }
         }
 
         if (this.progress == 100 && !level.isPlatformer) {
@@ -113,7 +134,10 @@ class Record {
         }
 
         if (!level.isPlatformer && !title.includes(this.progress!.toString()) && !desc.includes(this.progress!.toString())) {
-            throw new Error("Progress is not 100% and is not in the title or description of the video");
+            throw {
+                en: "Progress is not 100% and is not in the title or description of the video",
+                vi: "Tiến độ không phải 100% và không có trong tiêu đề hay mô tả của video"
+            }
         }
     }
 
@@ -139,7 +163,10 @@ class Record {
             .match({ userid: this.userid, levelid: this.levelid })
 
         if (error) {
-            throw error
+            throw {
+                en: error.message,
+                vi: error.message
+            }
         }
     }
 }

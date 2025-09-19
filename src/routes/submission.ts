@@ -41,8 +41,7 @@ router.route('/')
             res.send()
             logger.notice(`New record submitted! Please check it out.`)
         } catch (err: any) {
-            console.log(err.message)
-            res.status(500).send({ message: err.message })
+            res.status(500).send(err)
         }
     })
 
