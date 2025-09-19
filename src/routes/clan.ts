@@ -718,15 +718,16 @@ router.route('/:id/list/:list')
 
         const { data, error } = await supabase
             .from('levels')
-            .select('*, records!inner(userid, levelid, accepted, players!public_records_userid_fkey!inner(uid, clan))')
+            .select('*, records!inner(userid, levelid, isChecked, players!public_records_userid_fkey!inner(uid, clan))')
             .eq("records.players.clan", Number(id))
-            .eq("accepted", true)
+            .eq("records.isChecked", true)
             .eq('isPlatformer', isPlat)
             .not(x, 'is', null)
             .order(x, { ascending: false })
             .range(from ? Number(from) : 0, to ? Number(to) : 49)
 
         if (error) {
+            console.error(error)
             throw error;
         }
 
