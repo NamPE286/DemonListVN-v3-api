@@ -1,4 +1,6 @@
+import supabase from "@src/database/supabase"
 import { createDirectMessageChannel, getAccessToken, getUserByToken } from "@src/lib/client/discord"
+import { getUsernameByToken } from "@src/lib/client/pointercrate"
 import userAuth from "@src/middleware/userAuth"
 import express from "express"
 
@@ -80,6 +82,26 @@ router.route("/link/discord")
         await user.updateDiscord(id);
 
         res.send();
+    })
+
+router.route("/link/pointercrate")
+    .patch(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { token } = req.body
+        const username = await getUsernameByToken(token);
+
+        const { data, error } = await supabase
+            .from("players")
+            .update({ pointercrate: username })
+            .eq("uid", user.uid!)
+
+        if (error) {
+            console.error(error)
+            res.status(500).send()
+            return;
+        }
+
+        res.send()
     })
 
 export default router

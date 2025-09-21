@@ -60,6 +60,7 @@ class Player {
         delete updateData.clans
         delete updateData.discord
         delete updateData.nameLocked
+        delete updateData.pointercrate
 
         if (!updateClan) {
             delete this.clan
