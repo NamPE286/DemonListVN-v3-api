@@ -1,5 +1,7 @@
 import supabase from '@database/supabase'
 import Level from '@src/lib/classes/Level'
+import Player from '@src/lib/classes/Player';
+import { approved } from '@src/lib/client/pointercrate';
 import type { TRecord } from '@src/lib/types'
 import getVideoId from 'get-video-id';
 
@@ -60,14 +62,20 @@ class Record {
 
         const record = new Record(this)
         const level = new Level({ id: this.levelid })
+        const player = new Player({ uid: this.userid })
 
         await level.pull()
+        await player.pull();
 
         try {
             await record.pull()
         } catch {
-            await this.update(true)
-            return
+            if (player.pointercrate) {
+                const apv = await approved(player.pointercrate, level.name!);
+                await this.update(true, apv)
+            } else {
+                await this.update(true)
+            } return
         }
 
         if (!level.isPlatformer && (record.progress! >= this.progress!)) {
@@ -84,7 +92,12 @@ class Record {
             }
         }
 
-        await this.update(true)
+        if (player.pointercrate) {
+            const apv = await approved(player.pointercrate, level.name!);
+            await this.update(true, apv)
+        } else {
+            await this.update(true)
+        }
     }
 
     async validate() {
@@ -141,10 +154,13 @@ class Record {
         }
     }
 
-    async update(validate = false) {
+    async update(validate = false, accepted = false) {
+        console.log(validate, accepted)
         if (validate) {
             await this.validate()
         }
+
+        this.isChecked = accepted;
 
         const { error } = await supabase
             .from('records')
