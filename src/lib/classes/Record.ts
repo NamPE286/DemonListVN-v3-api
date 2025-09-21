@@ -155,7 +155,6 @@ class Record {
     }
 
     async update(validate = false, accepted = false) {
-        console.log(validate, accepted)
         if (validate) {
             await this.validate()
         }
