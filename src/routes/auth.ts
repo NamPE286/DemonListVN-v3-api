@@ -1,6 +1,6 @@
 import supabase from "@src/database/supabase"
 import { createDirectMessageChannel, getAccessToken, getUserByToken } from "@src/lib/client/discord"
-import { getUsernameByToken } from "@src/lib/client/pointercrate"
+import { getUsernameByToken as getIDByToken } from "@src/lib/client/pointercrate"
 import userAuth from "@src/middleware/userAuth"
 import express from "express"
 
@@ -88,11 +88,11 @@ router.route("/link/pointercrate")
     .patch(userAuth, async (req, res) => {
         const { user } = res.locals
         const { token } = req.body
-        const username = await getUsernameByToken(token);
+        const id = await getIDByToken(token);
 
         const { data, error } = await supabase
             .from("players")
-            .update({ pointercrate: username })
+            .update({ pointercrate: id })
             .eq("uid", user.uid!)
 
         if (error) {

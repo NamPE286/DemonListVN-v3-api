@@ -5,5 +5,5 @@ export async function getUsernameByToken(token: string): Promise<string> {
         }
     })).json();
 
-    return res.data.name;
+    return res.data.id;
 }
