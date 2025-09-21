@@ -154,12 +154,14 @@ class Record {
         }
     }
 
-    async update(validate = false, accepted = false) {
+    async update(validate = false, accepted: boolean | null = null) {
         if (validate) {
             await this.validate()
         }
 
-        this.isChecked = accepted;
+        if (accepted !== null) {
+            this.isChecked = accepted;
+        }
 
         const { error } = await supabase
             .from('records')
