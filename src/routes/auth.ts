@@ -88,11 +88,11 @@ router.route("/link/pointercrate")
     .patch(userAuth, async (req, res) => {
         const { user } = res.locals
         const { token } = req.body
-        const id = await getIDByToken(token);
+        const name = await getIDByToken(token);
 
         const { data, error } = await supabase
             .from("players")
-            .update({ pointercrate: id })
+            .update({ pointercrate: name })
             .eq("uid", user.uid!)
 
         if (error) {

@@ -1174,12 +1174,6 @@ revoke truncate on table "public"."userSocial" from "service_role";
 
 revoke update on table "public"."userSocial" from "service_role";
 
-alter table "public"."eventLevels" alter column "needRaw" set default false;
-
-alter table "public"."events" add column "priority" bigint not null default '0'::bigint;
-
-alter table "public"."events" alter column "imgUrl" drop not null;
-
 alter table "public"."players" alter column "uid" set default extensions.uuid_generate_v4();
 
 set check_function_bodies = off;

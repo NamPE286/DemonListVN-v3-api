@@ -76,10 +76,43 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 
 
+CREATE OR REPLACE FUNCTION "public"."getEventLeaderboard"("event_id" integer) RETURNS TABLE("userID" "uuid", "elo" bigint, "matchCount" bigint, "point" numeric, "penalty" numeric)
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    er."userID",
+    p.elo,
+    p."matchCount",
+    COALESCE(SUM((er.progress::numeric * el.point::numeric) / 100), 0) AS point,
+    SUM(
+      EXTRACT(EPOCH FROM (er.created_at - e.start)) / 60
+    ) AS penalty
+  FROM
+    "eventRecords" AS er
+    JOIN "eventLevels" AS el ON er."levelID" = el.id
+    JOIN events AS e ON e.id = el."eventID"
+    JOIN players AS p ON p.uid = er."userID"
+  WHERE
+    el."eventID" = event_id
+  GROUP BY
+    er."userID",
+    p."elo",
+    p."matchCount"
+  ORDER BY
+    point DESC,
+    penalty ASC;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."getEventLeaderboard"("event_id" integer) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."updateList"() RETURNS "void"
     LANGUAGE "plpgsql"
     AS $$begin
-
 WITH
   v_table_name AS (
     SELECT
@@ -108,6 +141,7 @@ WITH
   v_table_name AS (
     SELECT
       id,
+      "isPlatformer",
       (
         case
           when "rating" is not null then RANK() OVER (
@@ -118,6 +152,33 @@ WITH
       ) as ab
     FROM
       levels
+    where "isPlatformer" = false
+  )
+UPDATE
+  levels
+set
+  "dlTop" = v_table_name.ab
+FROM
+  v_table_name
+WHERE
+  levels.id = v_table_name.id;
+
+WITH
+  v_table_name AS (
+    SELECT
+      id,
+      "isPlatformer",
+      (
+        case
+          when "rating" is not null then RANK() OVER (
+            ORDER BY
+              "rating" desc nulls last
+          )
+        end
+      ) as ab
+    FROM
+      levels
+    where "isPlatformer" = true
   )
 UPDATE
   levels
@@ -144,10 +205,6 @@ SET
 where
   "flTop" > 75;
 
-UPDATE levels
-SET "minProgress" = least(greatest(0, 100 - (rating - 1783) / 40), 100)
-where true;
-
 update clans
 set "memberCount" = (select count(*) from players where players.clan = clans.id)
 where true;
@@ -165,7 +222,7 @@ CREATE OR REPLACE FUNCTION "public"."updateRank"() RETURNS "void"
     AS $$begin
 with
   v_table_a as (
-    SELECT
+    select
       records.userid,
       records.levelid,
       records."dlPt",
@@ -178,13 +235,15 @@ with
             when records."isChecked" = false then null
             when records.progress = 100 then levels.rating
             else levels.rating * records.progress / 150
-          end desc nulls last
+          end desc nulls last,
+          levels.name
       ) as no
-    FROM
+    from
       records,
       levels
     where
       levels.id = records.levelid
+      and levels."isPlatformer" = false
   )
 update records
 set
@@ -196,8 +255,8 @@ where
   and records.levelid = v_table_a.levelid
   and v_table_a.rating is not null;
 
-UPDATE records
-SET
+update records
+set
   "flPt" = cast(
     (
       select
@@ -213,7 +272,7 @@ where
 
 with
   v_b as (
-    SELECT
+    select
       records.userid,
       records.levelid,
       case
@@ -224,18 +283,22 @@ with
         when (
           records.no > 3
           and records.no <= 15
-        ) then greatest(5, floor(levels.rating * (25 / records.no) / 100))
+        ) then greatest(
+          5,
+          floor(levels.rating * (25.0 / records.no) / 100)
+        )
         when (
           records.no > 15
           and records.no <= 25
         ) then 5
         else 1
       end as pt
-    FROM
+    from
       records,
       levels
     where
       levels.id = records.levelid
+      and levels."isPlatformer" = false
   )
 update records
 set
@@ -249,7 +312,7 @@ where
 
 with
   v_b as (
-    SELECT
+    select
       records.userid,
       records.levelid,
       case
@@ -260,18 +323,22 @@ with
         when (
           records.no > 1
           and records.no <= 15
-        ) then greatest(5, floor(levels.rating * (25 / records.no) / 100))
+        ) then greatest(
+          5,
+          floor(levels.rating * (25.0 / records.no) / 100)
+        )
         when (
           records.no > 15
           and records.no <= 25
         ) then 5
         else 1
       end as pt
-    FROM
+    from
       records,
       levels
     where
       levels.id = records.levelid
+      and levels."isPlatformer" = false
   )
 update records
 set
@@ -367,74 +434,74 @@ set
 where
   "isHidden";
 
-WITH
-  v_table_name AS (
-    SELECT
+with
+  v_table_name as (
+    select
       uid,
       (
         case
-          when "totalFLpt" is not null then RANK() OVER (
-            ORDER BY
+          when "totalFLpt" is not null then RANK() over (
+            order by
               "totalFLpt" desc nulls last
           )
         end
       ) as ab
-    FROM
+    from
       players
   )
-UPDATE players
+update players
 set
   "flrank" = v_table_name.ab
-FROM
+from
   v_table_name
-WHERE
+where
   players.uid = v_table_name.uid;
 
-WITH
-  v_table_name AS (
-    SELECT
+with
+  v_table_name as (
+    select
       uid,
       (
         case
-          when "totalDLpt" is not null then RANK() OVER (
-            ORDER BY
+          when "totalDLpt" is not null then RANK() over (
+            order by
               "totalDLpt" desc nulls last
           )
         end
       ) as ab
-    FROM
+    from
       players
   )
-UPDATE players
+update players
 set
   "dlrank" = v_table_name.ab
-FROM
+from
   v_table_name
-WHERE
+where
   players.uid = v_table_name.uid;
 
-WITH
-  v_table_name AS (
-    SELECT
+with
+  v_table_name as (
+    select
       uid,
       (
         case
           when "rating" is not null
-          and "rating" != 0 then RANK() OVER (
-            ORDER BY
+          and "rating" != 0 then RANK() over (
+            order by
               "rating" desc nulls last
           )
         end
       ) as ab
-    FROM
+    from
       players
   )
-UPDATE players
+update players
 set
   "overallRank" = v_table_name.ab
-FROM
+from
   v_table_name
-WHERE
+where
   players.uid = v_table_name.uid;
 
 with
@@ -507,10 +574,95 @@ from
   v_table_a
 where
   players.uid = v_table_a.userid;
+
+update records
+set
+  "queueNo" = null
+where
+  true;
+
+with
+  RankedRecords as (
+    select
+      ROW_NUMBER() over (
+        order by
+          case
+            when p."supporterUntil" is null then r.timestamp
+            when p."supporterUntil" > NOW() then r.timestamp - 604800000
+            else r.timestamp
+          end
+      ) as "queueNo",
+      r.userid,
+      r.levelid,
+      r."isChecked",
+      r."needMod",
+      r."reviewer",
+      p."supporterUntil"
+    from
+      public.records r
+      join public.players p on r.userid = p.uid
+    where
+      r."isChecked" = false
+      and r."needMod" = false
+      and r."reviewer" is null
+  )
+update records
+set
+  "queueNo" = RankedRecords."queueNo"
+from
+  RankedRecords
+where
+  records.userid = RankedRecords.userid
+  and records.levelid = RankedRecords.levelid;
 end$$;
 
 
 ALTER FUNCTION "public"."updateRank"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."update_supporter_until"() RETURNS "void"
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+    user_record RECORD;
+    order_record RECORD;
+    current_supporter_until TIMESTAMP;
+BEGIN
+    -- Lặp qua từng user có đơn hàng
+    FOR user_record IN 
+        SELECT DISTINCT COALESCE("giftTo", "userID") as target_uid
+        FROM orders 
+        WHERE "productID" = 1 AND delivered = true
+    LOOP
+        current_supporter_until := NULL;
+        
+        -- Xử lý từng đơn hàng theo thứ tự thời gian
+        FOR order_record IN 
+            SELECT created_at, quantity
+            FROM orders 
+            WHERE "productID" = 1 AND delivered = true
+            AND COALESCE("giftTo", "userID") = user_record.target_uid
+            ORDER BY created_at
+        LOOP
+            IF current_supporter_until IS NULL OR current_supporter_until < order_record.created_at THEN
+                -- Nếu chưa có hoặc đã hết hạn supporter
+                current_supporter_until := order_record.created_at + INTERVAL '1 month' * order_record.quantity;
+            ELSE
+                -- Nếu vẫn còn supporter, cộng thêm thời gian
+                current_supporter_until := current_supporter_until + INTERVAL '1 month' * order_record.quantity;
+            END IF;
+        END LOOP;
+        
+        -- Cập nhật vào database
+        UPDATE players 
+        SET "supporterUntil" = current_supporter_until
+        WHERE uid = user_record.target_uid;
+    END LOOP;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_supporter_until"() OWNER TO "postgres";
 
 SET default_tablespace = '';
 
@@ -576,18 +728,18 @@ ALTER TABLE "public"."PVPRooms" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS ID
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."achievement" (
+CREATE TABLE IF NOT EXISTS "public"."items" (
     "id" bigint NOT NULL,
     "name" character varying DEFAULT 'defaultname'::character varying NOT NULL,
-    "timestamp" bigint DEFAULT '0'::bigint NOT NULL,
-    "image" character varying
+    "redirect" "text",
+    "type" "text" DEFAULT 'medal'::"text" NOT NULL
 );
 
 
-ALTER TABLE "public"."achievement" OWNER TO "postgres";
+ALTER TABLE "public"."items" OWNER TO "postgres";
 
 
-ALTER TABLE "public"."achievement" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+ALTER TABLE "public"."items" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME "public"."achievement_id_seq"
     START WITH 1
     INCREMENT BY 1
@@ -595,6 +747,25 @@ ALTER TABLE "public"."achievement" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS
     NO MAXVALUE
     CACHE 1
 );
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."cards" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "supporterIncluded" bigint DEFAULT '0'::bigint NOT NULL,
+    "owner" "uuid",
+    "activationDate" timestamp with time zone,
+    "name" "text" DEFAULT 'Basic Card'::"text" NOT NULL,
+    "img" "text" DEFAULT 'https://qdwpenfblwdmhywwszzj.supabase.co/storage/v1/object/public/cards/basic.webp'::"text" NOT NULL,
+    "content" "text" DEFAULT ''::"text" NOT NULL
+);
+
+
+ALTER TABLE "public"."cards" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."cards"."supporterIncluded" IS 'Day of supporter included';
 
 
 
@@ -667,7 +838,12 @@ CREATE TABLE IF NOT EXISTS "public"."clans" (
     "rating" bigint DEFAULT '0'::bigint NOT NULL,
     "rank" bigint,
     "memberLimit" bigint DEFAULT '50'::bigint NOT NULL,
+    "imageVersion" bigint DEFAULT '0'::bigint NOT NULL,
+    "boostedUntil" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "homeContent" "text",
+    "mode" "text" DEFAULT 'markdown'::"text" NOT NULL,
     CONSTRAINT "clans_memberLimit_check" CHECK (("memberLimit" <= 500)),
+    CONSTRAINT "clans_mode_check" CHECK (("mode" = ANY (ARRAY['markdown'::"text", 'iframe'::"text"]))),
     CONSTRAINT "clans_name_check" CHECK (("length"("name") <= 30)),
     CONSTRAINT "clans_tag_check" CHECK ((("length"("tag") <= 6) AND ("length"("tag") >= 2)))
 );
@@ -685,6 +861,22 @@ ALTER TABLE "public"."clans" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENT
     CACHE 1
 );
 
+
+
+CREATE TABLE IF NOT EXISTS "public"."coupons" (
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "code" "text" NOT NULL,
+    "percent" double precision DEFAULT '0'::double precision NOT NULL,
+    "deduct" bigint DEFAULT '0'::bigint NOT NULL,
+    "usageLeft" bigint DEFAULT '1'::bigint NOT NULL,
+    "validUntil" timestamp with time zone NOT NULL,
+    "quantity" bigint DEFAULT '1'::bigint NOT NULL,
+    "productID" bigint,
+    CONSTRAINT "coupons_percent_check" CHECK (("percent" <= (1)::double precision))
+);
+
+
+ALTER TABLE "public"."coupons" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."deathCount" (
@@ -710,16 +902,56 @@ ALTER TABLE "public"."deathCount" ALTER COLUMN "levelID" ADD GENERATED BY DEFAUL
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."eventLevels" (
+    "eventID" bigint NOT NULL,
+    "levelID" bigint NOT NULL,
+    "point" bigint NOT NULL,
+    "needRaw" boolean DEFAULT false NOT NULL,
+    "id" bigint NOT NULL
+);
+
+
+ALTER TABLE "public"."eventLevels" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."eventLevels" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."eventLevels_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."eventProofs" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "userid" "uuid" NOT NULL,
     "eventID" bigint NOT NULL,
     "content" "text" DEFAULT ''::"text" NOT NULL,
-    "accepted" boolean DEFAULT false NOT NULL
+    "accepted" boolean DEFAULT false NOT NULL,
+    "data" "jsonb",
+    "diff" bigint
 );
 
 
 ALTER TABLE "public"."eventProofs" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."eventRecords" (
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "userID" "uuid" NOT NULL,
+    "levelID" bigint NOT NULL,
+    "progress" double precision NOT NULL,
+    "accepted" boolean,
+    "videoLink" "text" NOT NULL,
+    "raw" "text",
+    "rejectReason" "text"
+);
+
+
+ALTER TABLE "public"."eventRecords" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."events" (
@@ -729,12 +961,21 @@ CREATE TABLE IF NOT EXISTS "public"."events" (
     "end" timestamp with time zone,
     "title" "text" NOT NULL,
     "description" "text" NOT NULL,
-    "imgUrl" "text" NOT NULL,
+    "imgUrl" "text",
     "exp" bigint,
     "content" "text",
     "redirect" "text",
     "minExp" bigint DEFAULT '0'::bigint NOT NULL,
-    "needProof" boolean DEFAULT true NOT NULL
+    "needProof" boolean DEFAULT true NOT NULL,
+    "isSupporterOnly" boolean DEFAULT false NOT NULL,
+    "isContest" boolean DEFAULT false NOT NULL,
+    "hidden" boolean DEFAULT false NOT NULL,
+    "freeze" timestamp with time zone,
+    "isExternal" boolean DEFAULT false NOT NULL,
+    "data" "jsonb",
+    "isRanked" boolean DEFAULT false NOT NULL,
+    "isCalculated" boolean DEFAULT false NOT NULL,
+    "priority" bigint DEFAULT '0'::bigint NOT NULL
 );
 
 
@@ -750,6 +991,17 @@ CREATE TABLE IF NOT EXISTS "public"."heatmap" (
 
 
 ALTER TABLE "public"."heatmap" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."inventory" (
+    "userID" "uuid" NOT NULL,
+    "medalID" bigint NOT NULL,
+    "content" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."inventory" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."levelDeathCount" (
@@ -782,12 +1034,12 @@ CREATE TABLE IF NOT EXISTS "public"."levels" (
     "flTop" double precision,
     "dlTop" double precision,
     "flPt" double precision,
-    "dlPt" double precision,
     "rating" bigint,
-    "songID" bigint,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "avgSuggestedRating" bigint,
-    "isPlatformer" boolean DEFAULT false NOT NULL
+    "isPlatformer" boolean DEFAULT false NOT NULL,
+    "insaneTier" bigint,
+    "accepted" boolean DEFAULT false NOT NULL,
+    "isNonList" boolean DEFAULT false NOT NULL
 );
 
 
@@ -818,17 +1070,86 @@ ALTER TABLE "public"."notifications" ALTER COLUMN "id" ADD GENERATED BY DEFAULT 
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."orderItems" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "productID" bigint NOT NULL,
+    "orderID" bigint NOT NULL,
+    "quantity" bigint DEFAULT '1'::bigint NOT NULL,
+    CONSTRAINT "orderItems_quantity_check" CHECK (("quantity" > 0))
+);
+
+
+ALTER TABLE "public"."orderItems" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."orderItems" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."orderItems_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."orderTracking" (
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "orderID" bigint NOT NULL,
+    "id" bigint NOT NULL,
+    "content" "text",
+    "link" "text",
+    "delivering" boolean DEFAULT false NOT NULL
+);
+
+
+ALTER TABLE "public"."orderTracking" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."orderTracking" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."orderTracking_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."orders" (
     "id" bigint NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "userID" "uuid" NOT NULL,
     "state" "text" NOT NULL,
-    "amount" bigint NOT NULL,
-    "productID" bigint
+    "quantity" bigint,
+    "productID" bigint,
+    "delivered" boolean DEFAULT false NOT NULL,
+    "giftTo" "uuid",
+    "discount" double precision DEFAULT '0'::double precision NOT NULL,
+    "coupon" "text",
+    "amount" double precision NOT NULL,
+    "currency" "text" DEFAULT ''::"text" NOT NULL,
+    "paymentMethod" "text" DEFAULT 'Bank Transfer'::"text" NOT NULL,
+    "address" "text",
+    "phone" bigint,
+    "fee" bigint DEFAULT '0'::bigint NOT NULL,
+    "recipientName" "text",
+    "targetClanID" bigint,
+    CONSTRAINT "orders_discount_check" CHECK (("discount" <= (1)::double precision))
 );
 
 
 ALTER TABLE "public"."orders" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."orders"."quantity" IS 'Set NULL for physical product';
+
+
+
+COMMENT ON COLUMN "public"."orders"."productID" IS 'Set NULL for physical product';
+
 
 
 ALTER TABLE "public"."orders" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
@@ -844,12 +1165,11 @@ ALTER TABLE "public"."orders" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDEN
 
 CREATE TABLE IF NOT EXISTS "public"."players" (
     "id" bigint NOT NULL,
-    "name" "text" NOT NULL,
-    "email" character varying,
-    "avatar" character varying,
-    "facebook" character varying,
-    "youtube" character varying,
-    "discord" character varying,
+    "name" "text",
+    "email" "text",
+    "facebook" "text",
+    "youtube" "text",
+    "discord" "text",
     "totalFLpt" double precision,
     "totalDLpt" double precision,
     "flrank" bigint,
@@ -872,7 +1192,20 @@ CREATE TABLE IF NOT EXISTS "public"."players" (
     "exp" bigint DEFAULT '0'::bigint NOT NULL,
     "extraExp" bigint,
     "supporterUntil" timestamp with time zone,
-    CONSTRAINT "players_name_check" CHECK (("length"("name") <= 35))
+    "isAvatarGif" boolean DEFAULT false NOT NULL,
+    "isBannerGif" boolean DEFAULT false NOT NULL,
+    "bgColor" "text",
+    "borderColor" "text",
+    "DiscordDMChannelID" "text",
+    "avatarVersion" bigint DEFAULT '0'::bigint NOT NULL,
+    "bannerVersion" bigint DEFAULT '0'::bigint NOT NULL,
+    "platformerRating" bigint,
+    "platformerRank" bigint,
+    "nameLocked" boolean DEFAULT false NOT NULL,
+    "elo" bigint DEFAULT '1500'::bigint NOT NULL,
+    "matchCount" bigint DEFAULT '0'::bigint NOT NULL,
+    "pointercrate" "text",
+    CONSTRAINT "players_name_check" CHECK (("length"("name") <= 20))
 );
 
 
@@ -915,8 +1248,16 @@ ALTER TABLE "public"."players" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDE
 CREATE TABLE IF NOT EXISTS "public"."products" (
     "id" bigint NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "name" "text",
-    "price" bigint
+    "name" "text" NOT NULL,
+    "price" bigint NOT NULL,
+    "redirect" "text",
+    "description" "text",
+    "featured" boolean DEFAULT false NOT NULL,
+    "stock" bigint,
+    "imgCount" bigint,
+    "maxQuantity" bigint,
+    "bannerTextColor" "text" DEFAULT '#FFFFFF'::"text" NOT NULL,
+    CONSTRAINT "products_stock_check" CHECK (("stock" >= 0))
 );
 
 
@@ -948,7 +1289,7 @@ ALTER TABLE "public"."events" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDEN
 CREATE TABLE IF NOT EXISTS "public"."records" (
     "videoLink" character varying,
     "refreshRate" bigint DEFAULT '60'::bigint,
-    "progress" bigint DEFAULT '0'::bigint,
+    "progress" bigint DEFAULT '0'::bigint NOT NULL,
     "timestamp" bigint DEFAULT '0'::bigint,
     "flPt" double precision,
     "dlPt" double precision,
@@ -964,7 +1305,7 @@ CREATE TABLE IF NOT EXISTS "public"."records" (
     "no" bigint,
     "raw" "text" DEFAULT ''::"text",
     "time" bigint,
-    CONSTRAINT "records_progress_check" CHECK ((("progress" >= 0) AND ("progress" <= 100)))
+    "queueNo" bigint
 );
 
 
@@ -1013,18 +1354,23 @@ ALTER TABLE ONLY "public"."PVPRooms"
 
 
 
-ALTER TABLE ONLY "public"."achievement"
+ALTER TABLE ONLY "public"."items"
     ADD CONSTRAINT "achievement_name_key" UNIQUE ("name");
 
 
 
-ALTER TABLE ONLY "public"."achievement"
+ALTER TABLE ONLY "public"."items"
     ADD CONSTRAINT "achievement_pkey" PRIMARY KEY ("id");
 
 
 
 ALTER TABLE ONLY "public"."heatmap"
     ADD CONSTRAINT "attempts_pkey" PRIMARY KEY ("uid", "year");
+
+
+
+ALTER TABLE ONLY "public"."cards"
+    ADD CONSTRAINT "cards_pkey" PRIMARY KEY ("id");
 
 
 
@@ -1058,8 +1404,28 @@ ALTER TABLE ONLY "public"."clans"
 
 
 
+ALTER TABLE ONLY "public"."coupons"
+    ADD CONSTRAINT "coupons_pkey" PRIMARY KEY ("code");
+
+
+
 ALTER TABLE ONLY "public"."deathCount"
     ADD CONSTRAINT "deathCount_pkey" PRIMARY KEY ("levelID", "uid");
+
+
+
+ALTER TABLE ONLY "public"."orderTracking"
+    ADD CONSTRAINT "deliverySteps_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."eventLevels"
+    ADD CONSTRAINT "eventLevels_id_key" UNIQUE ("id");
+
+
+
+ALTER TABLE ONLY "public"."eventLevels"
+    ADD CONSTRAINT "eventLevels_pkey" PRIMARY KEY ("eventID", "levelID");
 
 
 
@@ -1068,8 +1434,18 @@ ALTER TABLE ONLY "public"."eventProofs"
 
 
 
+ALTER TABLE ONLY "public"."eventRecords"
+    ADD CONSTRAINT "eventRecords_pkey" PRIMARY KEY ("userID", "levelID");
+
+
+
 ALTER TABLE ONLY "public"."levelDeathCount"
     ADD CONSTRAINT "levelDeathCount_pkey" PRIMARY KEY ("levelID");
+
+
+
+ALTER TABLE ONLY "public"."levels"
+    ADD CONSTRAINT "levels_id_key" UNIQUE ("id");
 
 
 
@@ -1078,13 +1454,33 @@ ALTER TABLE ONLY "public"."notifications"
 
 
 
+ALTER TABLE ONLY "public"."orderItems"
+    ADD CONSTRAINT "orderItems_id_key" UNIQUE ("id");
+
+
+
+ALTER TABLE ONLY "public"."orderItems"
+    ADD CONSTRAINT "orderItems_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."orders"
     ADD CONSTRAINT "orders_pkey" PRIMARY KEY ("id");
 
 
 
+ALTER TABLE ONLY "public"."inventory"
+    ADD CONSTRAINT "playerMedal_pkey" PRIMARY KEY ("userID", "medalID");
+
+
+
 ALTER TABLE ONLY "public"."playersAchievement"
     ADD CONSTRAINT "playersAchievement_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."players"
+    ADD CONSTRAINT "players_discord_key" UNIQUE ("discord");
 
 
 
@@ -1100,6 +1496,11 @@ ALTER TABLE ONLY "public"."players"
 
 ALTER TABLE ONLY "public"."players"
     ADD CONSTRAINT "players_pkey" PRIMARY KEY ("uid");
+
+
+
+ALTER TABLE ONLY "public"."players"
+    ADD CONSTRAINT "players_pointercrate_key" UNIQUE ("pointercrate");
 
 
 
@@ -1143,6 +1544,11 @@ ALTER TABLE ONLY "public"."PVPRooms"
 
 
 
+ALTER TABLE ONLY "public"."cards"
+    ADD CONSTRAINT "cards_owner_fkey" FOREIGN KEY ("owner") REFERENCES "public"."players"("uid");
+
+
+
 ALTER TABLE ONLY "public"."changelogs"
     ADD CONSTRAINT "changelogs_levelID_fkey" FOREIGN KEY ("levelID") REFERENCES "public"."levels"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
@@ -1173,6 +1579,26 @@ ALTER TABLE ONLY "public"."clans"
 
 
 
+ALTER TABLE ONLY "public"."coupons"
+    ADD CONSTRAINT "coupons_productID_fkey" FOREIGN KEY ("productID") REFERENCES "public"."products"("id");
+
+
+
+ALTER TABLE ONLY "public"."orderTracking"
+    ADD CONSTRAINT "deliverySteps_orderID_fkey" FOREIGN KEY ("orderID") REFERENCES "public"."orders"("id");
+
+
+
+ALTER TABLE ONLY "public"."eventLevels"
+    ADD CONSTRAINT "eventLevels_eventID_fkey" FOREIGN KEY ("eventID") REFERENCES "public"."events"("id");
+
+
+
+ALTER TABLE ONLY "public"."eventLevels"
+    ADD CONSTRAINT "eventLevels_levelID_fkey" FOREIGN KEY ("levelID") REFERENCES "public"."levels"("id");
+
+
+
 ALTER TABLE ONLY "public"."eventProofs"
     ADD CONSTRAINT "eventProofs_eventID_fkey" FOREIGN KEY ("eventID") REFERENCES "public"."events"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
@@ -1183,8 +1609,33 @@ ALTER TABLE ONLY "public"."eventProofs"
 
 
 
+ALTER TABLE ONLY "public"."eventRecords"
+    ADD CONSTRAINT "eventRecords_levelID_fkey" FOREIGN KEY ("levelID") REFERENCES "public"."eventLevels"("id") ON UPDATE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."notifications"
     ADD CONSTRAINT "notifications_to_fkey" FOREIGN KEY ("to") REFERENCES "public"."players"("uid");
+
+
+
+ALTER TABLE ONLY "public"."orderItems"
+    ADD CONSTRAINT "orderItems_orderID_fkey" FOREIGN KEY ("orderID") REFERENCES "public"."orders"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."orderItems"
+    ADD CONSTRAINT "orderItems_productID_fkey" FOREIGN KEY ("productID") REFERENCES "public"."products"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."orders"
+    ADD CONSTRAINT "orders_coupon_fkey" FOREIGN KEY ("coupon") REFERENCES "public"."coupons"("code");
+
+
+
+ALTER TABLE ONLY "public"."orders"
+    ADD CONSTRAINT "orders_giftTo_fkey" FOREIGN KEY ("giftTo") REFERENCES "public"."players"("uid");
 
 
 
@@ -1194,12 +1645,27 @@ ALTER TABLE ONLY "public"."orders"
 
 
 ALTER TABLE ONLY "public"."orders"
+    ADD CONSTRAINT "orders_targetClanID_fkey" FOREIGN KEY ("targetClanID") REFERENCES "public"."clans"("id") ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."orders"
     ADD CONSTRAINT "orders_userID_fkey" FOREIGN KEY ("userID") REFERENCES "public"."players"("uid");
 
 
 
+ALTER TABLE ONLY "public"."inventory"
+    ADD CONSTRAINT "playerMedal_medalID_fkey" FOREIGN KEY ("medalID") REFERENCES "public"."items"("id");
+
+
+
+ALTER TABLE ONLY "public"."inventory"
+    ADD CONSTRAINT "playerMedal_userID_fkey" FOREIGN KEY ("userID") REFERENCES "public"."players"("uid");
+
+
+
 ALTER TABLE ONLY "public"."playersAchievement"
-    ADD CONSTRAINT "playersAchievement_achievementid_fkey" FOREIGN KEY ("achievementid") REFERENCES "public"."achievement"("id");
+    ADD CONSTRAINT "playersAchievement_achievementid_fkey" FOREIGN KEY ("achievementid") REFERENCES "public"."items"("id");
 
 
 
@@ -1238,6 +1704,11 @@ ALTER TABLE ONLY "public"."records"
 
 
 
+ALTER TABLE ONLY "public"."eventRecords"
+    ADD CONSTRAINT "qualifier_userID_fkey" FOREIGN KEY ("userID") REFERENCES "public"."players"("uid");
+
+
+
 ALTER TABLE ONLY "public"."records"
     ADD CONSTRAINT "records_reviewer_fkey" FOREIGN KEY ("reviewer") REFERENCES "public"."players"("uid") ON UPDATE CASCADE ON DELETE SET NULL;
 
@@ -1258,15 +1729,15 @@ CREATE POLICY "Enable delete for users based on user_id" ON "public"."records" F
 
 
 
-CREATE POLICY "Enable read access for all users" ON "public"."achievement" FOR SELECT USING (true);
-
-
-
 CREATE POLICY "Enable read access for all users" ON "public"."clans" FOR SELECT USING (true);
 
 
 
 CREATE POLICY "Enable read access for all users" ON "public"."events" FOR SELECT USING (true);
+
+
+
+CREATE POLICY "Enable read access for all users" ON "public"."items" FOR SELECT USING (true);
 
 
 
@@ -1290,17 +1761,13 @@ CREATE POLICY "Enable read access for all users" ON "public"."records" FOR SELEC
 
 
 
-CREATE POLICY "Enable update for users based on uid" ON "public"."players" FOR INSERT WITH CHECK (("auth"."uid"() = "uid"));
-
-
-
 ALTER TABLE "public"."PVPPlayers" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."PVPRooms" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."achievement" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."cards" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."changelogs" ENABLE ROW LEVEL SECURITY;
@@ -1315,16 +1782,31 @@ ALTER TABLE "public"."clanInvitations" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."clans" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."coupons" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."deathCount" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."eventLevels" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."eventProofs" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."eventRecords" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."events" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."heatmap" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."inventory" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."items" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."levelDeathCount" ENABLE ROW LEVEL SECURITY;
@@ -1334,6 +1816,12 @@ ALTER TABLE "public"."levels" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."notifications" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."orderItems" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."orderTracking" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."orders" ENABLE ROW LEVEL SECURITY;
@@ -1360,10 +1848,6 @@ ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
 
 
 
-
-
-
-ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."notifications";
 
 
 
@@ -1549,6 +2033,12 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."getEventLeaderboard"("event_id" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."getEventLeaderboard"("event_id" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."getEventLeaderboard"("event_id" integer) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."updateList"() TO "anon";
 GRANT ALL ON FUNCTION "public"."updateList"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."updateList"() TO "service_role";
@@ -1558,6 +2048,12 @@ GRANT ALL ON FUNCTION "public"."updateList"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."updateRank"() TO "anon";
 GRANT ALL ON FUNCTION "public"."updateRank"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."updateRank"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_supporter_until"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_supporter_until"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_supporter_until"() TO "service_role";
 
 
 
@@ -1606,15 +2102,21 @@ GRANT ALL ON SEQUENCE "public"."PVPRoom_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."achievement" TO "anon";
-GRANT ALL ON TABLE "public"."achievement" TO "authenticated";
-GRANT ALL ON TABLE "public"."achievement" TO "service_role";
+GRANT ALL ON TABLE "public"."items" TO "anon";
+GRANT ALL ON TABLE "public"."items" TO "authenticated";
+GRANT ALL ON TABLE "public"."items" TO "service_role";
 
 
 
 GRANT ALL ON SEQUENCE "public"."achievement_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."achievement_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."achievement_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."cards" TO "anon";
+GRANT ALL ON TABLE "public"."cards" TO "authenticated";
+GRANT ALL ON TABLE "public"."cards" TO "service_role";
 
 
 
@@ -1660,6 +2162,12 @@ GRANT ALL ON SEQUENCE "public"."clans_id_seq" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."coupons" TO "anon";
+GRANT ALL ON TABLE "public"."coupons" TO "authenticated";
+GRANT ALL ON TABLE "public"."coupons" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."deathCount" TO "anon";
 GRANT ALL ON TABLE "public"."deathCount" TO "authenticated";
 GRANT ALL ON TABLE "public"."deathCount" TO "service_role";
@@ -1672,9 +2180,27 @@ GRANT ALL ON SEQUENCE "public"."deathCount_levelID_seq" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."eventLevels" TO "anon";
+GRANT ALL ON TABLE "public"."eventLevels" TO "authenticated";
+GRANT ALL ON TABLE "public"."eventLevels" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."eventLevels_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."eventLevels_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."eventLevels_id_seq" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."eventProofs" TO "anon";
 GRANT ALL ON TABLE "public"."eventProofs" TO "authenticated";
 GRANT ALL ON TABLE "public"."eventProofs" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."eventRecords" TO "anon";
+GRANT ALL ON TABLE "public"."eventRecords" TO "authenticated";
+GRANT ALL ON TABLE "public"."eventRecords" TO "service_role";
 
 
 
@@ -1687,6 +2213,12 @@ GRANT ALL ON TABLE "public"."events" TO "service_role";
 GRANT ALL ON TABLE "public"."heatmap" TO "anon";
 GRANT ALL ON TABLE "public"."heatmap" TO "authenticated";
 GRANT ALL ON TABLE "public"."heatmap" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."inventory" TO "anon";
+GRANT ALL ON TABLE "public"."inventory" TO "authenticated";
+GRANT ALL ON TABLE "public"."inventory" TO "service_role";
 
 
 
@@ -1717,6 +2249,30 @@ GRANT ALL ON TABLE "public"."notifications" TO "service_role";
 GRANT ALL ON SEQUENCE "public"."notifications_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."notifications_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."notifications_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."orderItems" TO "anon";
+GRANT ALL ON TABLE "public"."orderItems" TO "authenticated";
+GRANT ALL ON TABLE "public"."orderItems" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."orderItems_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."orderItems_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."orderItems_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."orderTracking" TO "anon";
+GRANT ALL ON TABLE "public"."orderTracking" TO "authenticated";
+GRANT ALL ON TABLE "public"."orderTracking" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."orderTracking_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."orderTracking_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."orderTracking_id_seq" TO "service_role";
 
 
 

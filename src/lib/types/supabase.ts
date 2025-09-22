@@ -933,7 +933,7 @@ export type Database = {
           overallRank: number | null
           platformerRank: number | null
           platformerRating: number | null
-          pointercrate: number | null
+          pointercrate: string | null
           province: string | null
           rating: number | null
           recordCount: number
@@ -976,7 +976,7 @@ export type Database = {
           overallRank?: number | null
           platformerRank?: number | null
           platformerRating?: number | null
-          pointercrate?: number | null
+          pointercrate?: string | null
           province?: string | null
           rating?: number | null
           recordCount?: number
@@ -1019,7 +1019,7 @@ export type Database = {
           overallRank?: number | null
           platformerRank?: number | null
           platformerRating?: number | null
-          pointercrate?: number | null
+          pointercrate?: string | null
           province?: string | null
           rating?: number | null
           recordCount?: number
