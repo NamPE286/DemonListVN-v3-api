@@ -9,13 +9,18 @@ export async function getUsernameByToken(token: string): Promise<string> {
 }
 
 export async function approved(userID: number, levelName: string) {
-    const res: any = await (await fetch(`https://pointercrate.com/api/v1/records?player=${userID}&demon=${levelName}`)).json();
+    try {
+        const res: any = await (await fetch(`https://pointercrate.com/api/v1/records?player=${userID}&demon=${levelName}`)).json();
 
-    for (const record of res) {
-        if (record.status == "approved") {
-            return true;
+        for (const record of res) {
+            if (record.status == "approved") {
+                return true;
+            }
         }
-    }
 
-    return false;
+        return false;
+    } catch {
+        console.error("Failed to fetch from Pointercrate")
+        return false;
+    }
 }
