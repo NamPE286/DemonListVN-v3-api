@@ -91,6 +91,14 @@ router.route('/:id/levels')
             res.status(500).send()
         }
     })
+    .post(async (req, res) => {
+        // TODO
+    })
+
+router.route('/:id/level/:levelID')
+    .delete(async (req, res) => {
+        // TODO
+    })
 
 router.route('/:id/submissions')
     /**
