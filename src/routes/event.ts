@@ -12,7 +12,8 @@ import {
     getEventSubmissions,
     insertEventSubmission,
     upsertEventSubmission,
-    insertEvent
+    insertEvent,
+    updateEvent
 } from '@src/lib/client/event'
 import userAuth from '@src/middleware/userAuth'
 import adminAuth from '@src/middleware/adminAuth'
@@ -26,6 +27,21 @@ router.route('/')
     .post(adminAuth, async (req, res) => {
         try {
             await insertEvent(req.body);
+            res.send()
+        } catch (err: any) {
+            console.error(err);
+
+            res.status(500).send({
+                message: err.message
+            })
+        }
+    })
+
+router.route('/:id')
+    .patch(adminAuth, async (req, res) => {
+        const { id } = req.params
+        try {
+            await updateEvent(Number(id), req.body);
             res.send()
         } catch (err: any) {
             console.error(err);
