@@ -88,7 +88,7 @@ router.route('/:id/levels')
             }
         } catch (err) {
             console.error(err)
-            res.status(500).send()
+            res.send([])
         }
     })
     .post(async (req, res) => {
