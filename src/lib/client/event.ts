@@ -38,6 +38,16 @@ function formatEventSubmissions(submissions: Tables<"eventRecords">[], levels: T
     return result
 }
 
+export async function insertEvent(data: Tables<"events">) {
+    const { error } = await supabase
+        .from("events")
+        .insert(data)
+
+    if (error) {
+        throw error
+    }
+}
+
 export async function getEvents() {
 
 }

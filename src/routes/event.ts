@@ -11,7 +11,8 @@ import {
     getEventLevels,
     getEventSubmissions,
     insertEventSubmission,
-    upsertEventSubmission
+    upsertEventSubmission,
+    insertEvent
 } from '@src/lib/client/event'
 import userAuth from '@src/middleware/userAuth'
 import adminAuth from '@src/middleware/adminAuth'
@@ -20,6 +21,20 @@ import supabase from '@src/database/supabase'
 import { calcLeaderboard } from '@src/lib/client/elo'
 
 const router = express.Router()
+
+router.route('/')
+    .post(adminAuth, async (req, res) => {
+        try {
+            await insertEvent(req.body);
+            res.send()
+        } catch (err: any) {
+            console.error(err);
+
+            res.status(500).send({
+                message: err.message
+            })
+        }
+    })
 
 router.route('/:id/levels')
     /**
@@ -553,7 +568,7 @@ router.route('/submitLevel/:levelID')
         const { levelID } = req.params
         const { progress, password } = req.query
 
-        if(password != process.env.SUBMIT_PASSWORD) {
+        if (password != process.env.SUBMIT_PASSWORD) {
             res.status(403).send()
             return;
         }
