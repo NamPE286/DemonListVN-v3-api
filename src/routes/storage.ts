@@ -10,6 +10,10 @@ function extractID(path: string) {
 }
 
 function validate(path: string, user: Player) {
+    if (user.isAdmin) {
+        return;
+    }
+    
     if ((path.startsWith('avatars') || path.startsWith('banners')) && user.uid == extractID(path)) {
         return;
     }
