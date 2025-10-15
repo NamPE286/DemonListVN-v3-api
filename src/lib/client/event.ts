@@ -1,6 +1,15 @@
 import supabase from "@src/database/supabase";
-import type Player from "@src/lib/classes/Player";
 import type { Tables } from "@src/lib/types/supabase";
+
+interface EventFilter {
+    search: string;
+    eventType: 'all' | 'contest' | 'nonContest';
+    contestType: 'all' | 'ranked' | 'unranked'; // all if eventType == 'all' or 'nonContest'
+    start: string;
+    end: string;
+    from: number;
+    to: number;
+}
 
 function getPenalty(records: any[]) {
     let res: number = 0;
@@ -95,12 +104,41 @@ export async function deleteEventLevel(eventID: number, levelID: number) {
     }
 }
 
-export async function getEvents(from: number, to: number) {
-    const { data, error } = await supabase
+export async function getEvents(filter: EventFilter) {
+    let query = supabase
         .from('events')
         .select('id, created_at, start, end, title, description, imgUrl, exp, redirect, minExp, isSupporterOnly, isContest, hidden, isExternal, isRanked')
+        .eq('hidden', false)
+
+    if (filter.search) {
+        query = query.ilike('title', `%${filter.search}%`)
+    }
+
+    if (filter.eventType === 'contest') {
+        query = query.eq('isContest', true)
+    } else if (filter.eventType === 'nonContest') {
+        query = query.eq('isContest', false)
+    }
+
+    if (filter.eventType !== 'nonContest' && filter.contestType !== 'all') {
+        if (filter.contestType === 'ranked') {
+            query = query.eq('isRanked', true)
+        } else if (filter.contestType === 'unranked') {
+            query = query.eq('isRanked', false)
+        }
+    }
+
+    if (filter.start) {
+        query = query.gte('start', filter.start)
+    }
+    
+    if (filter.end) {
+        query = query.lte('end', filter.end)
+    }
+
+    const { data, error } = await query
         .order('start', { ascending: false })
-        .range(from, to)
+        .range(filter.from, filter.to)
 
     if (error) {
         throw error

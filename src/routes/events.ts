@@ -5,14 +5,22 @@ const router = express.Router()
 
 router.route('/')
     .get(async (req, res) => {
-        const { from, to } = req.query
+        let defaultFilter = {
+            search: '',
+            eventType: 'all',
+            contestType: 'all',
+            start: '',
+            end: '',
+            from: 0,
+            to: 50
+        };
+        const filter: any = { ...defaultFilter, ...req.query };
 
         try {
-            if (!to) {
-                res.send(await getEvents(0, 49))
+            if (!filter.to) {
+                res.send(await getEvents(filter))
             } else {
-                res.send(await getEvents(Number(from), Number(to)))
-
+                res.send(await getEvents(filter))
             }
         } catch {
             res.status(500).send()
