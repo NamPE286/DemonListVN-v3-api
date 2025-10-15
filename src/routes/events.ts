@@ -3,10 +3,17 @@ import { getEvents, getOngoingEvents, getEventProofs } from '@src/lib/client/eve
 
 const router = express.Router()
 
-router.route('/all')
+router.route('/')
     .get(async (req, res) => {
+        const { from, to } = req.query
+
         try {
-            res.send(await getEvents())
+            if (!to) {
+                res.send(await getEvents(0, 49))
+            } else {
+                res.send(await getEvents(Number(from), Number(to)))
+
+            }
         } catch {
             res.status(500).send()
         }

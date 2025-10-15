@@ -95,8 +95,18 @@ export async function deleteEventLevel(eventID: number, levelID: number) {
     }
 }
 
-export async function getEvents() {
+export async function getEvents(from: number, to: number) {
+    const { data, error } = await supabase
+        .from('events')
+        .select('id, created_at, start, end, title, description, imgUrl, exp, redirect, minExp, isSupporterOnly, isContest, hidden, isExternal, data, isRanked')
+        .order('start', { ascending: false })
+        .range(from, to)
 
+    if (error) {
+        throw error
+    }
+
+    return data;
 }
 
 export async function getEvent(id: number) {
