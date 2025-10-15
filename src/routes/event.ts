@@ -76,7 +76,7 @@ router.route('/:id/levels')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
+    .get(adminAuth, async (req, res) => {
         const { id } = req.params
         const event = await getEvent(parseInt(id))
 
@@ -105,7 +105,7 @@ router.route('/:id/levels')
     })
 
 router.route('/:id/level/:levelID')
-    .delete(async (req, res) => {
+    .delete(adminAuth, async (req, res) => {
         const { id, levelID } = req.params;
         try {
             await deleteEventLevel(Number(id), Number(levelID));
