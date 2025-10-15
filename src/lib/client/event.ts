@@ -71,6 +71,17 @@ export async function upsertEventLevel(data: Tables<"eventLevels">) {
     }
 }
 
+export async function deleteEventLevel(eventID: number, levelID: number) {
+    const { error } = await supabase
+        .from("eventLevels")
+        .delete()
+        .match({ eventID: eventID, levelID: levelID })
+
+    if (error) {
+        throw error
+    }
+}
+
 export async function getEvents() {
 
 }
