@@ -76,7 +76,7 @@ router.route('/:id/levels')
      *           application/json:
      *             schema:
      */
-    .get(adminAuth, async (req, res) => {
+    .get(async (req, res) => {
         const { id } = req.params
         const event = await getEvent(parseInt(id))
 
@@ -93,7 +93,7 @@ router.route('/:id/levels')
             res.send([])
         }
     })
-    .put(async (req, res) => {
+    .put(adminAuth, async (req, res) => {
         const { id } = req.params;
         try {
             await upsertEventLevel(Number(id), req.body);
