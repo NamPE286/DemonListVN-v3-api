@@ -61,9 +61,20 @@ export async function updateEvent(id: number, data: Tables<"events">) {
     }
 }
 
+export async function updateEventLevel(data: Tables<"eventLevels">) {
+    const { error } = await supabase
+        .from("eventLevels")
+        .update(data)
+        .eq('id', data.id)
+
+    if (error) {
+        throw error
+    }
+}
+
 export async function upsertEventLevel(eventID: number, data: Tables<"eventLevels">) {
     data.eventID = eventID;
-    
+
     const { error } = await supabase
         .from("eventLevels")
         .upsert(data)

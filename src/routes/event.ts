@@ -15,7 +15,8 @@ import {
     insertEvent,
     updateEvent,
     upsertEventLevel,
-    deleteEventLevel
+    deleteEventLevel,
+    updateEventLevel
 } from '@src/lib/client/event'
 import userAuth from '@src/middleware/userAuth'
 import adminAuth from '@src/middleware/adminAuth'
@@ -96,7 +97,12 @@ router.route('/:id/levels')
     .put(adminAuth, async (req, res) => {
         const { id } = req.params;
         try {
-            await upsertEventLevel(Number(id), req.body);
+            if (req.body.id) {
+                await updateEventLevel(req.body);
+            } else {
+                await upsertEventLevel(Number(id), req.body);
+            }
+
             res.send()
         } catch (err) {
             console.error(err)
