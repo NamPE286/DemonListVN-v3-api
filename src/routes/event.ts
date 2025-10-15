@@ -91,7 +91,7 @@ router.route('/:id/levels')
             res.send([])
         }
     })
-    .post(async (req, res) => {
+    .put(async (req, res) => {
         // TODO
     })
 
