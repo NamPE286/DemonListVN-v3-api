@@ -98,7 +98,7 @@ export async function deleteEventLevel(eventID: number, levelID: number) {
 export async function getEvents(from: number, to: number) {
     const { data, error } = await supabase
         .from('events')
-        .select('id, created_at, start, end, title, description, imgUrl, exp, redirect, minExp, isSupporterOnly, isContest, hidden, isExternal, data, isRanked')
+        .select('id, created_at, start, end, title, description, imgUrl, exp, redirect, minExp, isSupporterOnly, isContest, hidden, isExternal, isRanked')
         .order('start', { ascending: false })
         .range(from, to)
 
