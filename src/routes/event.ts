@@ -77,12 +77,18 @@ router.route('/:id/levels')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
+    .get(optionalUserAuth, async (req, res) => {
         const { id } = req.params
         const event = await getEvent(parseInt(id))
+        const { user } = res.locals
 
         try {
             const result = await getEventLevels(parseInt(id));
+
+            if (user && user.isAdmin) {
+                res.send(result);
+                return;
+            }
 
             if (new Date(event.start) >= new Date()) {
                 res.send(Array(result.length).fill(null))
