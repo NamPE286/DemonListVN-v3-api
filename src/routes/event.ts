@@ -14,7 +14,8 @@ import {
     upsertEventSubmission,
     insertEvent,
     updateEvent,
-    upsertEventLevel
+    upsertEventLevel,
+    deleteEventLevel
 } from '@src/lib/client/event'
 import userAuth from '@src/middleware/userAuth'
 import adminAuth from '@src/middleware/adminAuth'
@@ -105,7 +106,14 @@ router.route('/:id/levels')
 
 router.route('/:id/level/:levelID')
     .delete(async (req, res) => {
-
+        const { id, levelID } = req.params;
+        try {
+            await deleteEventLevel(Number(id), Number(levelID));
+            res.send()
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
     })
 
 router.route('/:id/submissions')
