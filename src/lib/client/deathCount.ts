@@ -35,8 +35,45 @@ async function fetchLevelData(levelID: number): Promise<any> {
 async function isEligible(levelID: number): Promise<boolean> {
     const level = new Level({ id: levelID })
     const data = await level.fetchFromGD()
+    const now = new Date();
 
-    return data.difficulty == 'Extreme Demon' || data.difficulty == 'Insane Demon'
+    if (data.difficulty == 'Extreme Demon' || data.difficulty == 'Insane Demon') {
+        return true;
+    }
+
+    const a = await supabase
+        .from('eventLevels')
+        .select('*, events(*)')
+        .eq('levelID', levelID)
+
+    if (a.error) {
+        return false;
+    }
+
+    for (const lv of a.data) {
+        if (!lv.events) {
+            continue
+        }
+
+        const { start, end } = lv.events
+
+        if (!end) {
+            const startDate = new Date(start);
+
+            if (now >= startDate) {
+                return true;
+            }
+        } else {
+            const startDate = new Date(start);
+            const endDate = new Date(end);
+
+            if (now >= startDate && now <= endDate) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 export async function getDeathCount(uid: string, levelID: number) {
