@@ -7,6 +7,7 @@ import { updateHeatmap } from '@src/lib/client/heatmap'
 import { getPlayerSubmissions } from '@src/lib/client/record'
 import { syncRoleDLVN, syncRoleGDVN } from '@src/lib/client/discord'
 import supabase from '@src/database/supabase'
+import { EVENT_SELECT_STR } from '@src/lib/client/event'
 
 const router = express.Router()
 
@@ -333,6 +334,24 @@ router.route('/:id/medals')
             console.error(err)
             res.status(500).send()
         }
+    })
+
+router.route('/:uid/events')
+    .get(async (req, res) => {
+        const { uid } = req.params
+        const { data, error } = await supabase
+            .from('eventProofs')
+            .select(`*, events(${EVENT_SELECT_STR})`)
+            .eq('userid', uid)
+            .order('events(start)', { ascending: false })
+
+        if (error) {
+            console.error(error);
+            res.status(500).send()
+            return;
+        }
+
+        res.send(data)
     })
 
 export default router

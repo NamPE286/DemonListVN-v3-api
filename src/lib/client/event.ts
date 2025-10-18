@@ -1,6 +1,8 @@
 import supabase from "@src/database/supabase";
 import type { Tables } from "@src/lib/types/supabase";
 
+export const EVENT_SELECT_STR = 'id, created_at, start, end, title, description, imgUrl, exp, redirect, minExp, isSupporterOnly, isContest, hidden, isExternal, isRanked'
+
 interface EventFilter {
     search: string;
     eventType: 'all' | 'contest' | 'nonContest';
@@ -107,7 +109,7 @@ export async function deleteEventLevel(eventID: number, levelID: number) {
 export async function getEvents(filter: EventFilter) {
     let query = supabase
         .from('events')
-        .select('id, created_at, start, end, title, description, imgUrl, exp, redirect, minExp, isSupporterOnly, isContest, hidden, isExternal, isRanked')
+        .select(EVENT_SELECT_STR)
         .eq('hidden', false)
 
     if (filter.search) {
@@ -131,7 +133,7 @@ export async function getEvents(filter: EventFilter) {
     if (filter.start) {
         query = query.gte('start', filter.start)
     }
-    
+
     if (filter.end) {
         query = query.lte('end', filter.end)
     }
