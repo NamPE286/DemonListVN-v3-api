@@ -6,6 +6,7 @@ import { sendMessageToChannel } from '@src/lib/client/discord';
 import type { Response } from 'express';
 import { payOS } from '@src/lib/classes/payOS';
 import { handleProduct } from "@src/lib/client/handleProduct";
+import Clan from "@src/lib/classes/Clan";
 
 interface Item {
     id: number;
@@ -131,6 +132,10 @@ export async function redeem(code: string, player: Player) {
         throw new Error("Coupon is for discount only");
     }
 
+    if (coupon.productID == 3 && !player.clan) {
+        throw new Error("Player is not in a clan")
+    }
+
     delete (coupon as { products?: any }).products
 
 
@@ -158,7 +163,18 @@ export async function redeem(code: string, player: Player) {
         throw error
     }
 
-    await player.extendSupporter(coupon.quantity)
+    if (coupon.productID == 1) {
+        await player.extendSupporter(coupon.quantity)
+    }
+
+    if (coupon.productID == 3) {
+        const clan = new Clan({ id: player.clan! })
+        clan.extendBoost(coupon.quantity)
+    }
+
+    if (coupon.productID == 4) {
+        await player.extendSupporter(0, coupon.quantity)
+    }
 }
 
 export async function updateStock(items: TablesInsert<"orderItems">[], products: Tables<"products">[]) {
