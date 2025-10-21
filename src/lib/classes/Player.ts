@@ -84,12 +84,14 @@ class Player {
         await this.pull()
     }
 
-    async extendSupporter(month: number) {
+    async extendSupporter(month: number, day: number = 0) {
+        const DAY_MS = 24 * 60 * 60 * 1000;
+
         if (!this.supporterUntil || new Date(this.supporterUntil) < new Date()) {
-            const supporterUntil = new Date(new Date().getTime() + month * 30 * 24 * 60 * 60 * 1000);
+            const supporterUntil = new Date(new Date().getTime() + month * (30 + day) * DAY_MS);
             this.supporterUntil = supporterUntil.toISOString();
         } else {
-            const supporterUntil = new Date(new Date(this.supporterUntil).getTime() + month * 30 * 24 * 60 * 60 * 1000);
+            const supporterUntil = new Date(new Date(this.supporterUntil).getTime() + month * (30 + day) * DAY_MS);
             this.supporterUntil = supporterUntil.toISOString();
         }
 
