@@ -173,6 +173,7 @@ export async function redeem(code: string, player: Player) {
     }
 
     if (coupon.productID == 4) {
+        console.log('ok')
         await player.extendSupporter(0, coupon.quantity)
     }
 }
