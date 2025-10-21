@@ -176,6 +176,7 @@ class Clan {
     }
 
     async extendBoost(day: number) {
+        console.log(this.boostedUntil)
         if (!this.boostedUntil || new Date(this.boostedUntil) < new Date()) {
             const boostedUntil = new Date(new Date().getTime() + day * 24 * 60 * 60 * 1000);
             this.boostedUntil = boostedUntil.toISOString();
@@ -192,6 +193,8 @@ class Clan {
         if (error) {
             throw error;
         }
+        console.log(this.boostedUntil)
+
     }
 
     isBoostActive() {

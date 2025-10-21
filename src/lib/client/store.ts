@@ -169,11 +169,11 @@ export async function redeem(code: string, player: Player) {
 
     if (coupon.productID == 3) {
         const clan = new Clan({ id: player.clan! })
-        clan.extendBoost(coupon.quantity)
+        await clan.pull();
+        await clan.extendBoost(coupon.quantity)
     }
 
     if (coupon.productID == 4) {
-        console.log('ok')
         await player.extendSupporter(0, coupon.quantity)
     }
 }
