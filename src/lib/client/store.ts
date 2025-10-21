@@ -143,7 +143,7 @@ export async function redeem(code: string, player: Player) {
         throw new Error("Coupon is out of usage")
     }
 
-    if (new Date(coupon.created_at) > new Date()) {
+    if (new Date(coupon.validUntil) < new Date()) {
         throw new Error("Coupon is expired")
     }
 
@@ -176,6 +176,25 @@ export async function redeem(code: string, player: Player) {
     if (coupon.productID == 4) {
         await player.extendSupporter(0, coupon.quantity)
     }
+
+    const orderID = new Date().getTime();
+    await addNewOrder(
+        orderID,
+        coupon.productID,
+        player.uid!,
+        coupon.quantity,
+        null,
+        amount,
+        'VND',
+        'Coupon',
+        code,
+        null,
+        0,
+        null,
+        coupon.productID == 3 ? player.clan : null
+    );
+
+    await changeOrderState(orderID, 'PAID');
 }
 
 export async function updateStock(items: TablesInsert<"orderItems">[], products: Tables<"products">[]) {
