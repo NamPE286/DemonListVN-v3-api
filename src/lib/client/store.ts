@@ -16,6 +16,7 @@ export async function getProducts(ids: number[] | null = []) {
     const query = supabase
         .from("products")
         .select("*")
+        .eq('hidden', false)
 
     if (ids !== null) {
         query.in('id', ids)
