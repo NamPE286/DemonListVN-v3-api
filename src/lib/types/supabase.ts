@@ -342,7 +342,7 @@ export type Database = {
       }
       eventLevels: {
         Row: {
-          dmgTaken: number | null
+          totalProgress: number | null
           eventID: number
           id: number
           levelID: number
@@ -351,7 +351,7 @@ export type Database = {
           requiredLevel: number | null
         }
         Insert: {
-          dmgTaken?: number | null
+          totalProgress?: number | null
           eventID: number
           id?: number
           levelID: number
@@ -360,7 +360,7 @@ export type Database = {
           requiredLevel?: number | null
         }
         Update: {
-          dmgTaken?: number | null
+          totalProgress?: number | null
           eventID?: number
           id?: number
           levelID?: number

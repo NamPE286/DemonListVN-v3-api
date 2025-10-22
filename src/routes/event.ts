@@ -648,7 +648,7 @@ router.route('/submitLevel/:levelID')
 
         for (const event of data!) {
             for (const level of event.events?.eventLevels!) {
-                let dmgTaken = 0;
+                let totalProgress = 0;
 
                 for (const record of level.eventRecords) {
                     if (record.progress < Number(progress) && event.events!.type == 'basic') {
@@ -667,7 +667,7 @@ router.route('/submitLevel/:levelID')
 
                         let prog = Number(progress) * Math.pow(1.007, Number(progress));
                         record.progress += prog;
-                        dmgTaken = prog;
+                        totalProgress = prog;
                         record.videoLink = "Submitted via Geode mod"
                         record.accepted = true;
 
@@ -686,8 +686,8 @@ router.route('/submitLevel/:levelID')
                     })
                 }
 
-                if (dmgTaken > 0) {
-                    level.dmgTaken! += dmgTaken;
+                if (totalProgress > 0) {
+                    level.totalProgress! += totalProgress;
 
                     const { eventRecords, ...levelWithoutRecords } = level;
 

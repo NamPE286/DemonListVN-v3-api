@@ -300,11 +300,10 @@ export async function getEventLevelsSafe(eventID: number) {
     for (let i = 0; i < data.length; i++) {
         if (data[i].requiredLevel) {
             const requiredLevelItem = data.find(item => {
-                console.log(item.id, data[i])
                 return item.id === data[i].requiredLevel
             });
 
-            if (!requiredLevelItem || (requiredLevelItem.point - (requiredLevelItem.dmgTaken || 0)) > 0) {
+            if (!requiredLevelItem || (requiredLevelItem.point - (requiredLevelItem.totalProgress || 0)) > 0) {
                 hideLevel.add(data[i].id)
             }
         }

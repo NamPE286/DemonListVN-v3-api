@@ -1,6 +1,6 @@
 alter table "public"."eventLevels" drop column "hp";
 
-alter table "public"."eventLevels" add column "dmgTaken" bigint default '0'::bigint;
+alter table "public"."eventLevels" add column "totalProgress" bigint default '0'::bigint;
 
 alter table "public"."players" alter column "uid" set default extensions.uuid_generate_v4();
 
