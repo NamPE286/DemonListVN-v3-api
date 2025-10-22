@@ -217,25 +217,34 @@ router.route('/:id/deathCount')
 
 router.route('/:id/inEvent')
     .get(userAuth, async (req, res) => {
+        let { type } = req.query
         const { user } = res.locals
         const { id } = req.params
         const now = new Date().toISOString()
+
+        if (!type) {
+            type = 'basic'
+        }
+
         const { data, error } = await supabase
             .from('eventProofs')
-            .select('userid, eventID, events!inner(start, end, eventLevels!inner(levelID))')
+            .select('userid, eventID, events!inner(start, end, type, eventLevels!inner(levelID))')
             .eq('userid', user.uid!)
             .eq('events.eventLevels.levelID', Number(id))
+            .eq('events.type', String(type))
             .lte('events.start', now)
             .gte('events.end', now)
 
         if (error) {
             console.error(error)
+            res.status(500).send();
+            return;
         }
 
-        if(data?.length) {
+        if (data?.length) {
             res.send()
         } else {
-            res.status(500).send();
+            res.status(404).send();
         }
     })
 
