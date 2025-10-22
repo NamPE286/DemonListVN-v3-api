@@ -376,21 +376,39 @@ export async function getEventLeaderboard(eventID: number, ignoreFreeze: boolean
         player.eventRecords = formatEventSubmissions(player.eventRecords, levels);
     }
 
-    res.sort((a, b) => {
-        const x = a.eventRecords.reduce((sum, record, index) => {
-            return sum + (record && (record.accepted === null || record.accepted === true) ? levels[index].point * record.progress : 0);
-        }, 0);
+    if (event.type === 'raid') {
+        res.sort((a, b) => {
+            const x = a.eventRecords.reduce((sum, record) => {
+                return sum + (record && (record.accepted === null || record.accepted === true) ? record.progress : 0);
+            }, 0);
 
-        const y = b.eventRecords.reduce((sum, record, index) => {
-            return sum + (record && (record.accepted === null || record.accepted === true) ? levels[index].point * record.progress : 0);
-        }, 0);
+            const y = b.eventRecords.reduce((sum, record) => {
+                return sum + (record && (record.accepted === null || record.accepted === true) ? record.progress : 0);
+            }, 0);
 
-        if (x == y && x != 0) {
-            return getPenalty(a.eventRecords) - getPenalty(b.eventRecords)
-        }
+            if (x == y && x != 0) {
+                return getPenalty(a.eventRecords) - getPenalty(b.eventRecords)
+            }
 
-        return y - x;
-    });
+            return y - x;
+        });
+    } else {
+        res.sort((a, b) => {
+            const x = a.eventRecords.reduce((sum, record, index) => {
+                return sum + (record && (record.accepted === null || record.accepted === true) ? levels[index].point * record.progress : 0);
+            }, 0);
+
+            const y = b.eventRecords.reduce((sum, record, index) => {
+                return sum + (record && (record.accepted === null || record.accepted === true) ? levels[index].point * record.progress : 0);
+            }, 0);
+
+            if (x == y && x != 0) {
+                return getPenalty(a.eventRecords) - getPenalty(b.eventRecords)
+            }
+
+            return y - x;
+        });
+    }
 
     return res
 }
