@@ -674,7 +674,7 @@ router.route('/submitLevel/:levelID')
                         // @ts-ignore
                         record.created_at = new Date()
 
-                        let prog = Number(progress) * Math.pow(1.007, Number(progress));
+                        let prog = Number(progress) * Math.pow(1.0233, Number(progress));
                         record.progress += prog;
                         totalProgress = prog;
                         record.videoLink = "Submitted via Geode mod"
