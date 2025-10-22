@@ -628,7 +628,7 @@ router.route('/submitLevel/:levelID')
         const now = new Date().toISOString()
         var { data, error } = await supabase
             .from('eventProofs')
-            .select('userid, eventID, events!inner(start, end, type, eventLevels!inner(id, levelID, eventRecords(userID, levelID, progress, accepted, videoLink)))')
+            .select('userid, eventID, events!inner(start, end, type, eventLevels!inner(id, levelID, dmgTaken, eventRecords(userID, levelID, progress, accepted, videoLink)))')
             .eq('userid', user.uid!)
             .eq('events.eventLevels.levelID', Number(levelID))
             .eq('events.eventLevels.eventRecords.userID', user.uid!)
@@ -642,7 +642,8 @@ router.route('/submitLevel/:levelID')
             return
         }
 
-        const upsertData = []
+        const eventRecordUpsertData = []
+        const eventLevelUpsertData = []
 
         for (const event of data!) {
             for (const level of event.events?.eventLevels!) {
@@ -652,13 +653,10 @@ router.route('/submitLevel/:levelID')
                         record.created_at = new Date()
 
                         if (event.events?.type == 'raid') {
-                            let prog = Number(progress);
-
-                            if (prog == 100) {
-                                prog *= 2;
-                            }
-
+                            let prog = Math.pow(1.007, Number(progress));
                             record.progress += prog;
+
+                            console.log(level)
                         } else {
                             record.progress = Number(progress)
                         }
@@ -666,12 +664,12 @@ router.route('/submitLevel/:levelID')
                         record.videoLink = "Submitted via Geode mod"
                         record.accepted = true;
 
-                        upsertData.push(record);
+                        eventRecordUpsertData.push(record);
                     }
                 }
 
                 if (!level.eventRecords.length) {
-                    upsertData.push({
+                    eventRecordUpsertData.push({
                         created_at: new Date(),
                         userID: user.uid!,
                         levelID: level.id,
@@ -685,7 +683,7 @@ router.route('/submitLevel/:levelID')
 
         var { error } = await supabase
             .from('eventRecords')
-            .upsert(upsertData)
+            .upsert(eventRecordUpsertData)
 
         if (error) {
             console.error(error)
