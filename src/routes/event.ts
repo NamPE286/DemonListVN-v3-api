@@ -628,7 +628,7 @@ router.route('/submitLevel/:levelID')
         const now = new Date().toISOString()
         var { data, error } = await supabase
             .from('eventProofs')
-            .select('userid, eventID, events!inner(start, end, type, eventLevels!inner(id, levelID, dmgTaken, eventRecords(userID, levelID, progress, accepted, videoLink)))')
+            .select('userid, eventID, events!inner(start, end, type, eventLevels!inner(*, eventRecords(userID, levelID, progress, accepted, videoLink)))')
             .eq('userid', user.uid!)
             .eq('events.eventLevels.levelID', Number(levelID))
             .eq('events.eventLevels.eventRecords.userID', user.uid!)
@@ -647,20 +647,26 @@ router.route('/submitLevel/:levelID')
 
         for (const event of data!) {
             for (const level of event.events?.eventLevels!) {
+                let dmgTaken = 0;
+
                 for (const record of level.eventRecords) {
-                    if (record.progress < Number(progress)) {
+                    if (record.progress < Number(progress) && event.events!.type == 'basic') {
+                        // @ts-ignore
+                        record.created_at = new Date()
+                        record.progress = Number(progress)
+                        record.videoLink = "Submitted via Geode mod"
+                        record.accepted = true;
+
+                        eventRecordUpsertData.push(record);
+                    }
+
+                    if (event.events!.type == 'raid') {
                         // @ts-ignore
                         record.created_at = new Date()
 
-                        if (event.events?.type == 'raid') {
-                            let prog = Number(progress) * Math.pow(1.007, Number(progress));
-                            record.progress += prog;
-
-                            console.log(level)
-                        } else {
-                            record.progress = Number(progress)
-                        }
-
+                        let prog = Number(progress) * Math.pow(1.007, Number(progress));
+                        record.progress += prog;
+                        dmgTaken = prog;
                         record.videoLink = "Submitted via Geode mod"
                         record.accepted = true;
 
@@ -678,12 +684,31 @@ router.route('/submitLevel/:levelID')
                         videoLink: "Submitted via Geode mod"
                     })
                 }
+
+                if (dmgTaken > 0) {
+                    level.dmgTaken! += dmgTaken;
+                    
+                    const { eventRecords, ...levelWithoutRecords } = level;
+
+                    eventLevelUpsertData.push(levelWithoutRecords)
+                }
             }
         }
 
         var { error } = await supabase
             .from('eventRecords')
             .upsert(eventRecordUpsertData)
+
+        if (error) {
+            console.error(error)
+            res.status(500).send()
+
+            return
+        }
+
+        var { error } = await supabase
+            .from('eventLevels')
+            .upsert(eventLevelUpsertData)
 
         if (error) {
             console.error(error)
