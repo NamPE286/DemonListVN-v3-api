@@ -16,7 +16,8 @@ import {
     updateEvent,
     upsertEventLevel,
     deleteEventLevel,
-    updateEventLevel
+    updateEventLevel,
+    getEventLevelsSafe
 } from '@src/lib/client/event'
 import userAuth from '@src/middleware/userAuth'
 import adminAuth from '@src/middleware/adminAuth'
@@ -83,12 +84,12 @@ router.route('/:id/levels')
         const { user } = res.locals
 
         try {
-            const result = await getEventLevels(parseInt(id));
-
             if (user && user.isAdmin) {
-                res.send(result);
+                res.send(await getEventLevels(parseInt(id)))
                 return;
             }
+
+            const result = await getEventLevelsSafe(parseInt(id));
 
             if (new Date(event.start) >= new Date()) {
                 res.send(Array(result.length).fill(null))
@@ -687,7 +688,7 @@ router.route('/submitLevel/:levelID')
 
                 if (dmgTaken > 0) {
                     level.dmgTaken! += dmgTaken;
-                    
+
                     const { eventRecords, ...levelWithoutRecords } = level;
 
                     eventLevelUpsertData.push(levelWithoutRecords)

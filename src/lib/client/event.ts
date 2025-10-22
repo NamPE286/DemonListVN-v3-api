@@ -284,6 +284,49 @@ export async function getEventLevels(eventID: number) {
     return flattened
 }
 
+export async function getEventLevelsSafe(eventID: number) {
+    const { data, error } = await supabase
+        .from('eventLevels')
+        .select('*, levels(*)')
+        .eq("eventID", eventID)
+        .order("id")
+
+    if (error) {
+        throw error;
+    }
+
+    const hideLevel = new Set()
+
+    for (let i = 0; i < data.length; i++) {
+        if (data[i].requiredLevel) {
+            const requiredLevelItem = data.find(item => {
+                console.log(item.id, data[i])
+                return item.id === data[i].requiredLevel
+            });
+
+            if (!requiredLevelItem || (requiredLevelItem.point - (requiredLevelItem.dmgTaken || 0)) > 0) {
+                hideLevel.add(data[i].id)
+            }
+        }
+    }
+
+    const flattened = data.map(item => {
+        if (hideLevel.has(item.id)) {
+            return null;
+        }
+
+        const { levels, ...rest } = item;
+        const { id: levelsId, ...flattenedLevels } = levels || {};
+
+        return {
+            ...rest,
+            ...flattenedLevels,
+        };
+    });
+
+    return flattened
+}
+
 
 export async function getEventSubmissions(eventID: number, userID: string) {
     const levels = await getEventLevels(eventID)
