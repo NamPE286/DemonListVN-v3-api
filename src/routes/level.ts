@@ -6,6 +6,7 @@ import { getLevelDeathCount } from '@lib/client/deathCount'
 import { getLevelRecords } from '@src/lib/client/record'
 import userAuth from '@src/middleware/userAuth'
 import supabase from '@src/database/supabase'
+import { getEventLevelsSafe } from '@src/lib/client/event'
 
 const router = express.Router()
 
@@ -241,11 +242,16 @@ router.route('/:id/inEvent')
             return;
         }
 
-        if (data?.length) {
-            res.send()
-        } else {
-            res.status(404).send();
+        for (const i of data) {
+            const levels = await getEventLevelsSafe(i.eventID)
+
+            if (levels.some(level => level && level.levelID === Number(id))) {
+                res.send()
+                return
+            }
         }
+
+        res.status(404).send();
     })
 
 export default router
