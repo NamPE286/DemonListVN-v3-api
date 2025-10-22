@@ -643,6 +643,15 @@ router.route('/submitLevel/:levelID')
             return
         }
 
+        for (const i of data!) {
+            const levels = await getEventLevelsSafe(i.eventID)
+
+            if (levels.some(level => level && level.levelID === Number(levelID))) {
+                res.send()
+                return
+            }
+        }
+
         const eventRecordUpsertData = []
         const eventLevelUpsertData = []
 
