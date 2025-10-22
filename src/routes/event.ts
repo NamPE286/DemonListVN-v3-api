@@ -646,8 +646,8 @@ router.route('/submitLevel/:levelID')
         for (const i of data!) {
             const levels = await getEventLevelsSafe(i.eventID)
 
-            if (levels.some(level => level && level.levelID === Number(levelID))) {
-                res.send()
+            if (!levels.some(level => level && level.levelID === Number(levelID))) {
+                res.status(500).send()
                 return
             }
         }
