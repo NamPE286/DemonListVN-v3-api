@@ -653,7 +653,7 @@ router.route('/submitLevel/:levelID')
                         record.created_at = new Date()
 
                         if (event.events?.type == 'raid') {
-                            let prog = Math.pow(1.007, Number(progress));
+                            let prog = Number(progress) * Math.pow(1.007, Number(progress));
                             record.progress += prog;
 
                             console.log(level)
