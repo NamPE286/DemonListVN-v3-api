@@ -282,7 +282,7 @@ export type Database = {
           validUntil: string
         }
         Insert: {
-          code: string
+          code?: string
           created_at?: string
           deduct?: number
           percent?: number
@@ -342,25 +342,31 @@ export type Database = {
       }
       eventLevels: {
         Row: {
+          dmgTaken: number | null
           eventID: number
           id: number
           levelID: number
           needRaw: boolean
           point: number
+          requiredLevel: number | null
         }
         Insert: {
+          dmgTaken?: number | null
           eventID: number
           id?: number
           levelID: number
           needRaw?: boolean
           point: number
+          requiredLevel?: number | null
         }
         Update: {
+          dmgTaken?: number | null
           eventID?: number
           id?: number
           levelID?: number
           needRaw?: boolean
           point?: number
+          requiredLevel?: number | null
         }
         Relationships: [
           {
@@ -495,6 +501,7 @@ export type Database = {
           redirect: string | null
           start: string
           title: string
+          type: string
         }
         Insert: {
           content?: string | null
@@ -518,6 +525,7 @@ export type Database = {
           redirect?: string | null
           start?: string
           title: string
+          type?: string
         }
         Update: {
           content?: string | null
@@ -541,6 +549,7 @@ export type Database = {
           redirect?: string | null
           start?: string
           title?: string
+          type?: string
         }
         Relationships: []
       }
@@ -931,6 +940,7 @@ export type Database = {
           name: string | null
           nameLocked: boolean
           overallRank: number | null
+          overviewData: Json | null
           platformerRank: number | null
           platformerRating: number | null
           pointercrate: string | null
@@ -974,6 +984,7 @@ export type Database = {
           name?: string | null
           nameLocked?: boolean
           overallRank?: number | null
+          overviewData?: Json | null
           platformerRank?: number | null
           platformerRating?: number | null
           pointercrate?: string | null
@@ -1017,6 +1028,7 @@ export type Database = {
           name?: string | null
           nameLocked?: boolean
           overallRank?: number | null
+          overviewData?: Json | null
           platformerRank?: number | null
           platformerRating?: number | null
           pointercrate?: string | null
@@ -1083,6 +1095,7 @@ export type Database = {
           created_at: string
           description: string | null
           featured: boolean
+          hidden: boolean
           id: number
           imgCount: number | null
           maxQuantity: number | null
@@ -1096,6 +1109,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           featured?: boolean
+          hidden?: boolean
           id?: number
           imgCount?: number | null
           maxQuantity?: number | null
@@ -1109,6 +1123,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           featured?: boolean
+          hidden?: boolean
           id?: number
           imgCount?: number | null
           maxQuantity?: number | null
@@ -1328,18 +1343,9 @@ export type Database = {
           userID: string
         }[]
       }
-      update_supporter_until: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      updateList: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      updateRank: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      update_supporter_until: { Args: never; Returns: undefined }
+      updateList: { Args: never; Returns: undefined }
+      updateRank: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
