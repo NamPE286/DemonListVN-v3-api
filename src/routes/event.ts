@@ -652,7 +652,13 @@ router.route('/submitLevel/:levelID')
                         record.created_at = new Date()
 
                         if (event.events?.type == 'raid') {
-                            record.progress += Number(progress)
+                            let prog = Number(progress);
+
+                            if (prog == 100) {
+                                prog *= 2;
+                            }
+
+                            record.progress += prog;
                         } else {
                             record.progress = Number(progress)
                         }
