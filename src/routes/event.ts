@@ -628,7 +628,7 @@ router.route('/submitLevel/:levelID')
         const now = new Date().toISOString()
         var { data, error } = await supabase
             .from('eventProofs')
-            .select('userid, eventID, events!inner(start, end, eventLevels!inner(id, levelID, eventRecords(userID, levelID, progress, accepted, videoLink)))')
+            .select('userid, eventID, events!inner(start, end, type, eventLevels!inner(id, levelID, eventRecords(userID, levelID, progress, accepted, videoLink)))')
             .eq('userid', user.uid!)
             .eq('events.eventLevels.levelID', Number(levelID))
             .eq('events.eventLevels.eventRecords.userID', user.uid!)
@@ -650,7 +650,13 @@ router.route('/submitLevel/:levelID')
                     if (record.progress < Number(progress)) {
                         // @ts-ignore
                         record.created_at = new Date()
-                        record.progress = Number(progress)
+
+                        if (event.events?.type == 'raid') {
+                            record.progress += Number(progress)
+                        } else {
+                            record.progress = Number(progress)
+                        }
+
                         record.videoLink = "Submitted via Geode mod"
                         record.accepted = true;
 
