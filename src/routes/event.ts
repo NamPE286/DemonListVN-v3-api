@@ -679,6 +679,8 @@ router.route('/submitLevel/:levelID')
 
                         if (prog == 100) {
                             dmg *= 1.5
+                        } else if (prog <= 3) {
+                            dmg *= (0.1 * prog)
                         }
 
                         record.progress += dmg;
