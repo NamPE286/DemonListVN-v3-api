@@ -677,18 +677,20 @@ router.route('/submitLevel/:levelID')
                         let prog = Number(progress);
                         let dmg = Number(progress) * Math.pow(1.0305, Number(progress));
 
-                        if (prog == 100) {
-                            dmg *= 1.5
-                        } else if (prog <= 3) {
-                            dmg *= (0.1 * prog)
+                        if (prog >= level.minProgress) {
+                            if (prog == 100) {
+                                dmg *= 1.5
+                            } else if (prog <= 3) {
+                                dmg *= (0.1 * prog)
+                            }
+
+                            record.progress += dmg;
+                            totalProgress += dmg;
+                            record.videoLink = "Submitted via Geode mod"
+                            record.accepted = true;
+
+                            eventRecordUpsertData.push(record);
                         }
-
-                        record.progress += dmg;
-                        totalProgress += dmg;
-                        record.videoLink = "Submitted via Geode mod"
-                        record.accepted = true;
-
-                        eventRecordUpsertData.push(record);
                     }
                 }
 

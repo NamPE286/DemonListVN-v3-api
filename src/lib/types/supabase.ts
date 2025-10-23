@@ -342,31 +342,34 @@ export type Database = {
       }
       eventLevels: {
         Row: {
-          totalProgress: number | null
           eventID: number
           id: number
           levelID: number
+          minProgress: number
           needRaw: boolean
           point: number
           requiredLevel: number | null
+          totalProgress: number
         }
         Insert: {
-          totalProgress?: number | null
           eventID: number
           id?: number
           levelID: number
+          minProgress?: number
           needRaw?: boolean
           point: number
           requiredLevel?: number | null
+          totalProgress?: number
         }
         Update: {
-          totalProgress?: number | null
           eventID?: number
           id?: number
           levelID?: number
+          minProgress?: number
           needRaw?: boolean
           point?: number
           requiredLevel?: number | null
+          totalProgress?: number
         }
         Relationships: [
           {
