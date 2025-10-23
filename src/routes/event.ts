@@ -652,8 +652,13 @@ router.route('/submitLevel/:levelID')
             }
         }
 
+        interface LevelUpdateData {
+            level_id: number,
+            gained: number
+        }
+
         const eventRecordUpsertData = []
-        const eventLevelUpsertData = []
+        const eventLevelUpdateData: LevelUpdateData[] = []
 
         for (const event of data!) {
             for (const level of event.events?.eventLevels!) {
@@ -706,9 +711,10 @@ router.route('/submitLevel/:levelID')
                 if (totalProgress > 0) {
                     level.totalProgress! += totalProgress;
 
-                    const { eventRecords, ...levelWithoutRecords } = level;
-
-                    eventLevelUpsertData.push(levelWithoutRecords)
+                    eventLevelUpdateData.push({
+                        level_id: level.id,
+                        gained: totalProgress
+                    })
                 }
             }
         }
@@ -724,9 +730,9 @@ router.route('/submitLevel/:levelID')
             return
         }
 
-        var { error } = await supabase
-            .from('eventLevels')
-            .upsert(eventLevelUpsertData)
+        var { error } = await supabase.rpc('add_event_levels_progress', {
+            updates: JSON.parse(JSON.stringify(eventLevelUpdateData))
+        });
 
         if (error) {
             console.error(error)

@@ -1336,6 +1336,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_event_levels_progress: { Args: { updates: Json }; Returns: undefined }
       getEventLeaderboard: {
         Args: { event_id: number }
         Returns: {
