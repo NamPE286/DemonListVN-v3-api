@@ -675,7 +675,7 @@ router.route('/submitLevel/:levelID')
                         record.created_at = new Date()
 
                         let prog = Number(progress);
-                        let dmg = Number(progress) * Math.pow(1.0233, Number(progress));
+                        let dmg = Number(progress) * Math.pow(1.0305, Number(progress));
 
                         if (prog == 100) {
                             dmg *= 1.5
