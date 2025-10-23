@@ -345,7 +345,7 @@ export type Database = {
           eventID: number
           id: number
           levelID: number
-          minProgress: number
+          minEventProgress: number
           needRaw: boolean
           point: number
           requiredLevel: number | null
@@ -355,7 +355,7 @@ export type Database = {
           eventID: number
           id?: number
           levelID: number
-          minProgress?: number
+          minEventProgress?: number
           needRaw?: boolean
           point: number
           requiredLevel?: number | null
@@ -365,7 +365,7 @@ export type Database = {
           eventID?: number
           id?: number
           levelID?: number
-          minProgress?: number
+          minEventProgress?: number
           needRaw?: boolean
           point?: number
           requiredLevel?: number | null

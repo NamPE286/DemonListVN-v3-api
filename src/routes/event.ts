@@ -677,7 +677,7 @@ router.route('/submitLevel/:levelID')
                         let prog = Number(progress);
                         let dmg = Number(progress) * Math.pow(1.0305, Number(progress));
 
-                        if (prog >= level.minProgress) {
+                        if (prog >= level.minEventProgress) {
                             if (prog == 100) {
                                 dmg *= 1.5
                             }
