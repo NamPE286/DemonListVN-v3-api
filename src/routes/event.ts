@@ -683,7 +683,7 @@ router.route('/submitLevel/:levelID')
                         record.created_at = new Date()
 
                         let prog = Number(progress);
-                        let dmg = Math.max(remainingHP, Number(progress) * Math.pow(1.0305, Number(progress)));
+                        let dmg = Math.min(remainingHP, Number(progress) * Math.pow(1.0305, Number(progress)));
 
                         if (prog >= level.minEventProgress) {
                             if (prog == 100) {
