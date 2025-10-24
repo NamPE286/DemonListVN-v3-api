@@ -675,12 +675,15 @@ router.route('/submitLevel/:levelID')
                         eventRecordUpsertData.push(record);
                     }
 
+
                     if (event.events!.type == 'raid') {
+                        const remainingHP = Math.max(0, level.point - level.totalProgress)
+
                         // @ts-ignore
                         record.created_at = new Date()
 
                         let prog = Number(progress);
-                        let dmg = Number(progress) * Math.pow(1.0305, Number(progress));
+                        let dmg = Math.max(remainingHP, Number(progress) * Math.pow(1.0305, Number(progress)));
 
                         if (prog >= level.minEventProgress) {
                             if (prog == 100) {
