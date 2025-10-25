@@ -35,7 +35,7 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "start": "bun run src/index.ts",
-    "build": "bun build --compile --minify --sourcemap ./src/index.ts --outfile app",
+    "build": "bun build ./src/index.ts --outfile dist/index.js --target node",
     "update-types": "supabase gen types typescript --local > ./src/lib/types/supabase.ts",
     "sync": "echo y | supabase db pull --schema public; supabase db reset; supabase gen types typescript --local > ./src/lib/types/supabase.ts"
   }
