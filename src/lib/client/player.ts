@@ -65,6 +65,26 @@ export async function getFeaturedListLeaderboard({ start = 0, end = 50, sortBy =
     return data
 }
 
+export async function getPlatformerListLeaderboard({ start = 0, end = 50, sortBy = 'plrank', ascending = true } = {}) {
+    if (typeof ascending == 'string') {
+        ascending = (ascending == 'true')
+    }
+
+    const { data, error } = await supabase
+        .from('players')
+        .select('*, clans!id(*)')
+        .not('plRating', 'is', null)
+        .eq('isHidden', false)
+        .order(sortBy, { ascending: ascending })
+        .range(start, end)
+
+    if (error) {
+        throw error
+    }
+
+    return data
+}
+
 export async function getPlayersBatch(uid: string[]) {
     const { data, error } = await supabase
         .from('players')

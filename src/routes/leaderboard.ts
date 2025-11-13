@@ -1,5 +1,5 @@
 import express from 'express'
-import { getDemonListLeaderboard, getFeaturedListLeaderboard } from '@src/lib/client/player'
+import { getDemonListLeaderboard, getFeaturedListLeaderboard, getPlatformerListLeaderboard } from '@src/lib/client/player'
 
 const router = express.Router()
 
@@ -107,6 +107,58 @@ router.route('/fl')
     .get(async (req, res) => {
         try {
             res.send(await getFeaturedListLeaderboard(req.query))
+        } catch (err) {
+            res.status(500).send()
+        }
+    })
+
+router.route('/pl')
+    /**
+     * @openapi
+     * "/leaderboard/fl":
+     *   get:
+     *     tags:
+     *       - Leaderboard
+     *     summary: Get leaderboard of Platformer List
+     *     parameters:
+     *       - name: start
+     *         in: query
+     *         description: Range start index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 0
+     *       - name: end
+     *         in: query
+     *         description: Range end index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 50
+     *       - name: sortBy
+     *         in: query
+     *         description: Property of level to sort by
+     *         required: false
+     *         schema:
+     *           type: string
+     *           default: flrank
+     *       - name: ascending
+     *         in: query
+     *         description: Sort ascending
+     *         required: false
+     *         schema:
+     *           type: boolean
+     *           default: false
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
+    .get(async (req, res) => {
+        try {
+            res.send(await getPlatformerListLeaderboard(req.query))
         } catch (err) {
             res.status(500).send()
         }
