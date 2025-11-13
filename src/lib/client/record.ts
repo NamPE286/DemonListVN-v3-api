@@ -95,7 +95,7 @@ export async function getPlayerRecords(uid: string, { start = '0', end = '50', s
             .not('levels.flTop', 'is', null)
             .range(parseInt(start), parseInt(end))
         query2 = query2
-            .order('dlPt', { ascending: ascending == 'true' })
+            .order('plPt', { ascending: ascending == 'true' })
             .order('timestamp', { ascending: false })
             .not('levels.rating', 'is', null)
             .range(parseInt(start), parseInt(end))
@@ -117,7 +117,7 @@ export async function getPlayerRecords(uid: string, { start = '0', end = '50', s
         .range(parseInt(start), parseInt(end))
     query2 = query2
         .order(sortBy, { ascending: ascending == 'true' })
-        .not('levels.flTop', 'is', null)
+        .not('levels.plRating', 'is', null)
         .range(parseInt(start), parseInt(end))
 
     return {
