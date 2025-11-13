@@ -354,4 +354,22 @@ router.route('/:uid/events')
         res.send(data)
     })
 
+router.route('/:uid/cards')
+    .get(async (req, res) => {
+        const { uid } = req.params
+        const { data, error } = await supabase
+            .from('cards')
+            .select('id, created_at, supporterIncluded, owner, activationDate, name, img')
+            .eq('owner', uid)
+            .order('activationDate')
+
+        if (error) {
+            console.error(error);
+            res.status(500).send()
+            return;
+        }
+
+        res.send(data)
+    })
+
 export default router
