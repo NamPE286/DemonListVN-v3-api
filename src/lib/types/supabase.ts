@@ -944,8 +944,8 @@ export type Database = {
           nameLocked: boolean
           overallRank: number | null
           overviewData: Json | null
-          platformerRank: number | null
-          platformerRating: number | null
+          plrank: number | null
+          plRating: number | null
           pointercrate: string | null
           province: string | null
           rating: number | null
@@ -988,8 +988,8 @@ export type Database = {
           nameLocked?: boolean
           overallRank?: number | null
           overviewData?: Json | null
-          platformerRank?: number | null
-          platformerRating?: number | null
+          plrank?: number | null
+          plRating?: number | null
           pointercrate?: string | null
           province?: string | null
           rating?: number | null
@@ -1032,8 +1032,8 @@ export type Database = {
           nameLocked?: boolean
           overallRank?: number | null
           overviewData?: Json | null
-          platformerRank?: number | null
-          platformerRating?: number | null
+          plrank?: number | null
+          plRating?: number | null
           pointercrate?: string | null
           province?: string | null
           rating?: number | null
@@ -1218,6 +1218,7 @@ export type Database = {
           mobile: boolean
           needMod: boolean
           no: number | null
+          plPt: number | null
           progress: number
           queueNo: number | null
           raw: string | null
@@ -1225,7 +1226,6 @@ export type Database = {
           reviewer: string | null
           reviewerComment: string | null
           suggestedRating: number | null
-          time: number | null
           timestamp: number | null
           userid: string
           videoLink: string | null
@@ -1239,6 +1239,7 @@ export type Database = {
           mobile?: boolean
           needMod?: boolean
           no?: number | null
+          plPt?: number | null
           progress?: number
           queueNo?: number | null
           raw?: string | null
@@ -1246,7 +1247,6 @@ export type Database = {
           reviewer?: string | null
           reviewerComment?: string | null
           suggestedRating?: number | null
-          time?: number | null
           timestamp?: number | null
           userid: string
           videoLink?: string | null
@@ -1260,6 +1260,7 @@ export type Database = {
           mobile?: boolean
           needMod?: boolean
           no?: number | null
+          plPt?: number | null
           progress?: number
           queueNo?: number | null
           raw?: string | null
@@ -1267,7 +1268,6 @@ export type Database = {
           reviewer?: string | null
           reviewerComment?: string | null
           suggestedRating?: number | null
-          time?: number | null
           timestamp?: number | null
           userid?: string
           videoLink?: string | null
@@ -1295,6 +1295,24 @@ export type Database = {
             referencedColumns: ["uid"]
           },
         ]
+      }
+      rules: {
+        Row: {
+          content: string
+          lang: string
+          type: string
+        }
+        Insert: {
+          content: string
+          lang: string
+          type: string
+        }
+        Update: {
+          content?: string
+          lang?: string
+          type?: string
+        }
+        Relationships: []
       }
       userSocial: {
         Row: {
