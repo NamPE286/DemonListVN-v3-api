@@ -1355,6 +1355,31 @@ export type Database = {
     }
     Functions: {
       add_event_levels_progress: { Args: { updates: Json }; Returns: undefined }
+      get_random_levels: {
+        Args: { filter_type: string; row_count: number }
+        Returns: {
+          accepted: boolean
+          created_at: string
+          creator: string | null
+          dlTop: number | null
+          flPt: number | null
+          flTop: number | null
+          id: number
+          insaneTier: number | null
+          isNonList: boolean
+          isPlatformer: boolean
+          minProgress: number | null
+          name: string | null
+          rating: number | null
+          videoID: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "levels"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       getEventLeaderboard: {
         Args: { event_id: number }
         Returns: {
