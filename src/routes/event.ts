@@ -751,7 +751,7 @@ router.route('/:id/quest')
         const { id } = req.params
         const { data, error } = await supabase
             .from('eventQuests')
-            .select('*')
+            .select('*, items(*)')
             .eq('eventId', id)
 
         if (error) {
