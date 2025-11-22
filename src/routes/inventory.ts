@@ -2,6 +2,7 @@ import userAuth from '@src/middleware/userAuth'
 import itemOwnerCheck from '@src/middleware/itemOwnerCheck'
 import express from 'express'
 import { consumeCase } from '@src/lib/client/inventory'
+import supabase from '@src/database/supabase'
 
 const router = express.Router()
 
@@ -40,7 +41,19 @@ router.route('/:id/consume')
             if (item.type == 'case') {
                 res.send(await consumeCase(user, item.inventoryId, item.itemId))
             } else {
-                res.status(501).send()
+                var { error } = await supabase
+                    .from('inventory')
+                    .update({ consumed: true })
+                    .eq('id', item.inventoryId)
+
+                if (error) {
+                    console.error(error)
+                    res.status(500).send()
+
+                    return;
+                }
+
+                res.status(200).send()
             }
         } catch (err) {
             console.error(err);
