@@ -248,6 +248,7 @@ class Player {
                 redirect: items.redirect,
                 productId: items.productId,
                 description: items.description,
+                rarity: items.rarity
             } : {
                 name: '' as string,
                 type: '' as string,

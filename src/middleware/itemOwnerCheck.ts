@@ -24,6 +24,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             redirect: item.items ? item.items.redirect : null,
             productId: item.items ? item.items.productId : null,
             description: item.items ? item.items.description : null,
+            rarity: item.items?.rarity!
         }
 
         res.locals.item = mapped

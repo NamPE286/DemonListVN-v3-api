@@ -705,6 +705,7 @@ export type Database = {
           id: number
           name: string
           productId: number | null
+          rarity: number
           redirect: string | null
           type: string
         }
@@ -713,6 +714,7 @@ export type Database = {
           id?: number
           name?: string
           productId?: number | null
+          rarity?: number
           redirect?: string | null
           type?: string
         }
@@ -721,6 +723,7 @@ export type Database = {
           id?: number
           name?: string
           productId?: number | null
+          rarity?: number
           redirect?: string | null
           type?: string
         }
