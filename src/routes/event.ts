@@ -746,4 +746,20 @@ router.route('/submitLevel/:levelID')
         res.send();
     })
 
+router.route('/:id/quest')
+    .get(async (req, res) => {
+        const { id } = req.params
+        const { data, error } = await supabase
+            .from('eventQuests')
+            .select('*')
+            .eq('eventId', id)
+
+        if (error) {
+            console.error(error)
+            res.status(500).send()
+        }
+
+        res.send(data)
+    })
+
 export default router

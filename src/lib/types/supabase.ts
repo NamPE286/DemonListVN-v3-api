@@ -538,6 +538,81 @@ export type Database = {
           },
         ]
       }
+      eventQuestClaims: {
+        Row: {
+          created_at: string
+          questId: number
+          userId: string
+        }
+        Insert: {
+          created_at?: string
+          questId: number
+          userId: string
+        }
+        Update: {
+          created_at?: string
+          questId?: number
+          userId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventQuestClaims_questId_fkey"
+            columns: ["questId"]
+            isOneToOne: false
+            referencedRelation: "eventQuests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventQuestClaims_userId_fkey"
+            columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      eventQuests: {
+        Row: {
+          condition: Json
+          created_at: string
+          eventId: number
+          id: number
+          rewardItemId: number | null
+          title: string | null
+        }
+        Insert: {
+          condition: Json
+          created_at?: string
+          eventId: number
+          id?: number
+          rewardItemId?: number | null
+          title?: string | null
+        }
+        Update: {
+          condition?: Json
+          created_at?: string
+          eventId?: number
+          id?: number
+          rewardItemId?: number | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventQuests_eventId_fkey"
+            columns: ["eventId"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventQuests_rewardItemId_fkey"
+            columns: ["rewardItemId"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eventRecords: {
         Row: {
           accepted: boolean | null
@@ -689,7 +764,7 @@ export type Database = {
       }
       inventory: {
         Row: {
-          consumed: boolean | null
+          consumed: boolean
           content: string | null
           created_at: string
           expireAt: string | null
@@ -699,7 +774,7 @@ export type Database = {
           userID: string
         }
         Insert: {
-          consumed?: boolean | null
+          consumed?: boolean
           content?: string | null
           created_at?: string
           expireAt?: string | null
@@ -709,7 +784,7 @@ export type Database = {
           userID: string
         }
         Update: {
-          consumed?: boolean | null
+          consumed?: boolean
           content?: string | null
           created_at?: string
           expireAt?: string | null
