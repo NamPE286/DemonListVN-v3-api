@@ -220,6 +220,7 @@ class Player {
             .from('inventory')
             .select('*, items!inner(*)')
             .eq('userID', this.uid!)
+            .eq('consumed', false)
             .order('created_at', { ascending: false })
 
         if (error) {

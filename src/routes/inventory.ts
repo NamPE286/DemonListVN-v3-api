@@ -1,6 +1,7 @@
 import userAuth from '@src/middleware/userAuth'
 import itemOwnerCheck from '@src/middleware/itemOwnerCheck'
 import express from 'express'
+import { consumeCase } from '@src/lib/client/inventory'
 
 const router = express.Router()
 
@@ -30,9 +31,17 @@ router.route('/:id/consume')
     .delete(userAuth, itemOwnerCheck, async (req, res) => {
         const { item } = res.locals
 
+        if (!item) {
+            res.status(404).send()
+            return;
+        }
+
         try {
-            
-            res.status(204).send()
+            if (item.type == 'case') {
+                res.send(await consumeCase(item.itemId))
+            } else {
+                res.status(501).send()
+            }
         } catch (err) {
             console.error(err);
             res.status(500).send()

@@ -659,6 +659,7 @@ export type Database = {
       }
       inventory: {
         Row: {
+          consumed: boolean | null
           content: string | null
           created_at: string
           id: number
@@ -666,6 +667,7 @@ export type Database = {
           userID: string
         }
         Insert: {
+          consumed?: boolean | null
           content?: string | null
           created_at?: string
           id?: number
@@ -673,6 +675,7 @@ export type Database = {
           userID: string
         }
         Update: {
+          consumed?: boolean | null
           content?: string | null
           created_at?: string
           id?: number
