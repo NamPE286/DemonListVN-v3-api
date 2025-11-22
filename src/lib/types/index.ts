@@ -6,3 +6,13 @@ export type TNotification = Database['public']['Tables']['notifications']['Updat
 export type TLevel = Database['public']['Tables']['levels']['Update']
 export type TPlayer = Database['public']['Tables']['players']['Update']
 export type TRecord = Database['public']['Tables']['records']['Update']
+export type TInventoryRow = Database['public']['Tables']['inventory']['Row']
+export type TItemRow = Database['public']['Tables']['items']['Row']
+export type TInventoryWithItem = TInventoryRow & { items?: TItemRow | null }
+export type TInventoryItem = {
+	userID: TInventoryRow['userID']
+	itemId: TInventoryRow['itemId']
+	content: TInventoryRow['content']
+	created_at: TInventoryRow['created_at']
+	inventoryId: TInventoryRow['id']
+} & Omit<TItemRow, 'id'>

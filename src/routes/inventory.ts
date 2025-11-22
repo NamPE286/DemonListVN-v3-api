@@ -31,7 +31,7 @@ router.route('/:id/consume')
         const { item } = res.locals
 
         try {
-            // TODO: implement consume logic using `item`
+            
             res.status(204).send()
         } catch (err) {
             console.error(err);

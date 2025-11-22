@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express'
 import { getInventoryItem } from '@src/lib/client/inventory'
+import type { TInventoryItem } from '@src/lib/types'
 
 export default async function (req: Request, res: Response, next: NextFunction) {
     const { user } = res.locals
@@ -12,7 +13,20 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             return res.status(403).send({ error: 'User not owning this item' })
         }
 
-        res.locals.item = item
+        const mapped: TInventoryItem = {
+            userID: item.userID,
+            itemId: item.itemId,
+            content: item.content,
+            created_at: item.created_at,
+            inventoryId: item.id,
+            name: item.items ? item.items.name : '',
+            type: item.items ? item.items.type : '',
+            redirect: item.items ? item.items.redirect : null,
+            productId: item.items ? item.items.productId : null,
+            description: item.items ? item.items.description : null,
+        }
+
+        res.locals.item = mapped
         next()
     } catch (err) {
         console.error(err)
