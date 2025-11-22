@@ -3,7 +3,7 @@ import supabase from "@src/database/supabase";
 export async function getInventoryItem(id: number) {
     const { data, error } = await supabase
         .from('inventory')
-        .select('*')
+        .select('*, items(*)')
         .eq('id', id)
         .single()
 
