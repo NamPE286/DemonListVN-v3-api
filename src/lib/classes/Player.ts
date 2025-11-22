@@ -214,6 +214,8 @@ class Player {
             content: InventoryRow['content']
             created_at: InventoryRow['created_at']
             inventoryId: InventoryRow['id']
+            useRedirect: InventoryRow['redirectTo'],
+            expireAt: InventoryRow['expireAt']
         } & Omit<ItemRow, 'id'>
 
         const { data, error } = await supabase
@@ -241,6 +243,8 @@ class Player {
                 content: row.content,
                 created_at: row.created_at,
                 inventoryId: row.id,
+                useRedirect: row.redirectTo,
+                expireAt: row.expireAt
             }
 
             const itemFields = items ? {
@@ -249,13 +253,17 @@ class Player {
                 redirect: items.redirect,
                 productId: items.productId,
                 description: items.description,
-                rarity: items.rarity
+                rarity: items.rarity,
+                useRedirect: base.useRedirect,
+                expireAt: base.expireAt
             } : {
                 name: '' as string,
                 type: '' as string,
                 redirect: null as string | null,
                 productId: null as number | null,
                 description: null as string | null,
+                useRedirect: null,
+                expireAt: null
             }
 
             return Object.assign({}, base, itemFields) as InventoryItemType
