@@ -1,6 +1,6 @@
 import supabase from '@database/supabase'
 import { sendDirectMessage } from '@src/lib/client/discord'
-import type { TPlayer } from '@src/lib/types'
+import type { TInventoryItem, TPlayer } from '@src/lib/types'
 import type { Database } from '@src/lib/types/supabase'
 
 interface Player extends TPlayer { }
@@ -208,16 +208,6 @@ class Player {
         type InventoryRow = Database['public']['Tables']['inventory']['Row']
         type ItemRow = Database['public']['Tables']['items']['Row']
 
-        type InventoryItemType = {
-            userID: InventoryRow['userID']
-            itemId: InventoryRow['itemId']
-            content: InventoryRow['content']
-            created_at: InventoryRow['created_at']
-            inventoryId: InventoryRow['id']
-            useRedirect: InventoryRow['redirectTo'],
-            expireAt: InventoryRow['expireAt']
-        } & Omit<ItemRow, 'id'>
-
         const { data, error } = await supabase
             .from('inventory')
             .select('*, items!inner(*)')
@@ -231,10 +221,10 @@ class Player {
         }
 
         if (!data) {
-            return [] as InventoryItemType[]
+            return [] as TInventoryItem[]
         }
 
-        const mapped: InventoryItemType[] = (data as (InventoryRow & { items?: ItemRow })[]).map(row => {
+        const mapped: TInventoryItem[] = (data as (InventoryRow & { items?: ItemRow })[]).map(row => {
             const items = row.items
 
             const base = {
@@ -266,7 +256,7 @@ class Player {
                 expireAt: null
             }
 
-            return Object.assign({}, base, itemFields) as InventoryItemType
+            return Object.assign({}, base, itemFields) as TInventoryItem
         })
 
         return mapped

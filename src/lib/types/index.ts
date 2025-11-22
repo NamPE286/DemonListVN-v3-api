@@ -14,5 +14,7 @@ export type TInventoryItem = {
 	itemId: TInventoryRow['itemId']
 	content: TInventoryRow['content']
 	created_at: TInventoryRow['created_at']
-	inventoryId: TInventoryRow['id']
+	inventoryId: TInventoryRow['id'],
+	useRedirect: TInventoryRow['redirectTo'],
+	expireAt: TInventoryRow['expireAt']
 } & Omit<TItemRow, 'id'>
