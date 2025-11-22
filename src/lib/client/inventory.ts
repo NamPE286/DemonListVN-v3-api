@@ -90,6 +90,20 @@ export async function addInventoryItem(player: Player, caseItem: CaseItem) {
         if (!data || error) {
             throw error
         }
+
+        var { error } = await supabase
+            .from('inventory')
+            .insert({
+                userID: player.uid,
+                itemId: caseItem.itemId,
+                consumed: false,
+                redirectTo: '/redeem/' + data?.code,
+                expireAt: new Date(new Date().getTime() + caseItem.expireAfter).toISOString()
+            })
+
+        if (error) {
+            throw error
+        }
     } else {
         var { error } = await supabase
             .from('inventory')
