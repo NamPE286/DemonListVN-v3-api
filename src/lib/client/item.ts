@@ -3,7 +3,7 @@ import supabase from "@src/database/supabase";
 export async function getCase(id: number) {
     const { data, error } = await supabase
         .from('caseItems')
-        .select('*')
+        .select('*, items!caseItems_itemId_fkey(*)')
         .eq('caseId', id)
 
     if (error) {
