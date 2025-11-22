@@ -1,5 +1,5 @@
-import { getInventoryItem } from '@src/lib/client/inventory'
 import userAuth from '@src/middleware/userAuth'
+import itemOwnerCheck from '@src/middleware/itemOwnerCheck'
 import express from 'express'
 
 const router = express.Router()
@@ -17,18 +17,22 @@ router.route('/')
     })
 
 router.route('/:id')
-    .get(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { id } = req.params
+    .get(userAuth, itemOwnerCheck, async (req, res) => {
+        try {
+            res.send(res.locals.item);
+        } catch (err) {
+            console.error(err);
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/consume')
+    .delete(userAuth, itemOwnerCheck, async (req, res) => {
+        const { item } = res.locals
 
         try {
-            const item = await getInventoryItem(Number(id))
-
-            if (item.userID != user.uid) {
-                throw new Error("User not owning this item")
-            }
-
-            res.send(item);
+            // TODO: implement consume logic using `item`
+            res.status(204).send()
         } catch (err) {
             console.error(err);
             res.status(500).send()
