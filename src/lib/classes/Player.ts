@@ -1,6 +1,7 @@
 import supabase from '@database/supabase'
 import { sendDirectMessage } from '@src/lib/client/discord'
 import type { TPlayer } from '@src/lib/types'
+import type { Database } from '@src/lib/types/supabase'
 
 interface Player extends TPlayer { }
 
@@ -204,27 +205,60 @@ class Player {
     }
 
     async getInventoryItems() {
+        type InventoryRow = Database['public']['Tables']['inventory']['Row']
+        type ItemRow = Database['public']['Tables']['items']['Row']
+
+        type InventoryItemType = {
+            userID: InventoryRow['userID']
+            itemId: InventoryRow['itemId']
+            content: InventoryRow['content']
+            created_at: InventoryRow['created_at']
+            inventoryId: InventoryRow['id']
+        } & Omit<ItemRow, 'id'>
+
         const { data, error } = await supabase
-            .from("inventory")
-            .select("*, items!inner(*)")
-            .eq("userID", this.uid!)
-            .order("created_at", { ascending: false })
+            .from('inventory')
+            .select('*, items!inner(*)')
+            .eq('userID', this.uid!)
+            .order('created_at', { ascending: false })
 
         if (error) {
             throw error
         }
 
-        if (data) {
-            data.forEach((item: any) => {
-                if (item.items) {
-                    Object.assign(item, item.items);
-                    delete item.items;
-                    delete item.id;
-                }
-            });
+        if (!data) {
+            return [] as InventoryItemType[]
         }
 
-        return data
+        const mapped: InventoryItemType[] = (data as (InventoryRow & { items?: ItemRow })[]).map(row => {
+            const items = row.items
+
+            const base = {
+                userID: row.userID,
+                itemId: row.itemId,
+                content: row.content,
+                created_at: row.created_at,
+                inventoryId: row.id,
+            }
+
+            const itemFields = items ? {
+                name: items.name,
+                type: items.type,
+                redirect: items.redirect,
+                productId: items.productId,
+                description: items.description,
+            } : {
+                name: '' as string,
+                type: '' as string,
+                redirect: null as string | null,
+                productId: null as number | null,
+                description: null as string | null,
+            }
+
+            return Object.assign({}, base, itemFields) as InventoryItemType
+        })
+
+        return mapped
     }
 }
 
