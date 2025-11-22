@@ -101,6 +101,45 @@ export type Database = {
           },
         ]
       }
+      caseItems: {
+        Row: {
+          caseId: number
+          created_at: string
+          itemId: number
+          quantity: number
+          rate: number | null
+        }
+        Insert: {
+          caseId: number
+          created_at?: string
+          itemId: number
+          quantity?: number
+          rate?: number | null
+        }
+        Update: {
+          caseId?: number
+          created_at?: string
+          itemId?: number
+          quantity?: number
+          rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caseItems_caseId_fkey"
+            columns: ["caseId"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caseItems_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       changelogs: {
         Row: {
           created_at: string
@@ -620,24 +659,38 @@ export type Database = {
       }
       items: {
         Row: {
+          description: string | null
           id: number
           name: string
+          productId: number | null
           redirect: string | null
           type: string
         }
         Insert: {
+          description?: string | null
           id?: number
           name?: string
+          productId?: number | null
           redirect?: string | null
           type?: string
         }
         Update: {
+          description?: string | null
           id?: number
           name?: string
+          productId?: number | null
           redirect?: string | null
           type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "items_productId_fkey"
+            columns: ["productId"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       levelDeathCount: {
         Row: {
