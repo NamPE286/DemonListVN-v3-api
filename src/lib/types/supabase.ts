@@ -105,28 +105,25 @@ export type Database = {
         Row: {
           caseId: number
           created_at: string
+          expireAfter: number | null
           id: number
           itemId: number
-          quantity: number
-          rarity: number | null
           rate: number | null
         }
         Insert: {
           caseId: number
           created_at?: string
+          expireAfter?: number | null
           id?: number
           itemId: number
-          quantity?: number
-          rarity?: number | null
           rate?: number | null
         }
         Update: {
           caseId?: number
           created_at?: string
+          expireAfter?: number | null
           id?: number
           itemId?: number
-          quantity?: number
-          rarity?: number | null
           rate?: number | null
         }
         Relationships: [
@@ -148,18 +145,24 @@ export type Database = {
       }
       caseResult: {
         Row: {
+          caseId: number
           created_at: string
           id: number
+          openerId: string
           resultId: number | null
         }
         Insert: {
+          caseId: number
           created_at?: string
           id?: number
+          openerId: string
           resultId?: number | null
         }
         Update: {
+          caseId?: number
           created_at?: string
           id?: number
+          openerId?: string
           resultId?: number | null
         }
         Relationships: [
@@ -169,6 +172,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "items"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caseResult_caseId_fkey1"
+            columns: ["caseId"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caseResult_openerId_fkey"
+            columns: ["openerId"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
           },
           {
             foreignKeyName: "caseResult_resultId_fkey"
@@ -678,6 +695,7 @@ export type Database = {
           expireAt: string | null
           id: number
           itemId: number
+          redirectTo: string | null
           userID: string
         }
         Insert: {
@@ -687,6 +705,7 @@ export type Database = {
           expireAt?: string | null
           id?: number
           itemId: number
+          redirectTo?: string | null
           userID: string
         }
         Update: {
@@ -696,6 +715,7 @@ export type Database = {
           expireAt?: string | null
           id?: number
           itemId?: number
+          redirectTo?: string | null
           userID?: string
         }
         Relationships: [
@@ -721,6 +741,7 @@ export type Database = {
           id: number
           name: string
           productId: number | null
+          quantity: number
           rarity: number
           redirect: string | null
           type: string
@@ -730,6 +751,7 @@ export type Database = {
           id?: number
           name?: string
           productId?: number | null
+          quantity?: number
           rarity?: number
           redirect?: string | null
           type?: string
@@ -739,6 +761,7 @@ export type Database = {
           id?: number
           name?: string
           productId?: number | null
+          quantity?: number
           rarity?: number
           redirect?: string | null
           type?: string

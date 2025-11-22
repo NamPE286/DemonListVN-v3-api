@@ -13,8 +13,6 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             return res.status(403).send({ error: 'User not owning this item' })
         }
 
-        
-
         const mapped: TInventoryItem = {
             userID: item.userID,
             itemId: item.itemId,
@@ -26,7 +24,8 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             redirect: item.items ? item.items.redirect : null,
             productId: item.items ? item.items.productId : null,
             description: item.items ? item.items.description : null,
-            rarity: item.items?.rarity!
+            rarity: item.items?.rarity!,
+            quantity: item.items?.quantity!
         }
 
         res.locals.item = mapped
