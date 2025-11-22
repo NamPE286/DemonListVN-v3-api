@@ -40,7 +40,7 @@ router.route('/')
             .match({ userid: req.body.userid, levelid: req.body.levelid })
 
         if (error) {
-            console.log(error)
+            console.error(error)
             res.status(500).send()
             return
         }
@@ -51,7 +51,7 @@ router.route('/')
             .match({ uid: res.locals.user.uid })
 
         if (error) {
-            console.log(error)
+            console.error(error)
             res.status(500).send()
             return
         }

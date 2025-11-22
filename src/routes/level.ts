@@ -247,12 +247,10 @@ router.route('/:id/inEvent')
 
             if (levels.some(level => level && level.levelID === Number(id))) {
                 res.send()
-                console.log('ok')
                 return
             }
         }
 
-        console.log('123')
         res.status(404).send();
     })
 

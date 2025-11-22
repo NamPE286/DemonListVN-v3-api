@@ -50,7 +50,6 @@ export async function getUserByID(id: number) {
 }
 
 export async function createDirectMessageChannel(userID: string): Promise<string> {
-    console.log(userID)
     const response = await fetch("https://discord.com/api/v10/users/@me/channels", {
         method: "POST",
         body: JSON.stringify({

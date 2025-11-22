@@ -168,7 +168,7 @@ class Record {
             .upsert(this as any)
 
         if (error) {
-            console.log(error)
+            console.error(error)
             throw error
         }
     }

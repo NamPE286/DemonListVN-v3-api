@@ -70,7 +70,6 @@ router.route('/:levelID/:count')
      *             schema:
      */
     .post(userAuth, async (req, res) => {
-        console.log('deathCount')
         res.send()
         const { count } = req.params
         const arr: any[] = count.split('|')

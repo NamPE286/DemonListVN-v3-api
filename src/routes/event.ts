@@ -501,7 +501,6 @@ router.route('/proof')
         }
 
         if (event.end && new Date() >= new Date(event.end)) {
-            console.log(new Date(), new Date(event.end))
             res.status(401).send();
             return;
         }

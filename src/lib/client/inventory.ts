@@ -39,8 +39,6 @@ export async function consumeCase(player: Player, inventoryItemId: number, itemI
 }
 
 export async function addCaseResult(player: Player, inventoryItemId: number, caseItem: CaseItem | null) {
-    console.log(inventoryItemId)
-
     var { error } = await supabase
         .from('inventory')
         .update({ consumed: true })

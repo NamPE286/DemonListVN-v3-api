@@ -23,7 +23,7 @@ router.route('/')
         const a = await supabase.rpc('updateRank')
 
         if (a.error) {
-            console.log(a.error)
+            console.error(a.error)
             res.status(500).send()
             return
         }
@@ -31,7 +31,7 @@ router.route('/')
         const b = await supabase.rpc('updateList')
 
         if (b.error) {
-            console.log(b.error)
+            console.error(b.error)
             res.status(500).send()
             return
         }

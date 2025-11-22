@@ -598,8 +598,6 @@ router.route('/:id/invitation/:uid')
         const clan = new Clan({ id: parseInt(id) })
         await clan.pull()
 
-        console.log(clan.owner, user.uid)
-
         if (clan.owner != user.uid) {
             res.status(403).send()
             return

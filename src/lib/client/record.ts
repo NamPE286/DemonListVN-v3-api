@@ -162,7 +162,7 @@ export async function getRecord(uid: string, levelID: number) {
         .single()
 
     if (error) {
-        console.log(error)
+        console.error(error)
         throw error
     }
 
