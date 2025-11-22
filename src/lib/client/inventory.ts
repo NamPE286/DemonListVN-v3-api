@@ -16,8 +16,28 @@ export async function getInventoryItem(inventoryItemId: number) {
     return data;
 }
 
-export async function consumeCase(itemId: number) {
-    const caseItems = await getCaseItems(itemId)
+export async function consumeCase(inventoryItemId: number, itemId: number) {
+    const { error } = await supabase
+        .from('inventory')
+        .update({ consumed: true })
+        .eq('id', inventoryItemId)
 
-    return caseItems
+    if (error) {
+        throw error
+    }
+
+    const caseItems = await getCaseItems(itemId)
+    const roll = Math.random();
+
+    let x = 0;
+
+    for (const i of caseItems) {
+        x += i.rate!;
+
+        if (x >= roll) {
+            return i;
+        }
+    }
+
+    return null;
 }

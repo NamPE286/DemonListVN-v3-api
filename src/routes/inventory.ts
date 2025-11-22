@@ -38,7 +38,7 @@ router.route('/:id/consume')
 
         try {
             if (item.type == 'case') {
-                res.send(await consumeCase(item.itemId))
+                res.send(await consumeCase(item.inventoryId, item.itemId))
             } else {
                 res.status(501).send()
             }
