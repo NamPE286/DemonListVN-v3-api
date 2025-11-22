@@ -105,6 +105,7 @@ export type Database = {
         Row: {
           caseId: number
           created_at: string
+          id: number
           itemId: number
           quantity: number
           rate: number | null
@@ -112,6 +113,7 @@ export type Database = {
         Insert: {
           caseId: number
           created_at?: string
+          id?: number
           itemId: number
           quantity?: number
           rate?: number | null
@@ -119,6 +121,7 @@ export type Database = {
         Update: {
           caseId?: number
           created_at?: string
+          id?: number
           itemId?: number
           quantity?: number
           rate?: number | null
@@ -136,6 +139,39 @@ export type Database = {
             columns: ["itemId"]
             isOneToOne: false
             referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      caseResult: {
+        Row: {
+          created_at: string
+          id: number
+          resultId: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          resultId?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          resultId?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caseResult_caseId_fkey"
+            columns: ["resultId"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caseResult_resultId_fkey"
+            columns: ["resultId"]
+            isOneToOne: false
+            referencedRelation: "caseItems"
             referencedColumns: ["id"]
           },
         ]
@@ -625,25 +661,28 @@ export type Database = {
         Row: {
           content: string | null
           created_at: string
-          medalID: number
+          id: number
+          itemId: number
           userID: string
         }
         Insert: {
           content?: string | null
           created_at?: string
-          medalID: number
+          id?: number
+          itemId: number
           userID: string
         }
         Update: {
           content?: string | null
           created_at?: string
-          medalID?: number
+          id?: number
+          itemId?: number
           userID?: string
         }
         Relationships: [
           {
-            foreignKeyName: "playerMedal_medalID_fkey"
-            columns: ["medalID"]
+            foreignKeyName: "inventory_itemId_fkey"
+            columns: ["itemId"]
             isOneToOne: false
             referencedRelation: "items"
             referencedColumns: ["id"]

@@ -203,12 +203,11 @@ class Player {
         await sendDirectMessage(this.uid!, `Your Discord account is linked to [${this.name}](https://demonlistvn.com/player/${this.uid!}) DLVN account.`, true)
     }
 
-    async getInventoryItems(type: string) {
+    async getInventoryItems() {
         const { data, error } = await supabase
             .from("inventory")
             .select("*, items!inner(*)")
             .eq("userID", this.uid!)
-            .eq("items.type", type)
             .order("created_at", { ascending: false })
 
         if (error) {
