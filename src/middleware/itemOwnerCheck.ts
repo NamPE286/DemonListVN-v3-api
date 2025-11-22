@@ -13,6 +13,8 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             return res.status(403).send({ error: 'User not owning this item' })
         }
 
+        
+
         const mapped: TInventoryItem = {
             userID: item.userID,
             itemId: item.itemId,

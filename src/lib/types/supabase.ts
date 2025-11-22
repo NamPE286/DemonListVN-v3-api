@@ -108,6 +108,7 @@ export type Database = {
           id: number
           itemId: number
           quantity: number
+          rarity: number | null
           rate: number | null
         }
         Insert: {
@@ -116,6 +117,7 @@ export type Database = {
           id?: number
           itemId: number
           quantity?: number
+          rarity?: number | null
           rate?: number | null
         }
         Update: {
@@ -124,6 +126,7 @@ export type Database = {
           id?: number
           itemId?: number
           quantity?: number
+          rarity?: number | null
           rate?: number | null
         }
         Relationships: [
@@ -350,6 +353,7 @@ export type Database = {
           code: string
           created_at: string
           deduct: number
+          owner: string | null
           percent: number
           productID: number | null
           quantity: number
@@ -360,6 +364,7 @@ export type Database = {
           code?: string
           created_at?: string
           deduct?: number
+          owner?: string | null
           percent?: number
           productID?: number | null
           quantity?: number
@@ -370,6 +375,7 @@ export type Database = {
           code?: string
           created_at?: string
           deduct?: number
+          owner?: string | null
           percent?: number
           productID?: number | null
           quantity?: number
@@ -377,6 +383,13 @@ export type Database = {
           validUntil?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "coupons_owner_fkey"
+            columns: ["owner"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
           {
             foreignKeyName: "coupons_productID_fkey"
             columns: ["productID"]
@@ -662,6 +675,7 @@ export type Database = {
           consumed: boolean | null
           content: string | null
           created_at: string
+          expireAt: string | null
           id: number
           itemId: number
           userID: string
@@ -670,6 +684,7 @@ export type Database = {
           consumed?: boolean | null
           content?: string | null
           created_at?: string
+          expireAt?: string | null
           id?: number
           itemId: number
           userID: string
@@ -678,6 +693,7 @@ export type Database = {
           consumed?: boolean | null
           content?: string | null
           created_at?: string
+          expireAt?: string | null
           id?: number
           itemId?: number
           userID?: string

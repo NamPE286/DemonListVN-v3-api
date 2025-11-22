@@ -1,4 +1,5 @@
 import supabase from "@src/database/supabase";
+import type Player from "@src/lib/classes/Player";
 import { getCase as getCaseItems } from "@src/lib/client/item";
 
 export async function getInventoryItem(inventoryItemId: number) {
@@ -7,6 +8,7 @@ export async function getInventoryItem(inventoryItemId: number) {
         .select('*, items(*)')
         .eq('id', inventoryItemId)
         .eq('consumed', false)
+        .or(`expireAt.is.null,expireAt.gt.${new Date().toISOString()}`)
         .single()
 
     if (error) {
@@ -16,10 +18,10 @@ export async function getInventoryItem(inventoryItemId: number) {
     return data;
 }
 
-export async function consumeCase(inventoryItemId: number, itemId: number) {
+export async function consumeCase(player: Player, inventoryItemId: number, itemId: number) {
     const { error } = await supabase
         .from('inventory')
-        .update({ consumed: true })
+        .update({ consumed: false }) // set to true after testing
         .eq('id', inventoryItemId)
 
     if (error) {
@@ -35,9 +37,16 @@ export async function consumeCase(inventoryItemId: number, itemId: number) {
         x += i.rate!;
 
         if (x >= roll) {
+            await addInventoryItem(i);
             return i;
         }
     }
 
-    return null;
+    return {};
+}
+
+type CaseItem = Awaited<ReturnType<typeof getCaseItems>> extends Array<infer T> ? T : never;
+
+export async function addInventoryItem(item: CaseItem) {
+    
 }

@@ -221,6 +221,7 @@ class Player {
             .select('*, items!inner(*)')
             .eq('userID', this.uid!)
             .eq('consumed', false)
+            .or(`expireAt.is.null,expireAt.gt.${new Date().toISOString()}`)
             .order('created_at', { ascending: false })
 
         if (error) {

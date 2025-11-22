@@ -29,7 +29,7 @@ router.route('/:id')
 
 router.route('/:id/consume')
     .delete(userAuth, itemOwnerCheck, async (req, res) => {
-        const { item } = res.locals
+        const { item, user } = res.locals
 
         if (!item) {
             res.status(404).send()
@@ -38,7 +38,7 @@ router.route('/:id/consume')
 
         try {
             if (item.type == 'case') {
-                res.send(await consumeCase(item.inventoryId, item.itemId))
+                res.send(await consumeCase(user, item.inventoryId, item.itemId))
             } else {
                 res.status(501).send()
             }
