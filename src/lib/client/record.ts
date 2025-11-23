@@ -175,7 +175,7 @@ export async function retrieveRecord(user: Player) {
     var { data, error } = await supabase
         .from('records')
         .select('*, levels!inner(*)')
-        .neq('userid', user.uid)
+        .neq('userid', user.uid!)
         .eq('needMod', false)
         .eq('isChecked', false)
         .eq('reviewer', user.uid!)
@@ -190,7 +190,7 @@ export async function retrieveRecord(user: Player) {
         .from('records')
         .select('*, levels!inner(*)')
         .lte('levels.rating', user.rating! + 500)
-        .neq('userid', user.uid)
+        .neq('userid', user.uid!)
         .eq('needMod', false)
         .eq('isChecked', false)
         .eq("levels.isPlatformer", false)
@@ -204,7 +204,7 @@ export async function retrieveRecord(user: Player) {
     var { data, error } = await supabase
         .from('records')
         .select('*, levels!inner(*)')
-        .neq('userid', user.uid)
+        .neq('userid', user.uid!)
         .eq('needMod', false)
         .eq('isChecked', false)
         .eq("levels.isPlatformer", false)

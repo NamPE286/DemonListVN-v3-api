@@ -1,4 +1,5 @@
-import "@src/utils/instrument.ts"
+import 'dotenv/config'
+
 import express from 'express'
 import cors from 'cors'
 import rateLimit from 'express-rate-limit'
@@ -6,7 +7,42 @@ import swaggerDocs from '@src/utils/swagger.ts'
 import { version } from '../package.json'
 import cron from 'node-cron'
 import supabase from '@src/database/supabase'
-import * as Sentry from '@sentry/node'
+
+import levelRoute from './routes/level'
+import listRoute from './routes/list'
+import mergeAccountRoute from './routes/mergeAccount'
+import notificationRoute from './routes/notification'
+import notificationsRoute from './routes/notifications'
+import playerRoute from './routes/player'
+import provincesRoute from './routes/provinces'
+import recordRoute from './routes/record'
+import recordsRoute from './routes/records'
+import refreshRoute from './routes/refresh'
+import searchRoute from './routes/search'
+import submissionRoute from './routes/submission'
+import leaderboardRoute from './routes/leaderboard'
+import playersRoute from './routes/players'
+import APIKeyRoute from './routes/APIKey'
+import submitVerdictRoute from './routes/submitVerdict'
+import clanRoute from './routes/clan'
+import clansRoute from './routes/clans'
+import deathCountRoute from './routes/deathCount'
+import changelogsRoute from './routes/changelogs'
+import eventsRoute from './routes/events'
+import eventRoute from './routes/event'
+import paymentRoute from './routes/payment'
+import ordersRoute from './routes/orders'
+import authRoute from './routes/auth'
+import levelsRoute from './routes/levels'
+import couponRoute from './routes/coupon'
+import cardRoute from './routes/card'
+import storeRoute from './routes/store'
+import orderRoute from './routes/order'
+import merchantRoute from './routes/merchant'
+import storageRoute from './routes/storage'
+import rulesRoute from './routes/rules'
+import itemRoute from './routes/item'
+import inventoryRoute from './routes/inventory'
 
 const app = express()
 const port = 8080
@@ -34,47 +70,41 @@ app.get('/', (req, res) => {
     })
 })
 
-app.get("/debug-sentry", function mainHandler(req, res) {
-  throw new Error("My first Sentry error!");
-});
-
-app.use('/level', require(`./routes/level`).default)
-app.use('/list', require(`./routes/list`).default)
-app.use('/mergeAccount', require(`./routes/mergeAccount`).default)
-app.use('/notification', require(`./routes/notification`).default)
-app.use('/notifications', require(`./routes/notifications`).default)
-app.use('/player', require(`./routes/player`).default)
-app.use('/provinces', require(`./routes/provinces`).default)
-app.use('/record', require(`./routes/record`).default)
-app.use('/records', require(`./routes/records`).default)
-app.use('/refresh', require(`./routes/refresh`).default)
-app.use('/search', require(`./routes/search`).default)
-app.use('/submission', require(`./routes/submission`).default)
-app.use('/leaderboard', require(`./routes/leaderboard`).default)
-app.use('/players', require(`./routes/players`).default)
-app.use('/APIKey', require(`./routes/APIKey`).default)
-app.use('/submitVerdict', require(`./routes/submitVerdict`).default)
-app.use('/clan', require(`./routes/clan`).default)
-app.use('/clans', require(`./routes/clans`).default)
-app.use('/deathCount', require(`./routes/deathCount`).default)
-app.use('/changelogs', require(`./routes/changelogs`).default)
-app.use('/events', require(`./routes/events`).default)
-app.use('/event', require(`./routes/event`).default)
-app.use('/payment', require(`./routes/payment`).default)
-app.use('/orders', require(`./routes/orders`).default)
-app.use('/auth', require(`./routes/auth`).default)
-app.use('/levels', require(`./routes/levels`).default)
-app.use('/coupon', require(`./routes/coupon`).default)
-app.use('/card', require(`./routes/card`).default)
-app.use('/store', require(`./routes/store`).default)
-app.use('/order', require(`./routes/order`).default)
-app.use('/merchant', require(`./routes/merchant`).default)
-app.use('/storage', require(`./routes/storage`).default)
-app.use('/rules', require(`./routes/rules`).default)
-app.use('/item', require(`./routes/item`).default)
-app.use('/inventory', require(`./routes/inventory`).default)
-
-Sentry.setupExpressErrorHandler(app);
+app.use('/level', levelRoute)
+app.use('/list', listRoute)
+app.use('/mergeAccount', mergeAccountRoute)
+app.use('/notification', notificationRoute)
+app.use('/notifications', notificationsRoute)
+app.use('/player', playerRoute)
+app.use('/provinces', provincesRoute)
+app.use('/record', recordRoute)
+app.use('/records', recordsRoute)
+app.use('/refresh', refreshRoute)
+app.use('/search', searchRoute)
+app.use('/submission', submissionRoute)
+app.use('/leaderboard', leaderboardRoute)
+app.use('/players', playersRoute)
+app.use('/APIKey', APIKeyRoute)
+app.use('/submitVerdict', submitVerdictRoute)
+app.use('/clan', clanRoute)
+app.use('/clans', clansRoute)
+app.use('/deathCount', deathCountRoute)
+app.use('/changelogs', changelogsRoute)
+app.use('/events', eventsRoute)
+app.use('/event', eventRoute)
+app.use('/payment', paymentRoute)
+app.use('/orders', ordersRoute)
+app.use('/auth', authRoute)
+app.use('/levels', levelsRoute)
+app.use('/coupon', couponRoute)
+app.use('/card', cardRoute)
+app.use('/store', storeRoute)
+app.use('/order', orderRoute)
+app.use('/merchant', merchantRoute)
+app.use('/storage', storageRoute)
+app.use('/rules', rulesRoute)
+app.use('/item', itemRoute)
+app.use('/inventory', inventoryRoute)
 
 app.listen(port, () => {
     console.log(`Server started on port ${port}`)

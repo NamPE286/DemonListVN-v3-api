@@ -206,7 +206,7 @@ router.route('/:id')
         var { error } = await supabase
             .from('clans')
             .delete()
-            .eq('id', id)
+            .eq('id', Number(id))
 
         if (error) {
             res.status(500).send()

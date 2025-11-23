@@ -1,35 +1,47 @@
 {
   "compilerOptions": {
     // Enable latest features
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext"
+    ],
     "target": "ESNext",
     "module": "ESNext",
     "moduleDetection": "force",
     "jsx": "react-jsx",
     "allowJs": true,
-
     // Bundler mode
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
-
     // Best practices
     "strict": true,
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
-
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
     "paths": {
-      "@src/*": ["./src/*"],
-      "@lib/*": ["./src/lib/*"],
-      "@types/*": ["./src/lib/types/*"],
-      "@database/*": ["./src/database/*"],
-      "@static/*": ["./static/*"]
+      "@src/*": [
+        "./src/*"
+      ],
+      "@lib/*": [
+        "./src/lib/*"
+      ],
+      "@types/*": [
+        "./src/lib/types/*"
+      ],
+      "@database/*": [
+        "./src/database/*"
+      ],
+      "@static/*": [
+        "./static/*"
+      ]
     }
   },
-  "include": ["./src/**/*", "src/lib/types/*.ts*.ts"],
+  "include": [
+    "./src/**/*",
+    "src/lib/types/*.ts*.ts"
+  ]
 }

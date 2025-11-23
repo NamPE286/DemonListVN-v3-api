@@ -27,7 +27,7 @@ export const search = {
             const { data, error } = await supabase
                 .from('levels')
                 .select('*')
-                .eq('id', query)
+                .eq('id', Number(query))
                 .limit(limit)
 
             if (error) {

@@ -329,7 +329,7 @@ router.route('/:id/medals')
         const { id } = req.params
         const player = new Player({ uid: id })
         try {
-            res.send(await player.getInventoryItems('medal'))
+            res.send(await player.getInventoryItems())
         } catch (err) {
             console.error(err)
             res.status(500).send()
