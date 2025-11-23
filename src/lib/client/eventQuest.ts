@@ -6,7 +6,8 @@ export async function getEventQuests(eventId: number) {
     const { data, error } = await supabase
         .from('eventQuests')
         .select('*, rewards:eventQuestRewards(reward:items(*))')
-        .eq('eventId', eventId);
+        .eq('eventId', eventId)
+        .order('id');
     if (error) {
         throw error
     }
