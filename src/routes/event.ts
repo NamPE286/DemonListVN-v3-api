@@ -754,8 +754,7 @@ router.route('/:id/quest')
             .select(`
                 *,
                 rewards:eventQuestRewards(
-                id,
-                reward:items(*)
+                    reward:items(*)
                 )
             `)
             .eq('eventId', id);
@@ -766,7 +765,13 @@ router.route('/:id/quest')
             return;
         }
 
-        res.send(data)
+        const quests = data.map(q => ({
+            ...q,
+            rewards: q.rewards.map(r => r.reward)
+        }));
+
+
+        res.send(quests)
     })
 
 export default router
