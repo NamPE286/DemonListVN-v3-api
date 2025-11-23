@@ -1,4 +1,6 @@
 import supabase from "@src/database/supabase";
+import type Player from "@src/lib/classes/Player";
+import { getEventSubmissions } from "@src/lib/client/event";
 
 export async function getEventQuests(eventId: number) {
     const { data, error } = await supabase
@@ -23,10 +25,50 @@ export async function getEventQuest(questId: number) {
         .from('eventQuests')
         .select('*, rewards:eventQuestRewards(reward:items(*))')
         .eq('id', questId)
+        .single()
 
     if (error) {
         throw error
     }
 
     return data
+}
+
+export async function isQuestCompleted(user: Player, eventId: number, questId: number) {
+    const quest = await getEventQuest(questId)
+    const submissions = await getEventSubmissions(eventId, user.uid!);
+    const attribute = new Map<string, number>()
+
+    attribute.set('total_point', (submissions || [])
+        .filter((s: any) => s.accepted)
+        .reduce((acc: number, s: any) => {
+            const prog = Number(s.progress ?? 0)
+            const point = Number(s.eventLevels?.point ?? 0)
+            return acc + (prog * point) / 100
+        }, 0))
+
+    interface Condition {
+        type: string,
+        value: number,
+        attribute: string
+    }
+
+    //@ts-ignore
+    const conditions: Condition[] = quest.condition
+
+    for (const condition of conditions) {
+        const value = attribute.get(condition.attribute)
+
+        if (!value) {
+            throw new Error('Attribute not exists')
+        }
+
+        if (condition.type == 'min') {
+            if (value < condition.value) {
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
