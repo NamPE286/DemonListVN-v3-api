@@ -758,11 +758,11 @@ router.route('/:id/quest')
         }
     })
 
-router.route('/:id/quest/:questId/check')
+router.route('/quest/:questId/check')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
-        const { id, questId } = req.params
-        const result = await isQuestCompleted(user, Number(id), Number(questId));
+        const { questId } = req.params
+        const result = await isQuestCompleted(user, Number(questId));
 
         if (!result) {
             res.status(403).send()

@@ -34,9 +34,9 @@ export async function getEventQuest(questId: number) {
     return data
 }
 
-export async function isQuestCompleted(user: Player, eventId: number, questId: number) {
+export async function isQuestCompleted(user: Player, questId: number) {
     const quest = await getEventQuest(questId)
-    const submissions = await getEventSubmissions(eventId, user.uid!);
+    const submissions = await getEventSubmissions(quest.eventId, user.uid!);
     const attribute = new Map<string, number>()
 
     attribute.set('total_point', (submissions || [])
