@@ -66,10 +66,11 @@ export async function isQuestCompleted(user: Player, questId: number) {
     const attribute = new Map<string, number>()
 
     attribute.set('total_point', (submissions || [])
-        .filter((s: any) => s.accepted)
+        .filter((s: any) => s && s.accepted)
         .reduce((acc: number, s: any) => {
             const prog = Number(s.progress ?? 0)
             const point = Number(s.eventLevels?.point ?? 0)
+
             return acc + (prog * point) / 100
         }, 0))
 
