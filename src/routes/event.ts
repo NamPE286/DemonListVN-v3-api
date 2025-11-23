@@ -24,7 +24,7 @@ import adminAuth from '@src/middleware/adminAuth'
 import optionalUserAuth from '@src/middleware/optionalUserAuth'
 import supabase from '@src/database/supabase'
 import { calcLeaderboard } from '@src/lib/client/elo'
-import { getEventQuest, getEventQuests, isQuestCompleted } from '@src/lib/client/eventQuest'
+import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted } from '@src/lib/client/eventQuest'
 
 const router = express.Router()
 
@@ -762,6 +762,15 @@ router.route('/quest/:questId/check')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
         const { questId } = req.params
+
+        if (!isQuestClaimed(user, Number(questId))) {
+            res.send({
+                status: 'claimed'
+            })
+
+            return;
+        }
+
         const result = await isQuestCompleted(user, Number(questId));
 
         if (!result) {
