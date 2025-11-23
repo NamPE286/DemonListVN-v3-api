@@ -765,11 +765,16 @@ router.route('/quest/:questId/check')
         const result = await isQuestCompleted(user, Number(questId));
 
         if (!result) {
-            res.status(403).send()
+            res.send({
+                status: 'unclaimable'
+            })
+
             return;
         }
 
-        res.send()
+        res.send({
+            status: 'claimable'
+        })
     })
 
 router.route('/:id/quest/:questId/claim')
