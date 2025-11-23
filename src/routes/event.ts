@@ -25,7 +25,7 @@ import optionalUserAuth from '@src/middleware/optionalUserAuth'
 import supabase from '@src/database/supabase'
 import { calcLeaderboard } from '@src/lib/client/elo'
 import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted } from '@src/lib/client/eventQuest'
-import { addInventoryItem, addInventoryItems } from '@src/lib/client/inventory'
+import { addInventoryItem, receiveReward } from '@src/lib/client/inventory'
 
 const router = express.Router()
 
@@ -789,6 +789,7 @@ router.route('/quest/:questId/check')
 
 router.route('/quest/:questId/claim')
     .post(userAuth, async (req, res) => {
+
         const { questId } = req.params
         const { user } = res.locals
 
@@ -827,24 +828,9 @@ router.route('/quest/:questId/claim')
             }
 
             if (quest.rewards && Array.isArray(quest.rewards)) {
-                const rewardItems: any[] = []
-
-                for (const r of quest.rewards) {
+                for (const reward of quest.rewards) {
                     try {
-                        const rewardItem = (r && (r.reward ?? r)) as any
-
-                        if (rewardItem && rewardItem.id) {
-                            rewardItems.push(rewardItem)
-                        }
-
-                    } catch (err) {
-                        console.error(err)
-                    }
-                }
-
-                if (rewardItems.length) {
-                    try {
-                        await addInventoryItems(user, rewardItems)
+                        await receiveReward(user, reward)
                     } catch (err) {
                         console.error(err)
                     }

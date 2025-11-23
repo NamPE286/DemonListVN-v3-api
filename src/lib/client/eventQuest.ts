@@ -5,18 +5,21 @@ import { getEventSubmissions } from "@src/lib/client/event";
 export async function getEventQuests(eventId: number) {
     const { data, error } = await supabase
         .from('eventQuests')
-        .select('*, rewards:eventQuestRewards(reward:items(*))')
+        .select('*, rewards:eventQuestRewards(expireAfter, reward:items(*))')
         .eq('eventId', eventId)
         .order('id');
+
     if (error) {
         throw error
     }
 
     const quests = data.map(q => ({
         ...q,
-        rewards: q.rewards.map(r => r.reward)
+        rewards: q.rewards.map((r) => ({
+            ...r.reward,
+            expireAfter: r.expireAfter
+        }))
     }));
-
 
     return quests
 }
@@ -24,7 +27,7 @@ export async function getEventQuests(eventId: number) {
 export async function getEventQuest(questId: number) {
     const { data, error } = await supabase
         .from('eventQuests')
-        .select('*, rewards:eventQuestRewards(reward:items(*))')
+        .select('*, rewards:eventQuestRewards(expireAfter, reward:items(*))')
         .eq('id', questId)
         .single()
 
@@ -32,7 +35,15 @@ export async function getEventQuest(questId: number) {
         throw error
     }
 
-    return data
+    const quest = {
+        ...data,
+        rewards: (data.rewards || []).map((r) => ({
+            ...r.reward,
+            expireAfter: r.expireAfter
+        }))
+    }
+
+    return quest
 }
 
 export async function isQuestClaimed(user: Player, questId: number) {

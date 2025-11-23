@@ -574,18 +574,21 @@ export type Database = {
       eventQuestRewards: {
         Row: {
           created_at: string
+          expireAfter: number | null
           id: number
           questId: number | null
           rewardId: number | null
         }
         Insert: {
           created_at?: string
+          expireAfter?: number | null
           id?: number
           questId?: number | null
           rewardId?: number | null
         }
         Update: {
           created_at?: string
+          expireAfter?: number | null
           id?: number
           questId?: number | null
           rewardId?: number | null
