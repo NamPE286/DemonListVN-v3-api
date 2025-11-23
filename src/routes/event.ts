@@ -751,12 +751,19 @@ router.route('/:id/quest')
         const { id } = req.params
         const { data, error } = await supabase
             .from('eventQuests')
-            .select('*, items(*)')
-            .eq('eventId', id)
-
+            .select(`
+                *,
+                rewards:eventQuestRewards(
+                id,
+                reward:items(*)
+                )
+            `)
+            .eq('eventId', id);
         if (error) {
             console.error(error)
             res.status(500).send()
+
+            return;
         }
 
         res.send(data)

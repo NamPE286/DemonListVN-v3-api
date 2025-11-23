@@ -571,13 +571,48 @@ export type Database = {
           },
         ]
       }
+      eventQuestRewards: {
+        Row: {
+          created_at: string
+          id: number
+          questId: number | null
+          rewardId: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          questId?: number | null
+          rewardId?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          questId?: number | null
+          rewardId?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventQuestRewards_questId_fkey"
+            columns: ["questId"]
+            isOneToOne: false
+            referencedRelation: "eventQuests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventQuestRewards_rewardId_fkey"
+            columns: ["rewardId"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eventQuests: {
         Row: {
           condition: Json
           created_at: string
           eventId: number
           id: number
-          rewardItemId: number | null
           title: string | null
         }
         Insert: {
@@ -585,7 +620,6 @@ export type Database = {
           created_at?: string
           eventId: number
           id?: number
-          rewardItemId?: number | null
           title?: string | null
         }
         Update: {
@@ -593,7 +627,6 @@ export type Database = {
           created_at?: string
           eventId?: number
           id?: number
-          rewardItemId?: number | null
           title?: string | null
         }
         Relationships: [
@@ -602,13 +635,6 @@ export type Database = {
             columns: ["eventId"]
             isOneToOne: false
             referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "eventQuests_rewardItemId_fkey"
-            columns: ["rewardItemId"]
-            isOneToOne: false
-            referencedRelation: "items"
             referencedColumns: ["id"]
           },
         ]
