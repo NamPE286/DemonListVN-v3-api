@@ -38,7 +38,10 @@
       "@static/*": [
         "./static/*"
       ]
-    }
+    },
+    "types": [
+      "@cloudflare/workers-types"
+    ]
   },
   "include": [
     "./src/**/*",

@@ -21,13 +21,15 @@
     "node-cron": "^3.0.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
-    "tsx": "^4.20.6"
+    "tsx": "^4.20.6",
+    "wrangler": "^4.50.0"
   },
   "name": "demonlistvn-v3-api",
   "module": "index.ts",
   "version": "3.0",
   "type": "module",
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251121.0",
     "@types/bun": "latest",
     "@types/express": "^5.0.5",
     "@types/node": "^24.10.1",
