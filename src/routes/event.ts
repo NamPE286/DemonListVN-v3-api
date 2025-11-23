@@ -24,6 +24,7 @@ import adminAuth from '@src/middleware/adminAuth'
 import optionalUserAuth from '@src/middleware/optionalUserAuth'
 import supabase from '@src/database/supabase'
 import { calcLeaderboard } from '@src/lib/client/elo'
+import { getEventQuests } from '@src/lib/client/eventQuest'
 
 const router = express.Router()
 
@@ -749,29 +750,22 @@ router.route('/submitLevel/:levelID')
 router.route('/:id/quest')
     .get(async (req, res) => {
         const { id } = req.params
-        const { data, error } = await supabase
-            .from('eventQuests')
-            .select(`
-                *,
-                rewards:eventQuestRewards(
-                    reward:items(*)
-                )
-            `)
-            .eq('eventId', id);
-        if (error) {
-            console.error(error)
+        try {
+            res.send(await getEventQuests(Number(id)))
+        } catch (err) {
+            console.error(err)
             res.status(500).send()
-
-            return;
         }
+    })
 
-        const quests = data.map(q => ({
-            ...q,
-            rewards: q.rewards.map(r => r.reward)
-        }));
+router.route('/:id/quest/:questId/check')
+    .get(userAuth, async (req, res) => {
 
+    })
 
-        res.send(quests)
+router.route('/:id/quest/:questId/claim')
+    .post(userAuth, async (req, res) => {
+
     })
 
 export default router
