@@ -41,12 +41,12 @@ export async function isQuestClaimed(user: Player, questId: number) {
         .select('*')
         .eq('userId', user.uid!)
         .eq('questId', questId)
-    
-    if(!data || error) {
-        return true;
+
+    if (!data || !data.length || error) {
+        return false;
     }
-    
-    return false;
+
+    return true;
 }
 
 export async function isQuestCompleted(user: Player, questId: number) {

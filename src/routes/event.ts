@@ -25,6 +25,7 @@ import optionalUserAuth from '@src/middleware/optionalUserAuth'
 import supabase from '@src/database/supabase'
 import { calcLeaderboard } from '@src/lib/client/elo'
 import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted } from '@src/lib/client/eventQuest'
+import { addInventoryItem, addInventoryItems } from '@src/lib/client/inventory'
 
 const router = express.Router()
 
@@ -763,7 +764,7 @@ router.route('/quest/:questId/check')
         const { user } = res.locals
         const { questId } = req.params
 
-        if (!isQuestClaimed(user, Number(questId))) {
+        if (await isQuestClaimed(user, Number(questId))) {
             res.send({
                 status: 'claimed'
             })
@@ -786,8 +787,75 @@ router.route('/quest/:questId/check')
         })
     })
 
-router.route('/:id/quest/:questId/claim')
+router.route('/quest/:questId/claim')
     .post(userAuth, async (req, res) => {
+        const { questId } = req.params
+        const { user } = res.locals
+
+        try {
+            if (await isQuestClaimed(user, Number(questId))) {
+                res.status(400).send({ message: 'Already claimed' })
+                return
+            }
+
+            const completed = await isQuestCompleted(user, Number(questId))
+
+            if (!completed) {
+                res.status(401).send()
+                return
+            }
+
+            const quest = await getEventQuest(Number(questId))
+            const event = await getEvent(quest.eventId)
+
+            if (event.end && new Date() >= new Date(event.end)) {
+                res.status(401).send()
+                return
+            }
+
+            var { error } = await supabase
+                .from('eventQuestClaims')
+                .insert({
+                    userId: user.uid!,
+                    questId: Number(questId)
+                })
+
+            if (error) {
+                console.error(error)
+                res.status(500).send()
+                return
+            }
+
+            if (quest.rewards && Array.isArray(quest.rewards)) {
+                const rewardItems: any[] = []
+
+                for (const r of quest.rewards) {
+                    try {
+                        const rewardItem = (r && (r.reward ?? r)) as any
+
+                        if (rewardItem && rewardItem.id) {
+                            rewardItems.push(rewardItem)
+                        }
+
+                    } catch (err) {
+                        console.error(err)
+                    }
+                }
+
+                if (rewardItems.length) {
+                    try {
+                        await addInventoryItems(user, rewardItems)
+                    } catch (err) {
+                        console.error(err)
+                    }
+                }
+            }
+
+            res.send()
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message })
+        }
 
     })
 
