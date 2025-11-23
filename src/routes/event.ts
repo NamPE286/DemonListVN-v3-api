@@ -43,6 +43,310 @@ router.route('/')
         }
     })
 
+router.route('/proof')
+    /**
+     * @openapi
+     * "/event/proof":
+     *   put:
+     *     tags:
+     *       - Event
+     *     summary: Add/Edit user's event proof
+     *     requestBody:
+     *         required: true
+     *         content:
+     *             application/json:
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
+    .put(adminAuth, async (req, res) => {
+        try {
+            res.send(await upsertEventProof(req.body))
+        } catch {
+            res.status(500).send();
+        }
+    })
+    /**
+     * @openapi
+     * "/event/proof":
+     *   post:
+     *     tags:
+     *       - Event
+     *     summary: Create new event proof
+     *     requestBody:
+     *         required: true
+     *         content:
+     *             application/json:
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
+    .post(userAuth, async (req, res) => {
+        const { user } = res.locals;
+
+        req.body.userid = res.locals.user.uid
+        req.body.accepted = false
+
+        const event = await getEvent(parseInt(req.body.eventID));
+
+        if (event.isSupporterOnly && !user.isSupporterActive()) {
+            res.status(401).send();
+            return;
+        }
+
+        if (event.isContest && !user.discord) {
+            res.status(401).send();
+            return;
+        }
+
+        if (event.end && new Date() >= new Date(event.end)) {
+            res.status(401).send();
+            return;
+        }
+
+        try {
+            res.send(await insertEventProof(req.body))
+        } catch (err) {
+            console.error(err)
+            res.status(500).send();
+        }
+    })
+
+router.route('/submitLevel/:levelID')
+    .put(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { levelID } = req.params
+        const { progress, password } = req.query
+
+        if (password != process.env.SUBMIT_PASSWORD) {
+            res.status(403).send()
+            return;
+        }
+
+        const now = new Date().toISOString()
+        var { data, error } = await supabase
+            .from('eventProofs')
+            .select('userid, eventID, events!inner(start, end, type, eventLevels!inner(*, eventRecords(userID, levelID, progress, accepted, videoLink)))')
+            .eq('userid', user.uid!)
+            .eq('events.eventLevels.levelID', Number(levelID))
+            .eq('events.eventLevels.eventRecords.userID', user.uid!)
+            .lte('events.start', now)
+            .gte('events.end', now)
+
+        if (error) {
+            console.error(error)
+            res.status(500).send()
+
+            return
+        }
+
+        for (const i of data!) {
+            const levels = await getEventLevelsSafe(i.eventID)
+
+            if (!levels.some(level => level && level.levelID === Number(levelID))) {
+                res.status(500).send()
+                return
+            }
+        }
+
+        interface LevelUpdateData {
+            level_id: number,
+            gained: number
+        }
+
+        const eventRecordUpsertData = []
+        const eventLevelUpdateData: LevelUpdateData[] = []
+
+        for (const event of data!) {
+            for (const level of event.events?.eventLevels!) {
+                let totalProgress = 0;
+
+                for (const record of level.eventRecords) {
+                    if (record.progress < Number(progress) && event.events!.type == 'basic') {
+                        // @ts-ignore
+                        record.created_at = new Date()
+                        record.progress = Number(progress)
+                        record.videoLink = "Submitted via Geode mod"
+                        record.accepted = true;
+
+                        eventRecordUpsertData.push(record);
+                    }
+
+
+                    if (event.events!.type == 'raid') {
+                        const remainingHP = Math.max(0, level.point - level.totalProgress)
+
+                        // @ts-ignore
+                        record.created_at = new Date()
+
+                        let prog = Number(progress);
+                        let dmg = Math.min(remainingHP, Number(progress) * Math.pow(1.0305, Number(progress)));
+
+                        if (prog >= level.minEventProgress) {
+                            if (prog == 100) {
+                                dmg *= 1.5
+                            }
+
+                            record.progress += dmg;
+                            totalProgress += dmg;
+                            record.videoLink = "Submitted via Geode mod"
+                            record.accepted = true;
+
+                            eventRecordUpsertData.push(record);
+                        }
+                    }
+                }
+
+                if (!level.eventRecords.length) {
+                    eventRecordUpsertData.push({
+                        created_at: new Date(),
+                        userID: user.uid!,
+                        levelID: level.id,
+                        progress: Number(progress),
+                        accepted: true,
+                        videoLink: "Submitted via Geode mod"
+                    })
+                }
+
+                if (totalProgress > 0) {
+                    level.totalProgress! += totalProgress;
+
+                    eventLevelUpdateData.push({
+                        level_id: level.id,
+                        gained: totalProgress
+                    })
+                }
+            }
+        }
+
+        var { error } = await supabase
+            .from('eventRecords')
+            .upsert(eventRecordUpsertData)
+
+        if (error) {
+            console.error(error)
+            res.status(500).send()
+
+            return
+        }
+
+        var { error } = await supabase.rpc('add_event_levels_progress', {
+            updates: JSON.parse(JSON.stringify(eventLevelUpdateData))
+        });
+
+        if (error) {
+            console.error(error)
+            res.status(500).send()
+
+            return
+        }
+
+        res.send();
+    })
+
+router.route('/quest/:questId/check')
+    .get(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { questId } = req.params
+
+        if (await isQuestClaimed(user, Number(questId))) {
+            res.send({
+                status: 'claimed'
+            })
+
+            return;
+        }
+
+        const result = await isQuestCompleted(user, Number(questId));
+
+        if (!result) {
+            res.send({
+                status: 'unclaimable'
+            })
+
+            return;
+        }
+
+        res.send({
+            status: 'claimable'
+        })
+    })
+
+router.route('/quest/:questId/claim')
+    .post(userAuth, async (req, res) => {
+
+        const { questId } = req.params
+        const { user } = res.locals
+
+        try {
+            if (await isQuestClaimed(user, Number(questId))) {
+                res.status(400).send({ message: 'Already claimed' })
+                return
+            }
+
+            const completed = await isQuestCompleted(user, Number(questId))
+
+            if (!completed) {
+                res.status(401).send()
+                return
+            }
+
+            const quest = await getEventQuest(Number(questId))
+            const event = await getEvent(quest.eventId)
+
+            if (event.end && new Date() >= new Date(event.end)) {
+                res.status(401).send()
+                return
+            }
+
+            var { error } = await supabase
+                .from('eventQuestClaims')
+                .insert({
+                    userId: user.uid!,
+                    questId: Number(questId)
+                })
+
+            if (error) {
+                console.error(error)
+                res.status(500).send()
+                return
+            }
+
+            if (quest.rewards && Array.isArray(quest.rewards)) {
+                for (const reward of quest.rewards) {
+                    try {
+                        await receiveReward(user, reward)
+                    } catch (err) {
+                        console.error(err)
+                    }
+                }
+            }
+
+            res.send()
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message })
+        }
+
+    })
+
+router.route('/submission')
+    .patch(adminAuth, async (req, res) => {
+        try {
+            await upsertEventSubmission(req.body)
+            res.send()
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
 router.route('/:id')
     .patch(adminAuth, async (req, res) => {
         const { id } = req.params
@@ -207,17 +511,6 @@ router.route('/:id/submit')
 
         try {
             await insertEventSubmission(req.body)
-            res.send()
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
-
-router.route('/submission')
-    .patch(adminAuth, async (req, res) => {
-        try {
-            await upsertEventSubmission(req.body)
             res.send()
         } catch (err) {
             console.error(err)
@@ -440,81 +733,6 @@ router.route('/:id/proof/:uid')
         }
     })
 
-router.route('/proof')
-    /**
-     * @openapi
-     * "/event/proof":
-     *   put:
-     *     tags:
-     *       - Event
-     *     summary: Add/Edit user's event proof
-     *     requestBody:
-     *         required: true
-     *         content:
-     *             application/json:
-     *     responses:
-     *       200:
-     *         description: Success
-     *         content:
-     *           application/json:
-     *             schema:
-     */
-    .put(adminAuth, async (req, res) => {
-        try {
-            res.send(await upsertEventProof(req.body))
-        } catch {
-            res.status(500).send();
-        }
-    })
-    /**
-     * @openapi
-     * "/event/proof":
-     *   post:
-     *     tags:
-     *       - Event
-     *     summary: Create new event proof
-     *     requestBody:
-     *         required: true
-     *         content:
-     *             application/json:
-     *     responses:
-     *       200:
-     *         description: Success
-     *         content:
-     *           application/json:
-     *             schema:
-     */
-    .post(userAuth, async (req, res) => {
-        const { user } = res.locals;
-
-        req.body.userid = res.locals.user.uid
-        req.body.accepted = false
-
-        const event = await getEvent(parseInt(req.body.eventID));
-
-        if (event.isSupporterOnly && !user.isSupporterActive()) {
-            res.status(401).send();
-            return;
-        }
-
-        if (event.isContest && !user.discord) {
-            res.status(401).send();
-            return;
-        }
-
-        if (event.end && new Date() >= new Date(event.end)) {
-            res.status(401).send();
-            return;
-        }
-
-        try {
-            res.send(await insertEventProof(req.body))
-        } catch (err) {
-            console.error(err)
-            res.status(500).send();
-        }
-    })
-
 router.route('/:id/calc')
     .patch(adminAuth, async (req, res) => {
         const { id } = req.params
@@ -616,138 +834,6 @@ router.route('/:id/calc')
         res.send()
     })
 
-router.route('/submitLevel/:levelID')
-    .put(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { levelID } = req.params
-        const { progress, password } = req.query
-
-        if (password != process.env.SUBMIT_PASSWORD) {
-            res.status(403).send()
-            return;
-        }
-
-        const now = new Date().toISOString()
-        var { data, error } = await supabase
-            .from('eventProofs')
-            .select('userid, eventID, events!inner(start, end, type, eventLevels!inner(*, eventRecords(userID, levelID, progress, accepted, videoLink)))')
-            .eq('userid', user.uid!)
-            .eq('events.eventLevels.levelID', Number(levelID))
-            .eq('events.eventLevels.eventRecords.userID', user.uid!)
-            .lte('events.start', now)
-            .gte('events.end', now)
-
-        if (error) {
-            console.error(error)
-            res.status(500).send()
-
-            return
-        }
-
-        for (const i of data!) {
-            const levels = await getEventLevelsSafe(i.eventID)
-
-            if (!levels.some(level => level && level.levelID === Number(levelID))) {
-                res.status(500).send()
-                return
-            }
-        }
-
-        interface LevelUpdateData {
-            level_id: number,
-            gained: number
-        }
-
-        const eventRecordUpsertData = []
-        const eventLevelUpdateData: LevelUpdateData[] = []
-
-        for (const event of data!) {
-            for (const level of event.events?.eventLevels!) {
-                let totalProgress = 0;
-
-                for (const record of level.eventRecords) {
-                    if (record.progress < Number(progress) && event.events!.type == 'basic') {
-                        // @ts-ignore
-                        record.created_at = new Date()
-                        record.progress = Number(progress)
-                        record.videoLink = "Submitted via Geode mod"
-                        record.accepted = true;
-
-                        eventRecordUpsertData.push(record);
-                    }
-
-
-                    if (event.events!.type == 'raid') {
-                        const remainingHP = Math.max(0, level.point - level.totalProgress)
-
-                        // @ts-ignore
-                        record.created_at = new Date()
-
-                        let prog = Number(progress);
-                        let dmg = Math.min(remainingHP, Number(progress) * Math.pow(1.0305, Number(progress)));
-
-                        if (prog >= level.minEventProgress) {
-                            if (prog == 100) {
-                                dmg *= 1.5
-                            }
-
-                            record.progress += dmg;
-                            totalProgress += dmg;
-                            record.videoLink = "Submitted via Geode mod"
-                            record.accepted = true;
-
-                            eventRecordUpsertData.push(record);
-                        }
-                    }
-                }
-
-                if (!level.eventRecords.length) {
-                    eventRecordUpsertData.push({
-                        created_at: new Date(),
-                        userID: user.uid!,
-                        levelID: level.id,
-                        progress: Number(progress),
-                        accepted: true,
-                        videoLink: "Submitted via Geode mod"
-                    })
-                }
-
-                if (totalProgress > 0) {
-                    level.totalProgress! += totalProgress;
-
-                    eventLevelUpdateData.push({
-                        level_id: level.id,
-                        gained: totalProgress
-                    })
-                }
-            }
-        }
-
-        var { error } = await supabase
-            .from('eventRecords')
-            .upsert(eventRecordUpsertData)
-
-        if (error) {
-            console.error(error)
-            res.status(500).send()
-
-            return
-        }
-
-        var { error } = await supabase.rpc('add_event_levels_progress', {
-            updates: JSON.parse(JSON.stringify(eventLevelUpdateData))
-        });
-
-        if (error) {
-            console.error(error)
-            res.status(500).send()
-
-            return
-        }
-
-        res.send();
-    })
-
 router.route('/:id/quest')
     .get(async (req, res) => {
         const { id } = req.params
@@ -757,92 +843,6 @@ router.route('/:id/quest')
             console.error(err)
             res.status(500).send()
         }
-    })
-
-router.route('/quest/:questId/check')
-    .get(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { questId } = req.params
-
-        if (await isQuestClaimed(user, Number(questId))) {
-            res.send({
-                status: 'claimed'
-            })
-
-            return;
-        }
-
-        const result = await isQuestCompleted(user, Number(questId));
-
-        if (!result) {
-            res.send({
-                status: 'unclaimable'
-            })
-
-            return;
-        }
-
-        res.send({
-            status: 'claimable'
-        })
-    })
-
-router.route('/quest/:questId/claim')
-    .post(userAuth, async (req, res) => {
-
-        const { questId } = req.params
-        const { user } = res.locals
-
-        try {
-            if (await isQuestClaimed(user, Number(questId))) {
-                res.status(400).send({ message: 'Already claimed' })
-                return
-            }
-
-            const completed = await isQuestCompleted(user, Number(questId))
-
-            if (!completed) {
-                res.status(401).send()
-                return
-            }
-
-            const quest = await getEventQuest(Number(questId))
-            const event = await getEvent(quest.eventId)
-
-            if (event.end && new Date() >= new Date(event.end)) {
-                res.status(401).send()
-                return
-            }
-
-            var { error } = await supabase
-                .from('eventQuestClaims')
-                .insert({
-                    userId: user.uid!,
-                    questId: Number(questId)
-                })
-
-            if (error) {
-                console.error(error)
-                res.status(500).send()
-                return
-            }
-
-            if (quest.rewards && Array.isArray(quest.rewards)) {
-                for (const reward of quest.rewards) {
-                    try {
-                        await receiveReward(user, reward)
-                    } catch (err) {
-                        console.error(err)
-                    }
-                }
-            }
-
-            res.send()
-        } catch (err: any) {
-            console.error(err)
-            res.status(500).send({ message: err.message })
-        }
-
     })
 
 export default router
