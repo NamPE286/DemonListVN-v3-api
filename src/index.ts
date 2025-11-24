@@ -7,7 +7,6 @@ import swaggerDocs from '@src/utils/swagger.ts'
 import { version } from '../package.json'
 import cron from 'node-cron'
 import supabase from '@src/database/supabase'
-import { httpServerHandler } from "cloudflare:node";
 
 import levelRoute from './routes/level'
 import listRoute from './routes/list'
@@ -112,5 +111,3 @@ app.listen(port, () => {
     console.log('Timezone: ' + Intl.DateTimeFormat().resolvedOptions().timeZone)
     swaggerDocs(app, port)
 })
-
-export default httpServerHandler({ port: port });
