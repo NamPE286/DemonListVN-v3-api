@@ -1,4 +1,8 @@
 {
+  "name": "demonlistvn-v3-api",
+  "version": "3.0",
+  "type": "module",
+  "exports": "./dist/index.mjs",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.873.0",
     "@aws-sdk/s3-request-presigner": "^3.873.0",
@@ -24,15 +28,12 @@
     "tsx": "^4.20.6",
     "wrangler": "^4.50.0"
   },
-  "name": "demonlistvn-v3-api",
-  "module": "index.ts",
-  "version": "3.0",
-  "type": "module",
   "devDependencies": {
     "@types/bun": "latest",
     "@types/express": "^5.0.5",
     "@types/node": "^24.10.1",
     "nodemon": "^3.1.11",
+    "pkgroll": "^2.21.3",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
@@ -40,8 +41,8 @@
   },
   "scripts": {
     "dev": "nodemon",
-    "start": "node dist/index.js",
-    "build": "tsc",
+    "start": "node dist/index.mjs",
+    "build": "pkgroll --minify",
     "update-types": "supabase gen types typescript --local > ./src/lib/types/supabase.ts",
     "sync": "echo y | supabase db pull --schema public; supabase db reset; supabase gen types typescript --local > ./src/lib/types/supabase.ts"
   }
