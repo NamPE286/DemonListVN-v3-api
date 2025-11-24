@@ -7,7 +7,7 @@
     "@aws-sdk/client-s3": "^3.873.0",
     "@aws-sdk/s3-request-presigner": "^3.873.0",
     "@payos/node": "^1.0.10",
-    "@sentry/node": "^10.0.0",
+    "@sentry/node": "^10.27.0",
     "@supabase/supabase-js": "^2.39.8",
     "@types/cors": "^2.8.17",
     "@types/jsonwebtoken": "^9.0.6",
