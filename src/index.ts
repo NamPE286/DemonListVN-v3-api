@@ -43,25 +43,19 @@ import storageRoute from './routes/storage'
 import rulesRoute from './routes/rules'
 import itemRoute from './routes/item'
 import inventoryRoute from './routes/inventory'
+import routeLog from '@src/middleware/routeLog'
 
 const app = express()
 const port = 8080
 
 app.use(express.json())
 app.use(cors())
-
-cron.schedule('0 */15 * * * *', async () => {
-    await supabase.rpc('updateRank')
-    await supabase.rpc('updateList')
-
-    console.log("Refreshing...")
-});
-
 app.use(rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10000,
     message: "Too many requests, please try again later."
 }))
+app.use(routeLog)
 
 app.get('/', (req, res) => {
     res.send({
