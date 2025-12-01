@@ -38,7 +38,7 @@ router.route('/getPaymentLink/:productID/:quantity')
                 targetClanID ? Number(targetClanID) : null
             );
 
-            res.send({ url: redirectUrl });
+            res.send({ checkoutUrl: redirectUrl });
             return;
         }
 
@@ -93,7 +93,7 @@ router.route('/getPaymentLink')
         const redirectUrl = await getSepayPaymentLink(orderID, amount, description)
 
         if (redirectUrl) {
-            res.send({ url: redirectUrl })
+            res.send({ checkoutUrl: redirectUrl })
             return
         }
 
