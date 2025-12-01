@@ -49,7 +49,7 @@ class Level {
             .from('levels')
             .upsert(this as any)
 
-        await supabase.rpc('updateList')
+        await supabase.rpc('update_list')
 
         if (error) {
             throw error

@@ -52,7 +52,7 @@ router.route('/:a/:b')
             return
         }
 
-        await supabase.rpc('updateRank')
+        await supabase.rpc('update_rank')
 
         res.send()
     })
