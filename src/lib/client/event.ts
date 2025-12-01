@@ -343,7 +343,7 @@ export async function getEventSubmissions(eventID: number, userID: string) {
     return formatEventSubmissions(data, levels)
 }
 
-export async function getEventLeaderboard(eventID: number, ignoreFreeze: boolean) {
+export async function get_event_leaderboard(eventID: number, ignoreFreeze: boolean) {
     const event = await getEvent(eventID)
     const levels = await getEventLevels(eventID)
     const { data, error } = await supabase

@@ -7,7 +7,7 @@ import {
     insertEventProof,
     upsertEventProof,
     deleteEventSubmission,
-    getEventLeaderboard,
+    get_event_leaderboard,
     getEventLevels,
     getEventSubmissions,
     insertEventSubmission,
@@ -595,7 +595,7 @@ router.route('/:id/leaderboard')
         const ignoreFreeze = authenticated && (user && user.isAdmin!)
 
         try {
-            res.send(await getEventLeaderboard(parseInt(id), ignoreFreeze))
+            res.send(await get_event_leaderboard(parseInt(id), ignoreFreeze))
         } catch (err) {
             console.error(err)
             res.status(500).send()
@@ -755,7 +755,7 @@ router.route('/:id/calc')
         }
 
         var { data, error } = await supabase
-            .rpc('getEventLeaderboard', { event_id: Number(id) });
+            .rpc('get_event_leaderboard', { event_id: Number(id) });
 
         const newData = calcLeaderboard(data!)
 

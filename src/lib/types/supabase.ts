@@ -1653,7 +1653,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
-      getEventLeaderboard: {
+      get_event_leaderboard: {
         Args: { event_id: number }
         Returns: {
           elo: number
@@ -1664,8 +1664,8 @@ export type Database = {
         }[]
       }
       update_supporter_until: { Args: never; Returns: undefined }
-      updateList: { Args: never; Returns: undefined }
-      updateRank: { Args: never; Returns: undefined }
+      update_list: { Args: never; Returns: undefined }
+      update_rank: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
