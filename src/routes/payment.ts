@@ -164,7 +164,6 @@ router.route('/webhook')
     .post(async (req, res) => {
         const { orderCode } = req.body.data
         const id = parseInt(String(orderCode))
-        // const paymentLink = await payOS.getPaymentLinkInformation(id);
 
         // if (paymentLink.status == 'EXPIRED') {
         //     await handlePayment(id)

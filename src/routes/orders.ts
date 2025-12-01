@@ -1,4 +1,4 @@
-import { payOS } from "@src/lib/classes/payOS";
+import { sepay } from "@src/lib/classes/sepay";
 import { getOrders } from "@src/lib/client/store";
 import userAuth from "@src/middleware/userAuth";
 import express from "express"
@@ -45,7 +45,7 @@ router.route('/getPaymentLink/:id')
     .get(async (req, res) => {
         const { id } = req.params
 
-        res.send(await payOS.getPaymentLinkInformation(parseInt(id)));
+        res.send(await sepay.order.retrieve(id));
     })
 
 export default router;
