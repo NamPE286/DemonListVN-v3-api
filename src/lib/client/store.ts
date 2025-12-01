@@ -4,9 +4,9 @@ import type { Tables, TablesInsert } from "@src/lib/types/supabase";
 import { sendNotification } from '@src/lib/client/notification'
 import { sendMessageToChannel } from '@src/lib/client/discord';
 import type { Response } from 'express';
-import { payOS } from '@src/lib/classes/payOS';
 import { handleProduct } from "@src/lib/client/handleProduct";
 import Clan from "@src/lib/classes/Clan";
+import { sepay } from "@src/lib/classes/sepay";
 
 interface Item {
     id: number;
@@ -371,7 +371,7 @@ export async function handlePayment(id: number, res: Response | null = null) {
     }
 
     if (order.state == 'CANCELLED') {
-        await payOS.cancelPaymentLink(order.id)
+        await sepay.order.cancel(String(id))
 
         if (res) {
             res.redirect(`https://www.demonlistvn.com/orders/${id}`)
@@ -380,13 +380,25 @@ export async function handlePayment(id: number, res: Response | null = null) {
         return;
     }
 
-    const paymentLink = await payOS.getPaymentLinkInformation(id);
+    const sepayOrder = await sepay.order.retrieve(String(id));
+    const sepayOrderData = sepayOrder.data.data;
+    
+    let paymentStatus: string;
+    if (sepayOrderData.order_status === 'CAPTURED') {
+        paymentStatus = 'PAID';
+    } else if (sepayOrderData.order_status === 'CANCELLED') {
+        paymentStatus = 'CANCELLED';
+    } else if (sepayOrderData.order_status === 'AUTHENTICATION_NOT_NEEDED') {
+        paymentStatus = 'PENDING';
+    } else {
+        paymentStatus = sepayOrderData.order_status;
+    }
 
-    if (order.state != 'EXPIRED' && paymentLink.status == 'EXPIRED') {
+    if (order.state != 'EXPIRED' && paymentStatus == 'EXPIRED') {
         await renewStock(order)
     }
 
-    if (order.state != 'PAID' && paymentLink.status == 'PAID') {
+    if (order.state != 'PAID' && paymentStatus == 'PAID') {
         const products = []
 
         for (const i of order.orderItems) {
@@ -402,19 +414,19 @@ export async function handlePayment(id: number, res: Response | null = null) {
         await updateStock(order.orderItems, products)
     }
 
-    order.state = paymentLink.status
+    order.state = paymentStatus
 
-    await changeOrderState(id, paymentLink.status);
+    await changeOrderState(id, paymentStatus);
 
-    if (paymentLink.status == 'PENDING') {
+    if (paymentStatus == 'PENDING') {
         if (res) {
-            res.redirect(`https://pay.payos.vn/web/${paymentLink.id}`)
+            res.redirect(`https://www.demonlistvn.com/orders/${id}`)
         }
 
         return;
     }
 
-    if (paymentLink.status != "PAID") {
+    if (paymentStatus != "PAID") {
         if (res) {
             res.redirect(`https://www.demonlistvn.com/orders/${id}`)
         }

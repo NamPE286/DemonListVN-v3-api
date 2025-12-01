@@ -1,75 +1,49 @@
 import express from 'express'
-import { payOS } from '@src/lib/classes/payOS';
-import { getProductByID, addNewOrder, changeOrderState, addOrderItems, getOrder, renewStock, handlePayment } from '@src/lib/client/store';
+import { getProductByID, addNewOrder, changeOrderState, getOrder, renewStock, handlePayment, addOrderItems } from '@src/lib/client/store';
+import { getSepayPaymentLink } from '@src/lib/client/payment';
 import userAuth from '@src/middleware/userAuth';
+import { sepay } from '@src/lib/classes/sepay';
 
 const router = express.Router();
 
-/**
- * @openapi
- * "/payment/getPaymentLink/{productID}/{quantity}":
- *   get:
- *     tags:
- *       - Payment
- *     summary: Get payment link
- *     parameters:
- *       - name: productID
- *         in: path
- *         description: The ID of the product
- *         required: true
- *         schema:
- *           type: number
- *       - name: quantity
- *         in: path
- *         description: Number of product to buy
- *         required: true
- *         schema:
- *           type: number
- *     responses:
- *       200:
- *         description: Success
- */
 router.route('/getPaymentLink/:productID/:quantity')
     .get(userAuth, async (req, res) => {
-        const { user } = res.locals
+        const { user } = res.locals;
         const { giftTo, targetClanID } = req.query;
-        const { productID, quantity } = req.params
+        const { productID, quantity } = req.params;
         const id = new Date().getTime();
         const product = await getProductByID(parseInt(productID));
         const amount = product.price! * parseInt(quantity);
-        const paymentLinkRes = await payOS.createPaymentLink({
-            orderCode: id,
-            amount: amount,
-            description: "dlvn",
-            expiredAt: Math.floor((Date.now() + 5 * 60 * 1000) / 1000),
-            items: [
-                {
-                    name: product.name!,
-                    quantity: parseInt(quantity),
-                    price: product.price!,
-                },
-            ],
-            cancelUrl: "https://api.demonlistvn.com/payment/cancelled",
-            returnUrl: "https://api.demonlistvn.com/payment/success",
-        });
 
-        await addNewOrder(
+        const redirectUrl = await getSepayPaymentLink(
             id,
-            parseInt(productID),
-            user.uid!,
-            parseInt(quantity),
-            giftTo ? String(giftTo) : null,
             amount,
-            "VND",
-            "Bank Transfer",
-            null,
-            null,
-            0,
-            null,
-            targetClanID ? Number(targetClanID) : null
+            `${product.name} x${quantity}`
         );
-        res.send(paymentLinkRes);
-    })
+
+        if (redirectUrl) {
+            await addNewOrder(
+                id,
+                parseInt(productID),
+                user.uid!,
+                parseInt(quantity),
+                giftTo ? String(giftTo) : null,
+                amount,
+                "VND",
+                "Bank Transfer",
+                null,
+                null,
+                0,
+                null,
+                targetClanID ? Number(targetClanID) : null
+            );
+
+            res.send({ checkoutUrl: redirectUrl });
+            return;
+        }
+
+        res.status(500).send();
+    });
 
 router.route('/getPaymentLink')
     .post(userAuth, async (req, res) => {
@@ -115,17 +89,15 @@ router.route('/getPaymentLink')
             amount += i.quantity * i.products?.price!
         }
 
-        const paymentLinkRes = await payOS.createPaymentLink({
-            orderCode: orderID,
-            amount: amount,
-            description: "dlvn",
-            expiredAt: Math.floor((Date.now() + 5 * 60 * 1000) / 1000),
-            items: paymentItem,
-            cancelUrl: "https://api.demonlistvn.com/payment/cancelled",
-            returnUrl: "https://api.demonlistvn.com/payment/success",
-        });
+        const description = paymentItem.map(i => `${i.name} x${i.quantity}`).join(', ')
+        const redirectUrl = await getSepayPaymentLink(orderID, amount, description)
 
-        res.send(paymentLinkRes);
+        if (redirectUrl) {
+            res.send({ checkoutUrl: redirectUrl })
+            return
+        }
+
+        res.status(500).send()
     })
 
 /**
@@ -178,9 +150,7 @@ router.route('/cancelled')
         }
 
         if (order.paymentMethod == 'Bank Transfer') {
-            try {
-                await payOS.cancelPaymentLink(id)
-            } catch { }
+            await sepay.order.cancel(String(orderCode))
         }
 
         if (order.state == 'PENDING' && order.paymentMethod == 'COD') {
@@ -194,7 +164,6 @@ router.route('/webhook')
     .post(async (req, res) => {
         const { orderCode } = req.body.data
         const id = parseInt(String(orderCode))
-        // const paymentLink = await payOS.getPaymentLinkInformation(id);
 
         // if (paymentLink.status == 'EXPIRED') {
         //     await handlePayment(id)

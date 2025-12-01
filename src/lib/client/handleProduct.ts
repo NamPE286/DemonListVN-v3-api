@@ -14,6 +14,7 @@ export const handleProduct: Map<number, HandleProduct> = new Map()
 
 handleProduct.set(1, {
     pre: async (buyer, recipient, order) => {
+        console.log(recipient)
         await recipient.extendSupporter(order.quantity!);
 
         const { error } = await supabase
