@@ -12,9 +12,9 @@ export async function getSepayPaymentLink(
         order_amount: amount,
         currency: 'VND',
         order_description: description,
-        success_url: `http://localhost:8080/payment/success?orderCode=${orderID}&source=sepay`,
-        error_url: `http://localhost:8080/payment/error?orderCode=${orderID}&source=sepay`,
-        cancel_url: `http://localhost:8080/payment/cancelled?orderCode=${orderID}&source=sepay`
+        success_url: `https://api.demonlistvn.com/payment/success?orderCode=${orderID}`,
+        error_url: `https://api.demonlistvn.com/payment/error?orderCode=${orderID}`,
+        cancel_url: `https://api.demonlistvn.com/payment/cancelled?orderCode=${orderID}`
     });
 
     const stringifiedPayload = Object.fromEntries(
