@@ -1,7 +1,23 @@
 import supabase from '@database/supabase'
 import { gdapi } from '@src/lib/classes/GDApi'
-import { addChangelog } from '@src/lib/client/changelog'
 import type { TLevel } from '@src/lib/types'
+
+async function addChangelog(id: number, oldData: any) {
+    let { data } = await supabase
+        .from('levels')
+        .select('*')
+        .eq('id', id)
+        .limit(1)
+        .single()
+
+    const { error } = await supabase
+        .from('changelogs')
+        .insert({ levelID: id, old: oldData, new: data })
+
+    if (error) {
+        throw error
+    }
+}
 
 interface Level extends TLevel { }
 
