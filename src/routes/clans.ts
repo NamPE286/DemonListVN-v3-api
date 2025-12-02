@@ -1,5 +1,5 @@
-import { getClans } from '@src/lib/client/clan'
 import express from 'express'
+import clansController from '@src/controllers/clansController'
 
 const router = express.Router()
 
@@ -53,13 +53,6 @@ router.route('/')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        try {
-            res.send(await getClans(req.query))
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(clansController.getClans.bind(clansController))
 
 export default router

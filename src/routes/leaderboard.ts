@@ -1,5 +1,5 @@
 import express from 'express'
-import { getDemonListLeaderboard, getFeaturedListLeaderboard, getPlatformerListLeaderboard } from '@src/lib/client/player'
+import leaderboardController from '@src/controllers/leaderboardController'
 
 const router = express.Router()
 
@@ -52,16 +52,7 @@ router.route('/dl')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        try {
-            const result = await getDemonListLeaderboard(req.query)
-
-            res.send(result)
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(leaderboardController.getDemonListLeaderboard.bind(leaderboardController))
 
 router.route('/fl')
     /**
@@ -107,16 +98,7 @@ router.route('/fl')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        try {
-            const result = await getFeaturedListLeaderboard(req.query)
-
-            res.send(result)
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(leaderboardController.getFeaturedListLeaderboard.bind(leaderboardController))
 
 router.route('/pl')
     /**
@@ -162,15 +144,6 @@ router.route('/pl')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        try {
-            const result = await getPlatformerListLeaderboard(req.query)
-
-            res.send(result)
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(leaderboardController.getPlatformerListLeaderboard.bind(leaderboardController))
 
 export default router

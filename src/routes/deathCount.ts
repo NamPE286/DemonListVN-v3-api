@@ -1,6 +1,6 @@
 import express from 'express'
-import { getDeathCount, updateDeathCount } from '@src/lib/client/deathCount'
 import userAuth from '@src/middleware/userAuth'
+import deathCountController from '@src/controllers/deathCountController'
 
 const router = express.Router()
 
@@ -32,14 +32,7 @@ router.route('/:uid/:levelID')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        try {
-            const { uid, levelID } = req.params
-            res.send(await getDeathCount(uid, parseInt(levelID)));
-        } catch {
-            res.status(500).send();
-        }
-    })
+    .get(deathCountController.getDeathCount.bind(deathCountController))
 
 router.route('/:levelID/:count')
     /**
@@ -69,21 +62,6 @@ router.route('/:levelID/:count')
      *           application/json:
      *             schema:
      */
-    .post(userAuth, async (req, res) => {
-        res.send()
-        const { count } = req.params
-        const arr: any[] = count.split('|')
-
-        for(let i = 0; i < arr.length; i++) {
-            arr[i] = parseInt(arr[i]);
-        }
-
-        try {
-            const { levelID } = req.params
-            const uid = res.locals.user.uid!
-
-            await updateDeathCount(uid, parseInt(levelID), arr);
-        } catch { }
-    })
+    .post(userAuth, deathCountController.updateDeathCount.bind(deathCountController))
 
 export default router
