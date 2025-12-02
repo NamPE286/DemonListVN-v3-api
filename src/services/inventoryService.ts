@@ -1,6 +1,20 @@
 import supabase from '@src/database/supabase'
 import type Player from '@lib/classes/Player'
-import { getCase as getCaseItems } from '@src/lib/client/item'
+
+async function getCase(id: number) {
+    const { data, error } = await supabase
+        .from('caseItems')
+        .select('*, items!caseItems_itemId_fkey(*)')
+        .eq('caseId', id)
+
+    if (error) {
+        throw error
+    }
+
+    return data;
+}
+
+const getCaseItems = getCase
 
 type CaseItem = Awaited<ReturnType<typeof getCaseItems>> extends Array<infer T> ? T : never
 

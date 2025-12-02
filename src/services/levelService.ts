@@ -1,8 +1,26 @@
 import Level from '@lib/classes/Level'
-import { getLevelDeathCount } from '@lib/client/deathCount'
 import { getLevelRecords } from '@src/lib/client/record'
 import supabase from '@src/database/supabase'
 import { getEventLevelsSafe } from '@src/lib/client/event'
+
+async function fetchLevelData(levelID: number): Promise<any> {
+    let { data, error } = await supabase
+        .from('levelDeathCount')
+        .select('*')
+        .eq('levelID', levelID)
+        .limit(1)
+        .single()
+
+    if (data == null) {
+        return { levelID: levelID, count: Array(100).fill(0) }
+    }
+
+    return data
+}
+
+async function getLevelDeathCount(id: number) {
+    return await fetchLevelData(id);
+}
 
 export class LevelService {
     validateLevelId(id: string): number {
