@@ -24,6 +24,23 @@ router.route("/new")
     .get((req, res) => levelsController.getNewLevels(req, res))
 
 router.route("/random")
+    /**
+     * @openapi
+     * /levels/random:
+     *   get:
+     *     summary: Get random levels
+     *     tags:
+     *       - Levels
+     *     responses:
+     *       200:
+     *         description: Successfully retrieved random levels
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: array
+     *       500:
+     *         description: Internal server error
+     */
     .get((req, res) => levelsController.getRandomLevels(req, res))
 
 export default router

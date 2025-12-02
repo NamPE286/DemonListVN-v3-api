@@ -4,6 +4,32 @@ import eventsController from '@src/controllers/eventsController'
 const router = express.Router()
 
 router.route('/')
+    /**
+     * @openapi
+     * "/events":
+     *   get:
+     *     tags:
+     *       - Event
+     *     summary: Get all events
+     *     parameters:
+     *       - name: start
+     *         in: query
+     *         description: Range start index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 0
+     *       - name: end
+     *         in: query
+     *         description: Range end index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 50
+     *     responses:
+     *       200:
+     *         description: Success
+     */
     .get((req, res) => eventsController.getEvents(req, res))
 
 /**

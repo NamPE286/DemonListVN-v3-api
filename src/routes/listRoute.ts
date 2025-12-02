@@ -239,6 +239,25 @@ router.route('/fl/records')
     .get((req, res) => listController.getFeaturedListRecords(req, res))
 
 router.route('/:list/random')
+    /**
+     * @openapi
+     * "/list/{list}/random":
+     *   get:
+     *     tags:
+     *       - List
+     *     summary: Get a random level from a list
+     *     parameters:
+     *       - name: list
+     *         in: path
+     *         description: The list type (dl, fl, or pl)
+     *         required: true
+     *         schema:
+     *           type: string
+     *           enum: [dl, fl, pl]
+     *     responses:
+     *       200:
+     *         description: Success
+     */
     .get((req, res) => listController.getRandomLevel(req, res))
 
 export default router
