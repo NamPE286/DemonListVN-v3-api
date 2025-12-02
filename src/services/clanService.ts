@@ -1,6 +1,9 @@
 import supabase from '@src/database/supabase'
 import Clan from '@src/lib/classes/Clan'
 import ClanInvitation from '@src/lib/classes/ClanInvitation'
+import type { Database } from '@src/lib/types/supabase'
+
+type ClanType = Database['public']['Tables']['clans']['Update']
 
 class ClanService {
     async isOwner(uid: string, clanID: number): Promise<boolean> {
@@ -8,7 +11,7 @@ class ClanService {
 
         await clan.pull()
 
-        return uid == clan.owner
+        return uid === clan.owner
     }
 
     async createClan(clanData: any, ownerUid: string): Promise<Clan> {
@@ -164,11 +167,11 @@ class ClanService {
     async getClanList(clanId: number, list: string, from: number, to: number) {
         let x = '', isPlat = false
 
-        if (list == 'dl') {
+        if (list === 'dl') {
             x = 'rating'; isPlat = false
-        } else if (list == 'pl') {
+        } else if (list === 'pl') {
             x = 'rating'; isPlat = true
-        } else if (list == 'fl') {
+        } else if (list === 'fl') {
             x = 'flPt'; isPlat = false
         }
 
@@ -189,6 +192,29 @@ class ClanService {
         for (const i of data) {
             // @ts-ignore
             delete i.records
+        }
+
+        return data
+    }
+
+    // Migrated from lib/client/clan.ts
+    async getClans({ start = 0, end = 50, sortBy = 'boostedUntil', ascending = 'false', searchQuery = '' } = {}) {
+        let query = supabase
+            .from('clans')
+            .select('*, players!owner(*, clans!id(*))')
+
+        if (searchQuery.length) {
+            query = query.ilike('name', `%${searchQuery}%`)
+        }
+
+        query = query
+            .order(sortBy, { ascending: ascending === 'true' })
+            .range(start, end)
+
+        const { data, error } = await query
+
+        if (error) {
+            throw error
         }
 
         return data
