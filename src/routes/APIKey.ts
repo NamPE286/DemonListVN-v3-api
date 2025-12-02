@@ -26,7 +26,7 @@ router.route('/')
      *       500:
      *         description: Internal Server Error
      */
-    .get(userAuth, apiKeyController.getAllAPIKeys.bind(apiKeyController))
+    .get(userAuth, (req, res) => apiKeyController.getAllAPIKeys(req, res))
     /**
      * @openapi
      * /APIKey:
@@ -42,7 +42,7 @@ router.route('/')
      *       500:
      *         description: Internal Server Error
      */
-    .post(userAuth, apiKeyController.createAPIKey.bind(apiKeyController))
+    .post(userAuth, (req, res) => apiKeyController.createAPIKey(req, res))
 
 router.route('/:key')
     /**
@@ -67,6 +67,6 @@ router.route('/:key')
      *       500:
      *         description: Internal Server Error
      */
-    .delete(userAuth, apiKeyController.deleteAPIKey.bind(apiKeyController))
+    .delete(userAuth, (req, res) => apiKeyController.deleteAPIKey(req, res))
 
 export default router

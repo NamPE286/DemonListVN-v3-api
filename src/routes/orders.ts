@@ -16,7 +16,7 @@ const router = express.Router()
 *         description: Success
 */
 router.route('/')
-    .get(userAuth, ordersController.getOrders.bind(ordersController))
+    .get(userAuth, (req, res) => ordersController.getOrders(req, res))
 
 /**
 * @openapi
@@ -37,6 +37,6 @@ router.route('/')
 *         description: Success
 */
 router.route('/getPaymentLink/:id')
-    .get(ordersController.getPaymentLink.bind(ordersController))
+    .get((req, res) => ordersController.getPaymentLink(req, res))
 
 export default router

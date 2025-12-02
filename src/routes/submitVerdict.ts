@@ -20,6 +20,6 @@ router.route('/')
       *       200:
       *         description: Success
      */
-    .put(userAuth, submitVerdictController.submitVerdict.bind(submitVerdictController))
+    .put(userAuth, (req, res) => submitVerdictController.submitVerdict(req, res))
 
 export default router

@@ -32,6 +32,6 @@ router.route('/:query')
      *           application/json:
      *             schema:
      */
-    .get(searchController.search.bind(searchController))
+    .get((req, res) => searchController.search(req, res))
 
 export default router

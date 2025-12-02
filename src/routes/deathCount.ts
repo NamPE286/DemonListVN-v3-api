@@ -32,7 +32,7 @@ router.route('/:uid/:levelID')
      *           application/json:
      *             schema:
      */
-    .get(deathCountController.getDeathCount.bind(deathCountController))
+    .get((req, res) => deathCountController.getDeathCount(req, res))
 
 router.route('/:levelID/:count')
     /**
@@ -62,6 +62,6 @@ router.route('/:levelID/:count')
      *           application/json:
      *             schema:
      */
-    .post(userAuth, deathCountController.updateDeathCount.bind(deathCountController))
+    .post(userAuth, (req, res) => deathCountController.updateDeathCount(req, res))
 
 export default router

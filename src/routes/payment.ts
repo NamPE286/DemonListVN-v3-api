@@ -6,10 +6,10 @@ import paymentController from '@src/controllers/paymentController'
 const router = express.Router()
 
 router.route('/getPaymentLink/:productID/:quantity')
-    .get(userAuth, paymentController.getPaymentLinkForProduct.bind(paymentController))
+    .get(userAuth, (req, res) => paymentController.getPaymentLinkForProduct(req, res))
 
 router.route('/getPaymentLink')
-    .post(userAuth, paymentController.getPaymentLinkForOrder.bind(paymentController))
+    .post(userAuth, (req, res) => paymentController.getPaymentLinkForOrder(req, res))
 
 /**
  * @openapi
@@ -23,7 +23,7 @@ router.route('/getPaymentLink')
  *         description: Success
  */
 router.route('/success')
-    .get(paymentController.handleSuccessCallback.bind(paymentController))
+    .get((req, res) => paymentController.handleSuccessCallback(req, res))
 
 /**
 * @openapi
@@ -37,9 +37,9 @@ router.route('/success')
 *         description: Success
 */
 router.route('/cancelled')
-    .get(paymentController.handleCancelCallback.bind(paymentController))
+    .get((req, res) => paymentController.handleCancelCallback(req, res))
 
 router.route('/webhook')
-    .post(webhookAuth, paymentController.handleWebhook.bind(paymentController))
+    .post(webhookAuth, (req, res) => paymentController.handleWebhook(req, res))
 
 export default router

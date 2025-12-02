@@ -4,7 +4,7 @@ import eventsController from '@src/controllers/eventsController'
 const router = express.Router()
 
 router.route('/')
-    .get(eventsController.getEvents.bind(eventsController))
+    .get((req, res) => eventsController.getEvents(req, res))
 
 /**
  * @openapi
@@ -21,7 +21,7 @@ router.route('/')
  *             schema:
  */
 router.route('/ongoing')
-    .get(eventsController.getOngoingEvents.bind(eventsController))
+    .get((req, res) => eventsController.getOngoingEvents(req, res))
 
 /**
  * @openapi
@@ -54,6 +54,6 @@ router.route('/ongoing')
  *         description: Success
  */
 router.route('/proofs')
-    .get(eventsController.getEventProofs.bind(eventsController))
+    .get((req, res) => eventsController.getEventProofs(req, res))
 
 export default router

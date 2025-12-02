@@ -5,9 +5,9 @@ import orderController from '@src/controllers/orderController'
 const router = express.Router()
 
 router.route('/')
-    .post(userAuth, orderController.createOrder.bind(orderController))
+    .post(userAuth, (req, res) => orderController.createOrder(req, res))
 
 router.route('/:id')
-    .get(userAuth, orderController.getOrder.bind(orderController))
+    .get(userAuth, (req, res) => orderController.getOrder(req, res))
 
 export default router

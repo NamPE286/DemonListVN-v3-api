@@ -20,7 +20,7 @@ router.route('/')
      *       200:
      *         description: Success
      */
-    .put(userAuth, playerController.updatePlayer.bind(playerController))
+    .put(userAuth, (req, res) => playerController.updatePlayer(req, res))
 
     /**
      * @openapi
@@ -37,7 +37,7 @@ router.route('/')
      *       200:
      *         description: Success
      */
-    .post(userAuth, playerController.createPlayer.bind(playerController))
+    .post(userAuth, (req, res) => playerController.createPlayer(req, res))
 
 router.route('/:uid')
     /**
@@ -61,7 +61,7 @@ router.route('/:uid')
      *           application/json:
      *             schema:
      */
-    .get(playerController.getPlayer.bind(playerController))
+    .get((req, res) => playerController.getPlayer(req, res))
 
 router.route('/:uid/records')
     /**
@@ -106,7 +106,7 @@ router.route('/:uid/records')
      *           application/json:
      *             schema:
      */
-    .get(playerController.getPlayerRecords.bind(playerController))
+    .get((req, res) => playerController.getPlayerRecords(req, res))
 
 router.route('/:uid/heatmap/:year')
     /**
@@ -133,7 +133,7 @@ router.route('/:uid/heatmap/:year')
      *       200:
      *         description: Success
      */
-    .get(playerController.getPlayerHeatmap.bind(playerController))
+    .get((req, res) => playerController.getPlayerHeatmap(req, res))
 
 router.route('/heatmap/:count')
     /**
@@ -154,7 +154,7 @@ router.route('/heatmap/:count')
      *       200:
      *         description: Success
      */
-    .post(userAuth, playerController.updatePlayerHeatmap.bind(playerController))
+    .post(userAuth, (req, res) => playerController.updatePlayerHeatmap(req, res))
 
 router.route('/:uid/submissions')
     /**
@@ -175,7 +175,7 @@ router.route('/:uid/submissions')
      *       200:
      *         description: Success
      */
-    .get(playerController.getPlayerSubmissions.bind(playerController))
+    .get((req, res) => playerController.getPlayerSubmissions(req, res))
 
 
 router.route('/syncRole')
@@ -192,7 +192,7 @@ router.route('/syncRole')
      *       500:
      *         description: Internal server error
      */
-    .patch(userAuth, playerController.syncPlayerRoles.bind(playerController))
+    .patch(userAuth, (req, res) => playerController.syncPlayerRoles(req, res))
 
 router.route('/:id/medals')
     /**
@@ -213,12 +213,12 @@ router.route('/:id/medals')
      *       200:
      *         description: Success
      */
-    .get(playerController.getPlayerMedals.bind(playerController))
+    .get((req, res) => playerController.getPlayerMedals(req, res))
 
 router.route('/:uid/events')
-    .get(playerController.getPlayerEvents.bind(playerController))
+    .get((req, res) => playerController.getPlayerEvents(req, res))
 
 router.route('/:uid/cards')
-    .get(playerController.getPlayerCards.bind(playerController))
+    .get((req, res) => playerController.getPlayerCards(req, res))
 
 export default router

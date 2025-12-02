@@ -4,6 +4,6 @@ import itemController from '@src/controllers/itemController'
 const router = express.Router()
 
 router.route('/:id')
-    .get(itemController.getItem.bind(itemController))
+    .get((req, res) => itemController.getItem(req, res))
 
 export default router

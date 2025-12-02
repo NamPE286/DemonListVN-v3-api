@@ -29,6 +29,6 @@ const router = express.Router()
  *         description: Success
  */
 router.route('/:a/:b')
-    .patch(adminAuth, mergeAccountController.mergeAccounts.bind(mergeAccountController))
+    .patch(adminAuth, (req, res) => mergeAccountController.mergeAccounts(req, res))
 
 export default router

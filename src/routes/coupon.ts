@@ -5,9 +5,9 @@ import couponController from '@src/controllers/couponController'
 const router = express.Router()
 
 router.route('/:code')
-    .get(userAuth, couponController.getCoupon.bind(couponController))
+    .get(userAuth, (req, res) => couponController.getCoupon(req, res))
 
 router.route('/:code')
-    .delete(userAuth, couponController.redeemCoupon.bind(couponController))
+    .delete(userAuth, (req, res) => couponController.redeemCoupon(req, res))
 
 export default router

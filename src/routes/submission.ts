@@ -20,6 +20,6 @@ router.route('/')
       *       200:
       *         description: Success
      */
-    .post(userAuth, submissionController.submitRecord.bind(submissionController))
+    .post(userAuth, (req, res) => submissionController.submitRecord(req, res))
 
 export default router

@@ -59,7 +59,7 @@ router.route('/dl')
      *           application/json:
      *             schema:
      */
-    .get(listController.getDemonList.bind(listController))
+    .get((req, res) => listController.getDemonList(req, res))
 
 router.route('/pl')
     /**
@@ -112,7 +112,7 @@ router.route('/pl')
      *           application/json:
      *             schema:
      */
-    .get(listController.getPlatformerList.bind(listController))
+    .get((req, res) => listController.getPlatformerList(req, res))
 
 router.route('/fl')
     /**
@@ -158,7 +158,7 @@ router.route('/fl')
      *           application/json:
      *             schema:
      */
-    .get(listController.getFeaturedList.bind(listController))
+    .get((req, res) => listController.getFeaturedList(req, res))
 
 router.route('/dl/records')
     /**
@@ -197,7 +197,7 @@ router.route('/dl/records')
      *           application/json:
      *             schema:
      */
-    .get(listController.getDemonListRecords.bind(listController))
+    .get((req, res) => listController.getDemonListRecords(req, res))
 
 router.route('/fl/records')
     /**
@@ -236,9 +236,9 @@ router.route('/fl/records')
      *           application/json:
      *             schema:
      */
-    .get(listController.getFeaturedListRecords.bind(listController))
+    .get((req, res) => listController.getFeaturedListRecords(req, res))
 
 router.route('/:list/random')
-    .get(listController.getRandomLevel.bind(listController))
+    .get((req, res) => listController.getRandomLevel(req, res))
 
 export default router

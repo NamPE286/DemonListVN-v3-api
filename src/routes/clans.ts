@@ -53,6 +53,6 @@ router.route('/')
      *           application/json:
      *             schema:
      */
-    .get(clansController.getClans.bind(clansController))
+    .get((req, res) => clansController.getClans(req, res))
 
 export default router

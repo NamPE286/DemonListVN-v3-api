@@ -5,12 +5,12 @@ import cardController from '@src/controllers/cardController'
 const router = express.Router()
 
 router.route('/:id')
-    .get(cardController.getCard.bind(cardController))
+    .get((req, res) => cardController.getCard(req, res))
 
 router.route('/:id/link')
-    .patch(userAuth, cardController.linkCard.bind(cardController))
+    .patch(userAuth, (req, res) => cardController.linkCard(req, res))
 
 router.route('/:id/content')
-    .patch(userAuth, cardController.updateCardContent.bind(cardController))
+    .patch(userAuth, (req, res) => cardController.updateCardContent(req, res))
 
 export default router

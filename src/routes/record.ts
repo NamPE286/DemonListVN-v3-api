@@ -24,7 +24,7 @@ router.route('/')
      *           application/json:
      *             schema:
      */
-    .put(adminAuth, recordController.updateRecord.bind(recordController))
+    .put(adminAuth, (req, res) => recordController.updateRecord(req, res))
 
 router.route('/:userID/:levelID')
     /**
@@ -51,7 +51,7 @@ router.route('/:userID/:levelID')
      *       200:
      *         description: Success
      */
-    .delete(userAuth, recordController.deleteRecord.bind(recordController))
+    .delete(userAuth, (req, res) => recordController.deleteRecord(req, res))
 
 router.route('/:userID/:levelID')
     /**
@@ -78,7 +78,7 @@ router.route('/:userID/:levelID')
      *       200:
      *         description: Success
      */
-    .get(recordController.getRecord.bind(recordController))
+    .get((req, res) => recordController.getRecord(req, res))
 
 router.route('/:userID/:levelID/changeSuggestedRating/:rating')
     /**
@@ -105,7 +105,7 @@ router.route('/:userID/:levelID/changeSuggestedRating/:rating')
      *       200:
      *         description: Success
      */
-    .put(userAuth, recordController.changeSuggestedRating.bind(recordController))
+    .put(userAuth, (req, res) => recordController.changeSuggestedRating(req, res))
 
 router.route('/retrieve')
     /**
@@ -119,6 +119,6 @@ router.route('/retrieve')
      *       200:
      *         description: Success
      */
-    .get(userAuth, recordController.retrieveRecord.bind(recordController))
+    .get(userAuth, (req, res) => recordController.retrieveRecord(req, res))
 
 export default router

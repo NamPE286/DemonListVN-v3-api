@@ -20,6 +20,6 @@ router.route('/')
       *       200:
       *         description: Success
      */
-    .post(adminAuth, notificationController.sendNotification.bind(notificationController))
+    .post(adminAuth, (req, res) => notificationController.sendNotification(req, res))
 
 export default router

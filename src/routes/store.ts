@@ -4,9 +4,9 @@ import storeController from '@src/controllers/storeController'
 const router = express.Router()
 
 router.route('/product/:id')
-    .get(storeController.getProduct.bind(storeController))
+    .get((req, res) => storeController.getProduct(req, res))
 
 router.route('/products')
-    .get(storeController.getProducts.bind(storeController))
+    .get((req, res) => storeController.getProducts(req, res))
 
 export default router

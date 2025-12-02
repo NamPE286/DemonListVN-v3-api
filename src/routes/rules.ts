@@ -4,6 +4,6 @@ import rulesController from '@src/controllers/rulesController'
 const router = express.Router()
 
 router.route('/')
-    .get(rulesController.getRules.bind(rulesController))
+    .get((req, res) => rulesController.getRules(req, res))
 
 export default router

@@ -21,9 +21,9 @@ const router = express.Router()
  *         description: Internal server error.
  */
 router.route("/new")
-    .get(levelsController.getNewLevels.bind(levelsController))
+    .get((req, res) => levelsController.getNewLevels(req, res))
 
 router.route("/random")
-    .get(levelsController.getRandomLevels.bind(levelsController))
+    .get((req, res) => levelsController.getRandomLevels(req, res))
 
 export default router

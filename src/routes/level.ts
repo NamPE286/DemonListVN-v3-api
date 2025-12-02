@@ -21,7 +21,7 @@ router.route('/')
       *       200:
       *         description: Success
      */
-    .put(adminAuth, levelController.updateLevel.bind(levelController))
+    .put(adminAuth, (req, res) => levelController.updateLevel(req, res))
 
 router.route('/:id')
     /**
@@ -45,7 +45,7 @@ router.route('/:id')
      *           application/json:
      *             schema:
      */
-    .get(levelController.getLevel.bind(levelController))
+    .get((req, res) => levelController.getLevel(req, res))
 
     /**
      * @openapi
@@ -65,7 +65,7 @@ router.route('/:id')
      *       200:
      *         description: Success
      */
-    .delete(adminAuth, levelController.deleteLevel.bind(levelController))
+    .delete(adminAuth, (req, res) => levelController.deleteLevel(req, res))
 
 router.route('/:id/records')
     /**
@@ -110,7 +110,7 @@ router.route('/:id/records')
      *           application/json:
      *             schema:
      */
-    .get(levelController.getLevelRecords.bind(levelController))
+    .get((req, res) => levelController.getLevelRecords(req, res))
 
 router.route('/:id/deathCount')
     /**
@@ -134,9 +134,9 @@ router.route('/:id/deathCount')
      *           application/json:
      *             schema:
      */
-    .get(levelController.getLevelDeathCount.bind(levelController))
+    .get((req, res) => levelController.getLevelDeathCount(req, res))
 
 router.route('/:id/inEvent')
-    .get(userAuth, levelController.checkLevelInEvent.bind(levelController))
+    .get(userAuth, (req, res) => levelController.checkLevelInEvent(req, res))
 
 export default router

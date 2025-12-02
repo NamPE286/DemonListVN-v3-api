@@ -40,6 +40,6 @@ router.route('/')
      *           application/json:
      *             schema:
      */
-    .get(recordController.getRecords.bind(recordController))
+    .get((req, res) => recordController.getRecords(req, res))
 
 export default router

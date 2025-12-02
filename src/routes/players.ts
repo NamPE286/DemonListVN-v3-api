@@ -45,9 +45,9 @@ router.route('/')
      *           application/json:
      *             schema:
      */
-    .get(playersController.getPlayers.bind(playersController))
+    .get((req, res) => playersController.getPlayers(req, res))
 
 router.route('/')
-    .post(playersController.getPlayersBatch.bind(playersController))
+    .post((req, res) => playersController.getPlayersBatch(req, res))
 
 export default router

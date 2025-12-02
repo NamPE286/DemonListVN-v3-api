@@ -19,6 +19,6 @@ router.route('/')
      *           application/json:
      *             schema:
      */
-    .patch(adminAuth, refreshController.refreshRanks.bind(refreshController))
+    .patch(adminAuth, (req, res) => refreshController.refreshRanks(req, res))
 
 export default router

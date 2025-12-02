@@ -18,6 +18,6 @@ router.route('/')
      *           application/json:
      *             schema:
      */
-    .get(provincesController.getProvinces.bind(provincesController))
+    .get((req, res) => provincesController.getProvinces(req, res))
 
 export default router

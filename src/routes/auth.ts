@@ -31,7 +31,7 @@ const router = express.Router()
  *         description: Unauthorized, invalid authorization code
  */
 router.route('/callback/discord')
-    .get(authController.handleDiscordCallback.bind(authController))
+    .get((req, res) => authController.handleDiscordCallback(req, res))
 
 /**
  * @openapi
@@ -53,9 +53,9 @@ router.route('/callback/discord')
  *         description: Unauthorized, invalid access token
  */
 router.route('/link/discord')
-    .patch(userAuth, authController.linkDiscord.bind(authController))
+    .patch(userAuth, (req, res) => authController.linkDiscord(req, res))
 
 router.route('/link/pointercrate')
-    .patch(userAuth, authController.linkPointercrate.bind(authController))
+    .patch(userAuth, (req, res) => authController.linkPointercrate(req, res))
 
 export default router

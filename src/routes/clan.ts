@@ -20,7 +20,7 @@ router.route('/')
       *       200:
       *         description: Success
       */
-    .post(userAuth, clanController.createClan.bind(clanController))
+    .post(userAuth, (req, res) => clanController.createClan(req, res))
 
 router.route('/invitations')
     /**
@@ -37,7 +37,7 @@ router.route('/invitations')
      *           application/json:
      *             schema:
      */
-    .get(userAuth, clanController.getUserInvitations.bind(clanController))
+    .get(userAuth, (req, res) => clanController.getUserInvitations(req, res))
 
 router.route('/:id')
     /**
@@ -61,7 +61,7 @@ router.route('/:id')
      *           application/json:
      *             schema:
      */
-    .get(clanController.getClan.bind(clanController))
+    .get((req, res) => clanController.getClan(req, res))
 
     /**
      * @openapi
@@ -85,7 +85,7 @@ router.route('/:id')
      *       200:
      *         description: Success
      */
-    .patch(userAuth, clanController.updateClan.bind(clanController))
+    .patch(userAuth, (req, res) => clanController.updateClan(req, res))
 
     /**
      * @openapi
@@ -105,7 +105,7 @@ router.route('/:id')
      *       200:
      *         description: Success
      */
-    .delete(userAuth, clanController.deleteClan.bind(clanController))
+    .delete(userAuth, (req, res) => clanController.deleteClan(req, res))
 
 router.route('/:id/members')
     /**
@@ -157,7 +157,7 @@ router.route('/:id/members')
      *           application/json:
      *             schema:
      */
-    .get(clanController.getClanMembers.bind(clanController))
+    .get((req, res) => clanController.getClanMembers(req, res))
 
 
 router.route('/:id/records')
@@ -210,7 +210,7 @@ router.route('/:id/records')
      *           application/json:
      *             schema:
      */
-    .get(clanController.getClanRecords.bind(clanController))
+    .get((req, res) => clanController.getClanRecords(req, res))
 
 router.route('/invite/:uid')
     /**
@@ -231,7 +231,7 @@ router.route('/invite/:uid')
       *       200:
       *         description: Success
       */
-    .post(userAuth, clanController.invitePlayer.bind(clanController))
+    .post(userAuth, (req, res) => clanController.invitePlayer(req, res))
 
 router.route('/:id/invite')
     /**
@@ -252,7 +252,7 @@ router.route('/:id/invite')
       *       200:
       *         description: Success
       */
-    .patch(userAuth, clanController.acceptInvitation.bind(clanController))
+    .patch(userAuth, (req, res) => clanController.acceptInvitation(req, res))
 
     /**
       * @openapi
@@ -272,7 +272,7 @@ router.route('/:id/invite')
       *       200:
       *         description: Success
       */
-    .delete(userAuth, clanController.rejectInvitation.bind(clanController))
+    .delete(userAuth, (req, res) => clanController.rejectInvitation(req, res))
 
 router.route('/leave')
     /**
@@ -286,7 +286,7 @@ router.route('/leave')
      *       200:
      *         description: Success
      */
-    .put(userAuth, clanController.leaveClan.bind(clanController))
+    .put(userAuth, (req, res) => clanController.leaveClan(req, res))
 
 router.route('/:id/join')
     /**
@@ -307,7 +307,7 @@ router.route('/:id/join')
       *       200:
       *         description: Success
       */
-    .put(userAuth, clanController.joinClan.bind(clanController))
+    .put(userAuth, (req, res) => clanController.joinClan(req, res))
 
 router.route('/:id/invitation/:uid')
     /**
@@ -334,7 +334,7 @@ router.route('/:id/invitation/:uid')
      *       200:
      *         description: Success
      */
-    .get(clanController.getInvitation.bind(clanController))
+    .get((req, res) => clanController.getInvitation(req, res))
 
     /**
      * @openapi
@@ -360,7 +360,7 @@ router.route('/:id/invitation/:uid')
      *       200:
      *         description: Success
      */
-    .delete(userAuth, clanController.deleteInvitation.bind(clanController))
+    .delete(userAuth, (req, res) => clanController.deleteInvitation(req, res))
 
 router.route('/:id/kick/:uid')
     /**
@@ -387,7 +387,7 @@ router.route('/:id/kick/:uid')
      *       200:
      *         description: Success
      */
-    .patch(userAuth, clanController.kickMember.bind(clanController))
+    .patch(userAuth, (req, res) => clanController.kickMember(req, res))
 
 router.route('/:id/invitations')
     /**
@@ -408,12 +408,12 @@ router.route('/:id/invitations')
      *       200:
      *         description: Success
      */
-    .get(clanController.getClanInvitations.bind(clanController))
+    .get((req, res) => clanController.getClanInvitations(req, res))
 
 router.route('/:id/ban/:uid')
-    .post(userAuth, clanController.banMember.bind(clanController))
+    .post(userAuth, (req, res) => clanController.banMember(req, res))
 
 router.route('/:id/list/:list')
-    .get(clanController.getClanList.bind(clanController))
+    .get((req, res) => clanController.getClanList(req, res))
 
 export default router

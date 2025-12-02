@@ -6,12 +6,12 @@ import inventoryController from '@src/controllers/inventoryController'
 const router = express.Router()
 
 router.route('/')
-    .get(userAuth, inventoryController.getInventoryItems.bind(inventoryController))
+    .get(userAuth, (req, res) => inventoryController.getInventoryItems(req, res))
 
 router.route('/:id')
-    .get(userAuth, itemOwnerCheck, inventoryController.getInventoryItem.bind(inventoryController))
+    .get(userAuth, itemOwnerCheck, (req, res) => inventoryController.getInventoryItem(req, res))
 
 router.route('/:id/consume')
-    .delete(userAuth, itemOwnerCheck, inventoryController.consumeItem.bind(inventoryController))
+    .delete(userAuth, itemOwnerCheck, (req, res) => inventoryController.consumeItem(req, res))
 
 export default router

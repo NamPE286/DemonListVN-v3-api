@@ -26,7 +26,7 @@ router.route('/:uid')
       *           application/json:
       *             schema:
       */
-    .get(userAuth, notificationsController.getPlayerNotifications.bind(notificationsController))
+    .get(userAuth, (req, res) => notificationsController.getPlayerNotifications(req, res))
 
     /**
       * @openapi
@@ -46,6 +46,6 @@ router.route('/:uid')
       *       200:
       *         description: Success
      */
-    .delete(userAuth, notificationsController.clearPlayerNotifications.bind(notificationsController))
+    .delete(userAuth, (req, res) => notificationsController.clearPlayerNotifications(req, res))
 
 export default router

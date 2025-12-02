@@ -52,7 +52,7 @@ router.route('/dl')
      *           application/json:
      *             schema:
      */
-    .get(leaderboardController.getDemonListLeaderboard.bind(leaderboardController))
+    .get((req, res) => leaderboardController.getDemonListLeaderboard(req, res))
 
 router.route('/fl')
     /**
@@ -98,7 +98,7 @@ router.route('/fl')
      *           application/json:
      *             schema:
      */
-    .get(leaderboardController.getFeaturedListLeaderboard.bind(leaderboardController))
+    .get((req, res) => leaderboardController.getFeaturedListLeaderboard(req, res))
 
 router.route('/pl')
     /**
@@ -144,6 +144,6 @@ router.route('/pl')
      *           application/json:
      *             schema:
      */
-    .get(leaderboardController.getPlatformerListLeaderboard.bind(leaderboardController))
+    .get((req, res) => leaderboardController.getPlatformerListLeaderboard(req, res))
 
 export default router

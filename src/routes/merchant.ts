@@ -5,9 +5,9 @@ import merchantController from '@src/controllers/merchantController'
 const router = express.Router()
 
 router.route('/orders')
-    .get(adminAuth, merchantController.getOrders.bind(merchantController))
+    .get(adminAuth, (req, res) => merchantController.getOrders(req, res))
 
 router.route('/order/:id/tracking')
-    .post(adminAuth, merchantController.addOrderTracking.bind(merchantController))
+    .post(adminAuth, (req, res) => merchantController.addOrderTracking(req, res))
 
 export default router

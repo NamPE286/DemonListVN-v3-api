@@ -5,6 +5,6 @@ import changelogsController from '@src/controllers/changelogsController'
 const router = express.Router()
 
 router.route('/publish')
-    .post(adminAuth, changelogsController.publishChangelogs.bind(changelogsController))
+    .post(adminAuth, (req, res) => changelogsController.publishChangelogs(req, res))
 
 export default router

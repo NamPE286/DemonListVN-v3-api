@@ -7,7 +7,7 @@ import eventController from '@src/controllers/eventController'
 const router = express.Router()
 
 router.route('/')
-    .post(adminAuth, eventController.createEvent.bind(eventController))
+    .post(adminAuth, (req, res) => eventController.createEvent(req, res))
 
 router.route('/proof')
     /**
@@ -28,7 +28,7 @@ router.route('/proof')
      *           application/json:
      *             schema:
      */
-    .put(adminAuth, eventController.upsertProof.bind(eventController))
+    .put(adminAuth, (req, res) => eventController.upsertProof(req, res))
     /**
      * @openapi
      * "/event/proof":
@@ -47,26 +47,26 @@ router.route('/proof')
      *           application/json:
      *             schema:
      */
-    .post(userAuth, eventController.createProof.bind(eventController))
+    .post(userAuth, (req, res) => eventController.createProof(req, res))
 
 router.route('/submitLevel/:levelID')
-    .put(userAuth, eventController.submitLevel.bind(eventController))
+    .put(userAuth, (req, res) => eventController.submitLevel(req, res))
 
 router.route('/quest/:questId/check')
-    .get(userAuth, eventController.checkQuest.bind(eventController))
+    .get(userAuth, (req, res) => eventController.checkQuest(req, res))
 
 router.route('/quest/:questId/claim')
-    .post(userAuth, eventController.claimQuest.bind(eventController))
+    .post(userAuth, (req, res) => eventController.claimQuest(req, res))
 
 router.route('/submission')
-    .get(adminAuth, eventController.getSubmission.bind(eventController))
-    .patch(adminAuth, eventController.updateSubmission.bind(eventController))
-    .delete(adminAuth, eventController.deleteSubmission.bind(eventController))
+    .get(adminAuth, (req, res) => eventController.getSubmission(req, res))
+    .patch(adminAuth, (req, res) => eventController.updateSubmission(req, res))
+    .delete(adminAuth, (req, res) => eventController.deleteSubmission(req, res))
 
 router.route('/:id')
-    .get(eventController.getEvent.bind(eventController))
-    .patch(adminAuth, eventController.updateEvent.bind(eventController))
-    .delete(adminAuth, eventController.deleteEvent.bind(eventController))
+    .get((req, res) => eventController.getEvent(req, res))
+    .patch(adminAuth, (req, res) => eventController.updateEvent(req, res))
+    .delete(adminAuth, (req, res) => eventController.deleteEvent(req, res))
 
 router.route('/:id/levels')
     /**
@@ -90,12 +90,12 @@ router.route('/:id/levels')
      *           application/json:
      *             schema:
      */
-    .get(optionalUserAuth, eventController.getEventLevels.bind(eventController))
-    .put(adminAuth, eventController.upsertEventLevel.bind(eventController))
+    .get(optionalUserAuth, (req, res) => eventController.getEventLevels(req, res))
+    .put(adminAuth, (req, res) => eventController.upsertEventLevel(req, res))
 
 router.route('/:id/level/:levelID')
-    .patch(adminAuth, eventController.updateEventLevel.bind(eventController))
-    .delete(adminAuth, eventController.deleteEventLevel.bind(eventController))
+    .patch(adminAuth, (req, res) => eventController.updateEventLevel(req, res))
+    .delete(adminAuth, (req, res) => eventController.deleteEventLevel(req, res))
 
 router.route('/:id/submissions')
     /**
@@ -119,7 +119,7 @@ router.route('/:id/submissions')
      *           application/json:
      *             schema:
      */
-    .get(eventController.getEventSubmissions.bind(eventController))
+    .get((req, res) => eventController.getEventSubmissions(req, res))
 
 router.route('/:id/submit')
     /**
@@ -147,7 +147,7 @@ router.route('/:id/submit')
      *           application/json:
      *             schema:
      */
-    .post(userAuth, eventController.submitRecord.bind(eventController))
+    .post(userAuth, (req, res) => eventController.submitRecord(req, res))
 
 router.route('/:id/submission/:levelID')
     /**
@@ -177,7 +177,7 @@ router.route('/:id/submission/:levelID')
      *           application/json:
      *             schema:
      */
-    .get(eventController.getSubmissionByLevel.bind(eventController))
+    .get((req, res) => eventController.getSubmissionByLevel(req, res))
     /**
      * @openapi
      * "/event/{id}/submission/{levelID}":
@@ -205,7 +205,7 @@ router.route('/:id/submission/:levelID')
      *           application/json:
      *             schema:
      */
-    .patch(userAuth, eventController.updateSubmission.bind(eventController))
+    .patch(userAuth, (req, res) => eventController.updateSubmission(req, res))
 
 router.route('/:id/leaderboard')
     /**
@@ -229,7 +229,7 @@ router.route('/:id/leaderboard')
      *           application/json:
      *             schema:
      */
-    .get(eventController.getLeaderboard.bind(eventController))
+    .get((req, res) => eventController.getLeaderboard(req, res))
 
 router.route('/:id/proofs')
     /**
@@ -253,7 +253,7 @@ router.route('/:id/proofs')
      *           application/json:
      *             schema:
      */
-    .get(eventController.getEventProofs.bind(eventController))
+    .get((req, res) => eventController.getEventProofs(req, res))
 
 router.route('/:id/proof/:uid')
     /**
@@ -283,7 +283,7 @@ router.route('/:id/proof/:uid')
      *           application/json:
      *             schema:
      */
-    .get(eventController.getEventProof.bind(eventController))
+    .get((req, res) => eventController.getEventProof(req, res))
     /**
      * @openapi
      * "/event/{id}/proof/{uid}":
@@ -298,12 +298,12 @@ router.route('/:id/proof/:uid')
      *           application/json:
      *             schema:
      */
-    .delete(userAuth, eventController.deleteEventProof.bind(eventController))
+    .delete(userAuth, (req, res) => eventController.deleteEventProof(req, res))
 
 router.route('/:id/calc')
-    .patch(adminAuth, eventController.calculateLeaderboard.bind(eventController))
+    .patch(adminAuth, (req, res) => eventController.calculateLeaderboard(req, res))
 
 router.route('/:id/quest')
-    .get(optionalUserAuth, eventController.getEventQuests.bind(eventController))
+    .get(optionalUserAuth, (req, res) => eventController.getEventQuests(req, res))
 
 export default router
