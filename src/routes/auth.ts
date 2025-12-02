@@ -1,9 +1,6 @@
-import supabase from "@src/database/supabase"
-import { createDirectMessageChannel, getAccessToken, getUserByToken } from "@src/lib/client/discord"
-import { getUsernameByToken as getIDByToken } from "@src/lib/client/pointercrate"
-import userAuth from "@src/middleware/userAuth"
-import express from "express"
-import { FRONTEND_URL } from "@src/lib/constants"
+import express from 'express'
+import userAuth from '@src/middleware/userAuth'
+import authController from '@src/controllers/authController'
 
 /**
  * @swagger
@@ -33,19 +30,8 @@ const router = express.Router()
  *       401:
  *         description: Unauthorized, invalid authorization code
  */
-router.route("/callback/discord")
-    .get(async (req, res) => {
-        const { code } = req.query
-        const data = await getAccessToken(String(code));
-
-        if (data.access_token == undefined) {
-            res.status(401).send(data);
-
-            return;
-        }
-
-        res.redirect(`${FRONTEND_URL}/link/discord?token=${data.access_token}`)
-    })
+router.route('/callback/discord')
+    .get(authController.handleDiscordCallback.bind(authController))
 
 /**
  * @swagger
@@ -66,43 +52,10 @@ router.route("/callback/discord")
  *       401:
  *         description: Unauthorized, invalid access token
  */
-router.route("/link/discord")
-    .patch(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { token } = req.body
-        const data = await getUserByToken(String(token));
+router.route('/link/discord')
+    .patch(userAuth, authController.linkDiscord.bind(authController))
 
-        if (data.id == undefined) {
-            res.status(401).send(data);
-
-            return;
-        }
-
-        const id: string = String(data.id)
-
-        await user.updateDiscord(id);
-
-        res.send();
-    })
-
-router.route("/link/pointercrate")
-    .patch(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { token } = req.body
-        const name = await getIDByToken(token);
-
-        const { data, error } = await supabase
-            .from("players")
-            .update({ pointercrate: name })
-            .eq("uid", user.uid!)
-
-        if (error) {
-            console.error(error)
-            res.status(500).send()
-            return;
-        }
-
-        res.send()
-    })
+router.route('/link/pointercrate')
+    .patch(userAuth, authController.linkPointercrate.bind(authController))
 
 export default router
