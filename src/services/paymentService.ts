@@ -1,4 +1,4 @@
-import { getProductByID, addNewOrder, changeOrderState, getOrder, renewStock, handlePayment, addOrderItems } from '@src/lib/client/store'
+import { getProductByID, addNewOrder, changeOrderState, getOrder, renewStock, handlePayment, addOrderItems } from '@src/services/storeClientService'
 import { sepay } from '@src/lib/classes/sepay'
 import { API_URL } from '@src/lib/constants'
 import type Player from '@lib/classes/Player'

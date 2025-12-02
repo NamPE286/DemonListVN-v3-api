@@ -1,5 +1,5 @@
 import { sepay } from '@src/lib/classes/sepay'
-import { getOrders } from '@src/lib/client/store'
+import { getOrders } from '@src/services/storeClientService'
 
 export class OrdersService {
     async getOrders(uid: string) {

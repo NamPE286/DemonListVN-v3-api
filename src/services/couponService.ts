@@ -1,4 +1,4 @@
-import { getCoupon, redeem } from '@src/lib/client/store'
+import { getCoupon, redeem } from '@src/services/storeClientService'
 import type Player from '@lib/classes/Player'
 
 export class CouponService {

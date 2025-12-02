@@ -1,153 +1,104 @@
-import Record from '@lib/classes/Record'
-import Player from '@lib/classes/Player'
-import Level from '@lib/classes/Level'
-import supabase from '@src/database/supabase'
-import logger from '@src/utils/logger'
+// Migrated from lib/client/record.ts
+import supabase from "@src/database/supabase";
+import RecordClass from "@src/lib/classes/Record";
+import Player from "@src/lib/classes/Player";
+import Level from "@src/lib/classes/Level";
 
-export class RecordService {
-    async updateRecord(data: any) {
-        const record = new Record(data)
-
-        await record.update()
+export async function getDemonListRecords({ start = 0, end = 0, isChecked = false } = {}) {
+    if (typeof isChecked == 'string') {
+        isChecked = (isChecked == 'true')
     }
 
-    async deleteRecord(userId: string, levelId: number, user: Player) {
-        if (user.uid !== userId && !user.isAdmin) {
-            throw new Error("Forbidden")
-        }
+    const { data, error } = await supabase
+        .from('records')
+        .select('*')
+        .match({ isChecked: isChecked })
+        .not('dlPt', 'is', null)
+        .order('timestamp', { ascending: true })
+        .range(start, end)
 
-        const record = new Record({ userid: userId, levelid: levelId })
-
-        await record.delete()
-        
-        logger.log(`${user.name} (${user.uid}) performed DELETE /record/${userId}/${levelId}`)
+    if (error) {
+        throw error
     }
 
-    async getDemonListRecords({ start = 0, end = 0, isChecked = false } = {}) {
-        let isCheckedBool = isChecked
+    return data
+}
 
-        if (typeof isChecked === 'string') {
-            isCheckedBool = (isChecked === 'true')
-        }
-
-        const { data, error } = await supabase
-            .from('records')
-            .select('*')
-            .match({ isChecked: isCheckedBool })
-            .not('dlPt', 'is', null)
-            .order('timestamp', { ascending: true })
-            .range(start, end)
-
-        if (error) {
-            throw error
-        }
-
-        return data
+export async function getFeaturedListRecords({ start = 0, end = 0, isChecked = false } = {}) {
+    if (typeof isChecked == 'string') {
+        isChecked = (isChecked == 'true')
     }
 
-    async getFeaturedListRecords({ start = 0, end = 0, isChecked = false } = {}) {
-        let isCheckedBool = isChecked
+    const { data, error } = await supabase
+        .from('records')
+        .select('*')
+        .match({ isChecked: isChecked })
+        .not('flPt', 'is', null)
+        .order('timestamp', { ascending: true })
+        .range(start, end)
 
-        if (typeof isChecked === 'string') {
-            isCheckedBool = (isChecked === 'true')
-        }
-
-        const { data, error } = await supabase
-            .from('records')
-            .select('*')
-            .match({ isChecked: isCheckedBool })
-            .not('flPt', 'is', null)
-            .order('timestamp', { ascending: true })
-            .range(start, end)
-
-        if (error) {
-            throw error
-        }
-
-        return data
+    if (error) {
+        throw error
     }
 
-    async getPlayerRecordRating(uid: string) {
-        const { data, error } = await supabase
-            .from('records')
-            .select('userid, progress, no, levels!inner(id, rating), dlPt')
-            .eq('userid', uid)
-            .not('dlPt', 'is', null)
-            .order('no')
+    return data
+}
 
-        if (error) {
-            throw error
-        }
+export async function getPlayerRecordRating(uid: string) {
+    const { data, error } = await supabase
+        .from('records')
+        .select('userid, progress, no, levels!inner(id, rating), dlPt')
+        .eq('userid', uid)
+        .not('dlPt', 'is', null)
+        .order('no')
 
-        const res = []
-
-        for (const i of data) {
-            res.push({ progress: i.progress, rating: i.levels?.rating! })
-        }
-
-        return res
+    if (error) {
+        throw error
     }
 
-    async getPlayerRecords(uid: string, { start = '0', end = '50', sortBy = 'pt', ascending = 'false', isChecked = 'true' } = {}) {
-        let query = supabase
-            .from('records')
-            .select('*, levels!inner(*)')
-            .eq('userid', uid)
-            .eq('isChecked', isChecked === 'true')
-            .eq('levels.isPlatformer', false)
+    const res = []
 
-        let query1 = supabase
-            .from('records')
-            .select('*, levels!inner(*)')
-            .eq('userid', uid)
-            .eq('isChecked', isChecked === 'true')
+    for (const i of data) {
+        res.push({ progress: i.progress, rating: i.levels?.rating! })
+    }
 
-        let query2 = supabase
-            .from('records')
-            .select('*, levels!inner(*)')
-            .eq('userid', uid)
-            .eq('isChecked', isChecked === 'true')
-            .eq('levels.isPlatformer', true)
+    return res;
+}
 
-        if (sortBy === 'pt') {
-            query = query
-                .order('dlPt', { ascending: ascending === 'true' })
-                .order('timestamp', { ascending: false })
-                .not('levels.rating', 'is', null)
-                .range(parseInt(start), parseInt(end))
+export async function getPlayerRecords(uid: string, { start = '0', end = '50', sortBy = 'pt', ascending = 'false', isChecked = 'true' } = {}) {
+    let query = supabase
+        .from('records')
+        .select('*, levels!inner(*)')
+        .eq('userid', uid)
+        .eq('isChecked', isChecked == 'true')
+        .eq('levels.isPlatformer', false)
+    let query1 = supabase
+        .from('records')
+        .select('*, levels!inner(*)')
+        .eq('userid', uid)
+        .eq('isChecked', isChecked == 'true')
+    let query2 = supabase
+        .from('records')
+        .select('*, levels!inner(*)')
+        .eq('userid', uid)
+        .eq('isChecked', isChecked == 'true')
+        .eq('levels.isPlatformer', true)
 
-            query1 = query1
-                .order('flPt', { ascending: ascending === 'true' })
-                .order('timestamp', { ascending: false })
-                .not('levels.flTop', 'is', null)
-                .range(parseInt(start), parseInt(end))
-
-            query2 = query2
-                .order('plPt', { ascending: ascending === 'true' })
-                .order('timestamp', { ascending: false })
-                .not('levels.rating', 'is', null)
-                .range(parseInt(start), parseInt(end))
-
-            return {
-                dl: (await query).data,
-                fl: (await query1).data,
-                pl: (await query2).data
-            }
-        }
-
+    if (sortBy == 'pt') {
         query = query
-            .order(sortBy, { ascending: ascending === 'true' })
+            .order('dlPt', { ascending: ascending == 'true' })
+            .order('timestamp', { ascending: false })
             .not('levels.rating', 'is', null)
             .range(parseInt(start), parseInt(end))
-
         query1 = query1
-            .order(sortBy, { ascending: ascending === 'true' })
+            .order('flPt', { ascending: ascending == 'true' })
+            .order('timestamp', { ascending: false })
             .not('levels.flTop', 'is', null)
             .range(parseInt(start), parseInt(end))
-
         query2 = query2
-            .order(sortBy, { ascending: ascending === 'true' })
-            .not('levels.plRating', 'is', null)
+            .order('plPt', { ascending: ascending == 'true' })
+            .order('timestamp', { ascending: false })
+            .not('levels.rating', 'is', null)
             .range(parseInt(start), parseInt(end))
 
         return {
@@ -157,177 +108,177 @@ export class RecordService {
         }
     }
 
-    async getLevelRecords(id: number, { start = 0, end = 50, isChecked = true } = {}) {
-        let isCheckedBool = isChecked
+    query = query
+        .order(sortBy, { ascending: ascending == 'true' })
+        .not('levels.rating', 'is', null)
+        .range(parseInt(start), parseInt(end))
+    query1 = query1
+        .order(sortBy, { ascending: ascending == 'true' })
+        .not('levels.flTop', 'is', null)
+        .range(parseInt(start), parseInt(end))
+    query2 = query2
+        .order(sortBy, { ascending: ascending == 'true' })
+        .not('levels.plRating', 'is', null)
+        .range(parseInt(start), parseInt(end))
 
-        if (typeof isChecked === 'string') {
-            isCheckedBool = (isChecked === 'true')
-        }
-
-        const level = new Level({ id: id })
-        await level.pull()
-
-        const { data, error } = await supabase
-            .from('records')
-            .select('*, players!userid!inner(*, clans!id(*)), reviewer:players!reviewer(*, clans!id(*))')
-            .eq('players.isHidden', false)
-            .eq('levelid', id)
-            .eq('isChecked', isCheckedBool)
-            .order('progress', { ascending: level.isPlatformer })
-            .order('timestamp')
-            .range(start, end)
-
-        if (error) {
-            throw error
-        }
-
-        return data
-    }
-
-    async getRecord(userId: string, levelId: number) {
-        const { data, error } = await supabase
-            .from('records')
-            .select('*, players!userid(*, clans!id(*)), reviewer:players!reviewer(*, clans!id(*)), levels(*)')
-            .eq('levelid', levelId)
-            .eq('userid', userId)
-            .limit(1)
-            .single()
-
-        if (error) {
-            console.error(error)
-            throw error
-        }
-
-        // @ts-ignore
-        return data
-    }
-
-    async retrieveRecord(user: Player) {
-        if (!user.isAdmin && !user.isTrusted) {
-            throw new Error("Unauthorized")
-        }
-
-        if (user.reviewCooldown && (new Date()).getTime() - new Date(user.reviewCooldown).getTime() < 7200000) {
-            throw new Error("Too many requests")
-        }
-
-        var { data, error } = await supabase
-            .from('records')
-            .select('*, levels!inner(*)')
-            .neq('userid', user.uid!)
-            .eq('needMod', false)
-            .eq('isChecked', false)
-            .eq('reviewer', user.uid!)
-            .limit(1)
-            .single()
-
-        if (data) {
-            return data
-        }
-
-        var { data, error } = await supabase
-            .from('records')
-            .select('*, levels!inner(*)')
-            .lte('levels.rating', user.rating! + 500)
-            .neq('userid', user.uid!)
-            .eq('needMod', false)
-            .eq('isChecked', false)
-            .eq("levels.isPlatformer", false)
-            .is('reviewer', null)
-            .order('queueNo', { ascending: true, nullsFirst: false })
-            .limit(1)
-            .single()
-
-        let res = data
-
-        var { data, error } = await supabase
-            .from('records')
-            .select('*, levels!inner(*)')
-            .neq('userid', user.uid!)
-            .eq('needMod', false)
-            .eq('isChecked', false)
-            .eq("levels.isPlatformer", false)
-            .is('reviewer', null)
-            .order('queueNo', { ascending: true, nullsFirst: false })
-            .limit(1)
-            .single()
-
-        if (res === null) {
-            res = data
-        } else if (data !== null && (new Date(res.queueNo!)) > (new Date(data.queueNo!))) {
-            res = data
-        }
-
-        if (res === null) {
-            throw new Error("No available record")
-        }
-
-        const record = new Record({ userid: res.userid, levelid: res.levelid })
-        await record.pull()
-        record.reviewer = res.reviewer = user.uid!
-        record.queueNo = null
-        record.update()
-
-        return data
-    }
-
-    async getRecords({ start = 0, end = 50, isChecked = false } = {}) {
-        let isCheckedBool = isChecked
-
-        if (typeof isChecked === 'string') {
-            isCheckedBool = (isChecked === 'true')
-        }
-
-        const { data, error } = await supabase
-            .from('records')
-            .select('*, players!userid!inner(*, clans!id(*)), reviewer:players!reviewer(*), levels(*)')
-            .match({ isChecked: isCheckedBool })
-            .eq('players.isHidden', false)
-            .order('needMod', { ascending: false })
-            .order('queueNo', { ascending: true, nullsFirst: false })
-            .order('timestamp', { ascending: true })
-            .range(start, end)
-
-        if (error) {
-            throw error
-        }
-
-        return data
-    }
-
-    async getPlayerSubmissions(uid: string, { start = '0', end = '50', ascending = 'true' } = {}) {
-        const { data, error } = await supabase
-            .from('records')
-            .select('*, levels(*)')
-            .eq('userid', uid)
-            .eq('isChecked', false)
-            .order('timestamp', { ascending: ascending === 'true' })
-            .range(parseInt(start), parseInt(end))
-
-        if (error) {
-            throw error
-        }
-
-        return data
-    }
-
-    async changeSuggestedRating(userId: string, levelId: number, rating: number, user: Player) {
-        if (user.uid !== userId) {
-            throw new Error("Unauthorized")
-        }
-
-        const { data, error } = await supabase
-            .from('records')
-            .update({ suggestedRating: rating })
-            .eq('levelid', levelId)
-            .eq('userid', userId)
-
-        if (error) {
-            throw error
-        }
-
-        return data
+    return {
+        dl: (await query).data,
+        fl: (await query1).data,
+        pl: (await query2).data
     }
 }
 
-export default new RecordService()
+export async function getLevelRecords(id: number, { start = 0, end = 50, isChecked = true } = {}) {
+    if (typeof isChecked == 'string') {
+        isChecked = (isChecked == 'true')
+    }
+
+    const level = new Level({ id: id })
+    await level.pull()
+
+    const { data, error } = await supabase
+        .from('records')
+        .select('*, players!userid!inner(*, clans!id(*)), reviewer:players!reviewer(*, clans!id(*))')
+        .eq('players.isHidden', false)
+        .eq('levelid', id)
+        .eq('isChecked', isChecked)
+        .order('progress', { ascending: level.isPlatformer })
+        .order('timestamp')
+        .range(start, end)
+
+    if (error) {
+        throw error
+    }
+
+    return data
+}
+
+export async function getRecord(uid: string, levelID: number) {
+    const { data, error } = await supabase
+        .from('records')
+        .select('*, players!userid(*, clans!id(*)), reviewer:players!reviewer(*, clans!id(*)), levels(*)')
+        .eq('levelid', levelID)
+        .eq('userid', uid)
+        .limit(1)
+        .single()
+
+    if (error) {
+        console.error(error)
+        throw error
+    }
+
+    // @ts-ignore
+    return data
+}
+
+
+export async function retrieveRecord(user: Player) {
+    var { data, error } = await supabase
+        .from('records')
+        .select('*, levels!inner(*)')
+        .neq('userid', user.uid!)
+        .eq('needMod', false)
+        .eq('isChecked', false)
+        .eq('reviewer', user.uid!)
+        .limit(1)
+        .single()
+
+    if (data) {
+        return data
+    }
+
+    var { data, error } = await supabase
+        .from('records')
+        .select('*, levels!inner(*)')
+        .lte('levels.rating', user.rating! + 500)
+        .neq('userid', user.uid!)
+        .eq('needMod', false)
+        .eq('isChecked', false)
+        .eq("levels.isPlatformer", false)
+        .is('reviewer', null)
+        .order('queueNo', { ascending: true, nullsFirst: false })
+        .limit(1)
+        .single()
+
+    let res = data;
+
+    var { data, error } = await supabase
+        .from('records')
+        .select('*, levels!inner(*)')
+        .neq('userid', user.uid!)
+        .eq('needMod', false)
+        .eq('isChecked', false)
+        .eq("levels.isPlatformer", false)
+        .is('reviewer', null)
+        .order('queueNo', { ascending: true, nullsFirst: false })
+        .limit(1)
+        .single()
+
+    if (res == null) {
+        res = data;
+    } else if (data != null && (new Date(res.queueNo!)) > (new Date(data.queueNo!))) {
+        res = data;
+    }
+
+    if (res == null) {
+        throw new Error("No available record")
+    }
+
+    const record = new RecordClass({ userid: res.userid, levelid: res.levelid })
+    await record.pull()
+    record.reviewer = res.reviewer = user.uid!
+    record.queueNo = null
+    record.update()
+
+    return data
+}
+
+export async function getRecords({ start = 0, end = 50, isChecked = false } = {}) {
+    if (typeof isChecked == 'string') {
+        isChecked = (isChecked == 'true')
+    }
+
+    const { data, error } = await supabase
+        .from('records')
+        .select('*, players!userid!inner(*, clans!id(*)), reviewer:players!reviewer(*), levels(*)')
+        .match({ isChecked: isChecked })
+        .eq('players.isHidden', false)
+        .order('needMod', { ascending: false })
+        .order('queueNo', { ascending: true, nullsFirst: false })
+        .order('timestamp', { ascending: true })
+        .range(start, end)
+
+    if (error) {
+        throw error
+    }
+
+    return data
+}
+
+export async function getPlayerSubmissions(uid: string, { start = '0', end = '50', ascending = 'true' } = {}) {
+    const { data, error } = await supabase
+        .from('records')
+        .select('*, levels(*)')
+        .eq('userid', uid)
+        .eq('isChecked', false)
+        .order('timestamp', { ascending: ascending == 'true' })
+        .range(parseInt(start), parseInt(end))
+
+    if (error) {
+        throw error
+    }
+
+    return data
+}
+
+export async function changeSuggestedRating(uid: string, levelID: number, rating: number) {
+    const { data, error } = await supabase
+        .from('records')
+        .update({ suggestedRating: rating })
+        .eq('levelid', levelID)
+        .eq('userid', uid)
+
+    if (error) {
+        throw error
+    }
+}

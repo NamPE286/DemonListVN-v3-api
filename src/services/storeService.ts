@@ -1,4 +1,4 @@
-import { getProductByID, getProducts } from '@src/lib/client/store'
+import { getProductByID, getProducts } from '@src/services/storeClientService'
 
 export class StoreService {
     async getProductById(id: number) {

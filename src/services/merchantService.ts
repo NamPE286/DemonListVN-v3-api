@@ -1,6 +1,6 @@
 import supabase from '@src/database/supabase'
-import { sendNotification } from '@src/lib/client/notification'
-import { getOrder } from '@src/lib/client/store'
+import { sendNotification } from '@src/services/notificationClientService'
+import { getOrder } from '@src/services/storeClientService'
 import { FRONTEND_URL } from '@src/lib/constants'
 
 export class MerchantService {

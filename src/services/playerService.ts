@@ -1,6 +1,6 @@
 import Player from '@lib/classes/Player'
 import supabase from '@src/database/supabase'
-import { getPlayerRecordRating, getPlayerRecords, getPlayerSubmissions } from '@src/lib/client/record'
+import { getPlayerRecordRating, getPlayerRecords, getPlayerSubmissions } from '@src/services/recordService'
 import discordService from '@src/services/discordService'
 import { EVENT_SELECT_STR } from '@src/lib/client/event'
 

@@ -1,5 +1,5 @@
 import Level from '@lib/classes/Level'
-import { getLevelRecords } from '@src/lib/client/record'
+import { getLevelRecords } from '@src/services/recordService'
 import supabase from '@src/database/supabase'
 import { getEventLevelsSafe } from '@src/lib/client/event'
 

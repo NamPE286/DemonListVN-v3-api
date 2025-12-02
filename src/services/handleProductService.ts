@@ -1,9 +1,9 @@
 import supabase from "@src/database/supabase";
 import Clan from "@src/lib/classes/Clan";
 import type Player from "@src/lib/classes/Player";
-import { sendMessageToChannel } from "@src/lib/client/discord";
-import { sendNotification } from "@src/lib/client/notification";
-import type { getOrder } from "@src/lib/client/store";
+import { sendMessageToChannel } from "@src/services/discordClientService";
+import { sendNotification } from "@src/services/notificationClientService";
+import type { getOrder } from "@src/services/storeClientService";
 import { FRONTEND_URL } from "@src/lib/constants";
 
 interface HandleProduct {

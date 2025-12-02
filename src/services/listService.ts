@@ -1,4 +1,4 @@
-import { getDemonListRecords, getFeaturedListRecords } from '@src/lib/client/record'
+import { getDemonListRecords, getFeaturedListRecords } from '@src/services/recordService'
 import supabase from '@src/database/supabase'
 import type { TLevel } from "@src/lib/types"
 

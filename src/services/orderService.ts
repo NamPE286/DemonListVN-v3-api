@@ -1,4 +1,4 @@
-import { addOrderItems, getOrder } from '@src/lib/client/store'
+import { addOrderItems, getOrder } from '@src/services/storeClientService'
 import type Player from '@lib/classes/Player'
 import type { OrderItem } from '@src/types/order'
 

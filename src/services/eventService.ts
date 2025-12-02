@@ -19,8 +19,8 @@ import {
     getEventLevelsSafe
 } from '@src/lib/client/event'
 import supabase from '@src/database/supabase'
-import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted } from '@src/lib/client/eventQuest'
-import { addInventoryItem, receiveReward } from '@src/lib/client/inventory'
+import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted } from '@src/services/eventQuestService'
+import { addInventoryItem, receiveReward } from '@src/services/inventoryClientService'
 
 interface Elo {
     elo: number;
