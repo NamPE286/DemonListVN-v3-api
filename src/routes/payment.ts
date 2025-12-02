@@ -119,25 +119,25 @@ router.route('/success')
     .get(async (req, res) => {
         const { orderCode } = req.query;
         const id = parseInt(String(orderCode));
-        
+
         const maxAttempts = 10;
         let attempts = 0;
-        
+
         while (attempts < maxAttempts) {
             const order = await getOrder(id);
-            
+
             if (order.state === 'PAID') {
                 res.redirect(`${FRONTEND_URL}/supporter/success?id=${id}`);
                 return;
             }
-            
+
             attempts++;
-            
+
             if (attempts < maxAttempts) {
                 await new Promise(resolve => setTimeout(resolve, 300));
             }
         }
-        
+
         res.status(500).send({ message: 'Payment verification timeout' });
     })
 
@@ -156,9 +156,6 @@ router.route('/cancelled')
     .get(async (req, res) => {
         const { orderCode } = req.query;
         const id = parseInt(String(orderCode));
-
-        res.redirect(`${FRONTEND_URL}/orders/${id}`)
-
         const order = await getOrder(id)
 
         if (order.state == 'CANCELLED' || order.state == 'PAID') {
@@ -180,22 +177,24 @@ router.route('/cancelled')
         }
 
         await changeOrderState(id, "CANCELLED");
+
+        res.redirect(`${FRONTEND_URL}/orders/${id}`)
     })
 
 router.route('/webhook')
     .post(webhookAuth, async (req: Request<{}, any, SepayWebhookBody>, res) => {
         try {
             const { notification_type, order: orderData } = req.body;
-            
+
             if (notification_type !== 'ORDER_PAID') {
                 res.send({ message: 'Notification received' });
                 return;
             }
-            
+
             const orderId = parseInt(orderData.order_invoice_number);
-            
+
             await handlePayment(orderId, orderData);
-            
+
             res.send({ message: 'Webhook processed successfully' });
         } catch (error) {
             console.error('Webhook processing error:', error);
