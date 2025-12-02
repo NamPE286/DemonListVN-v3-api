@@ -1,47 +1,13 @@
 import express from 'express'
-import {
-    deleteEventProof,
-    getEvent,
-    getEventProof,
-    getEventProofs,
-    insertEventProof,
-    upsertEventProof,
-    deleteEventSubmission,
-    get_event_leaderboard,
-    getEventLevels,
-    getEventSubmissions,
-    insertEventSubmission,
-    upsertEventSubmission,
-    insertEvent,
-    updateEvent,
-    upsertEventLevel,
-    deleteEventLevel,
-    updateEventLevel,
-    getEventLevelsSafe
-} from '@src/lib/client/event'
 import userAuth from '@src/middleware/userAuth'
 import adminAuth from '@src/middleware/adminAuth'
 import optionalUserAuth from '@src/middleware/optionalUserAuth'
-import supabase from '@src/database/supabase'
-import { calcLeaderboard } from '@src/lib/client/elo'
-import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted } from '@src/lib/client/eventQuest'
-import { addInventoryItem, receiveReward } from '@src/lib/client/inventory'
+import eventController from '@src/controllers/eventController'
 
 const router = express.Router()
 
 router.route('/')
-    .post(adminAuth, async (req, res) => {
-        try {
-            await insertEvent(req.body);
-            res.send()
-        } catch (err: any) {
-            console.error(err);
-
-            res.status(500).send({
-                message: err.message
-            })
-        }
-    })
+    .post(adminAuth, eventController.createEvent.bind(eventController))
 
 router.route('/proof')
     /**
@@ -62,16 +28,7 @@ router.route('/proof')
      *           application/json:
      *             schema:
      */
-    .put(adminAuth, async (req, res) => {
-        try {
-            const result = await upsertEventProof(req.body)
-
-            res.send(result)
-        } catch (err) {
-            console.error(err)
-            res.status(500).send();
-        }
-    })
+    .put(adminAuth, eventController.upsertProof.bind(eventController))
     /**
      * @openapi
      * "/event/proof":
@@ -90,281 +47,26 @@ router.route('/proof')
      *           application/json:
      *             schema:
      */
-    .post(userAuth, async (req, res) => {
-        const { user } = res.locals;
-
-        req.body.userid = res.locals.user.uid
-        req.body.accepted = false
-
-        const event = await getEvent(parseInt(req.body.eventID));
-
-        if (event.isSupporterOnly && !user.isSupporterActive()) {
-            res.status(401).send();
-            return;
-        }
-
-        if (event.isContest && !user.discord) {
-            res.status(401).send();
-            return;
-        }
-
-        if (event.end && new Date() >= new Date(event.end)) {
-            res.status(401).send();
-            return;
-        }
-
-        try {
-            res.send(await insertEventProof(req.body))
-        } catch (err) {
-            console.error(err)
-            res.status(500).send();
-        }
-    })
+    .post(userAuth, eventController.createProof.bind(eventController))
 
 router.route('/submitLevel/:levelID')
-    .put(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { levelID } = req.params
-        const { progress, password } = req.query
-
-        if (password != process.env.SUBMIT_PASSWORD) {
-            res.status(403).send()
-            return;
-        }
-
-        const now = new Date().toISOString()
-        var { data, error } = await supabase
-            .from('eventProofs')
-            .select('userid, eventID, events!inner(start, end, type, eventLevels!inner(*, eventRecords(userID, levelID, progress, accepted, videoLink)))')
-            .eq('userid', user.uid!)
-            .eq('events.eventLevels.levelID', Number(levelID))
-            .eq('events.eventLevels.eventRecords.userID', user.uid!)
-            .lte('events.start', now)
-            .gte('events.end', now)
-
-        if (error) {
-            console.error(error)
-            res.status(500).send()
-
-            return
-        }
-
-        for (const i of data!) {
-            const levels = await getEventLevelsSafe(i.eventID)
-
-            if (!levels.some(level => level && level.levelID === Number(levelID))) {
-                res.status(500).send()
-                return
-            }
-        }
-
-        interface LevelUpdateData {
-            level_id: number,
-            gained: number
-        }
-
-        const eventRecordUpsertData = []
-        const eventLevelUpdateData: LevelUpdateData[] = []
-
-        for (const event of data!) {
-            for (const level of event.events?.eventLevels!) {
-                let totalProgress = 0;
-
-                for (const record of level.eventRecords) {
-                    if (record.progress < Number(progress) && event.events!.type == 'basic') {
-                        // @ts-ignore
-                        record.created_at = new Date()
-                        record.progress = Number(progress)
-                        record.videoLink = "Submitted via Geode mod"
-                        record.accepted = true;
-
-                        eventRecordUpsertData.push(record);
-                    }
-
-
-                    if (event.events!.type == 'raid') {
-                        const remainingHP = Math.max(0, level.point - level.totalProgress)
-
-                        // @ts-ignore
-                        record.created_at = new Date()
-
-                        let prog = Number(progress);
-                        let dmg = Math.min(remainingHP, Number(progress) * Math.pow(1.0305, Number(progress)));
-
-                        if (prog >= level.minEventProgress) {
-                            if (prog == 100) {
-                                dmg *= 1.5
-                            }
-
-                            record.progress += dmg;
-                            totalProgress += dmg;
-                            record.videoLink = "Submitted via Geode mod"
-                            record.accepted = true;
-
-                            eventRecordUpsertData.push(record);
-                        }
-                    }
-                }
-
-                if (!level.eventRecords.length) {
-                    eventRecordUpsertData.push({
-                        created_at: new Date(),
-                        userID: user.uid!,
-                        levelID: level.id,
-                        progress: Number(progress),
-                        accepted: true,
-                        videoLink: "Submitted via Geode mod"
-                    })
-                }
-
-                if (totalProgress > 0) {
-                    level.totalProgress! += totalProgress;
-
-                    eventLevelUpdateData.push({
-                        level_id: level.id,
-                        gained: totalProgress
-                    })
-                }
-            }
-        }
-
-        var { error } = await supabase
-            .from('eventRecords')
-            .upsert(eventRecordUpsertData)
-
-        if (error) {
-            console.error(error)
-            res.status(500).send()
-
-            return
-        }
-
-        var { error } = await supabase.rpc('add_event_levels_progress', {
-            updates: JSON.parse(JSON.stringify(eventLevelUpdateData))
-        });
-
-        if (error) {
-            console.error(error)
-            res.status(500).send()
-
-            return
-        }
-
-        res.send();
-    })
+    .put(userAuth, eventController.submitLevel.bind(eventController))
 
 router.route('/quest/:questId/check')
-    .get(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { questId } = req.params
-
-        if (await isQuestClaimed(user, Number(questId))) {
-            res.send({
-                status: 'claimed'
-            })
-
-            return;
-        }
-
-        const result = await isQuestCompleted(user, Number(questId));
-
-        if (!result) {
-            res.send({
-                status: 'unclaimable'
-            })
-
-            return;
-        }
-
-        res.send({
-            status: 'claimable'
-        })
-    })
+    .get(userAuth, eventController.checkQuest.bind(eventController))
 
 router.route('/quest/:questId/claim')
-    .post(userAuth, async (req, res) => {
-
-        const { questId } = req.params
-        const { user } = res.locals
-
-        try {
-            if (await isQuestClaimed(user, Number(questId))) {
-                res.status(400).send({ message: 'Already claimed' })
-                return
-            }
-
-            const completed = await isQuestCompleted(user, Number(questId))
-
-            if (!completed) {
-                res.status(401).send()
-                return
-            }
-
-            const quest = await getEventQuest(Number(questId))
-            const event = await getEvent(quest.eventId)
-
-            if (event.end && new Date() >= new Date(event.end)) {
-                res.status(401).send()
-                return
-            }
-
-            var { error } = await supabase
-                .from('eventQuestClaims')
-                .insert({
-                    userId: user.uid!,
-                    questId: Number(questId)
-                })
-
-            if (error) {
-                console.error(error)
-                res.status(500).send()
-                return
-            }
-
-            if (quest.rewards && Array.isArray(quest.rewards)) {
-                for (const reward of quest.rewards) {
-                    try {
-                        await receiveReward(user, reward)
-                    } catch (err) {
-                        console.error(err)
-                    }
-                }
-            }
-
-            res.send()
-        } catch (err: any) {
-            console.error(err)
-            res.status(500).send({ message: err.message })
-        }
-
-    })
+    .post(userAuth, eventController.claimQuest.bind(eventController))
 
 router.route('/submission')
-    .patch(adminAuth, async (req, res) => {
-        try {
-            await upsertEventSubmission(req.body)
-
-            res.send()
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(adminAuth, eventController.getSubmission.bind(eventController))
+    .patch(adminAuth, eventController.updateSubmission.bind(eventController))
+    .delete(adminAuth, eventController.deleteSubmission.bind(eventController))
 
 router.route('/:id')
-    .patch(adminAuth, async (req, res) => {
-        const { id } = req.params
-        try {
-            await updateEvent(Number(id), req.body);
-            res.send()
-        } catch (err: any) {
-            console.error(err);
-
-            res.status(500).send({
-                message: err.message
-            })
-        }
-    })
+    .get(eventController.getEvent.bind(eventController))
+    .patch(adminAuth, eventController.updateEvent.bind(eventController))
+    .delete(adminAuth, eventController.deleteEvent.bind(eventController))
 
 router.route('/:id/levels')
     /**
@@ -388,56 +90,12 @@ router.route('/:id/levels')
      *           application/json:
      *             schema:
      */
-    .get(optionalUserAuth, async (req, res) => {
-        const { id } = req.params
-        const event = await getEvent(parseInt(id))
-        const { user } = res.locals
-
-        try {
-            if (user && user.isAdmin) {
-                res.send(await getEventLevels(parseInt(id)))
-                return;
-            }
-
-            const result = await getEventLevelsSafe(parseInt(id));
-
-            if (new Date(event.start) >= new Date()) {
-                res.send(Array(result.length).fill(null))
-            } else {
-                res.send(result);
-            }
-        } catch (err) {
-            console.error(err)
-            res.send([])
-        }
-    })
-    .put(adminAuth, async (req, res) => {
-        const { id } = req.params;
-        try {
-            if (req.body.id) {
-                await updateEventLevel(req.body);
-            } else {
-                await upsertEventLevel(Number(id), req.body);
-            }
-
-            res.send()
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(optionalUserAuth, eventController.getEventLevels.bind(eventController))
+    .put(adminAuth, eventController.upsertEventLevel.bind(eventController))
 
 router.route('/:id/level/:levelID')
-    .delete(adminAuth, async (req, res) => {
-        const { id, levelID } = req.params;
-        try {
-            await deleteEventLevel(Number(id), Number(levelID));
-            res.send()
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .patch(adminAuth, eventController.updateEventLevel.bind(eventController))
+    .delete(adminAuth, eventController.deleteEventLevel.bind(eventController))
 
 router.route('/:id/submissions')
     /**
@@ -461,17 +119,7 @@ router.route('/:id/submissions')
      *           application/json:
      *             schema:
      */
-    .get(userAuth, async (req, res) => {
-        const { id } = req.params
-        const { user } = res.locals
-
-        try {
-            res.send(await getEventSubmissions(parseInt(id), user.uid!))
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(eventController.getEventSubmissions.bind(eventController))
 
 router.route('/:id/submit')
     /**
@@ -499,38 +147,16 @@ router.route('/:id/submit')
      *           application/json:
      *             schema:
      */
-    .post(userAuth, async (req, res) => {
-        const { id } = req.params
-        const event = await getEvent(parseInt(id))
-
-        if (new Date(event.end!) < new Date()) {
-            res.status(401).send();
-            return;
-        }
-
-        const { user } = res.locals
-
-        req.body.userID = user.uid
-        req.body.accepted = null
-
-        try {
-            await insertEventSubmission(req.body)
-
-            res.send()
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .post(userAuth, eventController.submitRecord.bind(eventController))
 
 router.route('/:id/submission/:levelID')
     /**
      * @openapi
      * "/event/{id}/submission/{levelID}":
-     *   delete:
+     *   get:
      *     tags:
      *       - Event
-     *     summary: Delete a submission for a specific level in an event
+     *     summary: Get submission for a specific level in an event
      *     parameters:
      *       - name: id
      *         in: path
@@ -551,27 +177,35 @@ router.route('/:id/submission/:levelID')
      *           application/json:
      *             schema:
      */
-    .delete(userAuth, async (req, res) => {
-        const { id } = req.params
-        const event = await getEvent(parseInt(id))
-
-        if (new Date(event.end!) < new Date()) {
-            res.status(401).send();
-            return;
-        }
-
-        const { user } = res.locals
-        const { levelID } = req.params
-
-        try {
-            await deleteEventSubmission(parseInt(levelID), user.uid!)
-
-            res.send()
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(eventController.getSubmissionByLevel.bind(eventController))
+    /**
+     * @openapi
+     * "/event/{id}/submission/{levelID}":
+     *   patch:
+     *     tags:
+     *       - Event
+     *     summary: Update submission for a specific level in an event
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the event
+     *         required: true
+     *         schema:
+     *           type: number
+     *       - name: levelID
+     *         in: path
+     *         description: The id of the level
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
+    .patch(userAuth, eventController.updateSubmission.bind(eventController))
 
 router.route('/:id/leaderboard')
     /**
@@ -595,53 +229,7 @@ router.route('/:id/leaderboard')
      *           application/json:
      *             schema:
      */
-    .get(optionalUserAuth, async (req, res) => {
-        const { id } = req.params
-        const { user, authenticated } = res.locals
-        const ignoreFreeze = authenticated && (user && user.isAdmin!)
-
-        try {
-            res.send(await get_event_leaderboard(parseInt(id), ignoreFreeze))
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
-
-router.route('/:id')
-    /**
-     * @openapi
-     * "/event/{id}":
-     *   get:
-     *     tags:
-     *       - Event
-     *     summary: Get event by ID
-     *     parameters:
-     *       - name: id
-     *         in: path
-     *         description: The id of the event
-     *         required: true
-     *         schema:
-     *           type: number
-     *     responses:
-     *       200:
-     *         description: Success
-     *         content:
-     *           application/json:
-     *             schema:
-     */
-    .get(async (req, res) => {
-        const { id } = req.params
-
-        try {
-            const result = await getEvent(parseInt(id))
-
-            res.send(result)
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(eventController.getLeaderboard.bind(eventController))
 
 router.route('/:id/proofs')
     /**
@@ -665,18 +253,7 @@ router.route('/:id/proofs')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        const { id } = req.params
-
-        try {
-            const result = await getEventProofs(parseInt(id), req.query)
-
-            res.send(result)
-        } catch (err) {
-            console.error(err)
-            res.status(500).send();
-        }
-    })
+    .get(eventController.getEventProofs.bind(eventController))
 
 router.route('/:id/proof/:uid')
     /**
@@ -706,18 +283,7 @@ router.route('/:id/proof/:uid')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        const { id, uid } = req.params
-
-        try {
-            const result = await getEventProof(parseInt(id), uid)
-
-            res.send(result)
-        } catch (err) {
-            console.error(err)
-            res.status(500).send();
-        }
-    })
+    .get(eventController.getEventProof.bind(eventController))
     /**
      * @openapi
      * "/event/{id}/proof/{uid}":
@@ -732,135 +298,14 @@ router.route('/:id/proof/:uid')
      *           application/json:
      *             schema:
      */
-    .delete(userAuth, async (req, res) => {
-        const { id, uid } = req.params
-        const user = res.locals.user
-
-        if (!user.isAdmin && !(user.uid == uid)) {
-            res.status(401).send()
-            return
-        }
-
-        try {
-            const result = await deleteEventProof(parseInt(id), uid)
-
-            res.send(result)
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .delete(userAuth, eventController.deleteEventProof.bind(eventController))
 
 router.route('/:id/calc')
-    .patch(adminAuth, async (req, res) => {
-        const { id } = req.params
-        const event = await getEvent(Number(id))
-
-        if (event.isCalculated) {
-            res.send({
-                message: 'Calculated'
-            })
-
-            return
-        }
-
-        if (!event.isRanked) {
-            res.status(403).send({
-                message: 'This event is unranked'
-            })
-
-            return
-        }
-
-        var { data, error } = await supabase
-            .rpc('get_event_leaderboard', { event_id: Number(id) });
-
-        const newData = calcLeaderboard(data!)
-
-        for (const i of newData) {
-            // @ts-ignore
-            i.eventID = Number(id)
-        }
-
-        var { error } = await supabase
-            .from('players')
-            .upsert(newData.map(item => ({
-                uid: item.userID,
-                elo: item.elo,
-                matchCount: item.matchCount + 1
-            })))
-
-        if (error) {
-            console.error(error)
-            res.status(500).send()
-            return;
-        }
-
-        var { error } = await supabase
-            .from('eventProofs')
-            .upsert(newData.map((item) => ({
-                userid: item.userID,
-                eventID: Number(id),
-                diff: item.diff
-            })))
-
-        if (error) {
-            console.error(error)
-            res.status(500).send()
-            return;
-        }
-
-        const a = await supabase
-            .from('eventProofs')
-            .select('userid, eventID, diff, players(uid, elo)')
-            .eq('eventID', Number(id))
-            .is('diff', null)
-
-        if (a.error) {
-            console.error(a.error)
-            res.status(500).send()
-            return;
-        }
-
-        var { error } = await supabase
-            .from('players')
-            .upsert(a.data!.map(item => ({
-                uid: item.players?.uid,
-                elo: item.players?.elo! - 200
-            })))
-
-        var { error } = await supabase
-            .from('eventProofs')
-            .update({ diff: -200 })
-            .eq('eventID', Number(id))
-            .is('diff', null)
-
-        if (error) {
-            console.error(error)
-            res.status(500).send()
-            return;
-        }
-
-        event.isCalculated = true;
-        event.freeze = null;
-
-        var { error } = await supabase
-            .from('events')
-            .update(event)
-            .eq('id', event.id)
-
-        res.send()
-    })
+    .patch(adminAuth, eventController.calculateLeaderboard.bind(eventController))
 
 router.route('/:id/quest')
-    .get(async (req, res) => {
-        const { id } = req.params
-        try {
-            res.send(await getEventQuests(Number(id)))
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(optionalUserAuth, eventController.getEventQuests.bind(eventController))
+
+export default router
 
 export default router
