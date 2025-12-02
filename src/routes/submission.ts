@@ -1,7 +1,6 @@
-import express, { application } from 'express'
-import Record from '@lib/classes/Record'
+import express from 'express'
 import userAuth from '@src/middleware/userAuth'
-import logger from '@src/utils/logger'
+import submissionController from '@src/controllers/submissionController'
 
 const router = express.Router()
 
@@ -21,30 +20,6 @@ router.route('/')
       *       200:
       *         description: Success
      */
-    .post(userAuth, async (req, res) => {
-        const { user } = res.locals
-        req.body.userid = user.uid
-        req.body.timestamp = Date.now()
-        req.body.isChecked = false
-
-        if (req.body.videoLink == undefined ||
-            req.body.progress == undefined ||
-            req.body.mobile == undefined) {
-            res.status(500).send()
-            return
-        }
-
-        const record = new Record(req.body)
-
-        try {
-            await record.submit()
-
-            res.send()
-            logger.notice(`New record submitted! Please check it out.`)
-        } catch (err: any) {
-            console.error(err)
-            res.status(500).send(err)
-        }
-    })
+    .post(userAuth, submissionController.submitRecord.bind(submissionController))
 
 export default router

@@ -1,6 +1,6 @@
 import express from 'express'
-import supabase from '@src/database/supabase'
 import adminAuth from '@src/middleware/adminAuth'
+import mergeAccountController from '@src/controllers/mergeAccountController'
 
 const router = express.Router()
 
@@ -29,32 +29,6 @@ const router = express.Router()
  *         description: Success
  */
 router.route('/:a/:b')
-    .patch(adminAuth, async (req, res) => {
-        const { a, b } = req.params
-
-        var { data, error } = await supabase
-            .from('records')
-            .update({ userid: b })
-            .eq('userid', a)
-
-        if(error) {
-            res.status(500).send(error)
-            return
-        }
-
-        var { error } = await supabase
-            .from('players')
-            .delete()
-            .match({ uid: a })
-
-        if(error) {
-            res.status(500).send(error)
-            return
-        }
-
-        await supabase.rpc('update_rank')
-
-        res.send()
-    })
+    .patch(adminAuth, mergeAccountController.mergeAccounts.bind(mergeAccountController))
 
 export default router

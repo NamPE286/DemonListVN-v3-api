@@ -1,9 +1,8 @@
-import { sepay } from "@src/lib/classes/sepay";
-import { getOrders } from "@src/lib/client/store";
-import userAuth from "@src/middleware/userAuth";
-import express from "express"
+import express from 'express'
+import userAuth from '@src/middleware/userAuth'
+import ordersController from '@src/controllers/ordersController'
 
-const router = express.Router();
+const router = express.Router()
 
 /**
 * @openapi
@@ -17,11 +16,7 @@ const router = express.Router();
 *         description: Success
 */
 router.route('/')
-    .get(userAuth, async (req, res) => {
-        const { user } = res.locals;
-
-        res.send(await getOrders(user.uid!))
-    })
+    .get(userAuth, ordersController.getOrders.bind(ordersController))
 
 /**
 * @openapi
@@ -42,10 +37,6 @@ router.route('/')
 *         description: Success
 */
 router.route('/getPaymentLink/:id')
-    .get(async (req, res) => {
-        const { id } = req.params
+    .get(ordersController.getPaymentLink.bind(ordersController))
 
-        res.send(await sepay.order.retrieve(id));
-    })
-
-export default router;
+export default router
