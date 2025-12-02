@@ -1,10 +1,7 @@
 import express from 'express'
-import Record from '@lib/classes/Record'
 import adminAuth from '@src/middleware/adminAuth'
 import userAuth from '@src/middleware/userAuth'
-import { getRecord, retrieveRecord } from '@src/lib/client/record'
-import { changeSuggestedRating } from '@src/lib/client/record'
-import logger from '@src/utils/logger'
+import recordController from '@src/controllers/recordController'
 
 const router = express.Router()
 
@@ -27,16 +24,7 @@ router.route('/')
      *           application/json:
      *             schema:
      */
-    .put(adminAuth, async (req, res) => {
-        try {
-            const record = new Record(req.body)
-            await record.update()
-
-            res.send()
-        } catch (err) {
-            res.status(500).send()
-        }
-    })
+    .put(adminAuth, recordController.updateRecord.bind(recordController))
 
 router.route('/:userID/:levelID')
     /**
@@ -63,25 +51,7 @@ router.route('/:userID/:levelID')
      *       200:
      *         description: Success
      */
-    .delete(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { userID, levelID } = req.params
-
-        if (user.uid != userID && !user.isAdmin) {
-            res.status(403).send()
-            return
-        }
-
-        try {
-            const record = new Record({ userid: userID, levelid: parseInt(levelID) })
-            await record.delete()
-
-            res.send()
-            logger.log(`${user.name} (${user.uid}) performed DELETE /record/${userID}/${levelID}`)
-        } catch (err) {
-            res.status(500).send()
-        }
-    })
+    .delete(userAuth, recordController.deleteRecord.bind(recordController))
 
 router.route('/:userID/:levelID')
     /**
@@ -108,15 +78,7 @@ router.route('/:userID/:levelID')
      *       200:
      *         description: Success
      */
-    .get(async (req, res) => {
-        const { userID, levelID } = req.params
-
-        try {
-            res.send(await getRecord(userID, parseInt(levelID)))
-        } catch (err) {
-            res.status(500).send()
-        }
-    })
+    .get(recordController.getRecord.bind(recordController))
 
 router.route('/:userID/:levelID/changeSuggestedRating/:rating')
     /**
@@ -143,21 +105,7 @@ router.route('/:userID/:levelID/changeSuggestedRating/:rating')
      *       200:
      *         description: Success
      */
-    .put(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { userID, levelID, rating } = req.params
-
-        if (user.uid != userID) {
-            res.status(401).send()
-            return;
-        }
-
-        try {
-            res.send(await changeSuggestedRating(userID, parseInt(levelID), parseInt(rating)))
-        } catch (err) {
-            res.status(500).send()
-        }
-    })
+    .put(userAuth, recordController.changeSuggestedRating.bind(recordController))
 
 router.route('/retrieve')
     /**
@@ -171,24 +119,6 @@ router.route('/retrieve')
      *       200:
      *         description: Success
      */
-    .get(userAuth, async (req, res) => {
-        const { user } = res.locals
-
-        if (!user.isAdmin && !user.isTrusted) {
-            res.status(401).send()
-            return
-        }
-
-        if (user.reviewCooldown && (new Date()).getTime() - new Date(user.reviewCooldown).getTime() < 7200000) {
-            res.status(429).send()
-            return
-        }
-
-        try {
-            res.send(await retrieveRecord(user))
-        } catch (err) {
-            res.status(500).send()
-        }
-    })
+    .get(userAuth, recordController.retrieveRecord.bind(recordController))
 
 export default router

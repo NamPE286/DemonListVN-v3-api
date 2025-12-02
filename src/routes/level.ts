@@ -1,28 +1,9 @@
 import express from 'express'
-import type { NextFunction, Response, Request } from 'express'
-import Level from '@lib/classes/Level'
 import adminAuth from '@src/middleware/adminAuth'
-import { getLevelDeathCount } from '@lib/client/deathCount'
-import { getLevelRecords } from '@src/lib/client/record'
 import userAuth from '@src/middleware/userAuth'
-import supabase from '@src/database/supabase'
-import { getEventLevelsSafe } from '@src/lib/client/event'
+import levelController from '@src/controllers/levelController'
 
 const router = express.Router()
-
-function checkID(req: Request, res: Response, next: NextFunction) {
-    if ('id' in req.params) {
-        if (isNaN(parseInt(req.params.id))) {
-            res.status(400).send({
-                message: "Invalid ID (ID should only include numeric character)"
-            })
-
-            return
-        }
-    }
-
-    next()
-}
 
 router.route('/')
     /**
@@ -40,26 +21,7 @@ router.route('/')
       *       200:
       *         description: Success
      */
-    .put(adminAuth, async (req, res) => {
-        const data = req.body
-
-        if (!('id' in data)) {
-            res.status(400).send({
-                message: "Missing 'id' property"
-            })
-
-            return
-        }
-
-        try {
-            const level = new Level(data)
-            await level.update()
-
-            res.send()
-        } catch (err) {
-            res.status(500).send()
-        }
-    })
+    .put(adminAuth, levelController.updateLevel.bind(levelController))
 
 router.route('/:id')
     /**
@@ -83,25 +45,7 @@ router.route('/:id')
      *           application/json:
      *             schema:
      */
-    .get(checkID, async (req, res) => {
-        const { id } = req.params
-        const { fromGD } = req.query
-
-        try {
-            const level = new Level({ id: parseInt(id) })
-
-            if (!fromGD) {
-                await level.pull()
-                res.send(level)
-            } else {
-                res.send(await level.fetchFromGD())
-            }
-
-        } catch (err) {
-            console.error(err)
-            res.status(404).send()
-        }
-    })
+    .get(levelController.getLevel.bind(levelController))
 
     /**
      * @openapi
@@ -121,18 +65,7 @@ router.route('/:id')
      *       200:
      *         description: Success
      */
-    .delete([adminAuth, checkID], async (req: Request, res: Response) => {
-        const { id } = req.params
-
-        try {
-            const level = new Level({ id: parseInt(id) })
-            await level.delete()
-
-            res.send()
-        } catch (err) {
-            res.status(500).send()
-        }
-    })
+    .delete(adminAuth, levelController.deleteLevel.bind(levelController))
 
 router.route('/:id/records')
     /**
@@ -177,13 +110,7 @@ router.route('/:id/records')
      *           application/json:
      *             schema:
      */
-    .get(checkID, async (req, res) => {
-        try {
-            res.send(await getLevelRecords(parseInt(req.params.id), req.query))
-        } catch {
-            res.status(404).send()
-        }
-    })
+    .get(levelController.getLevelRecords.bind(levelController))
 
 router.route('/:id/deathCount')
     /**
@@ -207,51 +134,9 @@ router.route('/:id/deathCount')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        try {
-            const { id } = req.params;
-            res.send(await getLevelDeathCount(parseInt(id)));
-        } catch {
-            res.status(500).send()
-        }
-    })
+    .get(levelController.getLevelDeathCount.bind(levelController))
 
 router.route('/:id/inEvent')
-    .get(userAuth, async (req, res) => {
-        let { type } = req.query
-        const { user } = res.locals
-        const { id } = req.params
-        const now = new Date().toISOString()
-
-        if (!type) {
-            type = 'basic'
-        }
-
-        const { data, error } = await supabase
-            .from('eventProofs')
-            .select('userid, eventID, events!inner(start, end, type, eventLevels!inner(levelID))')
-            .eq('userid', user.uid!)
-            .eq('events.eventLevels.levelID', Number(id))
-            .eq('events.type', String(type))
-            .lte('events.start', now)
-            .gte('events.end', now)
-
-        if (error) {
-            console.error(error)
-            res.status(500).send();
-            return;
-        }
-
-        for (const i of data) {
-            const levels = await getEventLevelsSafe(i.eventID)
-
-            if (levels.some(level => level && level.levelID === Number(id))) {
-                res.send()
-                return
-            }
-        }
-
-        res.status(404).send();
-    })
+    .get(userAuth, levelController.checkLevelInEvent.bind(levelController))
 
 export default router

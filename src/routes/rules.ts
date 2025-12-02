@@ -1,19 +1,9 @@
-import supabase from '@src/database/supabase';
 import express from 'express'
+import rulesController from '@src/controllers/rulesController'
 
 const router = express.Router()
 
 router.route('/')
-    .get(async (req, res) => {
-        const { data, error } = await supabase
-            .from('rules')
-            .select('*')
+    .get(rulesController.getRules.bind(rulesController))
 
-        if (error) {
-            res.status(500).send()
-        }
-
-        res.send(data);
-    })
-
-export default router;
+export default router

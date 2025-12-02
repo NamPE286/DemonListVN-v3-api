@@ -1,5 +1,5 @@
 import express from 'express'
-import provinces from '@static/provinces.json'
+import provincesController from '@src/controllers/provincesController'
 
 const router = express.Router()
 
@@ -17,9 +17,7 @@ router.route('/')
      *         content:
      *           application/json:
      *             schema:
-    */
-    .get((req, res) => {
-        res.send(provinces)
-    })
+     */
+    .get(provincesController.getProvinces.bind(provincesController))
 
 export default router

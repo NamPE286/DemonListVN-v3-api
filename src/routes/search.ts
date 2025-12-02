@@ -1,5 +1,5 @@
 import express from 'express'
-import { search } from '@lib/client/search'
+import searchController from '@src/controllers/searchController'
 
 const router = express.Router()
 
@@ -32,13 +32,6 @@ router.route('/:query')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        const { query } = req.params
-
-        res.send({
-            levels: await search.levels(query, req.query),
-            players: await search.players(query, req.query)
-        })
-    })
+    .get(searchController.search.bind(searchController))
 
 export default router
