@@ -162,14 +162,7 @@ router.route('/cancelled')
 
 router.route('/webhook')
     .post(async (req, res) => {
-        const { orderCode } = req.body.data
-        const id = parseInt(String(orderCode))
-
-        // if (paymentLink.status == 'EXPIRED') {
-        //     await handlePayment(id)
-        // }
-
-        // logger.log(JSON.stringify(req.body))
+        console.log(req.body, req.headers)
 
         res.send()
     })
