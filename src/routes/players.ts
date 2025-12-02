@@ -1,5 +1,5 @@
 import express from 'express'
-import { getPlayers, getPlayersBatch } from '@src/lib/client/player'
+import playersController from '@src/controllers/playersController'
 
 const router = express.Router()
 
@@ -45,29 +45,9 @@ router.route('/')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        try {
-            res.send(await getPlayers(req.query))
-        } catch {
-            res.status(500).send()
-        }
-    })
+    .get(playersController.getPlayers.bind(playersController))
 
 router.route('/')
-    .post(async (req, res) => {
-        const { batch } = req.body
-
-        if (batch) {
-            try {
-                res.send(await getPlayersBatch(batch))
-            } catch {
-                res.status(500).send()
-            }
-
-            return;
-        }
-
-        res.send()
-    })
+    .post(playersController.getPlayersBatch.bind(playersController))
 
 export default router

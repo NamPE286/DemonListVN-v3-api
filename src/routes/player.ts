@@ -1,13 +1,6 @@
 import express from 'express'
-import Player from '@lib/classes/Player'
 import userAuth from '@src/middleware/userAuth'
-import { getHeatmap } from '@src/lib/client/heatmap'
-import { getPlayerRecordRating, getPlayerRecords } from '@src/lib/client/record'
-import { updateHeatmap } from '@src/lib/client/heatmap'
-import { getPlayerSubmissions } from '@src/lib/client/record'
-import { syncRoleDLVN, syncRoleGDVN } from '@src/lib/client/discord'
-import supabase from '@src/database/supabase'
-import { EVENT_SELECT_STR } from '@src/lib/client/event'
+import playerController from '@src/controllers/playerController'
 
 const router = express.Router()
 
@@ -27,69 +20,24 @@ router.route('/')
      *       200:
      *         description: Success
      */
-    .put(userAuth, async (req, res) => {
-        const data = req.body
-        const user: Player = res.locals.user
+    .put(userAuth, playerController.updatePlayer.bind(playerController))
 
-        if (!('uid' in data)) {
-            if (user.isAdmin) {
-                res.status(400).send({
-                    message: "Missing 'uid' property"
-                })
-
-                return
-            } else {
-                data.uid = user.uid
-            }
-        }
-        /**
-         * @openapi
-         * "/player":
-         *   post:
-         *     tags:
-         *       - Player
-         *     summary: Add a Player
-         *     requestBody:
-         *       required: true
-         *       content:
-         *         application/json:
-         *     responses:
-         *       200:
-         *         description: Success
-         */
-        if (user.uid != data.uid && !user.isAdmin) {
-            res.status(403).send()
-            return
-        }
-
-        try {
-            const player = new Player(data)
-            await player.update()
-
-            res.send()
-        } catch (err) {
-            res.status(500).send()
-        }
-    })
-
-    .post(userAuth, async (req, res) => {
-        const user = res.locals.user
-
-        const { error } = await supabase
-            .from("players")
-            .insert({
-                uid: user.uid!,
-                name: String(new Date().getTime())
-            })
-
-        if (error) {
-            console.error(error)
-            res.status(500).send()
-            return;
-        }
-
-        res.send();
-    })
+    /**
+     * @openapi
+     * "/player":
+     *   post:
+     *     tags:
+     *       - Player
+     *     summary: Add a Player
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *     responses:
+     *       200:
+     *         description: Success
+     */
+    .post(userAuth, playerController.createPlayer.bind(playerController))
 
 router.route('/:uid')
     /**
@@ -112,27 +60,8 @@ router.route('/:uid')
      *         content:
      *           application/json:
      *             schema:
-    */
-    .get(async (req, res) => {
-        const { uid } = req.params
-        const { cached } = req.query
-
-        try {
-            const player = new Player({})
-
-            if (uid.startsWith('@')) {
-                player.name = uid.slice(1)
-            } else {
-                player.uid = uid
-            }
-
-            await player.pull()
-
-            res.send(player)
-        } catch (err) {
-            res.status(404).send()
-        }
-    })
+     */
+    .get(playerController.getPlayer.bind(playerController))
 
 router.route('/:uid/records')
     /**
@@ -177,18 +106,7 @@ router.route('/:uid/records')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        const { ratingOnly } = req.query
-        try {
-            if (ratingOnly) {
-                res.send(await getPlayerRecordRating(req.params.uid))
-            } else {
-                res.send(await getPlayerRecords(req.params.uid, req.query))
-            }
-        } catch {
-            res.status(404).send()
-        }
-    })
+    .get(playerController.getPlayerRecords.bind(playerController))
 
 router.route('/:uid/heatmap/:year')
     /**
@@ -215,13 +133,7 @@ router.route('/:uid/heatmap/:year')
      *       200:
      *         description: Success
      */
-    .get(async (req, res) => {
-        try {
-            res.send(await getHeatmap(req.params.uid, parseInt(req.params.year)))
-        } catch {
-            res.status(500).send()
-        }
-    })
+    .get(playerController.getPlayerHeatmap.bind(playerController))
 
 router.route('/heatmap/:count')
     /**
@@ -242,12 +154,7 @@ router.route('/heatmap/:count')
      *       200:
      *         description: Success
      */
-    .post(userAuth, async (req, res) => {
-        res.send()
-        try {
-            updateHeatmap(res.locals.user.uid!, parseInt(req.params.count))
-        } catch { }
-    })
+    .post(userAuth, playerController.updatePlayerHeatmap.bind(playerController))
 
 router.route('/:uid/submissions')
     /**
@@ -268,14 +175,7 @@ router.route('/:uid/submissions')
      *       200:
      *         description: Success
      */
-    .get(async (req, res) => {
-        const { uid } = req.params
-        try {
-            res.send(await getPlayerSubmissions(uid))
-        } catch {
-            res.status(500).send()
-        }
-    })
+    .get(playerController.getPlayerSubmissions.bind(playerController))
 
 
 router.route('/syncRole')
@@ -292,19 +192,7 @@ router.route('/syncRole')
      *       500:
      *         description: Internal server error
      */
-    .patch(userAuth, async (req, res) => {
-        const { user } = res.locals
-
-        try {
-            await syncRoleDLVN(user);
-            await syncRoleGDVN(user);
-
-            res.send();
-        } catch (err) {
-            console.error(err)
-            res.status(500).send();
-        }
-    })
+    .patch(userAuth, playerController.syncPlayerRoles.bind(playerController))
 
 router.route('/:id/medals')
     /**
@@ -325,51 +213,12 @@ router.route('/:id/medals')
      *       200:
      *         description: Success
      */
-    .get(async (req, res) => {
-        const { id } = req.params
-        const player = new Player({ uid: id })
-        try {
-            res.send(await player.getInventoryItems())
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(playerController.getPlayerMedals.bind(playerController))
 
 router.route('/:uid/events')
-    .get(async (req, res) => {
-        const { uid } = req.params
-        const { data, error } = await supabase
-            .from('eventProofs')
-            .select(`*, events(${EVENT_SELECT_STR})`)
-            .eq('userid', uid)
-            .order('events(start)', { ascending: false })
-
-        if (error) {
-            console.error(error);
-            res.status(500).send()
-            return;
-        }
-
-        res.send(data)
-    })
+    .get(playerController.getPlayerEvents.bind(playerController))
 
 router.route('/:uid/cards')
-    .get(async (req, res) => {
-        const { uid } = req.params
-        const { data, error } = await supabase
-            .from('cards')
-            .select('id, created_at, supporterIncluded, owner, activationDate, name, img')
-            .eq('owner', uid)
-            .order('activationDate')
-
-        if (error) {
-            console.error(error);
-            res.status(500).send()
-            return;
-        }
-
-        res.send(data)
-    })
+    .get(playerController.getPlayerCards.bind(playerController))
 
 export default router
