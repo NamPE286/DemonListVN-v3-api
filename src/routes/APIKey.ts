@@ -1,6 +1,6 @@
 import express from 'express'
 import userAuth from '@src/middleware/userAuth'
-import { createAPIKey, deleteAPIKey, getAllAPIKey } from '@src/lib/client/APIKey'
+import apiKeyController from '@src/controllers/apiKeyController'
 
 /**
  * @openapi
@@ -26,19 +26,7 @@ router.route('/')
      *       500:
      *         description: Internal Server Error
      */
-    .get(userAuth, async (req, res) => {
-        if(res.locals.authType == 'key') {
-            res.status(403).send()
-            return
-        }
-        
-        try {
-            res.send(await getAllAPIKey(res.locals.user.uid!))
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(userAuth, apiKeyController.getAllAPIKeys.bind(apiKeyController))
     /**
      * @openapi
      * /APIKey:
@@ -54,21 +42,7 @@ router.route('/')
      *       500:
      *         description: Internal Server Error
      */
-    .post(userAuth, async (req, res) => {
-        if(res.locals.authType == 'key') {
-            res.status(403).send()
-            return
-        }
-        
-        try {
-            await createAPIKey(res.locals.user.uid!)
-
-            res.send()
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .post(userAuth, apiKeyController.createAPIKey.bind(apiKeyController))
 
 router.route('/:key')
     /**
@@ -93,20 +67,6 @@ router.route('/:key')
      *       500:
      *         description: Internal Server Error
      */
-    .delete(userAuth, async (req, res) => {
-        if(res.locals.authType == 'key') {
-            res.status(403).send()
-            return
-        }
-        
-        try {
-            await deleteAPIKey(res.locals.user.uid!, req.params.key)
-
-            res.send()
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .delete(userAuth, apiKeyController.deleteAPIKey.bind(apiKeyController))
 
 export default router
