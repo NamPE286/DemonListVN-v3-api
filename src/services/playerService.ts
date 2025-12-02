@@ -1,7 +1,7 @@
 import Player from '@lib/classes/Player'
 import supabase from '@src/database/supabase'
 import { getPlayerRecordRating, getPlayerRecords, getPlayerSubmissions } from '@src/lib/client/record'
-import { syncRoleDLVN, syncRoleGDVN } from '@src/lib/client/discord'
+import discordService from '@src/services/discordService'
 import { EVENT_SELECT_STR } from '@src/lib/client/event'
 
 export class PlayerService {
@@ -220,8 +220,8 @@ export class PlayerService {
     }
 
     async syncPlayerRoles(user: Player) {
-        await syncRoleDLVN(user)
-        await syncRoleGDVN(user)
+        await discordService.syncRoleDLVN(user)
+        await discordService.syncRoleGDVN(user)
     }
 
     async getPlayerMedals(id: string) {
