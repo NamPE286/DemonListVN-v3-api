@@ -307,5 +307,3 @@ router.route('/:id/quest')
     .get(optionalUserAuth, eventController.getEventQuests.bind(eventController))
 
 export default router
-
-export default router

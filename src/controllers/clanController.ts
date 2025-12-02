@@ -1,4 +1,4 @@
-import { Request, Response } from 'express'
+import type { Request, Response } from 'express'
 import clanService from '@src/services/clanService'
 
 class ClanController {
@@ -16,7 +16,7 @@ class ClanController {
                 return
             }
 
-            const clan = await clanService.createClan(req.body, user.uid)
+            const clan = await clanService.createClan(req.body, user.uid!)
 
             res.send(clan)
         } catch (err) {
@@ -153,7 +153,7 @@ class ClanController {
             const { user } = res.locals
             const { id } = req.params
 
-            await clanService.acceptInvitation(user.uid, parseInt(id))
+            await clanService.acceptInvitation(user.uid!, parseInt(id))
 
             res.send()
         } catch (err) {
@@ -167,7 +167,7 @@ class ClanController {
             const { user } = res.locals
             const { id } = req.params
 
-            await clanService.rejectInvitation(user.uid, parseInt(id))
+            await clanService.rejectInvitation(user.uid!, parseInt(id))
 
             res.send()
         } catch (err) {
