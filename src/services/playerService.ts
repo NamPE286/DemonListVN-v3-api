@@ -1,18 +1,115 @@
-import { getPlayers, getPlayersBatch } from '@src/lib/client/player'
 import Player from '@lib/classes/Player'
 import supabase from '@src/database/supabase'
-import { getHeatmap, updateHeatmap } from '@src/lib/client/heatmap'
 import { getPlayerRecordRating, getPlayerRecords, getPlayerSubmissions } from '@src/lib/client/record'
 import { syncRoleDLVN, syncRoleGDVN } from '@src/lib/client/discord'
 import { EVENT_SELECT_STR } from '@src/lib/client/event'
 
 export class PlayerService {
+    // Moved from lib/client/player.ts
+    async getPlayers({ province = '', city = '', sortBy = 'rating', ascending = 'true' } = {}) {
+        if (province == '') {
+            throw new Error('Provinces is required')
+        }
+
+        let query = supabase
+            .from('players')
+            .select('*, clans!id(*)')
+            .order(sortBy, { ascending: ascending == 'true', nullsFirst: false })
+            .eq('province', province)
+            .eq('isHidden', false)
+
+        if (city) {
+            query = query.eq('city', city)
+        }
+
+        const { data, error } = await query
+
+        if (error) {
+            throw error
+        }
+
+        return data
+    }
+
+    async getDemonListLeaderboard({ start = 0, end = 50, sortBy = 'overallRank', ascending = true } = {}) {
+        if (typeof ascending == 'string') {
+            ascending = (ascending == 'true')
+        }
+
+        const { data, error } = await supabase
+            .from('players')
+            .select('*, clans!id(*)')
+            .not('overallRank', 'is', null)
+            .eq('isHidden', false)
+            .order(sortBy, { ascending: ascending })
+            .range(start, end)
+
+        if (error) {
+            throw error
+        }
+
+        return data
+    }
+
+    async getFeaturedListLeaderboard({ start = 0, end = 50, sortBy = 'flrank', ascending = true } = {}) {
+        if (typeof ascending == 'string') {
+            ascending = (ascending == 'true')
+        }
+
+        const { data, error } = await supabase
+            .from('players')
+            .select('*, clans!id(*)')
+            .not('flrank', 'is', null)
+            .eq('isHidden', false)
+            .order(sortBy, { ascending: ascending })
+            .range(start, end)
+
+        if (error) {
+            throw error
+        }
+
+        return data
+    }
+
+    async getPlatformerListLeaderboard({ start = 0, end = 50, sortBy = 'plrank', ascending = true } = {}) {
+        if (typeof ascending == 'string') {
+            ascending = (ascending == 'true')
+        }
+
+        const { data, error } = await supabase
+            .from('players')
+            .select('*, clans!id(*)')
+            .not('plRating', 'is', null)
+            .eq('isHidden', false)
+            .order(sortBy, { ascending: ascending })
+            .range(start, end)
+
+        if (error) {
+            throw error
+        }
+
+        return data
+    }
+
+    async getPlayersBatch(uid: string[]) {
+        const { data, error } = await supabase
+            .from('players')
+            .select('*, clans!id(*)')
+            .in('uid', uid)
+
+        if (error) {
+            throw error
+        }
+
+        return uid.map(id => data.find(player => player.uid === id)).filter(Boolean)
+    }
+
     async getFilteredPlayers(filters: any) {
-        return await getPlayers(filters)
+        return await this.getPlayers(filters)
     }
 
     async getPlayersByBatch(uids: string[]) {
-        return await getPlayersBatch(uids)
+        return await this.getPlayersBatch(uids)
     }
 
     async updatePlayer(data: any, user: Player) {
@@ -72,12 +169,50 @@ export class PlayerService {
         return await getPlayerRecords(uid, query)
     }
 
+    // Moved from lib/client/heatmap.ts
+    private async fetchHeatmapData(uid: string, year: number): Promise<any> {
+        let { data, error } = await supabase
+            .from('heatmap')
+            .select('*')
+            .eq('uid', uid)
+            .eq('year', year)
+            .limit(1)
+            .single()
+
+        if (data == null) {
+            return { uid: uid, year: year, days: Array(366).fill(0) }
+        }
+
+        return data
+    }
+
+    private dayOfYear(year: number, month: number, date: number) {
+        let x = new Date(year, 0, 1).getTime()
+        let y = new Date(year, month, date).getTime()
+
+        return Math.floor((y - x) / 86400000)
+    }
+
     async getPlayerHeatmap(uid: string, year: number) {
-        return await getHeatmap(uid, year)
+        return await this.fetchHeatmapData(uid, year)
     }
 
     async updatePlayerHeatmap(uid: string, count: number) {
-        await updateHeatmap(uid, count)
+        const date = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}))
+        const data = await this.fetchHeatmapData(uid, date.getFullYear())
+        const year = date.getFullYear()
+        const month = date.getMonth()
+        const day = date.getDate()
+
+        data.days[this.dayOfYear(year, month, day)] += count
+
+        const { error } = await supabase
+            .from('heatmap')
+            .upsert(data)
+
+        if (error) {
+            throw error
+        }
     }
 
     async getPlayerSubmissions(uid: string) {
