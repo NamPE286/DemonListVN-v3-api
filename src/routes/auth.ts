@@ -3,6 +3,7 @@ import { createDirectMessageChannel, getAccessToken, getUserByToken } from "@src
 import { getUsernameByToken as getIDByToken } from "@src/lib/client/pointercrate"
 import userAuth from "@src/middleware/userAuth"
 import express from "express"
+import { FRONTEND_URL } from "@src/lib/constants"
 
 /**
  * @swagger
@@ -43,7 +44,7 @@ router.route("/callback/discord")
             return;
         }
 
-        res.redirect(`https://www.demonlistvn.com/link/discord?token=${data.access_token}`)
+        res.redirect(`${FRONTEND_URL}/link/discord?token=${data.access_token}`)
     })
 
 /**

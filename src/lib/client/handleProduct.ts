@@ -4,6 +4,7 @@ import type Player from "@src/lib/classes/Player";
 import { sendMessageToChannel } from "@src/lib/client/discord";
 import { sendNotification } from "@src/lib/client/notification";
 import type { getOrder } from "@src/lib/client/store";
+import { FRONTEND_URL } from "@src/lib/constants";
 
 interface HandleProduct {
     pre: (buyer: Player, recipient: Player, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>;
@@ -34,8 +35,8 @@ handleProduct.set(1, {
             msg = `<@${buyer.discord}>`
             buyerStr = `<@${buyer.discord}>`
         } else {
-            msg = `[${buyer.name}](https://demonlistvn.com/player/${buyer.uid})`
-            buyerStr = `[${buyer.name}](https://demonlistvn.com/player/${buyer.uid})`
+            msg = `[${buyer.name}](${FRONTEND_URL}/player/${buyer.uid})`
+            buyerStr = `[${buyer.name}](${FRONTEND_URL}/player/${buyer.uid})`
         }
 
         if (order.giftTo) {
@@ -44,7 +45,7 @@ handleProduct.set(1, {
             if (recipient.discord) {
                 msg = `<@${recipient.discord}>`
             } else {
-                msg = `[${recipient.name}](https://demonlistvn.com/player/${recipient.uid})`
+                msg = `[${recipient.name}](${FRONTEND_URL}/player/${recipient.uid})`
             }
 
             await sendNotification({
@@ -84,10 +85,10 @@ handleProduct.set(3, {
         if (buyer.discord) {
             msg = `<@${buyer.discord}>`
         } else {
-            msg = `[${buyer.name}](https://demonlistvn.com/player/${buyer.uid})`
+            msg = `[${buyer.name}](${FRONTEND_URL}/player/${buyer.uid})`
         }
 
-        msg += ` boosted [${clan.name}](https://demonlistvn.com/clan/${clan.id}) for ${order.quantity} day${order.quantity! > 1 ? "s" : ""}!`
+        msg += ` boosted [${clan.name}](${FRONTEND_URL}/clan/${clan.id}) for ${order.quantity} day${order.quantity! > 1 ? "s" : ""}!`
         await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
     }
 })

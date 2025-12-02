@@ -7,6 +7,7 @@ import type { Response } from 'express';
 import { handleProduct } from "@src/lib/client/handleProduct";
 import Clan from "@src/lib/classes/Clan";
 import { sepay } from "@src/lib/classes/sepay";
+import type { SepayWebhookOrder } from "@src/lib/types/sepayWebhook";
 
 interface Item {
     id: number;
@@ -359,31 +360,17 @@ export async function renewStock(order: Awaited<ReturnType<typeof getOrder>>) {
 
 
 
-export async function handlePayment(id: number, res: Response | null = null) {
+export async function handlePayment(id: number , sepayOrderData: SepayWebhookOrder) {
     const order = await getOrder(id);
-
-    if (order.delivered) {
-        if (res) {
-            res.redirect(`https://www.demonlistvn.com/supporter/success?id=${id}`)
-        }
-
-        return;
-    }
 
     if (order.state == 'CANCELLED') {
         await sepay.order.cancel(String(id))
 
-        if (res) {
-            res.redirect(`https://www.demonlistvn.com/orders/${id}`)
-        }
-
         return;
     }
 
-    const sepayOrder = await sepay.order.retrieve(String(id));
-    const sepayOrderData = sepayOrder.data.data;
-    
     let paymentStatus: string;
+
     if (sepayOrderData.order_status === 'CAPTURED') {
         paymentStatus = 'PAID';
     } else if (sepayOrderData.order_status === 'CANCELLED') {
@@ -418,19 +405,7 @@ export async function handlePayment(id: number, res: Response | null = null) {
 
     await changeOrderState(id, paymentStatus);
 
-    if (paymentStatus == 'PENDING') {
-        if (res) {
-            res.redirect(`https://www.demonlistvn.com/orders/${id}`)
-        }
-
-        return;
-    }
-
-    if (paymentStatus != "PAID") {
-        if (res) {
-            res.redirect(`https://www.demonlistvn.com/orders/${id}`)
-        }
-
+    if (paymentStatus == 'PENDING' || paymentStatus != "PAID") {
         return;
     }
 
@@ -441,20 +416,11 @@ export async function handlePayment(id: number, res: Response | null = null) {
     await recipient.pull();
 
     if (!handleProduct.has(order.productID!)) {
-        if (res) {
-            res.redirect(`https://www.demonlistvn.com/supporter/success?id=${id}`)
-        }
-
         return
     }
 
     const { pre, post } = handleProduct.get(order.productID!)!
 
     await pre(buyer, recipient, order)
-
-    if (res) {
-        res.redirect(`https://www.demonlistvn.com/supporter/success?id=${id}`)
-    }
-
     await post(buyer, recipient, order)
 }

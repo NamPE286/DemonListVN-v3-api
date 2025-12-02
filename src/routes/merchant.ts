@@ -3,6 +3,7 @@ import { sendNotification } from '@src/lib/client/notification'
 import { getOrder } from '@src/lib/client/store'
 import adminAuth from '@src/middleware/adminAuth'
 import express from 'express'
+import { FRONTEND_URL } from '@src/lib/constants'
 
 const router = express.Router()
 
@@ -59,7 +60,7 @@ router.route('/order/:id/tracking')
 
         sendNotification({
             content: content,
-            redirect: `https://demonlistvn.com/orders/${id}`,
+            redirect: `${FRONTEND_URL}/orders/${id}`,
             to: order.userID
         }, true)
 

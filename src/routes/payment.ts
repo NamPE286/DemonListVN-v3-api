@@ -1,8 +1,12 @@
 import express from 'express'
+import type { Request } from 'express'
+import type { SepayWebhookBody } from '@src/lib/types/sepayWebhook';
 import { getProductByID, addNewOrder, changeOrderState, getOrder, renewStock, handlePayment, addOrderItems } from '@src/lib/client/store';
 import { getSepayPaymentLink } from '@src/lib/client/payment';
 import userAuth from '@src/middleware/userAuth';
+import webhookAuth from '@src/middleware/webhookAuth';
 import { sepay } from '@src/lib/classes/sepay';
+import { FRONTEND_URL } from '@src/lib/constants';
 
 const router = express.Router();
 
@@ -115,8 +119,26 @@ router.route('/success')
     .get(async (req, res) => {
         const { orderCode } = req.query;
         const id = parseInt(String(orderCode));
-
-        await handlePayment(id, res)
+        
+        const maxAttempts = 10;
+        let attempts = 0;
+        
+        while (attempts < maxAttempts) {
+            const order = await getOrder(id);
+            
+            if (order.state === 'PAID') {
+                res.redirect(`${FRONTEND_URL}/supporter/success?id=${id}`);
+                return;
+            }
+            
+            attempts++;
+            
+            if (attempts < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+        }
+        
+        res.status(500).send({ message: 'Payment verification timeout' });
     })
 
 /**
@@ -135,7 +157,7 @@ router.route('/cancelled')
         const { orderCode } = req.query;
         const id = parseInt(String(orderCode));
 
-        res.redirect(`https://www.demonlistvn.com/orders/${id}`)
+        res.redirect(`${FRONTEND_URL}/orders/${id}`)
 
         const order = await getOrder(id)
 
@@ -161,10 +183,24 @@ router.route('/cancelled')
     })
 
 router.route('/webhook')
-    .post(async (req, res) => {
-        console.log(req.body, req.headers)
-
-        res.send()
+    .post(webhookAuth, async (req: Request<{}, any, SepayWebhookBody>, res) => {
+        try {
+            const { notification_type, order: orderData } = req.body;
+            
+            if (notification_type !== 'ORDER_PAID') {
+                res.send({ message: 'Notification received' });
+                return;
+            }
+            
+            const orderId = parseInt(orderData.order_invoice_number);
+            
+            await handlePayment(orderId, orderData);
+            
+            res.send({ message: 'Webhook processed successfully' });
+        } catch (error) {
+            console.error('Webhook processing error:', error);
+            res.status(500).send({ message: 'Webhook processing failed' });
+        }
     })
 
 export default router;
