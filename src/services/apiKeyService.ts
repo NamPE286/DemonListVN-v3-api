@@ -1,16 +1,38 @@
-import { createAPIKey, deleteAPIKey, getAllAPIKey } from '@src/lib/client/APIKey'
+import supabase from '@src/database/supabase'
 
 export class APIKeyService {
     async getAllAPIKeys(uid: string) {
-        return await getAllAPIKey(uid)
+        const { data, error } = await supabase
+            .from('APIKey')
+            .select('*')
+            .eq('uid', uid)
+
+        if (error) {
+            throw error
+        }
+
+        return data
     }
 
     async createAPIKey(uid: string) {
-        await createAPIKey(uid)
+        const { data, error } = await supabase
+            .from('APIKey')
+            .insert({ uid: uid })
+
+        if (error) {
+            throw error
+        }
     }
 
     async deleteAPIKey(uid: string, key: string) {
-        await deleteAPIKey(uid, key)
+        const { error } = await supabase
+            .from('APIKey')
+            .delete()
+            .match({ uid: uid, key: key })
+
+        if (error) {
+            throw error
+        }
     }
 }
 

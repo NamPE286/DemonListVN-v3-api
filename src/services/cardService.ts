@@ -1,17 +1,57 @@
-import { getCard, linkCard, updateCardContent } from '@src/lib/client/card'
+import supabase from '@src/database/supabase'
 import type Player from '@lib/classes/Player'
 
 export class CardService {
     async getCard(id: string) {
-        return await getCard(id)
+        const { data, error } = await supabase
+            .from('cards')
+            .select('*, players(*, clans!id(*))')
+            .eq('id', id)
+            .single()
+
+        if (error) {
+            throw error
+        }
+
+        return data
     }
 
-    async linkCard(id: string, user: Player) {
-        await linkCard(id, user)
+    async linkCard(id: string, player: Player) {
+        const card = await this.getCard(id)
+
+        if (!card.activationDate || new Date(card.activationDate) > new Date()) {
+            throw new Error('Card is not activated')
+        }
+
+        if (card.owner) {
+            throw new Error('Card is already linked')
+        }
+
+        const { error } = await supabase
+            .from('cards')
+            .update({
+                owner: player.uid
+            })
+            .eq('id', id)
+
+        if (error) {
+            throw error
+        }
+
+        await player.extendSupporter(card.supporterIncluded)
     }
 
-    async updateCardContent(id: string, content: any) {
-        await updateCardContent(id, content)
+    async updateCardContent(id: string, content: string) {
+        const { error } = await supabase
+            .from('cards')
+            .update({
+                content: content
+            })
+            .eq('id', id)
+
+        if (error) {
+            throw error
+        }
     }
 }
 
