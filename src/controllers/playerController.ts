@@ -11,6 +11,8 @@ export class PlayerController {
             await playerService.updatePlayer(data, user)
             res.send()
         } catch (error: any) {
+            console.error(error)
+
             if (error.message === "Missing 'uid' property") {
                 res.status(400).send({ message: error.message })
 
@@ -46,6 +48,7 @@ export class PlayerController {
 
             res.send(player)
         } catch (error) {
+            console.error(error)
             res.status(404).send()
         }
     }
@@ -56,6 +59,7 @@ export class PlayerController {
 
             res.send(records)
         } catch (error) {
+            console.error(error)
             res.status(404).send()
         }
     }
@@ -69,6 +73,7 @@ export class PlayerController {
 
             res.send(heatmap)
         } catch (error) {
+            console.error(error)
             res.status(500).send()
         }
     }
@@ -81,6 +86,7 @@ export class PlayerController {
             res.send()
             await playerService.updatePlayerHeatmap(user.uid!, count)
         } catch (error) {
+            console.error(error)
             // Silent fail as per original implementation
         }
     }
@@ -92,6 +98,7 @@ export class PlayerController {
 
             res.send(submissions)
         } catch (error) {
+            console.error(error)
             res.status(500).send()
         }
     }

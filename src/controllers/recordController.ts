@@ -7,6 +7,7 @@ export class RecordController {
             await recordService.updateRecord(req.body)
             res.send()
         } catch (error) {
+            console.error(error)
             res.status(500).send()
         }
     }
@@ -19,6 +20,8 @@ export class RecordController {
             await recordService.deleteRecord(userID, parseInt(levelID), user)
             res.send()
         } catch (error: any) {
+            console.error(error)
+
             if (error.message === "Forbidden") {
                 res.status(403).send()
 
@@ -36,6 +39,7 @@ export class RecordController {
 
             res.send(record)
         } catch (error) {
+            console.error(error)
             res.status(500).send()
         }
     }
@@ -53,6 +57,8 @@ export class RecordController {
 
             res.send(result)
         } catch (error: any) {
+            console.error(error)
+
             if (error.message === "Unauthorized") {
                 res.status(401).send()
 
@@ -70,6 +76,8 @@ export class RecordController {
 
             res.send(record)
         } catch (error: any) {
+            console.error(error)
+
             if (error.message === "Unauthorized") {
                 res.status(401).send()
 
@@ -92,6 +100,7 @@ export class RecordController {
 
             res.send(records)
         } catch (error) {
+            console.error(error)
             res.status(500).send()
         }
     }

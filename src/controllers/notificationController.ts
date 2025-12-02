@@ -7,6 +7,7 @@ export class NotificationController {
             await notificationService.sendNotification(req.body)
             res.send()
         } catch (error) {
+            console.error(error)
             res.status(500).send()
         }
     }

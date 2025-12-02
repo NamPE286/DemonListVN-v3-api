@@ -8,6 +8,7 @@ export class PlayersController {
 
             res.send(players)
         } catch (error) {
+            console.error(error)
             res.status(500).send()
         }
     }
@@ -26,6 +27,7 @@ export class PlayersController {
 
             res.send(players)
         } catch (error) {
+            console.error(error)
             res.status(500).send()
         }
     }

@@ -9,6 +9,7 @@ export class SearchController {
 
             res.send(results)
         } catch (error) {
+            console.error(error)
             res.status(500).send()
         }
     }

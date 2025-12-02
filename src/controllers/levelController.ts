@@ -7,6 +7,8 @@ export class LevelController {
             await levelService.updateLevel(req.body)
             res.send()
         } catch (error: any) {
+            console.error(error)
+
             if (error.message === "Missing 'id' property") {
                 res.status(400).send({ message: error.message })
 
@@ -43,6 +45,8 @@ export class LevelController {
             await levelService.deleteLevel(id)
             res.send()
         } catch (error: any) {
+            console.error(error)
+
             if (error.message === "Invalid ID (ID should only include numeric character)") {
                 res.status(400).send({ message: error.message })
 
@@ -60,6 +64,8 @@ export class LevelController {
 
             res.send(records)
         } catch (error: any) {
+            console.error(error)
+
             if (error.message === "Invalid ID (ID should only include numeric character)") {
                 res.status(400).send({ message: error.message })
 
@@ -77,6 +83,7 @@ export class LevelController {
 
             res.send(deathCount)
         } catch (error) {
+            console.error(error)
             res.status(500).send()
         }
     }
