@@ -1,4 +1,4 @@
-import supabase from '@database/supabase'
+import supabase from '@src/database/supabase'
 
 export class RefreshService {
     async refreshRanks() {
