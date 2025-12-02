@@ -216,9 +216,45 @@ router.route('/:id/medals')
     .get((req, res) => playerController.getPlayerMedals(req, res))
 
 router.route('/:uid/events')
+    /**
+     * @openapi
+     * "/player/{uid}/events":
+     *   get:
+     *     tags:
+     *       - Player
+     *     summary: Get player's events
+     *     parameters:
+     *       - name: uid
+     *         in: path
+     *         description: The UID of the player
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Success
+     */
     .get((req, res) => playerController.getPlayerEvents(req, res))
 
 router.route('/:uid/cards')
+    /**
+     * @openapi
+     * "/player/{uid}/cards":
+     *   get:
+     *     tags:
+     *       - Player
+     *     summary: Get player's cards
+     *     parameters:
+     *       - name: uid
+     *         in: path
+     *         description: The UID of the player
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Success
+     */
     .get((req, res) => playerController.getPlayerCards(req, res))
 
 export default router

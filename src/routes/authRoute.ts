@@ -56,6 +56,24 @@ router.route('/link/discord')
     .patch(userAuth, (req, res) => authController.linkDiscord(req, res))
 
 router.route('/link/pointercrate')
+    /**
+     * @openapi
+     * /auth/link/pointercrate:
+     *   patch:
+     *     summary: Link Pointercrate account to user
+     *     tags: [Auth]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *     responses:
+     *       200:
+     *         description: Successfully linked Pointercrate account
+     *       401:
+     *         description: Unauthorized
+     */
     .patch(userAuth, (req, res) => authController.linkPointercrate(req, res))
 
 export default router

@@ -137,6 +137,24 @@ router.route('/:id/deathCount')
     .get((req, res) => levelController.getLevelDeathCount(req, res))
 
 router.route('/:id/inEvent')
+    /**
+     * @openapi
+     * "/level/{id}/inEvent":
+     *   get:
+     *     tags:
+     *       - Level
+     *     summary: Check if a level is in an event
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The id of the level
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     */
     .get(userAuth, (req, res) => levelController.checkLevelInEvent(req, res))
 
 export default router

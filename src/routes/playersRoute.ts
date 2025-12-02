@@ -48,6 +48,23 @@ router.route('/')
     .get((req, res) => playersController.getPlayers(req, res))
 
 router.route('/')
+    /**
+     * @openapi
+     * "/players":
+     *   post:
+     *     tags:
+     *       - Player
+     *     summary: Get multiple players by batch
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *     responses:
+     *       200:
+     *         description: Success
+     */
     .post((req, res) => playersController.getPlayersBatch(req, res))
 
 export default router
