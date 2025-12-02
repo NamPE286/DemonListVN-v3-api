@@ -3,7 +3,7 @@ import userAuth from '@src/middleware/userAuth'
 import authController from '@src/controllers/authController'
 
 /**
- * @swagger
+ * @openapi
  * tags:
  *   name: Auth
  *   description: Authentication routes
@@ -12,7 +12,7 @@ import authController from '@src/controllers/authController'
 const router = express.Router()
 
 /**
- * @swagger
+ * @openapi
  * /auth/callback/discord:
  *   get:
  *     summary: Discord OAuth callback
@@ -34,7 +34,7 @@ router.route('/callback/discord')
     .get(authController.handleDiscordCallback.bind(authController))
 
 /**
- * @swagger
+ * @openapi
  * /auth/link/discord:
  *   patch:
  *     summary: Link Discord account to user
