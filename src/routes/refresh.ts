@@ -1,6 +1,6 @@
 import express from 'express'
-import supabase from '@database/supabase'
 import adminAuth from '@src/middleware/adminAuth'
+import refreshController from '@src/controllers/refreshController'
 
 const router = express.Router()
 
@@ -19,24 +19,6 @@ router.route('/')
      *           application/json:
      *             schema:
      */
-    .patch(adminAuth, async (req, res) => {
-        const a = await supabase.rpc('update_rank')
-
-        if (a.error) {
-            console.error(a.error)
-            res.status(500).send()
-            return
-        }
-
-        const b = await supabase.rpc('update_list')
-
-        if (b.error) {
-            console.error(b.error)
-            res.status(500).send()
-            return
-        }
-
-        res.send()
-    })
+    .patch(adminAuth, refreshController.refreshRanks.bind(refreshController))
 
 export default router

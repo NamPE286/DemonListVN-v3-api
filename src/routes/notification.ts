@@ -1,6 +1,6 @@
 import express from 'express'
-import { sendNotification } from '@src/lib/client/notification'
 import adminAuth from '@src/middleware/adminAuth'
+import notificationController from '@src/controllers/notificationController'
 
 const router = express.Router()
 
@@ -20,14 +20,6 @@ router.route('/')
       *       200:
       *         description: Success
      */
-    .post(adminAuth, async (req, res) => {
-        try {
-            await sendNotification(req.body)
-            res.send()
-        } catch(err) {
-            res.status(500).send()
-        }
-
-    })
+    .post(adminAuth, notificationController.sendNotification.bind(notificationController))
 
 export default router

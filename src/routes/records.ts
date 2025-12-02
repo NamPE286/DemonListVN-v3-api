@@ -1,5 +1,5 @@
 import express from 'express'
-import { getRecords } from '@src/lib/client/record'
+import recordController from '@src/controllers/recordController'
 
 const router = express.Router()
 
@@ -40,12 +40,6 @@ router.route('/')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        try {
-            res.send(await getRecords(req.query))
-        } catch (err) {
-            res.status(500).send()
-        }
-    })
+    .get(recordController.getRecords.bind(recordController))
 
 export default router

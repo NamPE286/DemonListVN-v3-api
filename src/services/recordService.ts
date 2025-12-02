@@ -1,5 +1,5 @@
 import Record from '@lib/classes/Record'
-import { getRecord, retrieveRecord, changeSuggestedRating } from '@src/lib/client/record'
+import { getRecord, retrieveRecord, changeSuggestedRating, getRecords } from '@src/lib/client/record'
 import logger from '@src/utils/logger'
 import type Player from '@lib/classes/Player'
 
@@ -42,6 +42,10 @@ export class RecordService {
         }
 
         return await retrieveRecord(user)
+    }
+
+    async getRecords(query: any) {
+        return await getRecords(query)
     }
 }
 

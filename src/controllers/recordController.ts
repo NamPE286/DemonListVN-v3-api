@@ -71,6 +71,15 @@ export class RecordController {
             }
         }
     }
+
+    async getRecords(req: Request, res: Response) {
+        try {
+            const records = await recordService.getRecords(req.query)
+            res.send(records)
+        } catch (error) {
+            res.status(500).send()
+        }
+    }
 }
 
 export default new RecordController()
