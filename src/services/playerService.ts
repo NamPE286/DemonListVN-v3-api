@@ -7,7 +7,7 @@ import { EVENT_SELECT_STR } from '@src/lib/client/event'
 export class PlayerService {
     // Moved from lib/client/player.ts
     async getPlayers({ province = '', city = '', sortBy = 'rating', ascending = 'true' } = {}) {
-        if (province == '') {
+        if (province === '') {
             throw new Error('Provinces is required')
         }
 

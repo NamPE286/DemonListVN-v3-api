@@ -58,7 +58,7 @@ export class SearchService {
             return await this.getPlayerByDiscordID(id)
         }
 
-        const { data, error} = await supabase
+        const { data, error } = await supabase
             .from('players')
             .select('*')
             .ilike('name', `%${query}%`)
