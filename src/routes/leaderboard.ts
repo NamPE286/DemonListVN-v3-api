@@ -54,8 +54,11 @@ router.route('/dl')
      */
     .get(async (req, res) => {
         try {
-            res.send(await getDemonListLeaderboard(req.query))
+            const result = await getDemonListLeaderboard(req.query)
+
+            res.send(result)
         } catch (err) {
+            console.error(err)
             res.status(500).send()
         }
     })
@@ -106,8 +109,11 @@ router.route('/fl')
      */
     .get(async (req, res) => {
         try {
-            res.send(await getFeaturedListLeaderboard(req.query))
+            const result = await getFeaturedListLeaderboard(req.query)
+
+            res.send(result)
         } catch (err) {
+            console.error(err)
             res.status(500).send()
         }
     })
@@ -158,8 +164,11 @@ router.route('/pl')
      */
     .get(async (req, res) => {
         try {
-            res.send(await getPlatformerListLeaderboard(req.query))
+            const result = await getPlatformerListLeaderboard(req.query)
+
+            res.send(result)
         } catch (err) {
+            console.error(err)
             res.status(500).send()
         }
     })

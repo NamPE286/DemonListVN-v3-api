@@ -63,8 +63,11 @@ router.route('/dl')
      */
     .get(async (req, res) => {
         try {
-            res.send(await getDemonListLevels(req.query))
+            const result = await getDemonListLevels(req.query)
+
+            res.send(result)
         } catch (err) {
+            console.error(err)
             res.status(500).send()
         }
     })
@@ -122,8 +125,11 @@ router.route('/pl')
      */
     .get(async (req, res) => {
         try {
-            res.send(await getPlatformerListLevels(req.query))
+            const result = await getPlatformerListLevels(req.query)
+
+            res.send(result)
         } catch (err) {
+            console.error(err)
             res.status(500).send()
         }
     })

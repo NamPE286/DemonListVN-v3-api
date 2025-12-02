@@ -52,8 +52,10 @@ router.route('/presign')
 
         try {
             validate(path, user)
-        } catch {
+        } catch (err) {
+            console.error(err)
             res.status(403).send()
+
             return
         }
 

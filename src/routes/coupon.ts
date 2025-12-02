@@ -10,6 +10,7 @@ router.route('/:code')
 
         try {
             const coupon = await getCoupon(code)
+
             res.send(coupon)
         } catch (err) {
             console.error(err)
@@ -24,6 +25,7 @@ router.route('/:code')
 
         try {
             await redeem(code, user)
+
             res.send()
         } catch (err) {
             console.error(err)

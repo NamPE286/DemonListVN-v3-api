@@ -38,9 +38,11 @@ router.route('/')
 
         try {
             await record.submit()
+
             res.send()
             logger.notice(`New record submitted! Please check it out.`)
         } catch (err: any) {
+            console.error(err)
             res.status(500).send(err)
         }
     })

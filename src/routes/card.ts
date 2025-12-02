@@ -10,6 +10,7 @@ router.route("/:id")
 
         try {
             const card = await getCard(id)
+
             res.send(card)
         } catch (err) {
             console.error(err)
@@ -24,6 +25,7 @@ router.route("/:id/link")
 
         try {
             await linkCard(id, user)
+
             res.send()
         } catch (err) {
             console.error(err)
@@ -39,6 +41,7 @@ router.route("/:id/content")
 
         try {
             await updateCardContent(id, req.body.content)
+
             res.send()
         } catch (err) {
             console.error(err)

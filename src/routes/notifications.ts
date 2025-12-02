@@ -38,6 +38,7 @@ router.route('/:uid')
         try {
             res.send(await getPlayerNotifications(uid))
         } catch (err) {
+            console.error(err)
             res.status(500).send()
         }
     })
@@ -72,6 +73,7 @@ router.route('/:uid')
         try {
             res.send(await clearPlayerNotifications(uid))
         } catch(err) {
+            console.error(err)
             res.status(500).send()
         }
 

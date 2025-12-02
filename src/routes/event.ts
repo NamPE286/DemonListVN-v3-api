@@ -64,8 +64,11 @@ router.route('/proof')
      */
     .put(adminAuth, async (req, res) => {
         try {
-            res.send(await upsertEventProof(req.body))
-        } catch {
+            const result = await upsertEventProof(req.body)
+
+            res.send(result)
+        } catch (err) {
+            console.error(err)
             res.status(500).send();
         }
     })
@@ -340,6 +343,7 @@ router.route('/submission')
     .patch(adminAuth, async (req, res) => {
         try {
             await upsertEventSubmission(req.body)
+
             res.send()
         } catch (err) {
             console.error(err)
@@ -511,6 +515,7 @@ router.route('/:id/submit')
 
         try {
             await insertEventSubmission(req.body)
+
             res.send()
         } catch (err) {
             console.error(err)
@@ -560,6 +565,7 @@ router.route('/:id/submission/:levelID')
 
         try {
             await deleteEventSubmission(parseInt(levelID), user.uid!)
+
             res.send()
         } catch (err) {
             console.error(err)
@@ -628,8 +634,11 @@ router.route('/:id')
         const { id } = req.params
 
         try {
-            res.send(await getEvent(parseInt(id)))
-        } catch {
+            const result = await getEvent(parseInt(id))
+
+            res.send(result)
+        } catch (err) {
+            console.error(err)
             res.status(500).send()
         }
     })
@@ -660,8 +669,11 @@ router.route('/:id/proofs')
         const { id } = req.params
 
         try {
-            res.send(await getEventProofs(parseInt(id), req.query))
-        } catch {
+            const result = await getEventProofs(parseInt(id), req.query)
+
+            res.send(result)
+        } catch (err) {
+            console.error(err)
             res.status(500).send();
         }
     })
@@ -698,8 +710,11 @@ router.route('/:id/proof/:uid')
         const { id, uid } = req.params
 
         try {
-            res.send(await getEventProof(parseInt(id), uid))
-        } catch {
+            const result = await getEventProof(parseInt(id), uid)
+
+            res.send(result)
+        } catch (err) {
+            console.error(err)
             res.status(500).send();
         }
     })
@@ -727,8 +742,11 @@ router.route('/:id/proof/:uid')
         }
 
         try {
-            res.send(await deleteEventProof(parseInt(id), uid))
-        } catch {
+            const result = await deleteEventProof(parseInt(id), uid)
+
+            res.send(result)
+        } catch (err) {
+            console.error(err)
             res.status(500).send()
         }
     })

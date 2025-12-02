@@ -14,6 +14,7 @@ router.route('/product/:id')
             }
 
             const product = await getProductByID(productId)
+
             res.send(product)
         } catch (error) {
             console.error('Error fetching product:', error)
@@ -32,6 +33,7 @@ router.route('/products')
 
         try {
             const products = await getProducts(ids)
+
             res.send(products)
         } catch (error) {
             console.error('Error fetching products:', error)

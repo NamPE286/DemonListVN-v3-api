@@ -35,6 +35,7 @@ router.route('/')
         try {
             res.send(await getAllAPIKey(res.locals.user.uid!))
         } catch (err) {
+            console.error(err)
             res.status(500).send()
         }
     })
@@ -61,8 +62,10 @@ router.route('/')
         
         try {
             await createAPIKey(res.locals.user.uid!)
+
             res.send()
         } catch (err) {
+            console.error(err)
             res.status(500).send()
         }
     })
@@ -98,8 +101,10 @@ router.route('/:key')
         
         try {
             await deleteAPIKey(res.locals.user.uid!, req.params.key)
+
             res.send()
         } catch (err) {
+            console.error(err)
             res.status(500).send()
         }
     })

@@ -98,6 +98,7 @@ router.route('/getPaymentLink')
 
         if (redirectUrl) {
             res.send({ checkoutUrl: redirectUrl })
+
             return
         }
 

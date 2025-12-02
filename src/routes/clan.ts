@@ -8,6 +8,7 @@ const router = express.Router()
 
 async function isOwner(uid: string, clanID: number) {
     const clan = new Clan({ id: clanID })
+
     await clan.pull()
 
     return uid == clan.owner
@@ -49,6 +50,7 @@ router.route('/')
 
         try {
             await clan.create()
+
             res.send(clan)
         } catch (err) {
             console.error(err)
@@ -115,6 +117,7 @@ router.route('/:id')
 
         try {
             await clan.pull()
+
             res.send(clan)
         } catch (err) {
             console.error(err)
@@ -164,6 +167,7 @@ router.route('/:id')
 
         try {
             await clan.update()
+
             res.send()
         } catch (err) {
             console.error(err)
@@ -375,11 +379,14 @@ router.route('/invite/:uid')
         }
 
         const clan = new Clan({ id: user.clan })
+
         await clan.pull()
 
         if (clan.isPublic || clan.owner == user.uid) {
             await clan.invite(uid)
+
             res.send()
+
             return
         }
 
@@ -412,6 +419,7 @@ router.route('/:id/invite')
 
         try {
             await invitation.accept()
+
             res.send()
         } catch (err) {
             console.error(err)
@@ -444,6 +452,7 @@ router.route('/:id/invite')
 
         try {
             await invitation.reject()
+
             res.send()
         } catch (err) {
             console.error(err)
@@ -472,6 +481,7 @@ router.route('/leave')
         }
 
         const clan = new Clan({ id: user.clan })
+
         await clan.pull()
 
         if (user.uid == clan.owner) {
@@ -507,6 +517,7 @@ router.route('/:id/join')
         const { user } = res.locals
         const { id } = req.params
         const clan = new Clan({ id: parseInt(id) })
+
         await clan.pull()
 
         if (!clan.isPublic) {
@@ -559,6 +570,7 @@ router.route('/:id/invitation/:uid')
 
         try {
             const invitation = new ClanInvitation({ clan: parseInt(id), to: uid })
+
             await invitation.pull()
 
             res.send(invitation)
@@ -596,6 +608,7 @@ router.route('/:id/invitation/:uid')
         const { id, uid } = req.params
         const { user } = res.locals
         const clan = new Clan({ id: parseInt(id) })
+
         await clan.pull()
 
         if (clan.owner != user.uid) {
@@ -605,6 +618,7 @@ router.route('/:id/invitation/:uid')
 
         try {
             const invitation = new ClanInvitation({ clan: parseInt(id), to: uid })
+
             await invitation.reject()
 
             res.send()
@@ -643,6 +657,7 @@ router.route('/:id/kick/:uid')
         const { id, uid } = req.params
         const { user } = res.locals
         const clan = new Clan({ id: parseInt(id) })
+
         await clan.pull()
 
         if (user.uid == uid) {
@@ -656,6 +671,7 @@ router.route('/:id/kick/:uid')
         }
 
         await clan.removeMember(uid)
+
         res.send()
     })
 
