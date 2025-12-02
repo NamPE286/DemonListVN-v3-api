@@ -1,31 +1,10 @@
 import express from 'express'
-import { getEvents, getOngoingEvents, getEventProofs } from '@src/lib/client/event'
+import eventsController from '@src/controllers/eventsController'
 
 const router = express.Router()
 
 router.route('/')
-    .get(async (req, res) => {
-        let defaultFilter = {
-            search: '',
-            eventType: 'all',
-            contestType: 'all',
-            start: '',
-            end: '',
-            from: 0,
-            to: 50
-        };
-        const filter: any = { ...defaultFilter, ...req.query };
-
-        try {
-            if (!filter.to) {
-                res.send(await getEvents(filter))
-            } else {
-                res.send(await getEvents(filter))
-            }
-        } catch {
-            res.status(500).send()
-        }
-    })
+    .get(eventsController.getEvents.bind(eventsController))
 
 /**
  * @openapi
@@ -42,13 +21,7 @@ router.route('/')
  *             schema:
  */
 router.route('/ongoing')
-    .get(async (req, res) => {
-        try {
-            res.send(await getOngoingEvents())
-        } catch {
-            res.status(500).send()
-        }
-    })
+    .get(eventsController.getOngoingEvents.bind(eventsController))
 
 /**
  * @openapi
@@ -81,12 +54,6 @@ router.route('/ongoing')
  *         description: Success
  */
 router.route('/proofs')
-    .get(async (req, res) => {
-        try {
-            res.send(await getEventProofs(null, req.query))
-        } catch {
-            res.status(500).send()
-        }
-    })
+    .get(eventsController.getEventProofs.bind(eventsController))
 
 export default router

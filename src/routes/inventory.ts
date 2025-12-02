@@ -1,64 +1,17 @@
 import userAuth from '@src/middleware/userAuth'
 import itemOwnerCheck from '@src/middleware/itemOwnerCheck'
 import express from 'express'
-import { consumeCase } from '@src/lib/client/inventory'
-import supabase from '@src/database/supabase'
+import inventoryController from '@src/controllers/inventoryController'
 
 const router = express.Router()
 
 router.route('/')
-    .get(userAuth, async (req, res) => {
-        const { user } = res.locals
-
-        try {
-            res.send(await user.getInventoryItems());
-        } catch (err) {
-            console.error(err);
-            res.status(500).send()
-        }
-    })
+    .get(userAuth, inventoryController.getInventoryItems.bind(inventoryController))
 
 router.route('/:id')
-    .get(userAuth, itemOwnerCheck, async (req, res) => {
-        try {
-            res.send(res.locals.item);
-        } catch (err) {
-            console.error(err);
-            res.status(500).send()
-        }
-    })
+    .get(userAuth, itemOwnerCheck, inventoryController.getInventoryItem.bind(inventoryController))
 
 router.route('/:id/consume')
-    .delete(userAuth, itemOwnerCheck, async (req, res) => {
-        const { item, user } = res.locals
-
-        if (!item) {
-            res.status(404).send()
-            return;
-        }
-
-        try {
-            if (item.type == 'case') {
-                res.send(await consumeCase(user, item.inventoryId, item.itemId))
-            } else {
-                var { error } = await supabase
-                    .from('inventory')
-                    .update({ consumed: true })
-                    .eq('id', item.inventoryId)
-
-                if (error) {
-                    console.error(error)
-                    res.status(500).send()
-
-                    return;
-                }
-
-                res.status(200).send()
-            }
-        } catch (err) {
-            console.error(err);
-            res.status(500).send()
-        }
-    })
+    .delete(userAuth, itemOwnerCheck, inventoryController.consumeItem.bind(inventoryController))
 
 export default router

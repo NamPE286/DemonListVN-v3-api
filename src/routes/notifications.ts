@@ -1,6 +1,6 @@
 import express from 'express'
-import { clearPlayerNotifications, getPlayerNotifications } from '@src/lib/client/notification'
 import userAuth from '@src/middleware/userAuth'
+import notificationsController from '@src/controllers/notificationsController'
 
 const router = express.Router()
 
@@ -26,22 +26,7 @@ router.route('/:uid')
       *           application/json:
       *             schema:
       */
-    .get(userAuth, async (req, res) => {
-        const { uid } = req.params
-        const { user } = res.locals
-
-        if (user.uid != uid && !user.isAdmin) {
-            res.status(403).send()
-            return
-        }
-
-        try {
-            res.send(await getPlayerNotifications(uid))
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(userAuth, notificationsController.getPlayerNotifications.bind(notificationsController))
 
     /**
       * @openapi
@@ -61,22 +46,6 @@ router.route('/:uid')
       *       200:
       *         description: Success
      */
-    .delete(userAuth, async (req, res) => {
-        const { uid } = req.params
-        const { user } = res.locals
-
-        if (user.uid != uid && !user.isAdmin) {
-            res.status(403).send()
-            return
-        }
-
-        try {
-            res.send(await clearPlayerNotifications(uid))
-        } catch(err) {
-            console.error(err)
-            res.status(500).send()
-        }
-
-    })
+    .delete(userAuth, notificationsController.clearPlayerNotifications.bind(notificationsController))
 
 export default router
