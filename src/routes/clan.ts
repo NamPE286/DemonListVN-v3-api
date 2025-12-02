@@ -1,18 +1,8 @@
-import supabase from '@src/database/supabase'
-import Clan from '@src/lib/classes/Clan'
-import ClanInvitation from '@src/lib/classes/ClanInvitation'
 import userAuth from '@src/middleware/userAuth'
 import express from 'express'
+import clanController from '@src/controllers/clanController'
 
 const router = express.Router()
-
-async function isOwner(uid: string, clanID: number) {
-    const clan = new Clan({ id: clanID })
-
-    await clan.pull()
-
-    return uid == clan.owner
-}
 
 router.route('/')
     /**
@@ -30,33 +20,7 @@ router.route('/')
       *       200:
       *         description: Success
       */
-    .post(userAuth, async (req, res) => {
-        const { user } = res.locals
-
-        if (user.clan) {
-            res.status(500).send()
-            return
-        }
-
-        if (!user.rating && !user.totalFLpt) {
-            res.status(500).send()
-            return
-        }
-
-        req.body.owner = user.uid
-        delete req.body.id
-
-        const clan = new Clan(req.body)
-
-        try {
-            await clan.create()
-
-            res.send(clan)
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .post(userAuth, clanController.createClan.bind(clanController))
 
 router.route('/invitations')
     /**
@@ -73,21 +37,7 @@ router.route('/invitations')
      *           application/json:
      *             schema:
      */
-    .get(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { data, error } = await supabase
-            .from('clanInvitations')
-            .select('*, clans(*, players!owner(*, clans!id(*)))')
-            .eq('to', user.uid!)
-
-        if (error) {
-            console.error(error)
-            res.status(500).send()
-            return
-        }
-
-        res.send(data)
-    })
+    .get(userAuth, clanController.getUserInvitations.bind(clanController))
 
 router.route('/:id')
     /**
@@ -111,19 +61,7 @@ router.route('/:id')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        const { id } = req.params
-        const clan = new Clan({ id: parseInt(id) })
-
-        try {
-            await clan.pull()
-
-            res.send(clan)
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(clanController.getClan.bind(clanController))
 
     /**
      * @openapi
@@ -147,33 +85,7 @@ router.route('/:id')
      *       200:
      *         description: Success
      */
-    .patch(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { id } = req.params
-
-
-        if (!user.clan) {
-            res.status(500).send()
-            return
-        }
-
-        if (!(await isOwner(user.uid!, parseInt(id))) && !user.isAdmin) {
-            res.status(403).send()
-            return
-        }
-
-        req.body.id = id
-        const clan = new Clan(req.body)
-
-        try {
-            await clan.update()
-
-            res.send()
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .patch(userAuth, clanController.updateClan.bind(clanController))
 
     /**
      * @openapi
@@ -193,37 +105,7 @@ router.route('/:id')
      *       200:
      *         description: Success
      */
-    .delete(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { id } = req.params
-
-        if (!user.clan) {
-            res.status(500).send()
-            return
-        }
-
-        if (!(await isOwner(user.uid!, parseInt(id))) && !user.isAdmin) {
-            res.status(403).send()
-            return
-        }
-
-        var { error } = await supabase
-            .from('clans')
-            .delete()
-            .eq('id', Number(id))
-
-        if (error) {
-            res.status(500).send()
-            return
-        }
-
-        await supabase
-            .storage
-            .from('clanPhotos')
-            .remove([`${id}.jpg`])
-
-        res.send()
-    })
+    .delete(userAuth, clanController.deleteClan.bind(clanController))
 
 router.route('/:id/members')
     /**
@@ -275,17 +157,7 @@ router.route('/:id/members')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        const { id } = req.params
-        const clan = new Clan({ id: parseInt(id) })
-
-        try {
-            res.send(await clan.fetchMembers(req.query))
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(clanController.getClanMembers.bind(clanController))
 
 
 router.route('/:id/records')
@@ -338,17 +210,7 @@ router.route('/:id/records')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        const { id } = req.params
-        const clan = new Clan({ id: parseInt(id) })
-
-        try {
-            res.send(await clan.fetchRecords(req.query))
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(clanController.getClanRecords.bind(clanController))
 
 router.route('/invite/:uid')
     /**
@@ -369,29 +231,7 @@ router.route('/invite/:uid')
       *       200:
       *         description: Success
       */
-    .post(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { uid } = req.params
-
-        if (!user.clan) {
-            res.status(500).send()
-            return
-        }
-
-        const clan = new Clan({ id: user.clan })
-
-        await clan.pull()
-
-        if (clan.isPublic || clan.owner == user.uid) {
-            await clan.invite(uid)
-
-            res.send()
-
-            return
-        }
-
-        res.status(403).send()
-    })
+    .post(userAuth, clanController.invitePlayer.bind(clanController))
 
 router.route('/:id/invite')
     /**
@@ -412,20 +252,7 @@ router.route('/:id/invite')
       *       200:
       *         description: Success
       */
-    .patch(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { id } = req.params
-        const invitation = new ClanInvitation({ to: user.uid, clan: parseInt(id) })
-
-        try {
-            await invitation.accept()
-
-            res.send()
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .patch(userAuth, clanController.acceptInvitation.bind(clanController))
 
     /**
       * @openapi
@@ -445,20 +272,7 @@ router.route('/:id/invite')
       *       200:
       *         description: Success
       */
-    .delete(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { id } = req.params
-        const invitation = new ClanInvitation({ to: user.uid, clan: parseInt(id) })
-
-        try {
-            await invitation.reject()
-
-            res.send()
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .delete(userAuth, clanController.rejectInvitation.bind(clanController))
 
 router.route('/leave')
     /**
@@ -472,27 +286,7 @@ router.route('/leave')
      *       200:
      *         description: Success
      */
-    .put(userAuth, async (req, res) => {
-        const { user } = res.locals
-
-        if (!user.clan) {
-            res.status(500).send()
-            return
-        }
-
-        const clan = new Clan({ id: user.clan })
-
-        await clan.pull()
-
-        if (user.uid == clan.owner) {
-            res.status(500).send()
-            return
-        }
-
-        await clan.removeMember(user.uid!)
-
-        res.send()
-    })
+    .put(userAuth, clanController.leaveClan.bind(clanController))
 
 router.route('/:id/join')
     /**
@@ -513,32 +307,7 @@ router.route('/:id/join')
       *       200:
       *         description: Success
       */
-    .put(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { id } = req.params
-        const clan = new Clan({ id: parseInt(id) })
-
-        await clan.pull()
-
-        if (!clan.isPublic) {
-            res.status(403).send()
-            return
-        }
-
-        if (user.clan) {
-            res.status(500).send()
-            return
-        }
-
-        await clan.addMember(user.uid!)
-
-        const { error } = await supabase
-            .from('clanInvitations')
-            .delete()
-            .eq('to', user.uid!)
-
-        res.send()
-    })
+    .put(userAuth, clanController.joinClan.bind(clanController))
 
 router.route('/:id/invitation/:uid')
     /**
@@ -565,20 +334,7 @@ router.route('/:id/invitation/:uid')
      *       200:
      *         description: Success
      */
-    .get(async (req, res) => {
-        const { id, uid } = req.params
-
-        try {
-            const invitation = new ClanInvitation({ clan: parseInt(id), to: uid })
-
-            await invitation.pull()
-
-            res.send(invitation)
-        } catch (err) {
-            console.error(err)
-            res.status(404).send()
-        }
-    })
+    .get(clanController.getInvitation.bind(clanController))
 
     /**
      * @openapi
@@ -604,29 +360,7 @@ router.route('/:id/invitation/:uid')
      *       200:
      *         description: Success
      */
-    .delete(userAuth, async (req, res) => {
-        const { id, uid } = req.params
-        const { user } = res.locals
-        const clan = new Clan({ id: parseInt(id) })
-
-        await clan.pull()
-
-        if (clan.owner != user.uid) {
-            res.status(403).send()
-            return
-        }
-
-        try {
-            const invitation = new ClanInvitation({ clan: parseInt(id), to: uid })
-
-            await invitation.reject()
-
-            res.send()
-        } catch (err) {
-            console.error(err)
-            res.status(404).send()
-        }
-    })
+    .delete(userAuth, clanController.deleteInvitation.bind(clanController))
 
 router.route('/:id/kick/:uid')
     /**
@@ -653,27 +387,7 @@ router.route('/:id/kick/:uid')
      *       200:
      *         description: Success
      */
-    .patch(userAuth, async (req, res) => {
-        const { id, uid } = req.params
-        const { user } = res.locals
-        const clan = new Clan({ id: parseInt(id) })
-
-        await clan.pull()
-
-        if (user.uid == uid) {
-            res.status(500).send()
-            return
-        }
-
-        if (user.uid != clan.owner) {
-            res.status(403).send()
-            return
-        }
-
-        await clan.removeMember(uid)
-
-        res.send()
-    })
+    .patch(userAuth, clanController.kickMember.bind(clanController))
 
 router.route('/:id/invitations')
     /**
@@ -694,63 +408,12 @@ router.route('/:id/invitations')
      *       200:
      *         description: Success
      */
-    .get(async (req, res) => {
-        const { id } = req.params
-        const { data, error } = await supabase
-            .from('clanInvitations')
-            .select('*, players(*)')
-            .eq('clan', parseInt(id))
-            .order('created_at', { ascending: false })
-
-        if (error) {
-            console.error(error)
-            res.status(500).send()
-            return
-        }
-
-        res.send(data)
-    })
+    .get(clanController.getClanInvitations.bind(clanController))
 
 router.route('/:id/ban/:uid')
-    .post(userAuth, async (req, res) => {
-
-    })
+    .post(userAuth, clanController.banMember.bind(clanController))
 
 router.route('/:id/list/:list')
-    .get(async (req, res) => {
-        const { id, list } = req.params;
-        const { from, to } = req.query
-        let x = '', isPlat = false;
-
-        if (list == 'dl') {
-            x = 'rating', isPlat = false;
-        } else if (list == 'pl') {
-            x = 'rating', isPlat = true;
-        } else if (list == 'fl') {
-            x = 'flPt', isPlat = false;
-        }
-
-        const { data, error } = await supabase
-            .from('levels')
-            .select('*, records!inner(userid, levelid, isChecked, players!public_records_userid_fkey!inner(uid, clan))')
-            .eq("records.players.clan", Number(id))
-            .eq("records.isChecked", true)
-            .eq('isPlatformer', isPlat)
-            .not(x, 'is', null)
-            .order(x, { ascending: false })
-            .range(from ? Number(from) : 0, to ? Number(to) : 49)
-
-        if (error) {
-            console.error(error)
-            throw error;
-        }
-
-        for (const i of data) {
-            // @ts-ignore
-            delete i.records;
-        }
-
-        res.send(data)
-    })
+    .get(clanController.getClanList.bind(clanController))
 
 export default router
