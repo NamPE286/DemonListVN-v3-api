@@ -1,4 +1,20 @@
-# Prerequisite
+# DemonListVN v3 API
+
+REST API server for DemonListVN v3 built with Express.js and TypeScript, following MVC architectural pattern.
+
+## Architecture
+
+This project follows the **Model-View-Controller (MVC)** pattern for better separation of concerns:
+
+- **Routes** (`src/routes/`): Define API endpoints and middleware
+- **Controllers** (`src/controllers/`): Handle HTTP requests/responses
+- **Services** (`src/services/`): Contain business logic
+- **Models** (`src/lib/classes/`, `src/lib/client/`): Data access layer
+
+📚 See [MVC_ARCHITECTURE.md](./MVC_ARCHITECTURE.md) for detailed documentation
+📚 See [REFACTORING_GUIDE.md](./REFACTORING_GUIDE.md) for refactoring guidelines
+
+## Prerequisite
 
 - Docker
 - Bun
