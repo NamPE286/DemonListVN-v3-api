@@ -5,6 +5,7 @@ export class RulesController {
     async getRules(req: Request, res: Response) {
         try {
             const rules = await rulesService.getRules()
+
             res.send(rules)
         } catch (error) {
             res.status(500).send()

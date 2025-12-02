@@ -6,6 +6,7 @@ export class ItemController {
         try {
             const { id } = req.params
             const item = await itemService.getItemById(Number(id))
+
             res.send(item)
         } catch (error) {
             console.error(error)

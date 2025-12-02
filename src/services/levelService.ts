@@ -7,9 +7,11 @@ import { getEventLevelsSafe } from '@src/lib/client/event'
 export class LevelService {
     validateLevelId(id: string): number {
         const levelId = parseInt(id)
+
         if (isNaN(levelId)) {
             throw new Error("Invalid ID (ID should only include numeric character)")
         }
+
         return levelId
     }
 
@@ -19,6 +21,7 @@ export class LevelService {
         }
 
         const level = new Level(data)
+
         await level.update()
     }
 
@@ -27,14 +30,16 @@ export class LevelService {
 
         if (!fromGD) {
             await level.pull()
+
             return level
-        } else {
-            return await level.fetchFromGD()
         }
+
+        return await level.fetchFromGD()
     }
 
     async deleteLevel(id: number) {
         const level = new Level({ id })
+
         await level.delete()
     }
 

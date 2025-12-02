@@ -9,9 +9,11 @@ export class LevelController {
         } catch (error: any) {
             if (error.message === "Missing 'id' property") {
                 res.status(400).send({ message: error.message })
-            } else {
-                res.status(500).send()
+
+                return
             }
+
+            res.status(500).send()
         }
     }
 
@@ -20,28 +22,34 @@ export class LevelController {
             const id = levelService.validateLevelId(req.params.id)
             const { fromGD } = req.query
             const level = await levelService.getLevelById(id, !!fromGD)
+
             res.send(level)
         } catch (error: any) {
             if (error.message === "Invalid ID (ID should only include numeric character)") {
                 res.status(400).send({ message: error.message })
-            } else {
-                console.error(error)
-                res.status(404).send()
+
+                return
             }
+
+            console.error(error)
+            res.status(404).send()
         }
     }
 
     async deleteLevel(req: Request, res: Response) {
         try {
             const id = levelService.validateLevelId(req.params.id)
+
             await levelService.deleteLevel(id)
             res.send()
         } catch (error: any) {
             if (error.message === "Invalid ID (ID should only include numeric character)") {
                 res.status(400).send({ message: error.message })
-            } else {
-                res.status(500).send()
+
+                return
             }
+
+            res.status(500).send()
         }
     }
 
@@ -49,13 +57,16 @@ export class LevelController {
         try {
             const id = levelService.validateLevelId(req.params.id)
             const records = await levelService.getLevelRecords(id, req.query)
+
             res.send(records)
         } catch (error: any) {
             if (error.message === "Invalid ID (ID should only include numeric character)") {
                 res.status(400).send({ message: error.message })
-            } else {
-                res.status(404).send()
+
+                return
             }
+
+            res.status(404).send()
         }
     }
 
@@ -63,6 +74,7 @@ export class LevelController {
         try {
             const id = levelService.validateLevelId(req.params.id)
             const deathCount = await levelService.getLevelDeathCount(id)
+
             res.send(deathCount)
         } catch (error) {
             res.status(500).send()
@@ -83,9 +95,11 @@ export class LevelController {
             
             if (inEvent) {
                 res.send()
-            } else {
-                res.status(404).send()
+
+                return
             }
+
+            res.status(404).send()
         } catch (error) {
             console.error(error)
             res.status(500).send()

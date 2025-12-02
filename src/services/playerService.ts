@@ -31,6 +31,7 @@ export class PlayerService {
         }
 
         const player = new Player(data)
+
         await player.update()
     }
 
@@ -57,6 +58,7 @@ export class PlayerService {
         }
 
         await player.pull()
+
         return player
     }
 
@@ -65,9 +67,9 @@ export class PlayerService {
         
         if (ratingOnly) {
             return await getPlayerRecordRating(uid)
-        } else {
-            return await getPlayerRecords(uid, query)
         }
+
+        return await getPlayerRecords(uid, query)
     }
 
     async getPlayerHeatmap(uid: string, year: number) {
@@ -89,6 +91,7 @@ export class PlayerService {
 
     async getPlayerMedals(id: string) {
         const player = new Player({ uid: id })
+
         return await player.getInventoryItems()
     }
 

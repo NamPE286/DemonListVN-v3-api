@@ -5,6 +5,7 @@ export class LevelsController {
     async getNewLevels(req: Request, res: Response) {
         try {
             const levels = await levelsService.getNewLevels()
+
             res.send(levels)
         } catch (error) {
             console.error(error)
@@ -19,6 +20,7 @@ export class LevelsController {
             const limitNum = Number(limit)
 
             const levels = await levelsService.getRandomLevels(limitNum, filterType)
+
             res.send(levels)
         } catch (error) {
             console.error(error)

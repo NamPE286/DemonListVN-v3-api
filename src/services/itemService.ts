@@ -6,10 +6,11 @@ export class ItemService {
 
         if (item.type == 'case') {
             const caseItems = await getCaseItems(id)
+
             return { ...item, caseItems }
-        } else {
-            return item
         }
+
+        return item
     }
 }
 

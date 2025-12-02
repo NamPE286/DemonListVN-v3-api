@@ -15,14 +15,17 @@ export class RecordController {
         try {
             const { user } = res.locals
             const { userID, levelID } = req.params
+
             await recordService.deleteRecord(userID, parseInt(levelID), user)
             res.send()
         } catch (error: any) {
             if (error.message === "Forbidden") {
                 res.status(403).send()
-            } else {
-                res.status(500).send()
+
+                return
             }
+
+            res.status(500).send()
         }
     }
 
@@ -30,6 +33,7 @@ export class RecordController {
         try {
             const { userID, levelID } = req.params
             const record = await recordService.getRecord(userID, parseInt(levelID))
+
             res.send(record)
         } catch (error) {
             res.status(500).send()
@@ -46,13 +50,16 @@ export class RecordController {
                 parseInt(rating),
                 user
             )
+
             res.send(result)
         } catch (error: any) {
             if (error.message === "Unauthorized") {
                 res.status(401).send()
-            } else {
-                res.status(500).send()
+
+                return
             }
+
+            res.status(500).send()
         }
     }
 
@@ -60,21 +67,29 @@ export class RecordController {
         try {
             const { user } = res.locals
             const record = await recordService.retrieveRecord(user)
+
             res.send(record)
         } catch (error: any) {
             if (error.message === "Unauthorized") {
                 res.status(401).send()
-            } else if (error.message === "Too many requests") {
-                res.status(429).send()
-            } else {
-                res.status(500).send()
+
+                return
             }
+
+            if (error.message === "Too many requests") {
+                res.status(429).send()
+
+                return
+            }
+
+            res.status(500).send()
         }
     }
 
     async getRecords(req: Request, res: Response) {
         try {
             const records = await recordService.getRecords(req.query)
+
             res.send(records)
         } catch (error) {
             res.status(500).send()

@@ -6,6 +6,7 @@ import type Player from '@lib/classes/Player'
 export class RecordService {
     async updateRecord(data: any) {
         const record = new Record(data)
+
         await record.update()
     }
 
@@ -15,6 +16,7 @@ export class RecordService {
         }
 
         const record = new Record({ userid: userId, levelid: levelId })
+
         await record.delete()
         
         logger.log(`${user.name} (${user.uid}) performed DELETE /record/${userId}/${levelId}`)

@@ -5,6 +5,7 @@ export class PlayersController {
     async getPlayers(req: Request, res: Response) {
         try {
             const players = await playerService.getFilteredPlayers(req.query)
+
             res.send(players)
         } catch (error) {
             res.status(500).send()
@@ -16,11 +17,13 @@ export class PlayersController {
 
         if (!batch) {
             res.send()
+
             return
         }
 
         try {
             const players = await playerService.getPlayersByBatch(batch)
+
             res.send(players)
         } catch (error) {
             res.status(500).send()

@@ -6,6 +6,7 @@ export class SearchController {
         try {
             const { query } = req.params
             const results = await searchService.search(query, req.query)
+
             res.send(results)
         } catch (error) {
             res.status(500).send()
