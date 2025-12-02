@@ -5,8 +5,6 @@ import cors from 'cors'
 import rateLimit from 'express-rate-limit'
 import swaggerDocs from '@src/utils/swagger.ts'
 import { version } from '../package.json'
-import cron from 'node-cron'
-import supabase from '@src/database/supabase'
 
 import levelRoute from './routes/level'
 import listRoute from './routes/list'
