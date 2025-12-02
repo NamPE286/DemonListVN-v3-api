@@ -3,12 +3,7 @@ import { getSepayPaymentLink } from '@src/lib/client/payment'
 import { sepay } from '@src/lib/classes/sepay'
 import type Player from '@lib/classes/Player'
 import type { SepayWebhookBody } from '@src/lib/types/sepayWebhook'
-
-interface Item {
-    orderID: number
-    productID: number
-    quantity: number
-}
+import type { OrderItem } from '@src/types/order'
 
 interface PaymentItem {
     name: string
@@ -51,7 +46,7 @@ export class PaymentService {
         return redirectUrl
     }
 
-    async getPaymentLinkForOrder(user: Player, recipientName: string, items: Item[], address: string, phone: number) {
+    async getPaymentLinkForOrder(user: Player, recipientName: string, items: OrderItem[], address: string, phone: number) {
         const orderID = await addOrderItems(user, recipientName, items, address, phone, 'Bank Transfer')
         const order = await getOrder(orderID)
         const paymentItem: PaymentItem[] = []

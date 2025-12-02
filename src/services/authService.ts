@@ -1,5 +1,5 @@
 import supabase from '@src/database/supabase'
-import { createDirectMessageChannel, getAccessToken, getUserByToken } from '@src/lib/client/discord'
+import { getAccessToken, getUserByToken } from '@src/lib/client/discord'
 import { getUsernameByToken as getIDByToken } from '@src/lib/client/pointercrate'
 import type Player from '@lib/classes/Player'
 

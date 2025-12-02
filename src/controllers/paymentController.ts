@@ -2,12 +2,7 @@ import type { Request, Response } from 'express'
 import paymentService from '@src/services/paymentService'
 import { FRONTEND_URL } from '@src/lib/constants'
 import type { SepayWebhookBody } from '@src/lib/types/sepayWebhook'
-
-interface Item {
-    orderID: number
-    productID: number
-    quantity: number
-}
+import type { OrderItem } from '@src/types/order'
 
 export class PaymentController {
     async getPaymentLinkForProduct(req: Request, res: Response) {
@@ -33,7 +28,7 @@ export class PaymentController {
 
     async getPaymentLinkForOrder(req: Request, res: Response) {
         const { items, address, phone, recipientName } = req.body as {
-            items: Item[]
+            items: OrderItem[]
             address: string | undefined
             phone: number | undefined
             recipientName: string | undefined

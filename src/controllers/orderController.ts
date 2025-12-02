@@ -1,17 +1,12 @@
 import type { Request, Response } from 'express'
 import orderService from '@src/services/orderService'
-
-interface Item {
-    orderID: number
-    productID: number
-    quantity: number
-}
+import type { OrderItem } from '@src/types/order'
 
 export class OrderController {
     async createOrder(req: Request, res: Response) {
         const { user } = res.locals
         const { items, address, phone, recipientName } = req.body as {
-            items: Item[]
+            items: OrderItem[]
             address: string | undefined
             phone: number | undefined
             recipientName: string | undefined

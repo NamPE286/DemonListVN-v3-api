@@ -1,7 +1,5 @@
-import express from "express";
-import { getDemonListLevels, getFeaturedListLevels, getPlatformerListLevels } from '@lib/client/level'
-import { getDemonListRecords, getFeaturedListRecords } from "@src/lib/client/record";
-import supabase from "@src/database/supabase";
+import express from 'express'
+import listController from '@src/controllers/listController'
 
 const router = express.Router()
 
@@ -61,16 +59,7 @@ router.route('/dl')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        try {
-            const result = await getDemonListLevels(req.query)
-
-            res.send(result)
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(listController.getDemonList.bind(listController))
 
 router.route('/pl')
     /**
@@ -123,16 +112,7 @@ router.route('/pl')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        try {
-            const result = await getPlatformerListLevels(req.query)
-
-            res.send(result)
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(listController.getPlatformerList.bind(listController))
 
 router.route('/fl')
     /**
@@ -178,14 +158,7 @@ router.route('/fl')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        try {
-            res.send(await getFeaturedListLevels(req.query))
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(listController.getFeaturedList.bind(listController))
 
 router.route('/dl/records')
     /**
@@ -224,14 +197,7 @@ router.route('/dl/records')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        try {
-            res.send(await getDemonListRecords(req.query))
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
+    .get(listController.getDemonListRecords.bind(listController))
 
 router.route('/fl/records')
     /**
@@ -270,52 +236,9 @@ router.route('/fl/records')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
-        try {
-            res.send(await getFeaturedListRecords(req.query))
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
-
-async function getIDBound(list: string, min: boolean) {
-    const { data, error } = await supabase
-        .from('levels')
-        .select('id')
-        .order('id', { ascending: min })
-        .not(list == 'fl' ? 'flTop' : 'dlTop', 'is', null)
-        .eq('isPlatformer', list == 'pl')
-        .limit(1)
-        .single()
-
-    if (error) {
-        throw error
-    }
-
-    return data.id
-}
+    .get(listController.getFeaturedListRecords.bind(listController))
 
 router.route('/:list/random')
-    .get(async (req, res) => {
-        const { list } = req.params
-        const { exclude } = req.query
-        const maxID = await getIDBound(String(list), false)
-        const minID = await getIDBound(String(list), true) - 1000000
-        const random = Math.floor(Math.random() * (maxID - minID + 1)) + minID
-
-        var { data, error } = await supabase
-            .from('levels')
-            .select('*')
-            .not(list == 'fl' ? 'flTop' : 'dlTop', 'is', null)
-            .eq('isPlatformer', list == 'pl')
-            .not('id', 'in', exclude ? exclude : '()')
-            .order('id', { ascending: true })
-            .gte('id', random)
-            .limit(1)
-            .single()
-
-        res.send(data)
-    })
+    .get(listController.getRandomLevel.bind(listController))
 
 export default router

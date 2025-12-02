@@ -1,14 +1,9 @@
 import { addOrderItems, getOrder } from '@src/lib/client/store'
 import type Player from '@lib/classes/Player'
-
-interface Item {
-    orderID: number
-    productID: number
-    quantity: number
-}
+import type { OrderItem } from '@src/types/order'
 
 export class OrderService {
-    async createOrder(user: Player, recipientName: string, items: Item[], address: string, phone: number) {
+    async createOrder(user: Player, recipientName: string, items: OrderItem[], address: string, phone: number) {
         const orderID = await addOrderItems(user, recipientName, items, address, phone, 'COD', true)
 
         return orderID
