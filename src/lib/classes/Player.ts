@@ -1,5 +1,5 @@
 import supabase from '@database/supabase'
-import { sendDirectMessage } from '@src/lib/client/discord'
+import discordService from '@src/services/discordService'
 import type { TInventoryItem, TPlayer } from '@src/lib/types'
 import type { Database } from '@src/lib/types/supabase'
 import { FRONTEND_URL } from '@src/lib/constants'
@@ -202,7 +202,7 @@ class Player {
             throw error;
         }
 
-        await sendDirectMessage(this.uid!, `Your Discord account is linked to [${this.name}](${FRONTEND_URL}/player/${this.uid!}) DLVN account.`, true)
+        await discordService.sendDirectMessage(this.uid!, `Your Discord account is linked to [${this.name}](${FRONTEND_URL}/player/${this.uid!}) DLVN account.`, true)
     }
 
     async getInventoryItems() {

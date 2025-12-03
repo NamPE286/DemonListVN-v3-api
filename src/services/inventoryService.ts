@@ -1,8 +1,8 @@
 import supabase from '@src/database/supabase'
 import type Player from '@lib/classes/Player'
-import { getCase as getCaseItems } from '@src/lib/client/item'
+import itemService from '@src/services/itemService'
 
-type CaseItem = Awaited<ReturnType<typeof getCaseItems>> extends Array<infer T> ? T : never
+type CaseItem = Awaited<ReturnType<typeof itemService.getCase>> extends Array<infer T> ? T : never
 
 type Reward = {
     expireAfter: number | null
@@ -38,7 +38,7 @@ export class InventoryService {
     }
 
     async consumeCase(player: Player, inventoryItemId: number, itemId: number) {
-        const caseItems = await getCaseItems(itemId)
+        const caseItems = await itemService.getCase(itemId)
         const roll = Math.random()
 
         let x = 0

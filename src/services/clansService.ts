@@ -1,8 +1,8 @@
-import { getClans } from '@src/lib/client/clan'
+import clanService from '@src/services/clanService'
 
 export class ClansService {
     async getClans(query: any) {
-        return await getClans(query)
+        return await clanService.getClans(query)
     }
 }
 

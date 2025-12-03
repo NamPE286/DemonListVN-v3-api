@@ -1,12 +1,12 @@
-import { clearPlayerNotifications, getPlayerNotifications } from '@src/lib/client/notification'
+import notificationService from '@src/services/notificationService'
 
 export class NotificationsService {
     async getPlayerNotifications(uid: string) {
-        return await getPlayerNotifications(uid)
+        return await notificationService.getPlayerNotifications(uid)
     }
 
     async clearPlayerNotifications(uid: string) {
-        return await clearPlayerNotifications(uid)
+        return await notificationService.clearPlayerNotifications(uid)
     }
 }
 

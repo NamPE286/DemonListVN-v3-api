@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
-import { getInventoryItem } from '@src/lib/client/inventory'
+import inventoryService from '@src/services/inventoryService'
 import type { TInventoryItem } from '@src/lib/types'
 
 export default async function (req: Request, res: Response, next: NextFunction) {
@@ -7,7 +7,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
     const { id } = req.params
 
     try {
-        const item = await getInventoryItem(Number(id))
+        const item = await inventoryService.getInventoryItem(Number(id))
 
         if (!item || item.userID != user.uid) {
             return res.status(403).send({ error: 'User not owning this item' })

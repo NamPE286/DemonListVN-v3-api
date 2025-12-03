@@ -1,7 +1,7 @@
 import supabase from '@src/database/supabase'
 import Level from '@src/lib/classes/Level'
 import Record from '@src/lib/classes/Record'
-import { sendNotification } from '@src/lib/client/notification'
+import notificationService from '@src/services/notificationService'
 import logger from '@src/utils/logger'
 import type Player from '@lib/classes/Player'
 
@@ -42,12 +42,12 @@ export class SubmitVerdictService {
             const level = new Level({ id: parseInt(data.levelid) })
 
             await level.pull()
-            await sendNotification({ to: data.userid, content: `Your ${level.name} (${level.id}) record has been accepted by ${user.name}.`, status: 0 })
+            await notificationService.sendNotification({ to: data.userid, content: `Your ${level.name} (${level.id}) record has been accepted by ${user.name}.`, status: 0 })
         } else if (data.needMod) {
             const level = new Level({ id: parseInt(data.levelid) })
 
             await level.pull()
-            await sendNotification({ to: data.userid, content: `Your ${level.name} (${level.id}) record has been forwarded to moderator team for further inspection by ${user.name}.`, status: 0 })
+            await notificationService.sendNotification({ to: data.userid, content: `Your ${level.name} (${level.id}) record has been forwarded to moderator team for further inspection by ${user.name}.`, status: 0 })
         }
     }
 }

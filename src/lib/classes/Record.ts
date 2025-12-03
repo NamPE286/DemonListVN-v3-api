@@ -1,7 +1,7 @@
 import supabase from '@database/supabase'
 import Level from '@src/lib/classes/Level'
 import Player from '@src/lib/classes/Player';
-import { approved } from '@src/lib/client/pointercrate';
+import pointercrateService from '@src/services/pointercrateService'
 import type { TRecord } from '@src/lib/types'
 import getVideoId from 'get-video-id';
 
@@ -71,7 +71,7 @@ class Record {
             await record.pull()
         } catch {
             if (player.pointercrate) {
-                const apv = await approved(player.pointercrate, level.name!);
+                const apv = await pointercrateService.approved(player.pointercrate, level.name!);
                 await this.update(true, apv)
             } else {
                 await this.update(true)
@@ -93,7 +93,7 @@ class Record {
         }
 
         if (player.pointercrate) {
-            const apv = await approved(player.pointercrate, level.name!);
+            const apv = await pointercrateService.approved(player.pointercrate, level.name!);
             await this.update(true, apv)
         } else {
             await this.update(true)

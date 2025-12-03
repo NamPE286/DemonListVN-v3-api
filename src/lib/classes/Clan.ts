@@ -1,7 +1,7 @@
 import supabase from '@database/supabase'
 import ClanInvitation from '@src/lib/classes/ClanInvitation'
 import Player from '@src/lib/classes/Player'
-import { sendNotification } from '@src/lib/client/notification'
+import notificationService from '@src/services/notificationService'
 import type { TClan } from '@src/lib/types'
 
 interface Clan extends TClan { }
@@ -154,7 +154,7 @@ class Clan {
 
         const invitation = new ClanInvitation({ to: player.uid, clan: this.id! })
         await invitation.update()
-        await sendNotification({ to: uid, content: `You've been invited to ${this.name} clan!`, redirect: `/clan/${this.id}` })
+        await notificationService.sendNotification({ to: uid, content: `You've been invited to ${this.name} clan!`, redirect: `/clan/${this.id}` })
     }
 
     async fetchRecords({ start = 0, end = 50, sortBy = 'dlPt', ascending = 'false' } = {}) {

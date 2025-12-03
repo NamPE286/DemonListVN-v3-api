@@ -1,6 +1,6 @@
 import supabase from '@src/database/supabase'
-import { sendNotification } from '@src/lib/client/notification'
-import { getOrder } from '@src/lib/client/store'
+import notificationService from '@src/services/notificationService'
+import storeService from '@src/services/storeService'
 import { FRONTEND_URL } from '@src/lib/constants'
 
 export class MerchantService {
@@ -43,9 +43,9 @@ export class MerchantService {
             }
         }
 
-        const order = await getOrder(orderId)
+        const order = await storeService.getOrder(orderId)
 
-        await sendNotification({
+        await notificationService.sendNotification({
             content: content,
             redirect: `${FRONTEND_URL}/orders/${orderId}`,
             to: order.userID

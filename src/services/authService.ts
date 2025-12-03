@@ -1,11 +1,11 @@
 import supabase from '@src/database/supabase'
-import { getAccessToken, getUserByToken } from '@src/lib/client/discord'
-import { getUsernameByToken as getIDByToken } from '@src/lib/client/pointercrate'
+import discordService from '@src/services/discordService'
+import pointercrateService from '@src/services/pointercrateService'
 import type Player from '@lib/classes/Player'
 
 export class AuthService {
     async handleDiscordCallback(code: string) {
-        const data = await getAccessToken(code)
+        const data = await discordService.getAccessToken(code)
 
         if (data.access_token == undefined) {
             throw new Error('Invalid authorization code')
@@ -15,7 +15,7 @@ export class AuthService {
     }
 
     async linkDiscord(user: Player, token: string) {
-        const data = await getUserByToken(token)
+        const data = await discordService.getUserByToken(token)
 
         if (data.id == undefined) {
             throw new Error('Invalid access token')
@@ -27,7 +27,7 @@ export class AuthService {
     }
 
     async linkPointercrate(userUid: string, token: string) {
-        const name = await getIDByToken(token)
+        const name = await pointercrateService.getUsernameByToken(token)
 
         const { error } = await supabase
             .from('players')
