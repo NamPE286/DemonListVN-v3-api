@@ -3,6 +3,7 @@ import supabase from '@src/database/supabase'
 import eloService from '@src/services/eloService'
 import inventoryService from '@src/services/inventoryService'
 import type { Tables, TablesInsert } from '@src/lib/types/supabase'
+import type Player from '@src/lib/classes/Player'
 
 export const EVENT_SELECT_STR = 'id, created_at, start, end, title, description, imgUrl, exp, redirect, minExp, isSupporterOnly, isContest, hidden, isExternal, isRanked'
 

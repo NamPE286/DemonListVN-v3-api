@@ -203,6 +203,7 @@ export class LevelsService {
     async getRandomLevels(limit: number, filterType: string | null) {
         const { data, error } = await supabase.rpc("get_random_levels", {
             row_count: limit,
+            // @ts-ignore
             filter_type: filterType,
         })
 
