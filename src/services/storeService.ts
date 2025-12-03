@@ -35,7 +35,7 @@ export class StoreService {
     return data
     }
 
-    async getProductByID(id: number) {
+    async getProductById(id: number) {
     const { data, error } = await supabase
         .from("products")
         .select("*")
@@ -128,7 +128,7 @@ export class StoreService {
     }
 
     async redeem(code: string, player: Player) {
-    const coupon = await getCoupon(code);
+    const coupon = await this.getCoupon(code);
     const product = coupon.products
 
     if (product === null) {
@@ -181,7 +181,7 @@ export class StoreService {
     }
 
     const orderID = new Date().getTime();
-    await addNewOrder(
+    await this.addNewOrder(
         orderID,
         coupon.productID,
         player.uid!,
@@ -197,7 +197,7 @@ export class StoreService {
         coupon.productID == 3 ? player.clan : null
     );
 
-    await changeOrderState(orderID, 'PAID');
+    await this.changeOrderState(orderID, 'PAID');
     }
 
     async updateStock(items: TablesInsert<"orderItems">[], products: Tables<"products">[]) {
@@ -258,11 +258,11 @@ export class StoreService {
         ids.push(i.productID)
     }
 
-    const products = (await getProducts(ids)).sort((a, b) => a.id - b.id);
+    const products = (await this.getProducts(ids)).sort((a, b) => a.id - b.id);
     let amount = 0, fee = 25000;
 
     if (pending) {
-        await updateStock(items, products)
+        await this.updateStock(items, products)
     }
 
     for (let i = 0; i < items.length; i++) {
@@ -276,7 +276,7 @@ export class StoreService {
         amount += product.price * item.quantity!;
     }
 
-    await addNewOrder(orderID, null, buyer.uid!, null, null, amount, 'VND', paymentMethod, address, phone, fee, recipientName)
+    await this.addNewOrder(orderID, null, buyer.uid!, null, null, amount, 'VND', paymentMethod, address, phone, fee, recipientName)
 
     const { error } = await supabase
         .from('orderItems')
@@ -311,7 +311,7 @@ export class StoreService {
             orderID: data.id,
             quantity: data.quantity || 1,
             created_at: new Date().toISOString(),
-            products: await getProductByID(1)
+            products: await this.getProductById(1)
         });
     }
 
@@ -319,7 +319,7 @@ export class StoreService {
     }
 
 
-    async renewStock(order: Awaited<ReturnType<typeof getOrder>>) {
+    async renewStock(order: Awaited<ReturnType<typeof this.getOrder>>) {
     const upsertData = []
 
     if (order.productID == 1) {
@@ -363,7 +363,7 @@ export class StoreService {
 
 
     async handlePayment(id: number , sepayOrderData: SepayWebhookOrder) {
-    const order = await getOrder(id);
+    const order = await this.getOrder(id);
 
     if (order.state == 'CANCELLED') {
         await sepay.order.cancel(String(id))
@@ -384,7 +384,7 @@ export class StoreService {
     }
 
     if (order.state != 'EXPIRED' && paymentStatus == 'EXPIRED') {
-        await renewStock(order)
+        await this.renewStock(order)
     }
 
     if (order.state != 'PAID' && paymentStatus == 'PAID') {
@@ -400,12 +400,12 @@ export class StoreService {
             delete i.products
         }
 
-        await updateStock(order.orderItems, products)
+        await this.updateStock(order.orderItems, products)
     }
 
     order.state = paymentStatus
 
-    await changeOrderState(id, paymentStatus);
+    await this.changeOrderState(id, paymentStatus);
 
     if (paymentStatus == 'PENDING' || paymentStatus != "PAID") {
         return;

@@ -53,7 +53,7 @@ export class PaymentService {
 
     async getPaymentLinkForProduct(productID: number, quantity: number, userUid: string, giftTo?: string, targetClanID?: number) {
         const id = new Date().getTime()
-        const product = await storeService.getProductById(productID)
+        const product = await storeService.getProductById(productID);
         const amount = product.price! * quantity
 
         const redirectUrl = await this.getSepayPaymentLink(
