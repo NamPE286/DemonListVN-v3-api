@@ -19,9 +19,9 @@ import {
     getEventLevelsSafe
 } from '@src/lib/client/event'
 import supabase from '@src/database/supabase'
-import { calcLeaderboard } from '@src/lib/client/elo'
-import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted } from '@src/lib/client/eventQuest'
-import { addInventoryItem, receiveReward } from '@src/lib/client/inventory'
+import eloService from '@src/services/eloService'
+import eventQuestService from '@src/services/eventQuestService'
+import inventoryService from '@src/services/inventoryService'
 
 class EventService {
     async createEvent(eventData: any) {
@@ -317,11 +317,11 @@ class EventService {
             }
         }
 
-        return await calcLeaderboard(records)
+        return await eloService.calcLeaderboard(records)
     }
 
     async getEventQuests(eventId: number, uid?: string) {
-        return await getEventQuests(eventId, uid)
+        return await eventQuestService.getEventQuests(eventId)
     }
 }
 
