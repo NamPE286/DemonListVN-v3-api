@@ -367,7 +367,7 @@ class EventService {
                 continue
             }
 
-            if (!i.players.eventRecords === null) {
+            if (i.players.eventRecords === null || !i.players.eventRecords) {
                 i.players.eventRecords = []
             }
             // @ts-ignore
@@ -641,9 +641,22 @@ class EventService {
     }
 
     async deleteSubmission(submissionId: number) {
-        // deleteEventSubmission expects levelID and userID, but we only have submissionId
-        // This method seems to have the wrong signature - keeping for now but needs review
-        return await this.deleteEventSubmission(0, '')
+        // First, get the submission to find levelID and userID
+        const { data: submission, error: fetchError } = await supabase
+            .from('eventRecords')
+            .select('levelID, userID')
+            .eq('id', submissionId)
+            .single()
+
+        if (fetchError) {
+            throw fetchError
+        }
+
+        if (!submission) {
+            throw new Error('Submission not found')
+        }
+
+        return await this.deleteEventSubmission(submission.levelID, submission.userID)
     }
 
     async deleteEvent(id: number) {
