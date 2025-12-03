@@ -8,7 +8,6 @@ import { version } from '../package.json'
 import listRoute from './routes/list.route'
 import mergeAccountRoute from './routes/mergeAccount.route'
 import notificationsRoute from './routes/notifications.route'
-import playerRoute from './routes/player.route'
 import provincesRoute from './routes/provinces.route'
 import recordRoute from './routes/record.route'
 import recordsRoute from './routes/records.route'
@@ -55,7 +54,6 @@ app.get('/', (req, res) => {
 app.use('/list', listRoute)
 app.use('/mergeAccount', mergeAccountRoute)
 app.use('/notifications', notificationsRoute)
-app.use('/player', playerRoute)
 app.use('/provinces', provincesRoute)
 app.use('/record', recordRoute)
 app.use('/records', recordsRoute)
