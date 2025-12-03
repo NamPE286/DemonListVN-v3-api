@@ -15,7 +15,8 @@ interface Item {
     quantity: number;
 }
 
-export async function getProducts(ids: number[] | null = []) {
+export class StoreService {
+    async getProducts(ids: number[] | null = []) {
     const query = supabase
         .from("products")
         .select("*")
@@ -32,9 +33,9 @@ export async function getProducts(ids: number[] | null = []) {
     }
 
     return data
-}
+    }
 
-export async function getProductByID(id: number) {
+    async getProductByID(id: number) {
     const { data, error } = await supabase
         .from("products")
         .select("*")
@@ -46,9 +47,9 @@ export async function getProductByID(id: number) {
     }
 
     return data
-}
+    }
 
-export async function addNewOrder(
+    async addNewOrder(
     orderID: number,
     productID: number | null,
     userID: string,
@@ -63,7 +64,7 @@ export async function addNewOrder(
     recipientName: string | null = null,
     targetClanID: number | null = null
 
-) {
+    ) {
     const { error } = await supabase
         .from("orders")
         .insert({
@@ -85,9 +86,9 @@ export async function addNewOrder(
     if (error) {
         throw error
     }
-}
+    }
 
-export async function changeOrderState(orderID: number, state: string) {
+    async changeOrderState(orderID: number, state: string) {
     const { error } = await supabase
         .from("orders")
         .update({ state: state })
@@ -96,9 +97,9 @@ export async function changeOrderState(orderID: number, state: string) {
     if (error) {
         throw error
     }
-}
+    }
 
-export async function getOrders(userID: string) {
+    async getOrders(userID: string) {
     const { data, error } = await supabase
         .from("orders")
         .select("*, products(*), coupons(*), players!giftTo(*, clans!id(*))")
@@ -110,9 +111,9 @@ export async function getOrders(userID: string) {
     }
 
     return data
-}
+    }
 
-export async function getCoupon(code: string) {
+    async getCoupon(code: string) {
     const { data, error } = await supabase
         .from('coupons')
         .select('*, products(*)')
@@ -124,9 +125,9 @@ export async function getCoupon(code: string) {
     }
 
     return data
-}
+    }
 
-export async function redeem(code: string, player: Player) {
+    async redeem(code: string, player: Player) {
     const coupon = await getCoupon(code);
     const product = coupon.products
 
@@ -197,9 +198,9 @@ export async function redeem(code: string, player: Player) {
     );
 
     await changeOrderState(orderID, 'PAID');
-}
+    }
 
-export async function updateStock(items: TablesInsert<"orderItems">[], products: Tables<"products">[]) {
+    async updateStock(items: TablesInsert<"orderItems">[], products: Tables<"products">[]) {
     const sortedProducts = products.sort((a, b) => a.id - b.id);
     const sortedItems = items.sort((a, b) => a.productID - b.productID);
 
@@ -233,9 +234,9 @@ export async function updateStock(items: TablesInsert<"orderItems">[], products:
     if (error) {
         throw error;
     }
-}
+    }
 
-export async function addOrderItems(
+    async addOrderItems(
     buyer: Player,
     recipientName: string,
     items: TablesInsert<"orderItems">[],
@@ -243,7 +244,7 @@ export async function addOrderItems(
     phone: number,
     paymentMethod: "Bank Transfer" | "COD",
     pending: boolean = false
-) {
+    ) {
     items = items.sort((a, b) => a.productID - b.productID);
 
     const ids: number[] = []
@@ -286,9 +287,9 @@ export async function addOrderItems(
     }
 
     return orderID
-}
+    }
 
-export async function getOrder(id: number) {
+    async getOrder(id: number) {
     const { data, error } = await supabase
         .from("orders")
         .select("*, orderItems(*, products(*)), products(*), coupons(*), players!giftTo(*, clans!id(*)), orderTracking(*)")
@@ -315,10 +316,10 @@ export async function getOrder(id: number) {
     }
 
     return data;
-}
+    }
 
 
-export async function renewStock(order: Awaited<ReturnType<typeof getOrder>>) {
+    async renewStock(order: Awaited<ReturnType<typeof getOrder>>) {
     const upsertData = []
 
     if (order.productID == 1) {
@@ -357,11 +358,11 @@ export async function renewStock(order: Awaited<ReturnType<typeof getOrder>>) {
     if (error) {
         console.error("Failed to update tracking", error)
     }
-}
+    }
 
 
 
-export async function handlePayment(id: number , sepayOrderData: SepayWebhookOrder) {
+    async handlePayment(id: number , sepayOrderData: SepayWebhookOrder) {
     const order = await getOrder(id);
 
     if (order.state == 'CANCELLED') {
@@ -424,19 +425,8 @@ export async function handlePayment(id: number , sepayOrderData: SepayWebhookOrd
 
     await pre(buyer, recipient, order)
     await post(buyer, recipient, order)
+    }
+
 }
 
-export default {
-    getProducts,
-    getProductByID,
-    addNewOrder,
-    changeOrderState,
-    getOrders,
-    getCoupon,
-    redeem,
-    updateStock,
-    addOrderItems,
-    getOrder,
-    renewStock,
-    handlePayment
-}
+export default new StoreService()
