@@ -5,7 +5,6 @@ import cors from 'cors'
 import swaggerDocs from '@src/utils/swagger.ts'
 import { version } from '../package.json'
 
-import levelRoute from './routes/level.route'
 import listRoute from './routes/list.route'
 import mergeAccountRoute from './routes/mergeAccount.route'
 import notificationRoute from './routes/notification.route'
@@ -55,7 +54,6 @@ app.get('/', (req, res) => {
     })
 })
 
-app.use('/level', levelRoute)
 app.use('/list', listRoute)
 app.use('/mergeAccount', mergeAccountRoute)
 app.use('/notification', notificationRoute)
