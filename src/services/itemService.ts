@@ -1,7 +1,7 @@
 import supabase from '@src/database/supabase'
 
 export class ItemService {
-    private async getCase(id: number) {
+    async getCase(id: number) {
         const { data, error } = await supabase
             .from('caseItems')
             .select('*, items!caseItems_itemId_fkey(*)')
