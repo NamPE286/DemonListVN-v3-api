@@ -1,6 +1,6 @@
 import supabase from '@database/supabase'
 import { gdapi } from '@src/lib/classes/GDApi'
-import { addChangelog } from '@src/lib/client/changelog'
+import { addChangelog } from '@src/services/changelog'
 import type { TLevel } from '@src/lib/types'
 
 interface Level extends TLevel { }

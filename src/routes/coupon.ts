@@ -1,4 +1,4 @@
-import { getCoupon, redeem } from '@src/lib/client/store'
+import { getCoupon, redeem } from '@src/services/store'
 import userAuth from '@src/middleware/userAuth'
 import express from 'express'
 

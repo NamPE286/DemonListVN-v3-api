@@ -2,8 +2,8 @@ import express from 'express'
 import Record from '@lib/classes/Record'
 import adminAuth from '@src/middleware/adminAuth'
 import userAuth from '@src/middleware/userAuth'
-import { getRecord, retrieveRecord } from '@src/lib/client/record'
-import { changeSuggestedRating } from '@src/lib/client/record'
+import { getRecord, retrieveRecord } from '@src/services/record'
+import { changeSuggestedRating } from '@src/services/record'
 import logger from '@src/utils/logger'
 
 const router = express.Router()

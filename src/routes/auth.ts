@@ -1,6 +1,6 @@
 import supabase from "@src/database/supabase"
-import { createDirectMessageChannel, getAccessToken, getUserByToken } from "@src/lib/client/discord"
-import { getUsernameByToken as getIDByToken } from "@src/lib/client/pointercrate"
+import { createDirectMessageChannel, getAccessToken, getUserByToken } from "@src/services/discord"
+import { getUsernameByToken as getIDByToken } from "@src/services/pointercrate"
 import userAuth from "@src/middleware/userAuth"
 import express from "express"
 import { FRONTEND_URL } from "@src/lib/constants"

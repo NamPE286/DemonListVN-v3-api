@@ -1,4 +1,4 @@
-import { getProductByID, getProducts } from "@src/lib/client/store"
+import { getProductByID, getProducts } from "@src/services/store"
 import express from "express"
 
 const router = express.Router()

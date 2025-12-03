@@ -1,5 +1,5 @@
 import express from 'express'
-import { clearPlayerNotifications, getPlayerNotifications } from '@src/lib/client/notification'
+import { clearPlayerNotifications, getPlayerNotifications } from '@src/services/notification'
 import userAuth from '@src/middleware/userAuth'
 
 const router = express.Router()

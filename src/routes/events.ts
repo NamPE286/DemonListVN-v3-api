@@ -1,5 +1,5 @@
 import express from 'express'
-import { getEvents, getOngoingEvents, getEventProofs } from '@src/lib/client/event'
+import { getEvents, getOngoingEvents, getEventProofs } from '@src/services/event'
 
 const router = express.Router()
 

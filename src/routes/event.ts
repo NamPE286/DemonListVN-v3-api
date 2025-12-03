@@ -18,14 +18,14 @@ import {
     deleteEventLevel,
     updateEventLevel,
     getEventLevelsSafe
-} from '@src/lib/client/event'
+} from '@src/services/event'
 import userAuth from '@src/middleware/userAuth'
 import adminAuth from '@src/middleware/adminAuth'
 import optionalUserAuth from '@src/middleware/optionalUserAuth'
 import supabase from '@src/database/supabase'
-import { calcLeaderboard } from '@src/lib/client/elo'
-import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted } from '@src/lib/client/eventQuest'
-import { addInventoryItem, receiveReward } from '@src/lib/client/inventory'
+import { calcLeaderboard } from '@src/services/elo'
+import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted } from '@src/services/eventQuest'
+import { addInventoryItem, receiveReward } from '@src/services/inventory'
 
 const router = express.Router()
 

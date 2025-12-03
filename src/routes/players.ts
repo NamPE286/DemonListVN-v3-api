@@ -1,5 +1,5 @@
 import express from 'express'
-import { getPlayers, getPlayersBatch } from '@src/lib/client/player'
+import { getPlayers, getPlayersBatch } from '@src/services/player'
 
 const router = express.Router()
 
