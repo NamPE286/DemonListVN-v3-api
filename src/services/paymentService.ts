@@ -1,4 +1,4 @@
-import { getProductByID, addNewOrder, changeOrderState, getOrder, renewStock, handlePayment, addOrderItems } from '@src/lib/client/store'
+import storeService from '@src/services/storeService'
 import { sepay } from '@src/lib/classes/sepay'
 import { API_URL } from '@src/lib/constants'
 import type Player from '@lib/classes/Player'
@@ -53,7 +53,7 @@ export class PaymentService {
 
     async getPaymentLinkForProduct(productID: number, quantity: number, userUid: string, giftTo?: string, targetClanID?: number) {
         const id = new Date().getTime()
-        const product = await getProductByID(productID)
+        const product = await storeService.getProductByID(productID)
         const amount = product.price! * quantity
 
         const redirectUrl = await this.getSepayPaymentLink(
@@ -66,7 +66,7 @@ export class PaymentService {
             throw new Error('Failed to get payment link')
         }
 
-        await addNewOrder(
+        await storeService.addNewOrder(
             id,
             productID,
             userUid,
@@ -86,8 +86,8 @@ export class PaymentService {
     }
 
     async getPaymentLinkForOrder(user: Player, recipientName: string, items: OrderItem[], address: string, phone: number) {
-        const orderID = await addOrderItems(user, recipientName, items, address, phone, 'Bank Transfer')
-        const order = await getOrder(orderID)
+        const orderID = await storeService.addOrderItems(user, recipientName, items, address, phone, 'Bank Transfer')
+        const order = await storeService.getOrder(orderID)
         const paymentItem: PaymentItem[] = []
         let amount = order.fee
 
@@ -116,7 +116,7 @@ export class PaymentService {
         let attempts = 0
 
         while (attempts < maxAttempts) {
-            const order = await getOrder(orderId)
+            const order = await storeService.getOrder(orderId)
 
             if (order.state === 'PAID') {
                 return true
@@ -133,7 +133,7 @@ export class PaymentService {
     }
 
     async cancelPayment(orderId: number) {
-        const order = await getOrder(orderId)
+        const order = await storeService.getOrder(orderId)
 
         if (order.state === 'CANCELLED' || order.state === 'PAID') {
             return
@@ -150,10 +150,10 @@ export class PaymentService {
         }
 
         if (order.state === 'PENDING' && order.paymentMethod === 'COD') {
-            await renewStock(order)
+            await storeService.renewStock(order)
         }
 
-        await changeOrderState(orderId, 'CANCELLED')
+        await storeService.changeOrderState(orderId, 'CANCELLED')
     }
 
     async processWebhook(body: SepayWebhookBody) {
@@ -165,7 +165,7 @@ export class PaymentService {
 
         const orderId = parseInt(orderData.order_invoice_number)
 
-        await handlePayment(orderId, orderData)
+        await storeService.handlePayment(orderId, orderData)
 
         return true
     }

@@ -1,8 +1,9 @@
 import Player from '@lib/classes/Player'
 import supabase from '@src/database/supabase'
-import { getPlayerRecordRating, getPlayerRecords, getPlayerSubmissions } from '@src/lib/client/record'
+import recordService from '@src/services/recordService'
 import discordService from '@src/services/discordService'
-import { EVENT_SELECT_STR } from '@src/lib/client/event'
+
+export const EVENT_SELECT_STR = 'id, created_at, start, end, title, description, imgUrl, exp, redirect, minExp, isSupporterOnly, isContest, hidden, isExternal, isRanked'
 
 export class PlayerService {
     // Moved from lib/client/player.ts
@@ -163,10 +164,10 @@ export class PlayerService {
         const { ratingOnly } = query
         
         if (ratingOnly) {
-            return await getPlayerRecordRating(uid)
+            return await recordService.getPlayerRecordRating(uid)
         }
 
-        return await getPlayerRecords(uid, query)
+        return await recordService.getPlayerRecords(uid, query)
     }
 
     // Moved from lib/client/heatmap.ts
@@ -216,7 +217,7 @@ export class PlayerService {
     }
 
     async getPlayerSubmissions(uid: string) {
-        return await getPlayerSubmissions(uid)
+        return await recordService.getPlayerSubmissions(uid)
     }
 
     async syncPlayerRoles(user: Player) {

@@ -3,12 +3,19 @@ import Clan from '@src/lib/classes/Clan'
 import type Player from '@src/lib/classes/Player'
 import { sendMessageToChannel } from '@src/services/discordService'
 import notificationService from '@src/services/notificationService'
-import type { getOrder } from '@src/lib/client/store'
 import { FRONTEND_URL } from '@src/lib/constants'
 
+type Order = {
+    id: number
+    quantity: number | null
+    giftTo: string | null
+    targetClanID: number | null
+    productID: number | null
+}
+
 interface HandleProduct {
-    pre: (buyer: Player, recipient: Player, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>
-    post: (buyer: Player, recipient: Player, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>
+    pre: (buyer: Player, recipient: Player, order: Order) => Promise<void>
+    post: (buyer: Player, recipient: Player, order: Order) => Promise<void>
 }
 
 class ProductHandlerService {
