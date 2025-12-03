@@ -21,7 +21,6 @@ import leaderboardRoute from './routes/leaderboard.route'
 import playersRoute from './routes/players.route'
 import APIKeyRoute from './routes/APIKey.route'
 import submitVerdictRoute from './routes/submitVerdict.route'
-import clanRoute from './routes/clan.route'
 import clansRoute from './routes/clans.route'
 import deathCountRoute from './routes/deathCount.route'
 import changelogsRoute from './routes/changelogs.route'
@@ -73,7 +72,6 @@ app.use('/leaderboard', leaderboardRoute)
 app.use('/players', playersRoute)
 app.use('/APIKey', APIKeyRoute)
 app.use('/submitVerdict', submitVerdictRoute)
-app.use('/clan', clanRoute)
 app.use('/clans', clansRoute)
 app.use('/deathCount', deathCountRoute)
 app.use('/changelogs', changelogsRoute)
