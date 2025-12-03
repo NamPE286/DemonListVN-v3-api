@@ -263,19 +263,25 @@ router.route('/quest/:questId/check')
             return;
         }
 
-        const result = await isQuestCompleted(user, Number(questId));
+        try {
+            const result = await isQuestCompleted(user, Number(questId));
 
-        if (!result) {
+            if (!result) {
+                res.send({
+                    status: 'unclaimable'
+                })
+
+                return;
+            }
+
+            res.send({
+                status: 'claimable'
+            })
+        } catch {
             res.send({
                 status: 'unclaimable'
             })
-
-            return;
         }
-
-        res.send({
-            status: 'claimable'
-        })
     })
 
 router.route('/quest/:questId/claim')

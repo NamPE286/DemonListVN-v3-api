@@ -2,11 +2,8 @@ import 'dotenv/config'
 
 import express from 'express'
 import cors from 'cors'
-import rateLimit from 'express-rate-limit'
 import swaggerDocs from '@src/utils/swagger.ts'
 import { version } from '../package.json'
-import cron from 'node-cron'
-import supabase from '@src/database/supabase'
 
 import levelRoute from './routes/level'
 import listRoute from './routes/list'
@@ -43,6 +40,7 @@ import storageRoute from './routes/storage'
 import rulesRoute from './routes/rules'
 import itemRoute from './routes/item'
 import inventoryRoute from './routes/inventory'
+
 import routeLog from '@src/middleware/routeLog'
 
 const app = express()
@@ -50,11 +48,6 @@ const port = 8080
 
 app.use(express.json())
 app.use(cors())
-app.use(rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 10000,
-    message: "Too many requests, please try again later."
-}))
 app.use(routeLog)
 
 app.get('/', (req, res) => {
