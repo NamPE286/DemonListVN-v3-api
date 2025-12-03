@@ -1,14 +1,14 @@
 import supabase from '@src/database/supabase'
 import Clan from '@src/lib/classes/Clan'
 import type Player from '@src/lib/classes/Player'
-import { sendMessageToChannel } from '@src/services/discordService'
+import discordService from '@src/services/discordService'
 import notificationService from '@src/services/notificationService'
-import type { getOrder } from '@src/lib/client/store'
+import type storeService from '@src/services/storeService'
 import { FRONTEND_URL } from '@src/lib/constants'
 
 interface HandleProduct {
-    pre: (buyer: Player, recipient: Player, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>
-    post: (buyer: Player, recipient: Player, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>
+    pre: (buyer: Player, recipient: Player, order: Awaited<ReturnType<typeof storeService.getOrder>>) => Promise<void>
+    post: (buyer: Player, recipient: Player, order: Awaited<ReturnType<typeof storeService.getOrder>>) => Promise<void>
 }
 
 class ProductHandlerService {
@@ -59,10 +59,10 @@ class ProductHandlerService {
                         content: `You have been gifted ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role!`,
                         to: order.giftTo
                     })
-                    await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), `${buyerStr} gifted ${msg} ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role!`)
+                    await discordService.sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), `${buyerStr} gifted ${msg} ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role!`)
                 } else {
                     msg += ` purchased ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Demon List VN Supporter Role!`
-                    await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
+                    await discordService.sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
                 }
             }
         })
@@ -97,7 +97,7 @@ class ProductHandlerService {
                 }
 
                 msg += ` boosted [${clan.name}](${FRONTEND_URL}/clan/${clan.id}) for ${order.quantity} day${order.quantity! > 1 ? "s" : ""}!`
-                await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
+                await discordService.sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
             }
         })
     }
