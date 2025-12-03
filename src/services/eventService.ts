@@ -1,345 +1,577 @@
-import {
-    deleteEventProof,
-    getEvent,
-    getEventProof,
-    getEventProofs,
-    insertEventProof,
-    upsertEventProof,
-    deleteEventSubmission,
-    get_event_leaderboard,
-    getEventLevels,
-    getEventSubmissions,
-    insertEventSubmission,
-    upsertEventSubmission,
-    insertEvent,
-    updateEvent,
-    upsertEventLevel,
-    deleteEventLevel,
-    updateEventLevel,
-    getEventLevelsSafe,
-    EVENT_SELECT_STR,
-    getEvents,
-    getOngoingEvents
-} from '@src/lib/client/event'
+// Migrated from src/lib/client/event.ts and src/lib/client/eventQuest.ts
 import supabase from '@src/database/supabase'
 import eloService from '@src/services/eloService'
-import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted } from '@src/lib/client/eventQuest'
 import inventoryService from '@src/services/inventoryService'
+import type { Tables, TablesInsert } from '@src/lib/types/supabase'
 
-// Re-export constants and functions for use in other services
-export { 
+export const EVENT_SELECT_STR = 'id, created_at, start, end, title, description, imgUrl, exp, redirect, minExp, isSupporterOnly, isContest, hidden, isExternal, isRanked'
+
+interface EventFilter {
+    search: string;
+    eventType: 'all' | 'contest' | 'nonContest';
+    contestType: 'all' | 'ranked' | 'unranked'; // all if eventType == 'all' or 'nonContest'
+    start: string;
+    end: string;
+    from: number;
+    to: number;
+}
+
+function getPenalty(records: any[]) {
+    let res: number = 0;
+
+    for (const i of records) {
+        if (i == null) {
+            continue;
+        }
+
+        res += new Date(i.created_at).getTime()
+    }
+
+    return res
+}
+
+function formatEventSubmissions(submissions: Tables<"eventRecords">[], levels: Tables<"eventLevels" | "levels">[]) {
+    const result = []
+
+    while (result.length < levels.length) {
+        let found = false;
+
+        for (const record of submissions) {
+            if (record.levelID == levels[result.length].id) {
+                result.push(record)
+                found = true;
+                break
+            }
+        }
+
+        if (!found) {
+            result.push(null)
+        }
+    }
+
+    return result
+}
+
+export async function insertEvent(data: Tables<"events">) {
+    const { error } = await supabase
+        .from("events")
+        .insert(data)
+
+    if (error) {
+        throw error
+    }
+}
+
+export async function updateEvent(id: number, data: Tables<"events">) {
+    data.id = id;
+
+    const { error } = await supabase
+        .from("events")
+        .update(data)
+        .eq('id', id)
+
+    if (error) {
+        throw error
+    }
+}
+
+export async function updateEventLevel(data: Tables<"eventLevels">) {
+    const { error } = await supabase
+        .from("eventLevels")
+        .update(data)
+        .eq('id', data.id)
+
+    if (error) {
+        throw error
+    }
+}
+
+export async function upsertEventLevel(eventID: number, data: Tables<"eventLevels">) {
+    data.eventID = eventID;
+
+    const { error } = await supabase
+        .from("eventLevels")
+        .upsert(data)
+
+    if (error) {
+        throw error
+    }
+}
+
+export async function deleteEventLevel(eventID: number, levelID: number) {
+    const { error } = await supabase
+        .from("eventLevels")
+        .delete()
+        .match({ eventID: eventID, levelID: levelID })
+
+    if (error) {
+        throw error
+    }
+}
+
+export async function getEvents(filter: EventFilter) {
+    let query = supabase
+        .from('events')
+        .select(EVENT_SELECT_STR)
+        .eq('hidden', false)
+
+    if (filter.search) {
+        query = query.ilike('title', `%${filter.search}%`)
+    }
+
+    if (filter.eventType === 'contest') {
+        query = query.eq('isContest', true)
+    } else if (filter.eventType === 'nonContest') {
+        query = query.eq('isContest', false)
+    }
+
+    if (filter.eventType !== 'nonContest' && filter.contestType !== 'all') {
+        if (filter.contestType === 'ranked') {
+            query = query.eq('isRanked', true)
+        } else if (filter.contestType === 'unranked') {
+            query = query.eq('isRanked', false)
+        }
+    }
+
+    if (filter.start) {
+        query = query.gte('start', filter.start)
+    }
+
+    if (filter.end) {
+        query = query.lte('end', filter.end)
+    }
+
+    const { data, error } = await query
+        .order('start', { ascending: false })
+        .range(filter.from, filter.to)
+
+    if (error) {
+        throw error
+    }
+
+    return data;
+}
+
+export async function getEvent(id: number) {
+    const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', id)
+        .limit(1)
+        .single()
+
+    if (error) {
+        throw error
+    }
+
+    return data
+}
+
+export async function getOngoingEvents() {
+    const cur = new Date().toISOString()
+    var { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .gte('end', cur)
+        .eq('hidden', false)
+        .order('start', { ascending: false })
+    if (error) {
+        throw error
+    }
+
+    const res = data
+
+    var { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .is('end', null)
+
+    if (error) {
+        throw error
+    }
+
+    return res?.concat(data!)
+}
+
+export async function getEventProof(eventID: number, uid: string) {
+    const { data, error } = await supabase
+        .from('eventProofs')
+        .select('*')
+        .match({ eventID: eventID, userid: uid })
+        .limit(1)
+        .single()
+
+    if (error) {
+        throw error;
+    }
+
+    return data
+}
+
+export async function getEventProofs(eventID: number | null, { start = 0, end = 50, accepted = 'true' } = {}) {
+    let query = supabase
+        .from('eventProofs')
+        .select('*, events!inner(*), players(*)')
+        .eq('events.isContest', false)
+
+    if (eventID) {
+        query = query.eq('eventID', eventID)
+    }
+
+    query = query
+        .eq('accepted', accepted == 'true')
+        .order('created_at', { ascending: true })
+        .range(start, end)
+
+    const { data, error } = await query
+
+    if (error) {
+        throw error
+    }
+
+    return data
+}
+
+export async function upsertEventProof(data: any) {
+    const { error } = await supabase
+        .from('eventProofs')
+        .upsert(data)
+
+    if (error) {
+        throw error
+    }
+}
+
+export async function insertEventProof(data: any) {
+    const { error } = await supabase
+        .from('eventProofs')
+        .insert(data)
+
+    if (error) {
+        throw error
+    }
+}
+
+export async function deleteEventProof(eventID: number, uid: string) {
+    const { error } = await supabase
+        .from('eventProofs')
+        .delete()
+        .match({ eventID: eventID, userid: uid })
+
+    if (error) {
+        throw error
+    }
+}
+
+export async function getEventLevels(eventID: number) {
+    const { data, error } = await supabase
+        .from('eventLevels')
+        .select('*, levels(*)')
+        .eq("eventID", eventID)
+        .order("id")
+
+    if (error) {
+        throw error;
+    }
+
+    const flattened = data.map(item => {
+        const { levels, ...rest } = item;
+        const { id: levelsId, ...flattenedLevels } = levels || {};
+
+        return {
+            ...rest,
+            ...flattenedLevels,
+        };
+    });
+
+    return flattened
+}
+
+export async function getEventLevelsSafe(eventID: number) {
+    const { data, error } = await supabase
+        .from('eventLevels')
+        .select('*, levels(*)')
+        .eq("eventID", eventID)
+        .order("id")
+
+    if (error) {
+        throw error;
+    }
+
+    const hideLevel = new Set()
+
+    for (let i = 0; i < data.length; i++) {
+        if (data[i].requiredLevel) {
+            const requiredLevelItem = data.find(item => {
+                return item.id === data[i].requiredLevel
+            });
+
+            if (!requiredLevelItem || (requiredLevelItem.point - (requiredLevelItem.totalProgress || 0)) > 0) {
+                hideLevel.add(data[i].id)
+            }
+        }
+    }
+
+    const flattened = data.map(item => {
+        if (hideLevel.has(item.id)) {
+            return null;
+        }
+
+        const { levels, ...rest } = item;
+        const { id: levelsId, ...flattenedLevels } = levels || {};
+
+        return {
+            ...rest,
+            ...flattenedLevels,
+        };
+    });
+
+    return flattened
+}
+
+
+export async function getEventSubmissions(eventID: number, userID: string) {
+    const levels = await getEventLevels(eventID)
+
+    const { data, error } = await supabase
+        .from("eventRecords")
+        .select("*, eventLevels!inner(*)")
+        .eq("userID", userID)
+        .eq("eventLevels.eventID", eventID)
+
+    if (error) {
+        throw error
+    }
+
+    return formatEventSubmissions(data, levels)
+}
+
+export async function get_event_leaderboard(eventID: number, ignoreFreeze: boolean) {
+    const event = await getEvent(eventID)
+    const levels = await getEventLevels(eventID)
+    const { data, error } = await supabase
+        .from("eventProofs")
+        .select("userid, eventID, diff, players!inner(*, clans!id(*), eventRecords(*, eventLevels(*)))")
+        .eq("eventID", eventID)
+        .lte("players.eventRecords.created_at", event.freeze && !ignoreFreeze ? event.freeze : new Date().toISOString());
+
+    if (error) {
+        throw error
+    }
+
+    const res = []
+
+    for (let i of data) {
+        if (!i.players) {
+            continue
+        }
+
+        if (!i.players.eventRecords === null) {
+            i.players.eventRecords = []
+        }
+        // @ts-ignore
+        i.players.diff = i.diff
+        res.push(i.players)
+    }
+
+    for (const player of res) {
+        // @ts-ignore
+        player.eventRecords = formatEventSubmissions(player.eventRecords, levels);
+    }
+
+    if (event.type === 'raid') {
+        res.sort((a, b) => {
+            const x = a.eventRecords.reduce((sum, record) => {
+                return sum + (record && (record.accepted === null || record.accepted === true) ? record.progress : 0);
+            }, 0);
+
+            const y = b.eventRecords.reduce((sum, record) => {
+                return sum + (record && (record.accepted === null || record.accepted === true) ? record.progress : 0);
+            }, 0);
+
+            if (x == y && x != 0) {
+                return getPenalty(a.eventRecords) - getPenalty(b.eventRecords)
+            }
+
+            return y - x;
+        });
+    } else {
+        res.sort((a, b) => {
+            const x = a.eventRecords.reduce((sum, record, index) => {
+                return sum + (record && (record.accepted === null || record.accepted === true) ? levels[index].point * record.progress : 0);
+            }, 0);
+
+            const y = b.eventRecords.reduce((sum, record, index) => {
+                return sum + (record && (record.accepted === null || record.accepted === true) ? levels[index].point * record.progress : 0);
+            }, 0);
+
+            if (x == y && x != 0) {
+                return getPenalty(a.eventRecords) - getPenalty(b.eventRecords)
+            }
+
+            return y - x;
+        });
+    }
+
+    return res
+}
+
+export async function deleteEventSubmission(levelID: number, userID: string) {
+    const { error } = await supabase
+        .from('eventRecords')
+        .delete()
+        .match({ userID: userID, levelID: levelID })
+
+    if (error) {
+        throw error
+    }
+}
+
+export async function insertEventSubmission(submission: any) {
+    var { error } = await supabase
+        .from("eventRecords")
+        .insert(submission)
+
+    if (error) {
+        throw error
+    }
+
+    var { data, error } = await supabase
+        .from("eventLevels")
+        .select("id, eventID")
+        .eq("id", submission.levelID)
+        .single()
+
+    if (error) {
+        throw error
+    }
+
+    try {
+        await insertEventProof({
+            userid: submission.userID,
+            eventID: data?.eventID
+        })
+    } catch (err) {
+        console.warn(err)
+    }
+}
+
+export async function upsertEventSubmission(submission: any) {
+    var { error } = await supabase
+        .from("eventRecords")
+        .upsert(submission)
+}
+
+
+// Functions from eventQuest.ts
+
+export async function getEventQuests(eventId: number) {
+    const { data, error } = await supabase
+        .from('eventQuests')
+        .select('*, rewards:eventQuestRewards(expireAfter, reward:items(*))')
+        .eq('eventId', eventId)
+        .order('id');
+
+    if (error) {
+        throw error
+    }
+
+    const quests = data.map(q => ({
+        ...q,
+        rewards: q.rewards.map((r) => ({
+            ...r.reward,
+            expireAfter: r.expireAfter
+        }))
+    }));
+
+    return quests
+}
+
+export async function getEventQuest(questId: number) {
+    const { data, error } = await supabase
+        .from('eventQuests')
+        .select('*, rewards:eventQuestRewards(expireAfter, reward:items(*))')
+        .eq('id', questId)
+        .single()
+
+    if (error) {
+        throw error
+    }
+
+    const quest = {
+        ...data,
+        rewards: (data.rewards || []).map((r) => ({
+            ...r.reward,
+            expireAfter: r.expireAfter
+        }))
+    }
+
+    return quest
+}
+
+export async function isQuestClaimed(user: Player, questId: number) {
+    const { data, error } = await supabase
+        .from('eventQuestClaims')
+        .select('*')
+        .eq('userId', user.uid!)
+        .eq('questId', questId)
+
+    if (!data || !data.length || error) {
+        return false;
+    }
+
+    return true;
+}
+
+export async function isQuestCompleted(user: Player, questId: number) {
+    const quest = await getEventQuest(questId)
+    const submissions = await getEventSubmissions(quest.eventId, user.uid!);
+    const attribute = new Map<string, number>()
+
+    attribute.set('total_point', (submissions || [])
+        .filter((s: any) => s && s.accepted)
+        .reduce((acc: number, s: any) => {
+            const prog = Number(s.progress ?? 0)
+            const point = Number(s.eventLevels?.point ?? 0)
+
+            return acc + (prog * point) / 100
+        }, 0))
+
+    interface Condition {
+        type: string,
+        value: number,
+        attribute: string
+    }
+
+    //@ts-ignore
+    const conditions: Condition[] = quest.condition
+
+    for (const condition of conditions) {
+        const value = attribute.get(condition.attribute)
+
+        if (!value) {
+            throw new Error('Attribute not exists')
+        }
+
+        if (condition.type == 'min') {
+            if (value < condition.value) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+
+export default {
     EVENT_SELECT_STR,
-    getEventLevelsSafe,
     getEvents,
     getOngoingEvents,
-    getEventProofs
+    getEventProofs,
+    getEventLevelsSafe,
+    getEventQuest,
+    getEventQuests,
+    isQuestClaimed,
+    isQuestCompleted
 }
-
-class EventService {
-    async createEvent(eventData: any) {
-        return await insertEvent(eventData)
-    }
-
-    async upsertProof(proofData: any) {
-        return await upsertEventProof(proofData)
-    }
-
-    async createProof(proofData: any, eventID: number) {
-        const event = await getEvent(eventID)
-
-        return { event, proof: await insertEventProof(proofData) }
-    }
-
-    async submitLevel(uid: string, levelID: number, progress: number) {
-        const now = new Date().toISOString()
-        const { data, error } = await supabase
-            .from('eventProofs')
-            .select('userid, eventID, events!inner(start, end, type, eventLevels!inner(*, eventRecords(userID, levelID, progress, accepted, videoLink)))')
-            .eq('userid', uid)
-            .eq('events.eventLevels.levelID', levelID)
-            .eq('events.eventLevels.eventRecords.userID', uid)
-            .lte('events.start', now)
-            .gte('events.end', now)
-
-        if (error) {
-            throw error
-        }
-
-        for (const i of data!) {
-            const levels = await getEventLevelsSafe(i.eventID)
-
-            if (!levels.some(level => level && level.levelID === levelID)) {
-                throw new Error('Level not found in event')
-            }
-        }
-
-        interface LevelUpdateData {
-            level_id: number,
-            gained: number
-        }
-
-        const eventRecordUpsertData = []
-        const eventLevelUpdateData: LevelUpdateData[] = []
-
-        for (const event of data!) {
-            for (const level of event.events?.eventLevels!) {
-                let totalProgress = 0
-
-                for (const record of level.eventRecords) {
-                    if (record.progress < progress && event.events!.type == 'basic') {
-                        // @ts-ignore
-                        record.created_at = new Date()
-                        record.progress = progress
-                        record.videoLink = "Submitted via Geode mod"
-                        record.accepted = true
-
-                        eventRecordUpsertData.push(record)
-                    }
-
-                    if (event.events!.type == 'raid') {
-                        const remainingHP = Math.max(0, level.point - level.totalProgress)
-
-                        // @ts-ignore
-                        record.created_at = new Date()
-
-                        let prog = progress
-                        let dmg = Math.min(remainingHP, progress * Math.pow(1.0305, progress))
-
-                        if (prog >= level.minEventProgress) {
-                            if (prog == 100) {
-                                dmg *= 1.5
-                            }
-
-                            record.progress += dmg
-                            totalProgress += dmg
-
-                            record.videoLink = "Submitted via Geode mod"
-                            record.accepted = true
-
-                            eventRecordUpsertData.push(record)
-                            eventLevelUpdateData.push({
-                                level_id: level.id,
-                                gained: dmg
-                            })
-                        }
-                    }
-                }
-            }
-        }
-
-        if (eventRecordUpsertData.length) {
-            const { error } = await supabase
-                .from('eventRecords')
-                .upsert(eventRecordUpsertData)
-
-            if (error) {
-                throw error
-            }
-        }
-
-        if (eventLevelUpdateData.length) {
-            for (const i of eventLevelUpdateData) {
-                const { error } = await supabase
-                    .rpc('update_eventLevel_totalProgress', {
-                        level_id: i.level_id,
-                        gained: i.gained
-                    })
-
-                if (error) {
-                    throw error
-                }
-            }
-        }
-
-        return { success: true }
-    }
-
-    async checkQuest(uid: string, questId: number) {
-        const quest = await getEventQuest(questId)
-        const isCompleted = await isQuestCompleted(uid, quest)
-
-        return { isCompleted, quest }
-    }
-
-    async claimQuest(uid: string, questId: number) {
-        const quest = await getEventQuest(questId)
-        const isClaimed = await isQuestClaimed(uid, questId)
-
-        if (isClaimed) {
-            throw new Error('Quest already claimed')
-        }
-
-        const isCompleted = await isQuestCompleted(uid, quest)
-
-        if (!isCompleted) {
-            throw new Error('Quest not completed')
-        }
-
-        // Create Player object from uid for inventoryService
-        const Player = (await import('@lib/classes/Player')).default
-        const player = new Player({ uid })
-        await player.pull()
-        
-        await inventoryService.receiveReward(player, quest.reward)
-
-        const { error } = await supabase
-            .from('eventQuestClaims')
-            .insert({
-                userID: uid,
-                questID: questId
-            })
-
-        if (error) {
-            throw error
-        }
-
-        return { success: true }
-    }
-
-    async getSubmission(submissionId: number) {
-        const { data, error } = await supabase
-            .from('eventSubmissions')
-            .select('*, players(*)')
-            .eq('id', submissionId)
-            .single()
-
-        if (error) {
-            throw error
-        }
-
-        return data
-    }
-
-    async deleteSubmission(submissionId: number) {
-        return await deleteEventSubmission(submissionId)
-    }
-
-    async getEvent(id: number) {
-        return await getEvent(id)
-    }
-
-    async updateEvent(id: number, eventData: any) {
-        return await updateEvent(id, eventData)
-    }
-
-    async deleteEvent(id: number) {
-        const { error } = await supabase
-            .from('events')
-            .delete()
-            .eq('id', id)
-
-        if (error) {
-            throw error
-        }
-    }
-
-    async getEventLevels(eventId: number, uid?: string) {
-        return await getEventLevels(eventId, uid)
-    }
-
-    async upsertEventLevel(levelData: any) {
-        return await upsertEventLevel(levelData)
-    }
-
-    async updateEventLevel(levelId: number, levelData: any) {
-        return await updateEventLevel(levelId, levelData)
-    }
-
-    async deleteEventLevel(levelId: number) {
-        return await deleteEventLevel(levelId)
-    }
-
-    async getEventSubmissions(eventId: number, start: number, end: number) {
-        return await getEventSubmissions(eventId, start, end)
-    }
-
-    async submitRecord(uid: string, eventId: number, submissionData: any) {
-        submissionData.userid = uid
-        submissionData.eventID = eventId
-
-        const event = await getEvent(eventId)
-        const levels = await getEventLevelsSafe(eventId)
-
-        if (!levels.some(level => level && level.levelID === submissionData.levelID)) {
-            throw new Error('Level not in event')
-        }
-
-        if (event.end && new Date() >= new Date(event.end)) {
-            throw new Error('Event has ended')
-        }
-
-        return await insertEventSubmission(submissionData)
-    }
-
-    async getSubmissionByLevel(eventId: number, levelId: number) {
-        const { data, error } = await supabase
-            .from('eventSubmissions')
-            .select('*, players(*)')
-            .eq('eventID', eventId)
-            .eq('levelID', levelId)
-
-        if (error) {
-            throw error
-        }
-
-        return data
-    }
-
-    async updateSubmission(uid: string, eventId: number, levelId: number, submissionData: any) {
-        submissionData.userid = uid
-        submissionData.eventID = eventId
-        submissionData.levelID = levelId
-
-        return await upsertEventSubmission(submissionData)
-    }
-
-    async getLeaderboard(eventId: number) {
-        return await get_event_leaderboard(eventId)
-    }
-
-    async getEventProofs(eventId: number, start: number, end: number, uid?: string) {
-        return await getEventProofs(eventId, start, end, uid)
-    }
-
-    async getEventProof(eventId: number, uid: string) {
-        return await getEventProof(eventId, uid)
-    }
-
-    async deleteEventProof(eventId: number, uid: string) {
-        return await deleteEventProof(eventId, uid)
-    }
-
-    async calculateLeaderboard(eventId: number) {
-        const event = await getEvent(eventId)
-        const levels = await getEventLevelsSafe(eventId)
-        const records = []
-
-        for (const i of levels) {
-            const { data, error } = await supabase
-                .from('eventRecords')
-                .select('*')
-                .eq('eventLevelID', i.id)
-                .eq('accepted', true)
-
-            if (error) {
-                throw error
-            }
-
-            for (const j of data) {
-                records.push({
-                    userID: j.userID,
-                    levelID: i.levelID,
-                    progress: j.progress
-                })
-            }
-        }
-
-        return await eloService.calcLeaderboard(records)
-    }
-
-    async getEventQuests(eventId: number, uid?: string) {
-        return await getEventQuests(eventId, uid)
-    }
-}
-
-export default new EventService()
