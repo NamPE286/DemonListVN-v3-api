@@ -1,8 +1,34 @@
 import express from 'express'
-import { clearPlayerNotifications, getPlayerNotifications } from '@src/services/notification.service'
+import { clearPlayerNotifications, getPlayerNotifications, sendNotification } from '@src/services/notification.service'
 import userAuth from '@src/middleware/userAuth.middleware'
+import adminAuthMiddleware from '@src/middleware/adminAuth.middleware'
 
 const router = express.Router()
+
+router.route('/')
+    /**
+      * @openapi
+      * "/notification":
+      *   post:
+      *     tags:
+      *       - Notification
+      *     summary: Send a notification
+      *     requestBody:
+      *         required: true
+      *         content:
+      *             application/json:
+      *     responses:
+      *       200:
+      *         description: Success
+     */
+    .post(adminAuthMiddleware, async (req, res) => {
+        try {
+            await sendNotification(req.body)
+            res.send()
+        } catch(err) {
+            res.status(500).send()
+        }
+    })
 
 router.route('/:uid')
     /**
