@@ -9,7 +9,6 @@ import listRoute from './routes/list.route'
 import mergeAccountRoute from './routes/mergeAccount.route'
 import notificationsRoute from './routes/notifications.route'
 import provincesRoute from './routes/provinces.route'
-import recordRoute from './routes/record.route'
 import recordsRoute from './routes/records.route'
 import refreshRoute from './routes/refresh.route'
 import searchRoute from './routes/search.route'
@@ -55,7 +54,6 @@ app.use('/list', listRoute)
 app.use('/mergeAccount', mergeAccountRoute)
 app.use('/notifications', notificationsRoute)
 app.use('/provinces', provincesRoute)
-app.use('/record', recordRoute)
 app.use('/records', recordsRoute)
 app.use('/refresh', refreshRoute)
 app.use('/search', searchRoute)
