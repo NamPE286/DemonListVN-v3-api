@@ -19,9 +19,9 @@ import {
     updateEventLevel,
     getEventLevelsSafe
 } from '@src/services/event.service'
-import userAuth from '@src/middleware/userAuth'
-import adminAuth from '@src/middleware/adminAuth'
-import optionalUserAuth from '@src/middleware/optionalUserAuth'
+import userAuth from '@src/middleware/userAuth.middleware'
+import adminAuth from '@src/middleware/adminAuth.middleware'
+import optionalUserAuth from '@src/middleware/optionalUserAuth.middleware'
 import supabase from '@src/client/supabase'
 import { calcLeaderboard } from '@src/services/elo.service'
 import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted } from '@src/services/eventQuest.service'

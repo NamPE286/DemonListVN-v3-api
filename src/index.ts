@@ -41,7 +41,7 @@ import rulesRoute from './routes/rules.route'
 import itemRoute from './routes/item.route'
 import inventoryRoute from './routes/inventory.route'
 
-import routeLog from '@src/middleware/routeLog'
+import routeLog from '@src/middleware/routeLog.middleware'
 
 const app = express()
 const port = 8080

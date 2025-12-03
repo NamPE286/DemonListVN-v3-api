@@ -1,6 +1,6 @@
 import express from 'express'
 import { sendNotification } from '@src/services/notification.service'
-import adminAuth from '@src/middleware/adminAuth'
+import adminAuth from '@src/middleware/adminAuth.middleware'
 
 const router = express.Router()
 

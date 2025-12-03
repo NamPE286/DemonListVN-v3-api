@@ -1,7 +1,7 @@
 import supabase from '@src/client/supabase'
 import Clan from '@src/classes/Clan'
 import ClanInvitation from '@src/classes/ClanInvitation'
-import userAuth from '@src/middleware/userAuth'
+import userAuth from '@src/middleware/userAuth.middleware'
 import express from 'express'
 
 const router = express.Router()

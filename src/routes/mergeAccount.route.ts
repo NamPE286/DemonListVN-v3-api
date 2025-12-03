@@ -1,6 +1,6 @@
 import express from 'express'
 import supabase from '@src/client/supabase'
-import adminAuth from '@src/middleware/adminAuth'
+import adminAuth from '@src/middleware/adminAuth.middleware'
 
 const router = express.Router()
 

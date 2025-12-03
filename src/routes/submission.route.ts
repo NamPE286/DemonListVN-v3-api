@@ -1,6 +1,6 @@
 import express, { application } from 'express'
 import Record from '@src/classes/Record'
-import userAuth from '@src/middleware/userAuth'
+import userAuth from '@src/middleware/userAuth.middleware'
 import logger from '@src/utils/logger'
 
 const router = express.Router()

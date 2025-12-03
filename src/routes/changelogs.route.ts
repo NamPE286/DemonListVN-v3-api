@@ -1,5 +1,5 @@
 import supabase from '@src/client/supabase'
-import adminAuth from '@src/middleware/adminAuth'
+import adminAuth from '@src/middleware/adminAuth.middleware'
 import logger from '@src/utils/logger'
 import express from 'express'
 

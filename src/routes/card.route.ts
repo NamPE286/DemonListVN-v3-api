@@ -1,5 +1,5 @@
 import { getCard, linkCard, updateCardContent } from '@src/services/card.service'
-import userAuth from '@src/middleware/userAuth'
+import userAuth from '@src/middleware/userAuth.middleware'
 import express from 'express'
 
 const router = express.Router()

@@ -1,6 +1,6 @@
 import { sepay } from "@src/client/sepay";
 import { getOrders } from "@src/services/store.service";
-import userAuth from "@src/middleware/userAuth";
+import userAuth from "@src/middleware/userAuth.middleware";
 import express from "express"
 
 const router = express.Router();

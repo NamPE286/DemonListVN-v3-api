@@ -3,8 +3,8 @@ import type { Request } from 'express'
 import type { SepayWebhookBody } from '@src/types/sepayWebhook';
 import { getProductByID, addNewOrder, changeOrderState, getOrder, renewStock, handlePayment, addOrderItems } from '@src/services/store.service';
 import { getSepayPaymentLink } from '@src/services/payment.service';
-import userAuth from '@src/middleware/userAuth';
-import webhookAuth from '@src/middleware/webhookAuth';
+import userAuth from '@src/middleware/userAuth.middleware';
+import webhookAuth from '@src/middleware/webhookAuth.middleware';
 import { sepay } from '@src/client/sepay';
 import { FRONTEND_URL } from '@src/config/constants';
 
