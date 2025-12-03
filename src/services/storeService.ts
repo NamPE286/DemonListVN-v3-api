@@ -333,7 +333,7 @@ export class StoreService {
             upsertData.push(i.products)
         }
 
-        var { error } = await supabase
+        const { error } = await supabase
             .from("products")
             .upsert(upsertData)
 
@@ -341,15 +341,15 @@ export class StoreService {
             console.error("Failed to update products", error)
         }
 
-        var { error } = await supabase
+        const { error: trackingError } = await supabase
             .from('orderTracking')
             .insert({
                 content: "Order cancelled",
                 orderID: order.id
             })
 
-        if (error) {
-            console.error("Failed to update tracking", error)
+        if (trackingError) {
+            console.error("Failed to update tracking", trackingError)
         }
     }
 
