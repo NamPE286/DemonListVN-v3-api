@@ -2,7 +2,7 @@ import supabase from "@src/database/supabase";
 import Player from "@src/lib/classes/Player";
 import type { Tables, TablesInsert } from "@src/lib/types/supabase";
 import notificationService from '@src/services/notificationService'
-import { sendMessageToChannel } from '@src/services/discordService';
+import discordService from '@src/services/discordService';
 import productHandlerService from "@src/services/productHandlerService";
 import Clan from "@src/lib/classes/Clan";
 import { sepay } from "@src/lib/classes/sepay";
