@@ -30,7 +30,6 @@ import levelsRoute from './routes/levels.route'
 import couponRoute from './routes/coupon.route'
 import cardRoute from './routes/card.route'
 import storeRoute from './routes/store.route'
-import orderRoute from './routes/order.route'
 import merchantRoute from './routes/merchant.route'
 import storageRoute from './routes/storage.route'
 import rulesRoute from './routes/rules.route'
@@ -78,7 +77,6 @@ app.use('/levels', levelsRoute)
 app.use('/coupon', couponRoute)
 app.use('/card', cardRoute)
 app.use('/store', storeRoute)
-app.use('/order', orderRoute)
 app.use('/merchant', merchantRoute)
 app.use('/storage', storageRoute)
 app.use('/rules', rulesRoute)
