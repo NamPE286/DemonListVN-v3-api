@@ -1,5 +1,5 @@
-import supabase from "@src/database/supabase";
-import type Player from "@src/lib/classes/Player";
+import supabase from "@src/client/supabase";
+import type Player from "@src/classes/Player";
 import { getEventQuest } from "@src/services/eventQuest";
 import { getCase as getCaseItems } from "@src/services/item";
 

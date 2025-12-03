@@ -1,4 +1,4 @@
-import type { Database } from '@src/lib/types/supabase'
+import type { Database } from '@src/types/supabase'
 
 export type TClan = Database['public']['Tables']['clans']['Update']
 export type TClanInvitation = Database['public']['Tables']['clanInvitations']['Update']

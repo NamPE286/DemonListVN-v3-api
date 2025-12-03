@@ -2,7 +2,7 @@ import userAuth from '@src/middleware/userAuth'
 import itemOwnerCheck from '@src/middleware/itemOwnerCheck'
 import express from 'express'
 import { consumeCase } from '@src/services/inventory'
-import supabase from '@src/database/supabase'
+import supabase from '@src/client/supabase'
 
 const router = express.Router()
 

@@ -1,4 +1,4 @@
-import supabase from "@src/database/supabase";
+import supabase from "@src/client/supabase";
 
 function isNumeric(value: string) {
     return /^-?\d+$/.test(value);

@@ -1,8 +1,8 @@
-import supabase from '@database/supabase'
-import Level from '@src/lib/classes/Level'
-import Player from '@src/lib/classes/Player';
+import supabase from '@src/client/supabase'
+import Level from '@src/classes/Level'
+import Player from '@src/classes/Player';
 import { approved } from '@src/services/pointercrate';
-import type { TRecord } from '@src/lib/types'
+import type { TRecord } from '@src/types'
 import getVideoId from 'get-video-id';
 
 async function isLevelExists(id: number) {

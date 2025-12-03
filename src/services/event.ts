@@ -1,5 +1,5 @@
-import supabase from "@src/database/supabase";
-import type { Tables } from "@src/lib/types/supabase";
+import supabase from "@src/client/supabase";
+import type { Tables } from "@src/types/supabase";
 
 export const EVENT_SELECT_STR = 'id, created_at, start, end, title, description, imgUrl, exp, redirect, minExp, isSupporterOnly, isContest, hidden, isExternal, isRanked'
 

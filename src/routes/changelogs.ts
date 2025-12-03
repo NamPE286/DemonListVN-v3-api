@@ -1,4 +1,4 @@
-import supabase from '@src/database/supabase'
+import supabase from '@src/client/supabase'
 import adminAuth from '@src/middleware/adminAuth'
 import logger from '@src/utils/logger'
 import express from 'express'

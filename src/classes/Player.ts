@@ -1,8 +1,8 @@
-import supabase from '@database/supabase'
+import supabase from '@src/client/supabase'
 import { sendDirectMessage } from '@src/services/discord'
-import type { TInventoryItem, TPlayer } from '@src/lib/types'
-import type { Database } from '@src/lib/types/supabase'
-import { FRONTEND_URL } from '@src/lib/constants'
+import type { TInventoryItem, TPlayer } from '@src/types'
+import type { Database } from '@src/types/supabase'
+import { FRONTEND_URL } from '@src/config/constants'
 
 interface Player extends TPlayer { }
 

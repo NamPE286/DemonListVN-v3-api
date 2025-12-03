@@ -1,5 +1,5 @@
-import supabase from "@src/database/supabase";
-import Level from "@src/lib/classes/Level";
+import supabase from "@src/client/supabase";
+import Level from "@src/classes/Level";
 
 async function fetchPlayerData(uid: string, levelID: number): Promise<any> {
     let { data, error } = await supabase

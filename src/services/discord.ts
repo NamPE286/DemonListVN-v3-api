@@ -1,4 +1,4 @@
-import Player from "@src/lib/classes/Player";
+import Player from "@src/classes/Player";
 
 export async function getAccessToken(code: string) {
     const response = await fetch("https://discord.com/api/v10/oauth2/token", {

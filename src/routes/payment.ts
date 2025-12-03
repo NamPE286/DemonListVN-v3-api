@@ -1,12 +1,12 @@
 import express from 'express'
 import type { Request } from 'express'
-import type { SepayWebhookBody } from '@src/lib/types/sepayWebhook';
+import type { SepayWebhookBody } from '@src/types/sepayWebhook';
 import { getProductByID, addNewOrder, changeOrderState, getOrder, renewStock, handlePayment, addOrderItems } from '@src/services/store';
 import { getSepayPaymentLink } from '@src/services/payment';
 import userAuth from '@src/middleware/userAuth';
 import webhookAuth from '@src/middleware/webhookAuth';
-import { sepay } from '@src/lib/classes/sepay';
-import { FRONTEND_URL } from '@src/lib/constants';
+import { sepay } from '@src/client/sepay';
+import { FRONTEND_URL } from '@src/config/constants';
 
 const router = express.Router();
 

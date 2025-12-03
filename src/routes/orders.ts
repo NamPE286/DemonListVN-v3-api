@@ -1,4 +1,4 @@
-import { sepay } from "@src/lib/classes/sepay";
+import { sepay } from "@src/client/sepay";
 import { getOrders } from "@src/services/store";
 import userAuth from "@src/middleware/userAuth";
 import express from "express"

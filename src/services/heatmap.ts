@@ -1,4 +1,4 @@
-import supabase from "@src/database/supabase";
+import supabase from "@src/client/supabase";
 
 async function fetchData(uid: string, year: number): Promise<any> {
     let { data, error } = await supabase

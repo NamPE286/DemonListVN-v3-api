@@ -1,4 +1,4 @@
-import supabase from '@database/supabase'
+import supabase from '@src/client/supabase'
 
 export async function getPlayers({ province = '', city = '', sortBy = 'rating', ascending = 'true' } = {}) {
     if (province == '') {

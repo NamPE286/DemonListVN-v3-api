@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from 'jsonwebtoken'
-import Player from "@lib/classes/Player";
-import supabase from "@src/database/supabase";
+import Player from "@src/classes/Player";
+import supabase from "@src/client/supabase";
 
 export default async function (req: Request, res: Response, next: NextFunction) {
     res.locals.authenticated = false;

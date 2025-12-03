@@ -1,5 +1,5 @@
-import supabase from "@src/database/supabase"
-import type { Database } from '@src/lib/types/supabase'
+import supabase from "@src/client/supabase"
+import type { Database } from '@src/types/supabase'
 
 type Clan = Database['public']['Tables']['clans']['Update']
 

@@ -1,10 +1,10 @@
-import supabase from "@src/database/supabase";
-import Clan from "@src/lib/classes/Clan";
-import type Player from "@src/lib/classes/Player";
+import supabase from "@src/client/supabase";
+import Clan from "@src/classes/Clan";
+import type Player from "@src/classes/Player";
 import { sendMessageToChannel } from "@src/services/discord";
 import { sendNotification } from "@src/services/notification";
 import type { getOrder } from "@src/services/store";
-import { FRONTEND_URL } from "@src/lib/constants";
+import { FRONTEND_URL } from "@src/config/constants";
 
 interface HandleProduct {
     pre: (buyer: Player, recipient: Player, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>;

@@ -1,9 +1,9 @@
-import supabase from '@src/database/supabase'
+import supabase from '@src/client/supabase'
 import { sendNotification } from '@src/services/notification'
 import { getOrder } from '@src/services/store'
 import adminAuth from '@src/middleware/adminAuth'
 import express from 'express'
-import { FRONTEND_URL } from '@src/lib/constants'
+import { FRONTEND_URL } from '@src/config/constants'
 
 const router = express.Router()
 

@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express'
 import { getInventoryItem } from '@src/services/inventory'
-import type { TInventoryItem } from '@src/lib/types'
+import type { TInventoryItem } from '@src/types'
 
 export default async function (req: Request, res: Response, next: NextFunction) {
     const { user } = res.locals

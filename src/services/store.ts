@@ -1,13 +1,13 @@
-import supabase from "@src/database/supabase";
-import Player from "@src/lib/classes/Player";
-import type { Tables, TablesInsert } from "@src/lib/types/supabase";
+import supabase from "@src/client/supabase";
+import Player from "@src/classes/Player";
+import type { Tables, TablesInsert } from "@src/types/supabase";
 import { sendNotification } from '@src/services/notification'
 import { sendMessageToChannel } from '@src/services/discord';
 import type { Response } from 'express';
 import { handleProduct } from "@src/services/handleProduct";
-import Clan from "@src/lib/classes/Clan";
-import { sepay } from "@src/lib/classes/sepay";
-import type { SepayWebhookOrder } from "@src/lib/types/sepayWebhook";
+import Clan from "@src/classes/Clan";
+import { sepay } from "@src/client/sepay";
+import type { SepayWebhookOrder } from "@src/types/sepayWebhook";
 
 interface Item {
     id: number;

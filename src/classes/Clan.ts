@@ -1,8 +1,8 @@
-import supabase from '@database/supabase'
-import ClanInvitation from '@src/lib/classes/ClanInvitation'
-import Player from '@src/lib/classes/Player'
+import supabase from '@src/client/supabase'
+import ClanInvitation from '@src/classes/ClanInvitation'
+import Player from '@src/classes/Player'
 import { sendNotification } from '@src/services/notification'
-import type { TClan } from '@src/lib/types'
+import type { TClan } from '@src/types'
 
 interface Clan extends TClan { }
 

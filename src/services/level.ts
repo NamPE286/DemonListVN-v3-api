@@ -1,5 +1,5 @@
-import supabase from "@src/database/supabase"
-import type { TLevel } from "@src/lib/types"
+import supabase from "@src/client/supabase"
+import type { TLevel } from "@src/types"
 
 function convertToIDArray(levels: TLevel[]) {
     let res: number[] = []

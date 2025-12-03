@@ -1,7 +1,7 @@
-import supabase from "@src/database/supabase";
-import RecordClass from "@src/lib/classes/Record";
-import Player from "@src/lib/classes/Player";
-import Level from "@src/lib/classes/Level";
+import supabase from "@src/client/supabase";
+import RecordClass from "@src/classes/Record";
+import Player from "@src/classes/Player";
+import Level from "@src/classes/Level";
 
 export async function getDemonListRecords({ start = 0, end = 0, isChecked = false } = {}) {
     if (typeof isChecked == 'string') {

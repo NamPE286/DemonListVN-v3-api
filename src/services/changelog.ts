@@ -1,4 +1,4 @@
-import supabase from "@src/database/supabase";
+import supabase from "@src/client/supabase";
 
 export async function addChangelog(id: number, oldData: any) {
     let { data } = await supabase

@@ -26,15 +26,6 @@
       "@src/*": [
         "./src/*"
       ],
-      "@lib/*": [
-        "./src/lib/*"
-      ],
-      "@types/*": [
-        "./src/lib/types/*"
-      ],
-      "@database/*": [
-        "./src/database/*"
-      ],
       "@static/*": [
         "./static/*"
       ]
@@ -45,6 +36,6 @@
   },
   "include": [
     "./src/**/*",
-    "src/lib/types/*.ts*.ts"
+    "src/config/types/*.ts*.ts"
   ]
 }

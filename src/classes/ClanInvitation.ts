@@ -1,6 +1,6 @@
-import supabase from "@src/database/supabase";
-import Clan from "@src/lib/classes/Clan";
-import type { TClanInvitation } from "@src/lib/types";
+import supabase from "@src/client/supabase";
+import Clan from "@src/classes/Clan";
+import type { TClanInvitation } from "@src/types";
 
 interface ClanInvitation extends TClanInvitation { }
 

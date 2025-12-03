@@ -1,5 +1,5 @@
-import { sepay } from '@src/lib/classes/sepay';
-import { API_URL } from '@src/lib/constants';
+import { sepay } from '@src/client/sepay';
+import { API_URL } from '@src/config/constants';
 
 export async function getSepayPaymentLink(
     orderID: number,

@@ -1,5 +1,5 @@
-import supabase from "@src/database/supabase";
-import type Player from "@src/lib/classes/Player";
+import supabase from "@src/client/supabase";
+import type Player from "@src/classes/Player";
 
 export async function getCard(id: string) {
     const { data, error } = await supabase

@@ -1,4 +1,4 @@
-import supabase from '@src/database/supabase';
+import supabase from '@src/client/supabase';
 import express from 'express'
 
 const router = express.Router()
