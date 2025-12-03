@@ -1,5 +1,5 @@
 import express from 'express'
-import Record from '@src/classes/Record'
+import { pullRecord, deleteRecord, updateRecord } from '@src/services/record.service'
 import adminAuth from '@src/middleware/adminAuth.middleware'
 import userAuth from '@src/middleware/userAuth.middleware'
 import { getRecord, getRecords, retrieveRecord } from '@src/services/record.service'
@@ -72,8 +72,7 @@ router.route('/')
      */
     .put(adminAuth, async (req, res) => {
         try {
-            const record = new Record(req.body)
-            await record.update()
+            await updateRecord(req.body)
 
             res.send()
         } catch (err) {
@@ -116,8 +115,7 @@ router.route('/:userID/:levelID')
         }
 
         try {
-            const record = new Record({ userid: userID, levelid: parseInt(levelID) })
-            await record.delete()
+            await deleteRecord(userID, parseInt(levelID))
 
             res.send()
             logger.log(`${user.name} (${user.uid}) performed DELETE /record/${userID}/${levelID}`)

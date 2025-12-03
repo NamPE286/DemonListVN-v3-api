@@ -1,10 +1,9 @@
-import type Player from '@src/classes/Player'
-import type { TInventoryItem } from '@src/types'
+import type { TPlayer, TInventoryItem } from '@src/types'
 
 declare global {
     namespace Express {
         interface Locals {
-            user: Player
+            user: TPlayer
             authenticated: boolean
             authType: 'token' | 'key'
             item: TInventoryItem

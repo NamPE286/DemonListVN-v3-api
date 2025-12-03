@@ -1,5 +1,5 @@
 import express from 'express'
-import Player from '@src/classes/Player'
+import { pullPlayer, updatePlayer, getPlayerInventoryItems } from '@src/services/player.service'
 import userAuth from '@src/middleware/userAuth.middleware'
 import { getHeatmap } from '@src/services/heatmap.service'
 import { getPlayerRecordRating, getPlayerRecords } from '@src/services/record.service'
@@ -98,8 +98,7 @@ router.route('/')
         }
 
         try {
-            const player = new Player(data)
-            await player.update()
+            await updatePlayer(data)
 
             res.send()
         } catch (err) {
@@ -170,15 +169,12 @@ router.route('/:uid')
         const { cached } = req.query
 
         try {
-            const player = new Player({})
-
+            let player
             if (uid.startsWith('@')) {
-                player.name = uid.slice(1)
+                player = await pullPlayer(uid.slice(1), true)
             } else {
-                player.uid = uid
+                player = await pullPlayer(uid)
             }
-
-            await player.pull()
 
             res.send(player)
         } catch (err) {
@@ -379,9 +375,8 @@ router.route('/:id/medals')
      */
     .get(async (req, res) => {
         const { id } = req.params
-        const player = new Player({ uid: id })
         try {
-            res.send(await player.getInventoryItems())
+            res.send(await getPlayerInventoryItems(id))
         } catch (err) {
             console.error(err)
             res.status(500).send()
