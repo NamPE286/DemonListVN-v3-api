@@ -1,16 +1,16 @@
-import { getEvents, getOngoingEvents, getEventProofs } from '@src/lib/client/event'
+import eventService from '@src/services/eventService'
 
 export class EventsService {
     async getEvents(filter: any) {
-        return await getEvents(filter)
+        return await eventService.getEvents(filter)
     }
 
     async getOngoingEvents() {
-        return await getOngoingEvents()
+        return await eventService.getOngoingEvents()
     }
 
     async getEventProofs(query: any) {
-        return await getEventProofs(null, query)
+        return await eventService.getEventProofs(null, query)
     }
 }
 
