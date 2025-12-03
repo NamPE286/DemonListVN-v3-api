@@ -1,5 +1,5 @@
 import supabase from '@src/client/supabase'
-import { sendDirectMessage } from '@src/services/discord'
+import { sendDirectMessage } from '@src/services/discord.service'
 import type { TInventoryItem, TPlayer } from '@src/types'
 import type { Database } from '@src/types/supabase'
 import { FRONTEND_URL } from '@src/config/constants'

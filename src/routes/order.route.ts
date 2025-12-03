@@ -1,4 +1,4 @@
-import { addOrderItems, getOrder } from '@src/services/store';
+import { addOrderItems, getOrder } from '@src/services/store.service';
 import userAuth from '@src/middleware/userAuth'
 import express from 'express'
 

@@ -1,6 +1,6 @@
 import supabase from "@src/client/supabase";
 import type Player from "@src/classes/Player";
-import { getEventSubmissions } from "@src/services/event";
+import { getEventSubmissions } from "@src/services/event.service";
 
 export async function getEventQuests(eventId: number) {
     const { data, error } = await supabase

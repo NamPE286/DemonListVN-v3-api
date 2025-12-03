@@ -1,5 +1,5 @@
 import supabase from "@src/client/supabase"
-import { sendDirectMessage } from "@src/services/discord"
+import { sendDirectMessage } from "@src/services/discord.service"
 import type { TNotification } from "@src/types"
 
 export async function getPlayerNotifications(uid: string) {

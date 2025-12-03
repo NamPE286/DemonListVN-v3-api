@@ -1,5 +1,5 @@
 import { sepay } from "@src/client/sepay";
-import { getOrders } from "@src/services/store";
+import { getOrders } from "@src/services/store.service";
 import userAuth from "@src/middleware/userAuth";
 import express from "express"
 

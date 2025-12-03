@@ -1,4 +1,4 @@
-import { getCard, linkCard, updateCardContent } from '@src/services/card'
+import { getCard, linkCard, updateCardContent } from '@src/services/card.service'
 import userAuth from '@src/middleware/userAuth'
 import express from 'express'
 

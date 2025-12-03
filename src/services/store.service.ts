@@ -1,10 +1,10 @@
 import supabase from "@src/client/supabase";
 import Player from "@src/classes/Player";
 import type { Tables, TablesInsert } from "@src/types/supabase";
-import { sendNotification } from '@src/services/notification'
-import { sendMessageToChannel } from '@src/services/discord';
+import { sendNotification } from '@src/services/notification.service'
+import { sendMessageToChannel } from '@src/services/discord.service';
 import type { Response } from 'express';
-import { handleProduct } from "@src/services/handleProduct";
+import { handleProduct } from "@src/services/handleProduct.service";
 import Clan from "@src/classes/Clan";
 import { sepay } from "@src/client/sepay";
 import type { SepayWebhookOrder } from "@src/types/sepayWebhook";

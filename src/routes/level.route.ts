@@ -2,11 +2,11 @@ import express from 'express'
 import type { NextFunction, Response, Request } from 'express'
 import Level from '@src/classes/Level'
 import adminAuth from '@src/middleware/adminAuth'
-import { getLevelDeathCount } from '@src/services/deathCount'
-import { getLevelRecords } from '@src/services/record'
+import { getLevelDeathCount } from '@src/services/deathCount.service'
+import { getLevelRecords } from '@src/services/record.service'
 import userAuth from '@src/middleware/userAuth'
 import supabase from '@src/client/supabase'
-import { getEventLevelsSafe } from '@src/services/event'
+import { getEventLevelsSafe } from '@src/services/event.service'
 
 const router = express.Router()
 

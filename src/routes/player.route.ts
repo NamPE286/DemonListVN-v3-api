@@ -1,13 +1,13 @@
 import express from 'express'
 import Player from '@src/classes/Player'
 import userAuth from '@src/middleware/userAuth'
-import { getHeatmap } from '@src/services/heatmap'
-import { getPlayerRecordRating, getPlayerRecords } from '@src/services/record'
-import { updateHeatmap } from '@src/services/heatmap'
-import { getPlayerSubmissions } from '@src/services/record'
-import { syncRoleDLVN, syncRoleGDVN } from '@src/services/discord'
+import { getHeatmap } from '@src/services/heatmap.service'
+import { getPlayerRecordRating, getPlayerRecords } from '@src/services/record.service'
+import { updateHeatmap } from '@src/services/heatmap.service'
+import { getPlayerSubmissions } from '@src/services/record.service'
+import { syncRoleDLVN, syncRoleGDVN } from '@src/services/discord.service'
 import supabase from '@src/client/supabase'
-import { EVENT_SELECT_STR } from '@src/services/event'
+import { EVENT_SELECT_STR } from '@src/services/event.service'
 
 const router = express.Router()
 

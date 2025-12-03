@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
-import { getInventoryItem } from '@src/services/inventory'
+import { getInventoryItem } from '@src/services/inventory.service'
 import type { TInventoryItem } from '@src/types'
 
 export default async function (req: Request, res: Response, next: NextFunction) {

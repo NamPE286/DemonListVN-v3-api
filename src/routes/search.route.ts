@@ -1,5 +1,5 @@
 import express from 'express'
-import { search } from '@src/services/search'
+import { search } from '@src/services/search.service'
 
 const router = express.Router()
 

@@ -1,5 +1,5 @@
 import express from 'express'
-import { getDemonListLeaderboard, getFeaturedListLeaderboard, getPlatformerListLeaderboard } from '@src/services/player'
+import { getDemonListLeaderboard, getFeaturedListLeaderboard, getPlatformerListLeaderboard } from '@src/services/player.service'
 
 const router = express.Router()
 

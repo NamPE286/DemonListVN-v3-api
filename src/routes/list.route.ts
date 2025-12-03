@@ -1,6 +1,6 @@
 import express from "express";
-import { getDemonListLevels, getFeaturedListLevels, getPlatformerListLevels } from '@src/services/level'
-import { getDemonListRecords, getFeaturedListRecords } from "@src/services/record";
+import { getDemonListLevels, getFeaturedListLevels, getPlatformerListLevels } from '@src/services/level.service'
+import { getDemonListRecords, getFeaturedListRecords } from "@src/services/record.service";
 import supabase from "@src/client/supabase";
 
 const router = express.Router()

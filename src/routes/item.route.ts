@@ -1,4 +1,4 @@
-import { getCase as getCaseItems, getItem } from '@src/services/item'
+import { getCase as getCaseItems, getItem } from '@src/services/item.service'
 import express from 'express'
 
 const router = express.Router()

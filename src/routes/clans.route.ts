@@ -1,4 +1,4 @@
-import { getClans } from '@src/services/clan'
+import { getClans } from '@src/services/clan.service'
 import express from 'express'
 
 const router = express.Router()

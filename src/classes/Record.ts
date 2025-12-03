@@ -1,7 +1,7 @@
 import supabase from '@src/client/supabase'
 import Level from '@src/classes/Level'
 import Player from '@src/classes/Player';
-import { approved } from '@src/services/pointercrate';
+import { approved } from '@src/services/pointercrate.service';
 import type { TRecord } from '@src/types'
 import getVideoId from 'get-video-id';
 

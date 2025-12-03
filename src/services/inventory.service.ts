@@ -1,7 +1,7 @@
 import supabase from "@src/client/supabase";
 import type Player from "@src/classes/Player";
-import { getEventQuest } from "@src/services/eventQuest";
-import { getCase as getCaseItems } from "@src/services/item";
+import { getEventQuest } from "@src/services/eventQuest.service";
+import { getCase as getCaseItems } from "@src/services/item.service";
 
 export async function getInventoryItem(inventoryItemId: number) {
     const { data, error } = await supabase
