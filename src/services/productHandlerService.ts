@@ -11,7 +11,7 @@ interface HandleProduct {
     post: (buyer: Player, recipient: Player, order: Awaited<ReturnType<typeof storeService.getOrder>>) => Promise<void>
 }
 
-class ProductHandlerService {
+export class ProductHandlerService {
     private handlers: Map<number, HandleProduct> = new Map()
 
     constructor() {

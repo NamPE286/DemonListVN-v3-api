@@ -1,5 +1,5 @@
 // Migrated from lib/client/pointercrate.ts
-class PointercrateService {
+export class PointercrateService {
     async getUsernameByToken(token: string): Promise<string> {
         const res: any = await (await fetch('https://pointercrate.com/api/v1/auth/me/', {
             headers: {

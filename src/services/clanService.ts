@@ -5,7 +5,7 @@ import type { Database } from '@src/lib/types/supabase'
 
 type ClanType = Database['public']['Tables']['clans']['Update']
 
-class ClanService {
+export class ClanService {
     async isOwner(uid: string, clanID: number): Promise<boolean> {
         const clan = new Clan({ id: clanID })
 
