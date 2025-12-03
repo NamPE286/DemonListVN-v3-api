@@ -1,6 +1,7 @@
 import supabase from "@src/client/supabase";
 import type { TPlayer, TClan } from "@src/types";
 import { pullClan, extendClanBoost } from "@src/services/clan.service";
+import { extendPlayerSupporter } from "@src/services/player.service";
 import type { Tables, TablesInsert } from "@src/types/supabase";
 import { sendNotification } from '@src/services/notification.service'
 import { sendMessageToChannel } from '@src/services/discord.service';
@@ -165,7 +166,7 @@ export async function redeem(code: string, player: TPlayer) {
     }
 
     if (coupon.productID == 1) {
-        await player.extendSupporter(coupon.quantity)
+        await extendPlayerSupporter(player.uid!, coupon.quantity)
     }
 
     if (coupon.productID == 3) {
@@ -173,7 +174,7 @@ export async function redeem(code: string, player: TPlayer) {
     }
 
     if (coupon.productID == 4) {
-        await player.extendSupporter(0, coupon.quantity)
+        await extendPlayerSupporter(player.uid!, 0, coupon.quantity)
     }
 
     const orderID = new Date().getTime();

@@ -1,5 +1,6 @@
 import supabase from "@src/client/supabase";
 import { pullClan, extendClanBoost } from "@src/services/clan.service";
+import { extendPlayerSupporter } from "@src/services/player.service";
 import type { TPlayer } from "@src/types";
 import { sendMessageToChannel } from "@src/services/discord.service";
 import { sendNotification } from "@src/services/notification.service";
@@ -16,7 +17,7 @@ export const handleProduct: Map<number, HandleProduct> = new Map()
 handleProduct.set(1, {
     pre: async (buyer, recipient, order) => {
         console.log(recipient)
-        await recipient.extendSupporter(order.quantity!);
+        await extendPlayerSupporter(recipient.uid!, order.quantity!);
 
         const { error } = await supabase
             .from("orders")
