@@ -2,7 +2,7 @@ import Player from '@lib/classes/Player'
 import supabase from '@src/database/supabase'
 import recordService from '@src/services/recordService'
 import discordService from '@src/services/discordService'
-import { EVENT_SELECT_STR } from '@src/lib/client/event'
+import { EVENT_SELECT_STR } from '@src/services/eventService'
 
 export class PlayerService {
     // Moved from lib/client/player.ts

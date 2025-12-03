@@ -2,7 +2,7 @@ import Level from '@lib/classes/Level'
 import deathCountService from '@src/services/deathCountService'
 import recordService from '@src/services/recordService'
 import supabase from '@src/database/supabase'
-import { getEventLevelsSafe } from '@src/lib/client/event'
+import { getEventLevelsSafe } from '@src/services/eventService'
 
 export class LevelService {
     validateLevelId(id: string): number {

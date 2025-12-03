@@ -16,12 +16,24 @@ import {
     upsertEventLevel,
     deleteEventLevel,
     updateEventLevel,
-    getEventLevelsSafe
+    getEventLevelsSafe,
+    EVENT_SELECT_STR,
+    getEvents,
+    getOngoingEvents
 } from '@src/lib/client/event'
 import supabase from '@src/database/supabase'
-import { calcLeaderboard } from '@src/lib/client/elo'
+import eloService from '@src/services/eloService'
 import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted } from '@src/lib/client/eventQuest'
-import { addInventoryItem, receiveReward } from '@src/lib/client/inventory'
+import inventoryService from '@src/services/inventoryService'
+
+// Re-export constants and functions for use in other services
+export { 
+    EVENT_SELECT_STR,
+    getEventLevelsSafe,
+    getEvents,
+    getOngoingEvents,
+    getEventProofs
+}
 
 class EventService {
     async createEvent(eventData: any) {
@@ -163,7 +175,12 @@ class EventService {
             throw new Error('Quest not completed')
         }
 
-        await receiveReward(uid, quest.reward)
+        // Create Player object from uid for inventoryService
+        const Player = (await import('@lib/classes/Player')).default
+        const player = new Player({ uid })
+        await player.pull()
+        
+        await inventoryService.receiveReward(player, quest.reward)
 
         const { error } = await supabase
             .from('eventQuestClaims')
@@ -317,7 +334,7 @@ class EventService {
             }
         }
 
-        return await calcLeaderboard(records)
+        return await eloService.calcLeaderboard(records)
     }
 
     async getEventQuests(eventId: number, uid?: string) {
