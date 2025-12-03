@@ -1,11 +1,11 @@
 import supabase from "@src/client/supabase";
-import Player from "@src/classes/Player";
+import type { TPlayer, TClan } from "@src/types";
+import { pullClan, extendClanBoost } from "@src/services/clan.service";
 import type { Tables, TablesInsert } from "@src/types/supabase";
 import { sendNotification } from '@src/services/notification.service'
 import { sendMessageToChannel } from '@src/services/discord.service';
 import type { Response } from 'express';
 import { handleProduct } from "@src/services/handleProduct.service";
-import Clan from "@src/classes/Clan";
 import { sepay } from "@src/client/sepay";
 import type { SepayWebhookOrder } from "@src/types/sepayWebhook";
 
@@ -125,7 +125,7 @@ export async function getCoupon(code: string) {
     return data
 }
 
-export async function redeem(code: string, player: Player) {
+export async function redeem(code: string, player: TPlayer) {
     const coupon = await getCoupon(code);
     const product = coupon.products
 
@@ -169,9 +169,7 @@ export async function redeem(code: string, player: Player) {
     }
 
     if (coupon.productID == 3) {
-        const clan = new Clan({ id: player.clan! })
-        await clan.pull();
-        await clan.extendBoost(coupon.quantity)
+        await extendClanBoost(player.clan!, coupon.quantity)
     }
 
     if (coupon.productID == 4) {
@@ -235,7 +233,7 @@ export async function updateStock(items: TablesInsert<"orderItems">[], products:
 }
 
 export async function addOrderItems(
-    buyer: Player,
+    buyer: TPlayer,
     recipientName: string,
     items: TablesInsert<"orderItems">[],
     address: string,
@@ -409,11 +407,9 @@ export async function handlePayment(id: number , sepayOrderData: SepayWebhookOrd
         return;
     }
 
-    const buyer = new Player({ uid: order.userID })
-    const recipient = new Player({ uid: order.giftTo ? order.giftTo : order.userID })
-
-    await buyer.pull();
-    await recipient.pull();
+    const { pullPlayer } = await import('@src/services/player.service')
+    const buyer = await pullPlayer(order.userID)
+    const recipient = await pullPlayer(order.giftTo ? order.giftTo : order.userID)
 
     if (!handleProduct.has(order.productID!)) {
         return

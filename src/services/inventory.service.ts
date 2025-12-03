@@ -19,7 +19,7 @@ export async function getInventoryItem(inventoryItemId: number) {
     return data;
 }
 
-export async function consumeCase(player: Player, inventoryItemId: number, itemId: number) {
+export async function consumeCase(player: TPlayer, inventoryItemId: number, itemId: number) {
     const caseItems = await getCaseItems(itemId)
     const roll = Math.random();
 
@@ -39,7 +39,7 @@ export async function consumeCase(player: Player, inventoryItemId: number, itemI
     return {};
 }
 
-export async function addCaseResult(player: Player, inventoryItemId: number, caseItem: CaseItem | null) {
+export async function addCaseResult(player: TPlayer, inventoryItemId: number, caseItem: CaseItem | null) {
     var { error } = await supabase
         .from('inventory')
         .update({ consumed: true })
@@ -64,7 +64,7 @@ export async function addCaseResult(player: Player, inventoryItemId: number, cas
 
 type CaseItem = Awaited<ReturnType<typeof getCaseItems>> extends Array<infer T> ? T : never;
 
-export async function addInventoryItem(player: Player, caseItem: CaseItem) {
+export async function addInventoryItem(player: TPlayer, caseItem: CaseItem) {
     if (!player.uid) {
         throw new Error('player.uid is undefined');
     }
@@ -131,7 +131,7 @@ type Reward = {
 };
 
 
-export async function receiveReward(player: Player, reward: Reward) {
+export async function receiveReward(player: TPlayer, reward: Reward) {
     if (!player.uid) {
         throw new Error('player.uid is undefined');
     }

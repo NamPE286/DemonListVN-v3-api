@@ -15,7 +15,7 @@ export async function getCard(id: string) {
     return data
 }
 
-export async function linkCard(id: string, player: Player) {
+export async function linkCard(id: string, player: TPlayer) {
     const card = await getCard(id)
 
     if (!card.activationDate || new Date(card.activationDate) > new Date()) {

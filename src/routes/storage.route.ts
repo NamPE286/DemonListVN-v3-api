@@ -3,13 +3,13 @@ import express from 'express'
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { s3 } from '@src/client/s3';
-import type Player from '@src/classes/Player';
+import type { TPlayer } from '@src/types';
 
 function extractID(path: string) {
     return path.split('/')[1].split('.')[0]
 }
 
-function validate(path: string, user: Player) {
+function validate(path: string, user: TPlayer) {
     if (user.isAdmin) {
         return;
     }

@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from 'jsonwebtoken'
-import Player from "@src/classes/Player";
+import { pullPlayer } from "@src/services/player.service";
 import logger from "@src/utils/logger";
 
 export default async function (req: Request, res: Response, next: NextFunction) {
@@ -15,9 +15,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET!)
         const uid = String(decoded.sub)
-        const player = new Player({uid: uid})
-
-        await player.pull()
+        const player = await pullPlayer(uid)
 
         if(!player.isAdmin) {
             return

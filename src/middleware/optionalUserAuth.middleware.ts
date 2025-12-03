@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from 'jsonwebtoken'
-import Player from "@src/classes/Player";
+import { pullPlayer } from "@src/services/player.service";
 import supabase from "@src/client/supabase";
 
 export default async function (req: Request, res: Response, next: NextFunction) {
@@ -16,18 +16,18 @@ export default async function (req: Request, res: Response, next: NextFunction) 
         const token = req.headers.authorization.split(' ')[1]
         const decoded = jwt.verify(token, process.env.JWT_SECRET!)
         const uid = String(decoded.sub)
-        const player = new Player({ uid: uid })
+        let player
 
         try {
-            await player.pull()
+            player = await pullPlayer(uid)
         } catch { }
 
-        if (player.isBanned) {
+        if (player && player.isBanned) {
             next();
             return;
         }
 
-        if (player.recordCount === 0 && !player.isAdmin) {
+        if (player && player.recordCount === 0 && !player.isAdmin) {
             if (req.originalUrl.startsWith('/clan') && req.method != 'GET') {
                 next();
                 return;
@@ -51,7 +51,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
                 throw new Error(error.message)
             }
 
-            res.locals.user = new Player(data.players!)
+            res.locals.user = data.players
             res.locals.authType = 'key'
 
             if (res.locals.user.isBanned) {

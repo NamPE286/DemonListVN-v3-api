@@ -1,4 +1,4 @@
-import Player from "@src/classes/Player";
+import { pullPlayer, updatePlayer, isSupporterActive } from "@src/services/player.service";
 
 export async function getAccessToken(code: string) {
     const response = await fetch("https://discord.com/api/v10/oauth2/token", {
@@ -66,11 +66,9 @@ export async function createDirectMessageChannel(userID: string): Promise<string
 }
 
 export async function sendDirectMessage(uid: string, content: string, bypass: boolean = false) {
-    const player = new Player({ uid: uid })
+    const player = await pullPlayer(uid)
 
-    await player.pull();
-
-    if (!bypass && (!player.isSupporterActive() || !player.discord)) {
+    if (!bypass && (!isSupporterActive(player.supporterUntil) || !player.discord)) {
         return;
     }
 
@@ -81,7 +79,7 @@ export async function sendDirectMessage(uid: string, content: string, bypass: bo
             throw new Error("Failed to create channel")
         }
 
-        await player.update();
+        await updatePlayer(player);
     }
 
     await fetch(`https://discord.com/api/v10/channels/${player.DiscordDMChannelID}/messages`, {

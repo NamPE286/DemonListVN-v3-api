@@ -46,7 +46,7 @@ export async function getEventQuest(questId: number) {
     return quest
 }
 
-export async function isQuestClaimed(user: Player, questId: number) {
+export async function isQuestClaimed(user: TPlayer, questId: number) {
     const { data, error } = await supabase
         .from('eventQuestClaims')
         .select('*')
@@ -60,7 +60,7 @@ export async function isQuestClaimed(user: Player, questId: number) {
     return true;
 }
 
-export async function isQuestCompleted(user: Player, questId: number) {
+export async function isQuestCompleted(user: TPlayer, questId: number) {
     const quest = await getEventQuest(questId)
     const submissions = await getEventSubmissions(quest.eventId, user.uid!);
     const attribute = new Map<string, number>()

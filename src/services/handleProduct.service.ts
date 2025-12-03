@@ -1,14 +1,14 @@
 import supabase from "@src/client/supabase";
-import Clan from "@src/classes/Clan";
-import type Player from "@src/classes/Player";
+import { pullClan, extendClanBoost } from "@src/services/clan.service";
+import type { TPlayer } from "@src/types";
 import { sendMessageToChannel } from "@src/services/discord.service";
 import { sendNotification } from "@src/services/notification.service";
 import type { getOrder } from "@src/services/store.service";
 import { FRONTEND_URL } from "@src/config/constants";
 
 interface HandleProduct {
-    pre: (buyer: Player, recipient: Player, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>;
-    post: (buyer: Player, recipient: Player, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>;
+    pre: (buyer: TPlayer, recipient: TPlayer, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>;
+    post: (buyer: TPlayer, recipient: TPlayer, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>;
 }
 
 export const handleProduct: Map<number, HandleProduct> = new Map()
@@ -62,10 +62,7 @@ handleProduct.set(1, {
 
 handleProduct.set(3, {
     pre: async (buyer, recipient, order) => {
-        const clan = new Clan({ id: order.targetClanID! })
-
-        await clan.pull()
-        await clan.extendBoost(order.quantity!);
+        await extendClanBoost(order.targetClanID!, order.quantity!);
 
         const { error } = await supabase
             .from("orders")
@@ -77,8 +74,7 @@ handleProduct.set(3, {
         }
     },
     post: async (buyer, recipient, order) => {
-        const clan = new Clan({ id: order.targetClanID! })
-        await clan.pull()
+        const clan = await pullClan(order.targetClanID!)
 
         let msg = ''
 
