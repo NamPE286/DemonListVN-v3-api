@@ -24,8 +24,7 @@ import submitVerdictRoute from './routes/submitVerdict.route'
 import clansRoute from './routes/clans.route'
 import deathCountRoute from './routes/deathCount.route'
 import changelogsRoute from './routes/changelogs.route'
-import eventsRoute from './routes/events.route'
-import eventRoute from './routes/event.route'
+import eventRoute from './routes/events.route'
 import paymentRoute from './routes/payment.route'
 import ordersRoute from './routes/orders.route'
 import authRoute from './routes/auth.route'
@@ -75,8 +74,7 @@ app.use('/submitVerdict', submitVerdictRoute)
 app.use('/clans', clansRoute)
 app.use('/deathCount', deathCountRoute)
 app.use('/changelogs', changelogsRoute)
-app.use('/events', eventsRoute)
-app.use('/event', eventRoute)
+app.use('/events', eventRoute)
 app.use('/payment', paymentRoute)
 app.use('/orders', ordersRoute)
 app.use('/auth', authRoute)
