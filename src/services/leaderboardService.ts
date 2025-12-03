@@ -1,16 +1,16 @@
-import { getDemonListLeaderboard, getFeaturedListLeaderboard, getPlatformerListLeaderboard } from '@src/lib/client/player'
+import playerService from '@src/services/playerService'
 
 export class LeaderboardService {
     async getDemonListLeaderboard(query: any) {
-        return await getDemonListLeaderboard(query)
+        return await playerService.getDemonListLeaderboard(query)
     }
 
     async getFeaturedListLeaderboard(query: any) {
-        return await getFeaturedListLeaderboard(query)
+        return await playerService.getFeaturedListLeaderboard(query)
     }
 
     async getPlatformerListLeaderboard(query: any) {
-        return await getPlatformerListLeaderboard(query)
+        return await playerService.getPlatformerListLeaderboard(query)
     }
 }
 

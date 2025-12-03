@@ -1,6 +1,6 @@
 import Level from '@lib/classes/Level'
-import { getLevelDeathCount } from '@lib/client/deathCount'
-import { getLevelRecords } from '@src/lib/client/record'
+import deathCountService from '@src/services/deathCountService'
+import recordService from '@src/services/recordService'
 import supabase from '@src/database/supabase'
 import { getEventLevelsSafe } from '@src/lib/client/event'
 
@@ -44,11 +44,11 @@ export class LevelService {
     }
 
     async getLevelRecords(id: number, query: any) {
-        return await getLevelRecords(id, query)
+        return await recordService.getLevelRecords(id, query)
     }
 
     async getLevelDeathCount(id: number) {
-        return await getLevelDeathCount(id)
+        return await deathCountService.getLevelDeathCount(id)
     }
 
     async checkLevelInEvent(levelId: number, userId: string, eventType: string = 'basic') {

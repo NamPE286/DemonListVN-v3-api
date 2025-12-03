@@ -1,6 +1,6 @@
 import supabase from '@database/supabase'
 import { gdapi } from '@src/lib/classes/GDApi'
-import { addChangelog } from '@src/lib/client/changelog'
+import changelogsService from '@src/services/changelogsService'
 import type { TLevel } from '@src/lib/types'
 
 interface Level extends TLevel { }
@@ -55,7 +55,7 @@ class Level {
             throw error
         }
 
-        addChangelog(this.id!, data)
+        changelogsService.addChangelog(this.id!, data)
     }
 
     async delete() {

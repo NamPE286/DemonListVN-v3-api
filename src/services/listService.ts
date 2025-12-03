@@ -1,26 +1,26 @@
-import { getDemonListLevels, getFeaturedListLevels, getPlatformerListLevels } from '@lib/client/level'
-import { getDemonListRecords, getFeaturedListRecords } from '@src/lib/client/record'
+import levelsService from '@src/services/levelsService'
+import recordService from '@src/services/recordService'
 import supabase from '@src/database/supabase'
 
 export class ListService {
     async getDemonList(query: any) {
-        return await getDemonListLevels(query)
+        return await levelsService.getDemonListLevels(query)
     }
 
     async getPlatformerList(query: any) {
-        return await getPlatformerListLevels(query)
+        return await levelsService.getPlatformerListLevels(query)
     }
 
     async getFeaturedList(query: any) {
-        return await getFeaturedListLevels(query)
+        return await levelsService.getFeaturedListLevels(query)
     }
 
     async getDemonListRecords(query: any) {
-        return await getDemonListRecords(query)
+        return await recordService.getDemonListRecords(query)
     }
 
     async getFeaturedListRecords(query: any) {
-        return await getFeaturedListRecords(query)
+        return await recordService.getFeaturedListRecords(query)
     }
 
     async getRandomLevel(list: string, exclude?: string) {
