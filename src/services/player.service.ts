@@ -19,7 +19,7 @@ export async function getPlayers({ province = '', city = '', sortBy = 'rating', 
     const { data, error } = await query
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -39,7 +39,7 @@ export async function getDemonListLeaderboard({ start = 0, end = 50, sortBy = 'o
         .range(start, end)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -59,7 +59,7 @@ export async function getFeaturedListLeaderboard({ start = 0, end = 50, sortBy =
         .range(start, end)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -79,7 +79,7 @@ export async function getPlatformerListLeaderboard({ start = 0, end = 50, sortBy
         .range(start, end)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -92,7 +92,7 @@ export async function getPlayersBatch(uid: string[]) {
         .in('uid', uid)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return uid.map(id => data.find(player => player.uid === id)).filter(Boolean)

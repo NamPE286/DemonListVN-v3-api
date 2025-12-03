@@ -25,7 +25,7 @@ router.route('/publish')
             .order('created_at', { ascending: true })
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
 
         const changelog: Changelog = {

@@ -48,7 +48,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
                 .single()
 
             if (error) {
-                throw error
+                throw new Error(error.message)
             }
 
             res.locals.user = new Player(data.players!)

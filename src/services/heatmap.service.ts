@@ -41,6 +41,6 @@ export async function updateHeatmap(uid: string, count: number) {
         .upsert(data)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }

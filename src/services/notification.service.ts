@@ -10,7 +10,7 @@ export async function getPlayerNotifications(uid: string) {
         .order('timestamp', { ascending: false })
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -23,7 +23,7 @@ export async function clearPlayerNotifications(uid: string) {
         .eq('to', uid)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }
 
@@ -33,7 +33,7 @@ export async function sendNotification(notification: TNotification, bypass = fal
         .insert(notification as any)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     if (notification.redirect) {

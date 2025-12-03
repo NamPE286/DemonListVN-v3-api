@@ -20,7 +20,7 @@ class Player {
                 .single()
 
             if (error) {
-                throw error
+                throw new Error(error.message)
             }
 
             Object.assign(this, data)
@@ -32,7 +32,7 @@ class Player {
                 .single()
 
             if (error) {
-                throw error
+                throw new Error(error.message)
             }
 
             Object.assign(this, data)
@@ -79,7 +79,7 @@ class Player {
                 .eq("uid", this.uid!)
 
             if (error) {
-                throw error
+                throw new Error(error.message)
             }
         }
 
@@ -103,7 +103,7 @@ class Player {
             .eq('uid', this.uid!)
 
         if (error) {
-            throw error;
+            throw new Error(error.message);
         }
     }
 
@@ -199,7 +199,7 @@ class Player {
             .eq("uid", this.uid!)
 
         if (error) {
-            throw error;
+            throw new Error(error.message);
         }
 
         await sendDirectMessage(this.uid!, `Your Discord account is linked to [${this.name}](${FRONTEND_URL}/player/${this.uid!}) DLVN account.`, true)
@@ -218,7 +218,7 @@ class Player {
             .order('created_at', { ascending: false })
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
 
         if (!data) {

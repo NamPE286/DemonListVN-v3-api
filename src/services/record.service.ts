@@ -17,7 +17,7 @@ export async function getDemonListRecords({ start = 0, end = 0, isChecked = fals
         .range(start, end)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -37,7 +37,7 @@ export async function getFeaturedListRecords({ start = 0, end = 0, isChecked = f
         .range(start, end)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -52,7 +52,7 @@ export async function getPlayerRecordRating(uid: string) {
         .order('no')
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     const res = []
@@ -146,7 +146,7 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, isCheck
         .range(start, end)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -163,7 +163,7 @@ export async function getRecord(uid: string, levelID: number) {
 
     if (error) {
         console.error(error)
-        throw error
+        throw new Error(error.message)
     }
 
     // @ts-ignore
@@ -248,7 +248,7 @@ export async function getRecords({ start = 0, end = 50, isChecked = false } = {}
         .range(start, end)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -264,7 +264,7 @@ export async function getPlayerSubmissions(uid: string, { start = '0', end = '50
         .range(parseInt(start), parseInt(end))
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -278,6 +278,6 @@ export async function changeSuggestedRating(uid: string, levelID: number, rating
         .eq('userid', uid)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }

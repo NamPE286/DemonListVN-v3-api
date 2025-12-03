@@ -19,7 +19,7 @@ class Clan {
             .single()
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
 
         Object.assign(this, data)
@@ -37,7 +37,7 @@ class Clan {
             .single()
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
 
         const player = new Player({ uid: data.owner })
@@ -76,7 +76,7 @@ class Clan {
             .eq('id', this.id!)
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
 
         await this.pull()
@@ -92,7 +92,7 @@ class Clan {
             .range(start, end)
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
 
         return data
@@ -169,7 +169,7 @@ class Clan {
             .range(start, end)
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
 
         return data
@@ -190,7 +190,7 @@ class Clan {
             .eq('id', this.id!)
 
         if (error) {
-            throw error;
+            throw new Error(error.message);
         }
     }
 

@@ -13,7 +13,7 @@ export async function getInventoryItem(inventoryItemId: number) {
         .single()
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data;
@@ -46,7 +46,7 @@ export async function addCaseResult(player: Player, inventoryItemId: number, cas
         .eq('id', inventoryItemId)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     var { error } = await supabase
@@ -58,7 +58,7 @@ export async function addCaseResult(player: Player, inventoryItemId: number, cas
         })
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }
 
@@ -87,7 +87,7 @@ export async function addInventoryItem(player: Player, caseItem: CaseItem) {
 
 
         if (!data || error) {
-            throw error
+            throw new Error(error.message)
         }
 
         var { error } = await supabase
@@ -101,7 +101,7 @@ export async function addInventoryItem(player: Player, caseItem: CaseItem) {
             })
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
     } else {
         var { error } = await supabase
@@ -113,7 +113,7 @@ export async function addInventoryItem(player: Player, caseItem: CaseItem) {
             })
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
     }
 }
@@ -154,7 +154,7 @@ export async function receiveReward(player: Player, reward: Reward) {
 
 
         if (!data || error) {
-            throw error
+            throw new Error(error.message)
         }
 
         var { error } = await supabase
@@ -168,7 +168,7 @@ export async function receiveReward(player: Player, reward: Reward) {
             })
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
     } else {
         var { error } = await supabase
@@ -180,7 +180,7 @@ export async function receiveReward(player: Player, reward: Reward) {
             })
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
     }
 }

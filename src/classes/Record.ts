@@ -33,7 +33,7 @@ class Record {
             .single()
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
 
         Object.assign(this, data)
@@ -169,7 +169,7 @@ class Record {
 
         if (error) {
             console.error(error)
-            throw error
+            throw new Error(error.message)
         }
     }
 

@@ -7,7 +7,7 @@ export async function getAllAPIKey(uid: string) {
         .eq('uid', uid)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -19,7 +19,7 @@ export async function createAPIKey(uid: string) {
         .insert({ uid: uid })
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }
 
@@ -30,6 +30,6 @@ export async function deleteAPIKey(uid: string, key: string) {
         .match({ uid: uid, key: key })
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }

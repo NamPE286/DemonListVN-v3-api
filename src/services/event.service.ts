@@ -55,7 +55,7 @@ export async function insertEvent(data: Tables<"events">) {
         .insert(data)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }
 
@@ -68,7 +68,7 @@ export async function updateEvent(id: number, data: Tables<"events">) {
         .eq('id', id)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }
 
@@ -79,7 +79,7 @@ export async function updateEventLevel(data: Tables<"eventLevels">) {
         .eq('id', data.id)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }
 
@@ -91,7 +91,7 @@ export async function upsertEventLevel(eventID: number, data: Tables<"eventLevel
         .upsert(data)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }
 
@@ -102,7 +102,7 @@ export async function deleteEventLevel(eventID: number, levelID: number) {
         .match({ eventID: eventID, levelID: levelID })
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }
 
@@ -143,7 +143,7 @@ export async function getEvents(filter: EventFilter) {
         .range(filter.from, filter.to)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data;
@@ -158,7 +158,7 @@ export async function getEvent(id: number) {
         .single()
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -173,7 +173,7 @@ export async function getOngoingEvents() {
         .eq('hidden', false)
         .order('start', { ascending: false })
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     const res = data
@@ -184,7 +184,7 @@ export async function getOngoingEvents() {
         .is('end', null)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return res?.concat(data!)
@@ -199,7 +199,7 @@ export async function getEventProof(eventID: number, uid: string) {
         .single()
 
     if (error) {
-        throw error;
+        throw new Error(error.message);
     }
 
     return data
@@ -223,7 +223,7 @@ export async function getEventProofs(eventID: number | null, { start = 0, end = 
     const { data, error } = await query
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -235,7 +235,7 @@ export async function upsertEventProof(data: any) {
         .upsert(data)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }
 
@@ -245,7 +245,7 @@ export async function insertEventProof(data: any) {
         .insert(data)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }
 
@@ -256,7 +256,7 @@ export async function deleteEventProof(eventID: number, uid: string) {
         .match({ eventID: eventID, userid: uid })
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }
 
@@ -268,7 +268,7 @@ export async function getEventLevels(eventID: number) {
         .order("id")
 
     if (error) {
-        throw error;
+        throw new Error(error.message);
     }
 
     const flattened = data.map(item => {
@@ -292,7 +292,7 @@ export async function getEventLevelsSafe(eventID: number) {
         .order("id")
 
     if (error) {
-        throw error;
+        throw new Error(error.message);
     }
 
     const hideLevel = new Set()
@@ -337,7 +337,7 @@ export async function getEventSubmissions(eventID: number, userID: string) {
         .eq("eventLevels.eventID", eventID)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return formatEventSubmissions(data, levels)
@@ -353,7 +353,7 @@ export async function get_event_leaderboard(eventID: number, ignoreFreeze: boole
         .lte("players.eventRecords.created_at", event.freeze && !ignoreFreeze ? event.freeze : new Date().toISOString());
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     const res = []
@@ -420,7 +420,7 @@ export async function deleteEventSubmission(levelID: number, userID: string) {
         .match({ userID: userID, levelID: levelID })
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }
 
@@ -430,7 +430,7 @@ export async function insertEventSubmission(submission: any) {
         .insert(submission)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     var { data, error } = await supabase
@@ -440,7 +440,7 @@ export async function insertEventSubmission(submission: any) {
         .single()
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     try {

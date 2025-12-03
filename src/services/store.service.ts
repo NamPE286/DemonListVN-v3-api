@@ -27,7 +27,7 @@ export async function getProducts(ids: number[] | null = []) {
     const { data, error } = await query.order("created_at", { ascending: false })
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -41,7 +41,7 @@ export async function getProductByID(id: number) {
         .single()
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -82,7 +82,7 @@ export async function addNewOrder(
         })
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }
 
@@ -93,7 +93,7 @@ export async function changeOrderState(orderID: number, state: string) {
         .eq("id", orderID)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }
 
@@ -105,7 +105,7 @@ export async function getOrders(userID: string) {
         .order("created_at", { ascending: false })
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -119,7 +119,7 @@ export async function getCoupon(code: string) {
         .single()
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -161,7 +161,7 @@ export async function redeem(code: string, player: Player) {
         .upsert(coupon)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     if (coupon.productID == 1) {
@@ -230,7 +230,7 @@ export async function updateStock(items: TablesInsert<"orderItems">[], products:
         .upsert(sortedProducts);
 
     if (error) {
-        throw error;
+        throw new Error(error.message);
     }
 }
 
@@ -281,7 +281,7 @@ export async function addOrderItems(
         .insert(items)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return orderID
@@ -295,7 +295,7 @@ export async function getOrder(id: number) {
         .single();
 
     if (error) {
-        throw error;
+        throw new Error(error.message);
     }
 
     if (data.orderTracking) {

@@ -7,7 +7,7 @@ export async function getCase(id: number) {
         .eq('caseId', id)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data;
@@ -21,7 +21,7 @@ export async function getItem(id: number) {
         .single()
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data;

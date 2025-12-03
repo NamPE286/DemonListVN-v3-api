@@ -18,7 +18,7 @@ class Level {
             .single()
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
 
         Object.assign(this, data)
@@ -52,7 +52,7 @@ class Level {
         await supabase.rpc('update_list')
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
 
         addChangelog(this.id!, data)
@@ -65,7 +65,7 @@ class Level {
             .eq('id', this.id!)
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
     }
 }

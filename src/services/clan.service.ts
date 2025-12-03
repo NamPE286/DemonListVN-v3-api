@@ -19,7 +19,7 @@ export async function getClans({ start = 0, end = 50, sortBy = 'boostedUntil', a
     const { data, error } = await query
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data

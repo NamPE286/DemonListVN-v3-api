@@ -9,7 +9,7 @@ export async function getCard(id: string) {
         .single()
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data
@@ -34,7 +34,7 @@ export async function linkCard(id: string, player: Player) {
         .eq('id', id)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     await player.extendSupporter(card.supporterIncluded)
@@ -49,6 +49,6 @@ export async function updateCardContent(id: string, content: string) {
         .eq('id', id)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }

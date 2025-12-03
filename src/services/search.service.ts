@@ -11,7 +11,7 @@ async function getPlayerByDiscordID(id: string) {
         .eq("discord", id)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data;
@@ -31,7 +31,7 @@ export const search = {
                 .limit(limit)
 
             if (error) {
-                throw error
+                throw new Error(error.message)
             }
 
             return data;
@@ -44,7 +44,7 @@ export const search = {
             .limit(limit)
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
 
         return data
@@ -65,7 +65,7 @@ export const search = {
             .limit(limit)
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
 
         return data

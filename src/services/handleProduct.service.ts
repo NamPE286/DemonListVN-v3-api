@@ -24,7 +24,7 @@ handleProduct.set(1, {
             .eq("id", order.id)
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
     },
     post: async (buyer, recipient, order) => {
@@ -73,7 +73,7 @@ handleProduct.set(3, {
             .eq("id", order.id)
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
     },
     post: async (buyer, recipient, order) => {

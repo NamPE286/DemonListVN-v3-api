@@ -13,6 +13,6 @@ export async function addChangelog(id: number, oldData: any) {
         .insert({ levelID: id, old: oldData, new: data })
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 }

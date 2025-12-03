@@ -284,7 +284,7 @@ async function getIDBound(list: string, min: boolean) {
         .single()
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     return data.id

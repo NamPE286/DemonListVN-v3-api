@@ -30,7 +30,7 @@ class ClanInvitation {
             .single()
 
         if (error || !data) {
-            throw error
+            throw new Error(error.message)
         }
 
         Object.assign(this, data)
@@ -42,7 +42,7 @@ class ClanInvitation {
             .upsert(this as any)
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
     }
 
@@ -71,7 +71,7 @@ class ClanInvitation {
             .match({ to: this.to, clan: this.clan })
 
         if (error) {
-            throw error
+            throw new Error(error.message)
         }
     }
 }

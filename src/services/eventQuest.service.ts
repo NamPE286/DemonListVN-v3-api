@@ -10,7 +10,7 @@ export async function getEventQuests(eventId: number) {
         .order('id');
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     const quests = data.map(q => ({
@@ -32,7 +32,7 @@ export async function getEventQuest(questId: number) {
         .single()
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     const quest = {

@@ -785,7 +785,7 @@ router.route('/:id/list/:list')
 
         if (error) {
             console.error(error)
-            throw error;
+            throw new Error(error.message);
         }
 
         for (const i of data) {
