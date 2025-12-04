@@ -1,7 +1,7 @@
 import supabase from '@src/client/supabase'
-import Level from '@src/classes/Level'
 import Record from '@src/classes/Record'
 import { sendNotification } from '@src/services/notification.service'
+import { getLevel } from '@src/services/level.service'
 import userAuth from '@src/middleware/userAuth.middleware'
 import logger from '@src/utils/logger'
 import express from 'express'
@@ -60,13 +60,11 @@ router.route('/')
 
         logger.log(`${user.name} (${user.uid}) ${req.body.needMod ? 'forwarded' : ''}${req.body.isChecked ? 'accepted' : ''} ${req.body.levelid} record of ${req.body.userid}\nReviewer's comment: ${req.body.reviewerComment}`)
         if (req.body.isChecked) {
-            const level = new Level({ id: parseInt(req.body.levelid) });
-            await level.pull()
+            const level = await getLevel(parseInt(req.body.levelid));
 
             await sendNotification({ to: req.body.userid, content: `Your ${level.name} (${level.id}) record has been accepted by ${user.name}.`, status: 0 })
         } else if (req.body.needMod) {
-            const level = new Level({ id: parseInt(req.body.levelid) });
-            await level.pull()
+            const level = await getLevel(parseInt(req.body.levelid));
 
             await sendNotification({ to: req.body.userid, content: `Your ${level.name} (${level.id}) record has been forwarded to moderator team for further inspection by ${user.name}.`, status: 0 })
         }

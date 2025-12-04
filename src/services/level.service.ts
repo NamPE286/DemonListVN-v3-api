@@ -1,4 +1,6 @@
 import supabase from "@src/client/supabase"
+import { gdapi } from '@src/client/GDApi'
+import { addChangelog } from '@src/services/changelog.service'
 import type { TLevel } from "@src/types"
 
 function convertToIDArray(levels: TLevel[]) {
@@ -180,4 +182,63 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
     }
 
     return res
+}
+
+export async function getLevel(levelId: number): Promise<TLevel> {
+    const { data, error } = await supabase
+        .from('levels')
+        .select('*')
+        .eq('id', levelId)
+        .single()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}
+
+export async function fetchLevelFromGD(levelId: number) {
+    const data = await gdapi.levels.get(levelId)
+
+    return {
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        length: data.stats.length.raw,
+        author: data.creator.username,
+        difficulty: data.difficulty.level.pretty
+    }
+}
+
+export async function updateLevel(levelData: TLevel): Promise<void> {
+    let { data } = await supabase
+        .from('levels')
+        .select('*')
+        .eq('id', levelData.id!)
+        .limit(1)
+        .single()
+
+    let { error } = await supabase
+        .from('levels')
+        .upsert(levelData as any)
+
+    await supabase.rpc('update_list')
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    addChangelog(levelData.id!, data)
+}
+
+export async function deleteLevel(levelId: number): Promise<void> {
+    const { error } = await supabase
+        .from('levels')
+        .delete()
+        .eq('id', levelId)
+
+    if (error) {
+        throw new Error(error.message)
+    }
 }

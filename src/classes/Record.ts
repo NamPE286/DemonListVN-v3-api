@@ -1,7 +1,7 @@
 import supabase from '@src/client/supabase'
-import Level from '@src/classes/Level'
 import Player from '@src/classes/Player';
 import { approved } from '@src/services/pointercrate.service';
+import { getLevel, fetchLevelFromGD, updateLevel } from '@src/services/level.service'
 import type { TRecord } from '@src/types'
 import getVideoId from 'get-video-id';
 
@@ -41,10 +41,7 @@ class Record {
 
     async submit() {
         if (!(await isLevelExists(this.levelid!))) {
-            const level = new Level({
-                id: this.levelid,
-            })
-            let apiLevel = await level.fetchFromGD()
+            let apiLevel = await fetchLevelFromGD(this.levelid!)
 
             if (apiLevel.length != 5 && apiLevel.difficulty != 'Extreme Demon' && apiLevel.difficulty != 'Insane Demon') {
                 throw {
@@ -53,18 +50,18 @@ class Record {
                 }
             }
 
-            level.name = apiLevel.name
-            level.creator = apiLevel.author
-            level.isPlatformer = apiLevel.length == 5
-
-            await level.update()
+            await updateLevel({
+                id: this.levelid,
+                name: apiLevel.name,
+                creator: apiLevel.author,
+                isPlatformer: apiLevel.length == 5
+            })
         }
 
         const record = new Record(this)
-        const level = new Level({ id: this.levelid })
+        const level = await getLevel(this.levelid!)
         const player = new Player({ uid: this.userid })
 
-        await level.pull()
         await player.pull();
 
         try {
@@ -108,7 +105,7 @@ class Record {
             }
         }
 
-        const level = new Level({ id: this.levelid })
+        const level = await getLevel(this.levelid!)
         const { id, service } = getVideoId(this.videoLink)
 
         if (!id || !service) {
@@ -128,8 +125,6 @@ class Record {
         const video: any = await (
             (await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${id}&key=${process.env.GOOGLE_API_KEY}`)).json()
         )
-
-        await level.pull()
 
         const name = level.name!.toLowerCase()
         const title: string = video.items[0].snippet.title.toLowerCase()

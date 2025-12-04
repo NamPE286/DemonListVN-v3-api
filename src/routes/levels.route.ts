@@ -1,9 +1,9 @@
 import express from 'express'
 import type { NextFunction, Response, Request } from 'express'
-import Level from '@src/classes/Level'
 import adminAuth from '@src/middleware/adminAuth.middleware'
 import { getLevelDeathCount } from '@src/services/deathCount.service'
 import { getLevelRecords } from '@src/services/record.service'
+import { updateLevel, getLevel, fetchLevelFromGD, deleteLevel } from '@src/services/level.service'
 import userAuth from '@src/middleware/userAuth.middleware'
 import supabase from '@src/client/supabase'
 import { getEventLevelsSafe } from '@src/services/event.service'
@@ -52,8 +52,7 @@ router.route('/')
         }
 
         try {
-            const level = new Level(data)
-            await level.update()
+            await updateLevel(data)
 
             res.send()
         } catch (err) {
@@ -144,13 +143,11 @@ router.route('/:id')
         const { fromGD } = req.query
 
         try {
-            const level = new Level({ id: parseInt(id) })
-
             if (!fromGD) {
-                await level.pull()
+                const level = await getLevel(parseInt(id))
                 res.send(level)
             } else {
-                res.send(await level.fetchFromGD())
+                res.send(await fetchLevelFromGD(parseInt(id)))
             }
 
         } catch (err) {
@@ -181,8 +178,7 @@ router.route('/:id')
         const { id } = req.params
 
         try {
-            const level = new Level({ id: parseInt(id) })
-            await level.delete()
+            await deleteLevel(parseInt(id))
 
             res.send()
         } catch (err) {
