@@ -1,5 +1,4 @@
 import express, { application } from 'express'
-import Record from '@src/classes/Record'
 import { submitRecord } from '@src/services/record.service'
 import userAuth from '@src/middleware/user-auth.middleware'
 import logger from '@src/utils/logger'

@@ -1,10 +1,8 @@
 import supabase from "@src/client/supabase";
-import RecordClass from "@src/classes/Record";
-import Player from "@src/classes/Player";
 import { getLevel, fetchLevelFromGD, updateLevel } from "@src/services/level.service";
 import { getPlayer } from "@src/services/player.service";
 import { approved } from "@src/services/pointercrate.service";
-import type { TRecord } from "@src/types";
+import type { TRecord, TPlayer } from "@src/types";
 import getVideoId from "get-video-id";
 
 async function isLevelExists(id: number) {
@@ -187,7 +185,7 @@ export async function getRecord(uid: string, levelID: number) {
 }
 
 
-export async function retrieveRecord(user: Player) {
+export async function retrieveRecord(user: TPlayer) {
     var { data, error } = await supabase
         .from('records')
         .select('*, levels!inner(*)')
@@ -240,9 +238,14 @@ export async function retrieveRecord(user: Player) {
     }
 
     const record = await getRecord(res.userid, res.levelid)
+
+    // @ts-ignore
     record.reviewer = res.reviewer = user.uid!
     record.queueNo = null
-    await updateRecord(record)
+
+    const { players, levels, ...updData } = record
+
+    await updateRecord(updData)
 
     return data
 }
@@ -295,20 +298,6 @@ export async function changeSuggestedRating(uid: string, levelID: number, rating
     if (error) {
         throw new Error(error.message)
     }
-}
-
-export async function getRecord(userid: string, levelid: number) {
-    const { data, error } = await supabase
-        .from('records')
-        .select('*')
-        .match({ userid, levelid })
-        .single()
-
-    if (error) {
-        throw new Error(error.message)
-    }
-
-    return data
 }
 
 export async function submitRecord(recordData: TRecord) {

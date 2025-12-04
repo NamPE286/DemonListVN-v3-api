@@ -1,7 +1,9 @@
 import supabase from "@src/client/supabase";
-import type Player from "@src/classes/Player";
 import { getEventQuest } from "@src/services/event-quest.service";
 import { getCase as getCaseItems } from "@src/services/item.service";
+import type { getPlayer } from "@src/services/player.service";
+
+type Player = Awaited<ReturnType<typeof getPlayer>>;
 
 export async function getInventoryItem(inventoryItemId: number) {
     const { data, error } = await supabase

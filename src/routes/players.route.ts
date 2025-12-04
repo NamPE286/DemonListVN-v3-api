@@ -1,5 +1,4 @@
 import express from 'express'
-import Player from '@src/classes/Player'
 import userAuth from '@src/middleware/user-auth.middleware'
 import { getHeatmap } from '@src/services/heatmap.service'
 import { getPlayerRecordRating, getPlayerRecords } from '@src/services/record.service'
@@ -78,7 +77,7 @@ router.route('/')
      */
     .put(userAuth, async (req, res) => {
         const data = req.body
-        const user: Player = res.locals.user
+        const user = res.locals.user
 
         if (!('uid' in data)) {
             if (user.isAdmin) {

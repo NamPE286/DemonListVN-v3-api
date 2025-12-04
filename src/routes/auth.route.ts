@@ -1,6 +1,7 @@
 import supabase from "@src/client/supabase"
 import { createDirectMessageChannel, getAccessToken, getUserByToken } from "@src/services/discord.service"
 import { getUsernameByToken as getIDByToken } from "@src/services/pointercrate.service"
+import { updatePlayerDiscord } from "@src/services/player.service"
 import userAuth from "@src/middleware/user-auth.middleware"
 import express from "express"
 import { FRONTEND_URL } from "@src/config/constants"
@@ -80,7 +81,7 @@ router.route("/link/discord")
 
         const id: string = String(data.id)
 
-        await user.updateDiscord(id);
+        await updatePlayerDiscord(user.uid!, id);
 
         res.send();
     })

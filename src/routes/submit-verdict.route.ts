@@ -28,7 +28,7 @@ router.route('/')
         const { user } = res.locals
         const record = await getRecord(req.body.userid, req.body.levelid)
 
-        if (record.reviewer != res.locals.user.uid || (!user.isAdmin && !user.isTrusted)) {
+        if (record.reviewer!.uid != res.locals.user.uid || (!user.isAdmin && !user.isTrusted)) {
             res.status(401).send()
             return
         }

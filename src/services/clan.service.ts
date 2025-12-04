@@ -1,6 +1,5 @@
 import supabase from "@src/client/supabase"
 import type { Database } from '@src/types/supabase'
-import Player from '@src/classes/Player'
 import { sendNotification } from '@src/services/notification.service'
 import { getPlayer, updatePlayer } from '@src/services/player.service'
 import type { TClan, TClanInvitation } from '@src/types'

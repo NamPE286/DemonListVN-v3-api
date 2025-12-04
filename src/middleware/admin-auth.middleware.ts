@@ -1,37 +1,84 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from 'jsonwebtoken'
-import logger from "@src/utils/logger";
+import supabase from "@src/client/supabase";
 import { getPlayer } from '@src/services/player.service';
 
 export default async function (req: Request, res: Response, next: NextFunction) {
+    res.locals.authenticated = false;
+
     if (!req.headers.authorization ||
         !req.headers.authorization.startsWith('Bearer ')) {
         res.status(401).send()
         return
     }
 
-    const token = req.headers.authorization?.split(' ')[1]
-
     try {
+        const token = req.headers.authorization.split(' ')[1]
         const decoded = jwt.verify(token, process.env.JWT_SECRET!)
         const uid = String(decoded.sub)
-        const player = await getPlayer(uid)
+        let player;
 
-        if(!player?.isAdmin) {
+        try {
+            player = await getPlayer(uid)
+        } catch { }
+
+        if (player?.isBanned) {
+            res.status(401).send();
+            return;
+        }
+
+        if (!player) {
+            res.status(401).send();
+            return;
+        }
+
+        if (player.recordCount === 0 && !player.isAdmin) {
+            if (req.originalUrl.startsWith('/clan') && req.method != 'GET') {
+                res.status(401).send();
+                return;
+            }
+        }
+
+        res.locals.user = player
+        res.locals.authType = 'token'
+    } catch {
+        try {
+            const key = req.headers.authorization.split(' ')[1]
+
+            const { data, error } = await supabase
+                .from('APIKey')
+                .select('*, players(*, clans!id(*))')
+                .eq('key', key)
+                .limit(1)
+                .single()
+
+            if (error) {
+                throw new Error(error.message)
+            }
+
+            res.locals.user = data.players!
+            res.locals.authType = 'key'
+
+            if (res.locals.user.isBanned) {
+                res.status(401).send();
+                return;
+            }
+
+            if (!res.locals.user.isAdmin) {
+                res.status(401).send();
+                return;
+            }
+        } catch {
+            res.status(403).send()
             return
         }
+    }
 
-        let msg = `${player.name} (${player.uid}) performed ${req.method} ${req.originalUrl}`
-
-        if(req.body) {
-            msg += `\n\`\`\`json\n// Body content\n${JSON.stringify(req.body, null, 4)}\`\`\``
-        }
-
-        logger.log(msg)
-    } catch {
+    if (res.locals.authType != 'token') {
         res.status(403).send()
         return
     }
 
+    res.locals.authenticated = true;
     next()
 }

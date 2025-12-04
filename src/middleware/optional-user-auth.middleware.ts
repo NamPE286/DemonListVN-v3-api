@@ -42,7 +42,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
 
             const { data, error } = await supabase
                 .from('APIKey')
-                .select('*, players(*)')
+                .select('*, players(*, clans!id(*))')
                 .eq('key', key)
                 .limit(1)
                 .single()

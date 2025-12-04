@@ -1,6 +1,8 @@
 import supabase from "@src/client/supabase";
-import type Player from "@src/classes/Player";
 import { extendPlayerSupporter } from '@src/services/player.service';
+import type { getPlayer } from '@src/services/player.service';
+
+type Player = Awaited<ReturnType<typeof getPlayer>>;
 
 export async function getCard(id: string) {
     const { data, error } = await supabase

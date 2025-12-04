@@ -16,11 +16,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
         const token = req.headers.authorization.split(' ')[1]
         const decoded = jwt.verify(token, process.env.JWT_SECRET!)
         const uid = String(decoded.sub)
-        let player;
-
-        try {
-            player = await getPlayer(uid)
-        } catch { }
+        const player = await getPlayer(uid)
 
         if (player?.isBanned) {
             res.status(401).send();
@@ -47,7 +43,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
 
             const { data, error } = await supabase
                 .from('APIKey')
-                .select('*, players(*)')
+                .select('*, players(*, clans!id(*))')
                 .eq('key', key)
                 .limit(1)
                 .single()

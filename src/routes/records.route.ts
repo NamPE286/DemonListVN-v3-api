@@ -1,5 +1,4 @@
 import express from 'express'
-import Record from '@src/classes/Record'
 import adminAuth from '@src/middleware/admin-auth.middleware'
 import userAuth from '@src/middleware/user-auth.middleware'
 import { getRecord, getRecords, retrieveRecord, updateRecord, deleteRecord } from '@src/services/record.service'
