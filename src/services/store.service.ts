@@ -1,10 +1,9 @@
 import supabase from "@src/client/supabase";
-import Player from "@src/classes/Player";
 import type { Tables, TablesInsert } from "@src/types/supabase";
 import { sendNotification } from '@src/services/notification.service'
 import { sendMessageToChannel } from '@src/services/discord.service';
 import type { Response } from 'express';
-import { handleProduct } from "@src/services/handleProduct.service";
+import { handleProduct } from "@src/services/handle-product.service";
 import { sepay } from "@src/client/sepay";
 import type { SepayWebhookOrder } from "@src/types/sepayWebhook";
 import { getClan, extendClanBoost } from "@src/services/clan.service";
@@ -126,7 +125,7 @@ export async function getCoupon(code: string) {
     return data
 }
 
-export async function redeem(code: string, player: Player) {
+export async function redeem(code: string, player: Tables<"players">) {
     const coupon = await getCoupon(code);
     const product = coupon.products
 
@@ -234,7 +233,7 @@ export async function updateStock(items: TablesInsert<"orderItems">[], products:
 }
 
 export async function addOrderItems(
-    buyer: Player,
+    buyer: Tables<"players">,
     recipientName: string,
     items: TablesInsert<"orderItems">[],
     address: string,

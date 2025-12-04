@@ -1,15 +1,15 @@
 import supabase from "@src/client/supabase";
-import type Player from "@src/classes/Player";
 import { sendMessageToChannel } from "@src/services/discord.service";
 import { sendNotification } from "@src/services/notification.service";
 import type { getOrder } from "@src/services/store.service";
 import { FRONTEND_URL } from "@src/config/constants";
 import { getClan, extendClanBoost } from "@src/services/clan.service";
 import { extendPlayerSupporter } from "@src/services/player.service";
+import type { Tables } from "@src/types/supabase";
 
 interface HandleProduct {
-    pre: (buyer: Player, recipient: Player, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>;
-    post: (buyer: Player, recipient: Player, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>;
+    pre: (buyer: Tables<"players">, recipient: Tables<"players">, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>;
+    post: (buyer: Tables<"players">, recipient: Tables<"players">, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>;
 }
 
 export const handleProduct: Map<number, HandleProduct> = new Map()

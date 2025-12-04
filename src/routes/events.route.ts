@@ -21,12 +21,12 @@ import {
     getEvents,
     getOngoingEvents
 } from '@src/services/event.service'
-import userAuth from '@src/middleware/userAuth.middleware'
-import adminAuth from '@src/middleware/adminAuth.middleware'
-import optionalUserAuth from '@src/middleware/optionalUserAuth.middleware'
+import userAuth from '@src/middleware/user-auth.middleware'
+import adminAuth from '@src/middleware/admin-auth.middleware'
+import optionalUserAuth from '@src/middleware/optional-user-auth.middleware'
 import supabase from '@src/client/supabase'
 import { calcLeaderboard } from '@src/services/elo.service'
-import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted } from '@src/services/eventQuest.service'
+import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted } from '@src/services/event-quest.service'
 import { addInventoryItem, receiveReward } from '@src/services/inventory.service'
 
 const router = express.Router()
@@ -224,7 +224,7 @@ router.route('/submitLevel/:levelID')
                 for (const record of level.eventRecords) {
                     if (record.progress < Number(progress) && event.events!.type == 'basic') {
                         // @ts-ignore
-                        record.created_at = new Date()
+                        record.created_at = new Date().toISOString()
                         record.progress = Number(progress)
                         record.videoLink = "Submitted via Geode mod"
                         record.accepted = true;
@@ -237,7 +237,7 @@ router.route('/submitLevel/:levelID')
                         const remainingHP = Math.max(0, level.point - level.totalProgress)
 
                         // @ts-ignore
-                        record.created_at = new Date()
+                        record.created_at = new Date().toISOString()
 
                         let prog = Number(progress);
                         let dmg = Math.min(remainingHP, Number(progress) * Math.pow(1.0305, Number(progress)));
@@ -259,7 +259,7 @@ router.route('/submitLevel/:levelID')
 
                 if (!level.eventRecords.length) {
                     eventRecordUpsertData.push({
-                        created_at: new Date(),
+                        created_at: new Date().toISOString(),
                         userID: user.uid!,
                         levelID: level.id,
                         progress: Number(progress),

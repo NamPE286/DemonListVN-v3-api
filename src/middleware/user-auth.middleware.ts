@@ -1,6 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from 'jsonwebtoken'
-import Player from "@src/classes/Player";
 import supabase from "@src/client/supabase";
 import { getPlayer } from '@src/services/player.service';
 
@@ -57,7 +56,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
                 throw new Error(error.message)
             }
 
-            res.locals.user = new Player(data.players!)
+            res.locals.user = data.players!
             res.locals.authType = 'key'
 
             if (res.locals.user.isBanned) {

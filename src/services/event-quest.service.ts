@@ -1,6 +1,6 @@
 import supabase from "@src/client/supabase";
-import type Player from "@src/classes/Player";
 import { getEventSubmissions } from "@src/services/event.service";
+import type { Tables } from "@src/types/supabase";
 
 export async function getEventQuests(eventId: number) {
     const { data, error } = await supabase
@@ -46,7 +46,7 @@ export async function getEventQuest(questId: number) {
     return quest
 }
 
-export async function isQuestClaimed(user: Player, questId: number) {
+export async function isQuestClaimed(user: Tables<"players">, questId: number) {
     const { data, error } = await supabase
         .from('eventQuestClaims')
         .select('*')
@@ -60,7 +60,7 @@ export async function isQuestClaimed(user: Player, questId: number) {
     return true;
 }
 
-export async function isQuestCompleted(user: Player, questId: number) {
+export async function isQuestCompleted(user: Tables<"players">, questId: number) {
     const quest = await getEventQuest(questId)
     const submissions = await getEventSubmissions(quest.eventId, user.uid!);
     const attribute = new Map<string, number>()

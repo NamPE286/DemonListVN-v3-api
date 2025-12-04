@@ -1,6 +1,6 @@
 import express from 'express'
-import userAuth from '@src/middleware/userAuth.middleware'
-import { createAPIKey, deleteAPIKey, getAllAPIKey } from '@src/services/APIKey.service'
+import userAuth from '@src/middleware/user-auth.middleware'
+import { createAPIKey, deleteAPIKey, getAllAPIKey } from '@src/services/api-key.service'
 
 /**
  * @openapi

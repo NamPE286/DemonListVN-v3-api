@@ -1,5 +1,5 @@
-import Player from "@src/classes/Player";
 import { getPlayer, updatePlayer, isPlayerSupporterActive, getPlayerTitle } from '@src/services/player.service'
+import type { Tables } from '@src/types/supabase';
 
 export async function getAccessToken(code: string) {
     const response = await fetch("https://discord.com/api/v10/oauth2/token", {
@@ -139,7 +139,7 @@ export async function updateRole(guildID: string, userID: string, roles: string[
     }
 }
 
-export async function syncRoleDLVN(player: Player) {
+export async function syncRoleDLVN(player: Tables<"players">) {
     const roles = {
         trusted: "1246843095593517066",
         supporter: "1004356961309032549",
@@ -191,7 +191,7 @@ export async function syncRoleDLVN(player: Player) {
     await updateRole(guildID, player.discord!, Array.from(s));
 }
 
-export async function syncRoleGDVN(player: Player) {
+export async function syncRoleGDVN(player: Tables<"players">) {
     const roles = {
         supporter: "1387306487168106568",
         LGM: "1387311470257111051",

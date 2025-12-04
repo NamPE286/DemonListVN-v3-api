@@ -1,4 +1,4 @@
-import userAuth from '@src/middleware/userAuth.middleware'
+import userAuth from '@src/middleware/user-auth.middleware'
 import express from 'express'
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { PutObjectCommand } from "@aws-sdk/client-s3";

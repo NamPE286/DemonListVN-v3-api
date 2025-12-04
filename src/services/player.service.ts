@@ -102,7 +102,7 @@ export async function getPlayersBatch(uid: string[]) {
     return uid.map(id => data.find(player => player.uid === id)).filter(Boolean)
 }
 
-export async function getPlayer(uid?: string, name?: string): Promise<TPlayer> {
+export async function getPlayer(uid?: string, name?: string) {
     if (uid) {
         const { data, error } = await supabase
             .from('players')

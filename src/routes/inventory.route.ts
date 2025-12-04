@@ -1,5 +1,5 @@
-import userAuth from '@src/middleware/userAuth.middleware'
-import itemOwnerCheck from '@src/middleware/itemOwnerCheck.middleware'
+import userAuth from '@src/middleware/user-auth.middleware'
+import itemOwnerCheck from '@src/middleware/item-owner-check.middleware'
 import express from 'express'
 import { consumeCase } from '@src/services/inventory.service'
 import supabase from '@src/client/supabase'

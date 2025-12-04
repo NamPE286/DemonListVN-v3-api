@@ -1,5 +1,5 @@
 import supabase from '@src/client/supabase'
-import userAuth from '@src/middleware/userAuth.middleware'
+import userAuth from '@src/middleware/user-auth.middleware'
 import express from 'express'
 import { getClans, getClan, createClan, updateClan, fetchClanMembers, addClanMember, removeClanMember, inviteToClan, fetchClanRecords, acceptClanInvitation, rejectClanInvitation, getClanInvitation } from '@src/services/clan.service'
 

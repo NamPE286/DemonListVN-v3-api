@@ -1,10 +1,10 @@
 import express from 'express'
 import type { NextFunction, Response, Request } from 'express'
-import adminAuth from '@src/middleware/adminAuth.middleware'
-import { getLevelDeathCount } from '@src/services/deathCount.service'
+import adminAuth from '@src/middleware/admin-auth.middleware'
+import { getLevelDeathCount } from '@src/services/death-count.service'
 import { getLevelRecords } from '@src/services/record.service'
 import { updateLevel, getLevel, fetchLevelFromGD, deleteLevel } from '@src/services/level.service'
-import userAuth from '@src/middleware/userAuth.middleware'
+import userAuth from '@src/middleware/user-auth.middleware'
 import supabase from '@src/client/supabase'
 import { getEventLevelsSafe } from '@src/services/event.service'
 

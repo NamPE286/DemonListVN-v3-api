@@ -1,7 +1,7 @@
 import supabase from '@src/client/supabase'
 import { sendNotification } from '@src/services/notification.service'
 import { getOrder } from '@src/services/store.service'
-import adminAuth from '@src/middleware/adminAuth.middleware'
+import adminAuth from '@src/middleware/admin-auth.middleware'
 import express from 'express'
 import { FRONTEND_URL } from '@src/config/constants'
 

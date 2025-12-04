@@ -1,5 +1,5 @@
 import { getCoupon, redeem } from '@src/services/store.service'
-import userAuth from '@src/middleware/userAuth.middleware'
+import userAuth from '@src/middleware/user-auth.middleware'
 import express from 'express'
 
 const router = express.Router()

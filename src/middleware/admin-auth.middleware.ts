@@ -1,6 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from 'jsonwebtoken'
-import Player from "@src/classes/Player";
 import logger from "@src/utils/logger";
 import { getPlayer } from '@src/services/player.service';
 
