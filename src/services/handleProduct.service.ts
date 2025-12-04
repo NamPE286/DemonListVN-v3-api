@@ -5,6 +5,7 @@ import { sendMessageToChannel } from "@src/services/discord.service";
 import { sendNotification } from "@src/services/notification.service";
 import type { getOrder } from "@src/services/store.service";
 import { FRONTEND_URL } from "@src/config/constants";
+import { getClan } from "@src/services/clan.service";
 
 interface HandleProduct {
     pre: (buyer: Player, recipient: Player, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>;
@@ -62,9 +63,7 @@ handleProduct.set(1, {
 
 handleProduct.set(3, {
     pre: async (buyer, recipient, order) => {
-        const clan = new Clan({ id: order.targetClanID! })
-
-        await clan.pull()
+        const clan = new Clan(await getClan(order.targetClanID!))
         await clan.extendBoost(order.quantity!);
 
         const { error } = await supabase
@@ -77,8 +76,7 @@ handleProduct.set(3, {
         }
     },
     post: async (buyer, recipient, order) => {
-        const clan = new Clan({ id: order.targetClanID! })
-        await clan.pull()
+        const clan = new Clan(await getClan(order.targetClanID!))
 
         let msg = ''
 

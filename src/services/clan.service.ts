@@ -24,3 +24,17 @@ export async function getClans({ start = 0, end = 50, sortBy = 'boostedUntil', a
 
     return data
 }
+
+export async function getClan(clanId: number): Promise<Clan> {
+    const { data, error } = await supabase
+        .from('clans')
+        .select('*, players!owner(*, clans!id(*))')
+        .eq('id', clanId)
+        .single()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}

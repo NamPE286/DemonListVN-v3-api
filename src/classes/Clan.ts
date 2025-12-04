@@ -2,26 +2,13 @@ import supabase from '@src/client/supabase'
 import ClanInvitation from '@src/classes/ClanInvitation'
 import Player from '@src/classes/Player'
 import { sendNotification } from '@src/services/notification.service'
+import { getClan } from '@src/services/clan.service'
 import type { TClan } from '@src/types'
 
 interface Clan extends TClan { }
 
 class Clan {
     constructor(data: TClan) {
-        Object.assign(this, data)
-    }
-
-    async pull() {
-        var { data, error } = await supabase
-            .from('clans')
-            .select('*, players!owner(*, clans!id(*))')
-            .eq('id', this.id!)
-            .single()
-
-        if (error) {
-            throw new Error(error.message)
-        }
-
         Object.assign(this, data)
     }
 
@@ -47,7 +34,9 @@ class Clan {
         this.id = data.id
 
         await player.update({ updateClan: true })
-        await this.pull()
+        
+        const clanData = await getClan(this.id!)
+        Object.assign(this, clanData)
     }
 
     async update() {
@@ -79,7 +68,8 @@ class Clan {
             throw new Error(error.message)
         }
 
-        await this.pull()
+        const clanData = await getClan(this.id!)
+        Object.assign(this, clanData)
     }
 
     async fetchMembers({ start = 0, end = 50, sortBy = 'rating', ascending = 'false' } = {}) {
@@ -99,7 +89,8 @@ class Clan {
     }
 
     async addMember(uid: string) {
-        await this.pull()
+        const clanData = await getClan(this.id!)
+        Object.assign(this, clanData)
 
         if (this.memberCount! >= this.memberLimit! && this.memberLimit != 0) {
             throw new Error('Member limit exceeded')
@@ -121,11 +112,15 @@ class Clan {
 
         player.clan = this.id
         await player.update({ updateClan: true })
-        await this.pull()
+        
+        const updatedClanData = await getClan(this.id!)
+        Object.assign(this, updatedClanData)
     }
 
     async removeMember(uid: string) {
-        await this.pull()
+        const clanData = await getClan(this.id!)
+        Object.assign(this, clanData)
+        
         const player = new Player({ uid: uid })
         await player.pull()
 
@@ -141,7 +136,9 @@ class Clan {
 
         player.clan = null
         await player.update({ updateClan: true })
-        await this.pull()
+        
+        const updatedClanData = await getClan(this.id!)
+        Object.assign(this, updatedClanData)
     }
 
     async invite(uid: string) {
