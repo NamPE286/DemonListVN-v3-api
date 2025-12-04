@@ -1,6 +1,6 @@
 import express from 'express'
 import type { Request } from 'express'
-import type { SepayWebhookBody } from '@src/types/sepayWebhook';
+import type { SepayWebhookBody } from '@src/types/sepay-webhook';
 import { getProductByID, addNewOrder, changeOrderState, getOrder, renewStock, handlePayment, addOrderItems } from '@src/services/store.service';
 import { getSepayPaymentLink } from '@src/services/payment.service';
 import userAuth from '@src/middleware/user-auth.middleware';

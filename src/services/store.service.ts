@@ -5,7 +5,7 @@ import { sendMessageToChannel } from '@src/services/discord.service';
 import type { Response } from 'express';
 import { handleProduct } from "@src/services/handle-product.service";
 import { sepay } from "@src/client/sepay";
-import type { SepayWebhookOrder } from "@src/types/sepayWebhook";
+import type { SepayWebhookOrder } from "@src/types/sepay-webhook";
 import { getClan, extendClanBoost } from "@src/services/clan.service";
 import { getPlayer, extendPlayerSupporter } from "@src/services/player.service";
 
