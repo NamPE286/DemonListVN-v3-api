@@ -1,5 +1,6 @@
 import express, { application } from 'express'
 import Record from '@src/classes/Record'
+import { submitRecord } from '@src/services/record.service'
 import userAuth from '@src/middleware/userAuth.middleware'
 import logger from '@src/utils/logger'
 
@@ -34,10 +35,8 @@ router.route('/')
             return
         }
 
-        const record = new Record(req.body)
-
         try {
-            await record.submit()
+            await submitRecord(req.body)
             res.send()
             logger.notice(`New record submitted! Please check it out.`)
         } catch (err: any) {

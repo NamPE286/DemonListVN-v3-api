@@ -2,6 +2,7 @@ import supabase from '@src/client/supabase'
 import Record from '@src/classes/Record'
 import { sendNotification } from '@src/services/notification.service'
 import { getLevel } from '@src/services/level.service'
+import { getRecord } from '@src/services/record.service'
 import userAuth from '@src/middleware/userAuth.middleware'
 import logger from '@src/utils/logger'
 import express from 'express'
@@ -26,8 +27,7 @@ router.route('/')
      */
     .put(userAuth, async (req, res) => {
         const { user } = res.locals
-        const record = new Record({ userid: req.body.userid, levelid: req.body.levelid })
-        await record.pull()
+        const record = await getRecord(req.body.userid, req.body.levelid)
 
         if (record.reviewer != res.locals.user.uid || (!user.isAdmin && !user.isTrusted)) {
             res.status(401).send()

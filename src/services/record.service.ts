@@ -1,7 +1,24 @@
 import supabase from "@src/client/supabase";
 import RecordClass from "@src/classes/Record";
 import Player from "@src/classes/Player";
-import { getLevel } from "@src/services/level.service";
+import { getLevel, fetchLevelFromGD, updateLevel } from "@src/services/level.service";
+import { getPlayer } from "@src/services/player.service";
+import { approved } from "@src/services/pointercrate.service";
+import type { TRecord } from "@src/types";
+import getVideoId from "get-video-id";
+
+async function isLevelExists(id: number) {
+    const { data, error } = await supabase
+        .from('levels')
+        .select('id')
+        .eq('id', id)
+
+    if (error || !data.length) {
+        return false
+    }
+
+    return true
+}
 
 export async function getDemonListRecords({ start = 0, end = 0, isChecked = false } = {}) {
     if (typeof isChecked == 'string') {
@@ -222,11 +239,10 @@ export async function retrieveRecord(user: Player) {
         throw new Error("No available record")
     }
 
-    const record = new RecordClass({ userid: res.userid, levelid: res.levelid })
-    await record.pull()
+    const record = await getRecord(res.userid, res.levelid)
     record.reviewer = res.reviewer = user.uid!
     record.queueNo = null
-    record.update()
+    await updateRecord(record)
 
     return data
 }
@@ -278,5 +294,162 @@ export async function changeSuggestedRating(uid: string, levelID: number, rating
 
     if (error) {
         throw new Error(error.message)
+    }
+}
+
+export async function getRecord(userid: string, levelid: number) {
+    const { data, error } = await supabase
+        .from('records')
+        .select('*')
+        .match({ userid, levelid })
+        .single()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}
+
+export async function submitRecord(recordData: TRecord) {
+    if (!(await isLevelExists(recordData.levelid!))) {
+        let apiLevel = await fetchLevelFromGD(recordData.levelid!)
+
+        if (apiLevel.length != 5 && apiLevel.difficulty != 'Extreme Demon' && apiLevel.difficulty != 'Insane Demon') {
+            throw {
+                en: 'Level is not hard enough',
+                vi: 'Level không đủ khó'
+            }
+        }
+
+        await updateLevel({
+            id: recordData.levelid,
+            name: apiLevel.name,
+            creator: apiLevel.author,
+            isPlatformer: apiLevel.length == 5
+        })
+    }
+
+    const level = await getLevel(recordData.levelid!)
+    const player = await getPlayer(recordData.userid)
+
+    let existingRecord;
+    try {
+        existingRecord = await getRecord(recordData.userid!, recordData.levelid!)
+    } catch {
+        // Record doesn't exist, will create new one
+        if (player.pointercrate) {
+            const apv = await approved(player.pointercrate, level.name!);
+            await updateRecord(recordData, true, apv)
+        } else {
+            await updateRecord(recordData, true)
+        }
+        return
+    }
+
+    if (!level.isPlatformer && (existingRecord.progress! >= recordData.progress!)) {
+        throw {
+            en: 'Better record is submitted',
+            vi: "Đã có bản ghi tốt hơn"
+        }
+    }
+
+    if (level.isPlatformer && (existingRecord.progress! <= recordData.progress!)) {
+        throw {
+            en: 'Better record is submitted',
+            vi: "Đã có bản ghi tốt hơn"
+        }
+    }
+
+    if (player.pointercrate) {
+        const apv = await approved(player.pointercrate, level.name!);
+        await updateRecord(recordData, true, apv)
+    } else {
+        await updateRecord(recordData, true)
+    }
+}
+
+export async function validateRecord(recordData: TRecord) {
+    if (!recordData.videoLink) {
+        throw {
+            en: "Missing video's link",
+            vi: "Thiếu liên kết video"
+        }
+    }
+
+    const level = await getLevel(recordData.levelid!)
+    const { id, service } = getVideoId(recordData.videoLink)
+
+    if (!id || !service) {
+        throw {
+            en: "Invalid video's link",
+            vi: "Liên kết video không hợp lệ"
+        }
+    }
+
+    if (service != 'youtube') {
+        throw {
+            en: "Video's link is not YouTube",
+            vi: "Liên kết video không phải YouTube"
+        }
+    }
+
+    const video: any = await (
+        (await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${id}&key=${process.env.GOOGLE_API_KEY}`)).json()
+    )
+
+    const name = level.name!.toLowerCase()
+    const title: string = video.items[0].snippet.title.toLowerCase()
+    const desc: string = video.items[0].snippet.description.toLowerCase()
+
+    if (!title.includes(name) && !desc.includes(name)) {
+        throw {
+            en: "Level's name is not in the title or description of the video",
+            vi: "Tên level không có trong tiêu đề hay mô tả của video"
+        }
+    }
+
+    if (recordData.progress == 100 && !level.isPlatformer) {
+        return;
+    }
+
+    if (!level.isPlatformer && !title.includes(recordData.progress!.toString()) && !desc.includes(recordData.progress!.toString())) {
+        throw {
+            en: "Progress is not 100% and is not in the title or description of the video",
+            vi: "Tiến độ không phải 100% và không có trong tiêu đề hay mô tả của video"
+        }
+    }
+}
+
+export async function updateRecord(recordData: TRecord, validate = false, accepted: boolean | null = null) {
+    if (validate) {
+        await validateRecord(recordData)
+    }
+
+    if (accepted !== null) {
+        recordData.isChecked = accepted;
+    }
+
+    const { error } = await supabase
+        .from('records')
+        .upsert(recordData as any)
+
+    if (error) {
+        console.error(error)
+        throw new Error(error.message)
+    }
+}
+
+export async function deleteRecord(userid: string, levelid: number) {
+    const { error } = await supabase
+        .from('records')
+        .delete()
+        .match({ userid, levelid })
+
+    if (error) {
+        throw {
+            en: error.message,
+            vi: error.message
+        }
     }
 }
