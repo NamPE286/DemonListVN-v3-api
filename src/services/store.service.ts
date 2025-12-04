@@ -5,10 +5,9 @@ import { sendNotification } from '@src/services/notification.service'
 import { sendMessageToChannel } from '@src/services/discord.service';
 import type { Response } from 'express';
 import { handleProduct } from "@src/services/handleProduct.service";
-import Clan from "@src/classes/Clan";
 import { sepay } from "@src/client/sepay";
 import type { SepayWebhookOrder } from "@src/types/sepayWebhook";
-import { getClan } from "@src/services/clan.service";
+import { getClan, extendClanBoost } from "@src/services/clan.service";
 
 interface Item {
     id: number;
@@ -170,8 +169,7 @@ export async function redeem(code: string, player: Player) {
     }
 
     if (coupon.productID == 3) {
-        const clan = new Clan(await getClan(player.clan!))
-        await clan.extendBoost(coupon.quantity)
+        await extendClanBoost(player.clan!, coupon.quantity)
     }
 
     if (coupon.productID == 4) {

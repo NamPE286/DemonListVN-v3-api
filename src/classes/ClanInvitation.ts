@@ -1,5 +1,5 @@
 import supabase from "@src/client/supabase";
-import Clan from "@src/classes/Clan";
+import { addClanMember } from "@src/services/clan.service";
 import type { TClanInvitation } from "@src/types";
 
 interface ClanInvitation extends TClanInvitation { }
@@ -51,8 +51,7 @@ class ClanInvitation {
             throw new Error('Invalid invitation')
         }
 
-        const clan = new Clan({ id: this.clan })
-        await clan.addMember(this.to!)
+        await addClanMember(this.clan!, this.to!)
 
         const { error } = await supabase
             .from('clanInvitations')

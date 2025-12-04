@@ -1,14 +1,13 @@
 import supabase from '@src/client/supabase'
-import Clan from '@src/classes/Clan'
 import ClanInvitation from '@src/classes/ClanInvitation'
 import userAuth from '@src/middleware/userAuth.middleware'
 import express from 'express'
-import { getClans, getClan } from '@src/services/clan.service'
+import { getClans, getClan, createClan, updateClan, fetchClanMembers, addClanMember, removeClanMember, inviteToClan, fetchClanRecords } from '@src/services/clan.service'
 
 const router = express.Router()
 
 async function isOwner(uid: string, clanID: number) {
-    const clan = new Clan(await getClan(clanID))
+    const clan = await getClan(clanID)
 
     return uid == clan.owner
 }
@@ -103,10 +102,8 @@ router.route('/')
         req.body.owner = user.uid
         delete req.body.id
 
-        const clan = new Clan(req.body)
-
         try {
-            await clan.create()
+            const clan = await createClan(req.body)
             res.send(clan)
         } catch (err) {
             console.error(err)
@@ -171,7 +168,7 @@ router.route('/:id')
         const { id } = req.params
 
         try {
-            const clan = new Clan(await getClan(Number(id)))
+            const clan = await getClan(Number(id))
             res.send(clan)
         } catch (err) {
             console.error(err)
@@ -217,10 +214,9 @@ router.route('/:id')
         }
 
         req.body.id = id
-        const clan = new Clan(req.body)
 
         try {
-            await clan.update()
+            await updateClan(req.body)
             res.send()
         } catch (err) {
             console.error(err)
@@ -330,10 +326,9 @@ router.route('/:id/members')
      */
     .get(async (req, res) => {
         const { id } = req.params
-        const clan = new Clan({ id: parseInt(id) })
 
         try {
-            res.send(await clan.fetchMembers(req.query))
+            res.send(await fetchClanMembers(parseInt(id), req.query))
         } catch (err) {
             console.error(err)
             res.status(500).send()
@@ -393,10 +388,9 @@ router.route('/:id/records')
      */
     .get(async (req, res) => {
         const { id } = req.params
-        const clan = new Clan({ id: parseInt(id) })
 
         try {
-            res.send(await clan.fetchRecords(req.query))
+            res.send(await fetchClanRecords(parseInt(id), req.query))
         } catch (err) {
             console.error(err)
             res.status(500).send()
@@ -431,10 +425,10 @@ router.route('/invite/:uid')
             return
         }
 
-        const clan = new Clan(await getClan(user.clan))
+        const clan = await getClan(user.clan)
 
         if (clan.isPublic || clan.owner == user.uid) {
-            await clan.invite(uid)
+            await inviteToClan(user.clan, clan.name!, uid)
             res.send()
             return
         }
@@ -527,14 +521,14 @@ router.route('/leave')
             return
         }
 
-        const clan = new Clan(await getClan(user.clan))
+        const clan = await getClan(user.clan)
 
         if (user.uid == clan.owner) {
             res.status(500).send()
             return
         }
 
-        await clan.removeMember(user.uid!)
+        await removeClanMember(user.clan, user.uid!)
 
         res.send()
     })
@@ -561,7 +555,7 @@ router.route('/:id/join')
     .put(userAuth, async (req, res) => {
         const { user } = res.locals
         const { id } = req.params
-        const clan = new Clan(await getClan(Number(id)))
+        const clan = await getClan(Number(id))
 
         if (!clan.isPublic) {
             res.status(403).send()
@@ -573,7 +567,7 @@ router.route('/:id/join')
             return
         }
 
-        await clan.addMember(user.uid!)
+        await addClanMember(Number(id), user.uid!)
 
         const { error } = await supabase
             .from('clanInvitations')
@@ -649,7 +643,7 @@ router.route('/:id/invitation/:uid')
     .delete(userAuth, async (req, res) => {
         const { id, uid } = req.params
         const { user } = res.locals
-        const clan = new Clan(await getClan(Number(id)))
+        const clan = await getClan(Number(id))
 
         if (clan.owner != user.uid) {
             res.status(403).send()
@@ -695,7 +689,7 @@ router.route('/:id/kick/:uid')
     .patch(userAuth, async (req, res) => {
         const { id, uid } = req.params
         const { user } = res.locals
-        const clan = new Clan(await getClan(Number(id)))
+        const clan = await getClan(Number(id))
 
         if (user.uid == uid) {
             res.status(500).send()
@@ -707,7 +701,7 @@ router.route('/:id/kick/:uid')
             return
         }
 
-        await clan.removeMember(uid)
+        await removeClanMember(Number(id), uid)
         res.send()
     })
 

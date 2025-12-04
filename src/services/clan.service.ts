@@ -1,5 +1,9 @@
 import supabase from "@src/client/supabase"
 import type { Database } from '@src/types/supabase'
+import ClanInvitation from '@src/classes/ClanInvitation'
+import Player from '@src/classes/Player'
+import { sendNotification } from '@src/services/notification.service'
+import type { TClan } from '@src/types'
 
 type Clan = Database['public']['Tables']['clans']['Update']
 
@@ -37,4 +41,204 @@ export async function getClan(clanId: number): Promise<Clan> {
     }
 
     return data
+}
+
+export async function createClan(clanData: TClan): Promise<TClan> {
+    if (clanData.memberLimit && clanData.memberLimit < 0) {
+        throw new Error('Invalid member limit')
+    }
+
+    const { data, error } = await supabase
+        .from('clans')
+        .insert(clanData as any)
+        .select()
+        .single()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    const player = new Player({ uid: data.owner })
+    await player.pull()
+
+    player.clan = data.id
+
+    await player.update({ updateClan: true })
+    
+    const updatedClanData = await getClan(data.id)
+    return updatedClanData as TClan
+}
+
+export async function updateClan(clanData: TClan): Promise<TClan> {
+    const player = new Player({ uid: clanData.owner! })
+    await player.pull()
+
+    if (player.clan != clanData.id) {
+        throw new Error("Cannot give ownership. This player is not this clan's member")
+    }
+
+    if (clanData.memberLimit && clanData.memberLimit < 0) {
+        throw new Error('Invalid member limit')
+    }
+
+    const updateData = structuredClone(clanData)
+
+    if (!isBoostActive(clanData)) {
+        delete updateData.homeContent
+    }
+
+    delete updateData.boostedUntil
+
+    const { error } = await supabase
+        .from('clans')
+        .update(clanData)
+        .eq('id', clanData.id!)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    const updatedClanData = await getClan(clanData.id!)
+    return updatedClanData as TClan
+}
+
+export async function fetchClanMembers(clanId: number, { start = 0, end = 50, sortBy = 'rating', ascending = 'false' } = {}) {
+    const { data, error } = await supabase
+        .from('players')
+        .select('*, clans!id(*)')
+        .eq('clan', clanId)
+        .eq('isHidden', false)
+        .order(sortBy, { ascending: ascending == 'true', nullsFirst: false })
+        .range(start, end)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}
+
+export async function addClanMember(clanId: number, uid: string): Promise<TClan> {
+    const clanData = await getClan(clanId)
+
+    if (clanData.memberCount! >= clanData.memberLimit! && clanData.memberLimit != 0) {
+        throw new Error('Member limit exceeded')
+    }
+
+    const player = new Player({ uid: uid })
+    await player.pull()
+
+    if (player.clan) {
+        throw new Error('Player is already in a clan')
+    }
+
+    const tmp = clanData as any
+    delete tmp.players
+    tmp.memberCount!++
+    
+    const { error } = await supabase
+        .from('clans')
+        .update({ memberCount: tmp.memberCount })
+        .eq('id', clanId)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    player.clan = clanId
+    await player.update({ updateClan: true })
+    
+    const updatedClanData = await getClan(clanId)
+    return updatedClanData as TClan
+}
+
+export async function removeClanMember(clanId: number, uid: string): Promise<TClan> {
+    const clanData = await getClan(clanId)
+    
+    const player = new Player({ uid: uid })
+    await player.pull()
+
+    if (player.clan != clanId) {
+        throw new Error('Player is not in this clan')
+    }
+
+    const tmp = clanData as any
+    delete tmp.players
+    tmp.memberCount!--
+    
+    const { error } = await supabase
+        .from('clans')
+        .update({ memberCount: tmp.memberCount })
+        .eq('id', clanId)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    player.clan = null
+    await player.update({ updateClan: true })
+    
+    const updatedClanData = await getClan(clanId)
+    return updatedClanData as TClan
+}
+
+export async function inviteToClan(clanId: number, clanName: string, uid: string): Promise<void> {
+    const player = new Player({ uid: uid })
+    await player.pull()
+
+    if (player.clan) {
+        throw new Error('Player is already in a clan')
+    }
+
+    const invitation = new ClanInvitation({ to: player.uid, clan: clanId })
+    await invitation.update()
+    await sendNotification({ to: uid, content: `You've been invited to ${clanName} clan!`, redirect: `/clan/${clanId}` })
+}
+
+export async function fetchClanRecords(clanId: number, { start = 0, end = 50, sortBy = 'dlPt', ascending = 'false' } = {}) {
+    const { data, error } = await supabase
+        .from('records')
+        .select('*, players!userid!inner(*, clans!id(*)), levels(*)')
+        .eq('players.clan', clanId)
+        .eq('players.isHidden', false)
+        .eq('isChecked', true)
+        .not(sortBy, 'is', null)
+        .order(sortBy, { ascending: ascending == 'true' })
+        .range(start, end)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}
+
+export async function extendClanBoost(clanId: number, day: number): Promise<void> {
+    const clanData = await getClan(clanId)
+    let boostedUntil: string
+
+    if (!clanData.boostedUntil || new Date(clanData.boostedUntil) < new Date()) {
+        const newDate = new Date(new Date().getTime() + day * 24 * 60 * 60 * 1000);
+        boostedUntil = newDate.toISOString();
+    } else {
+        const newDate = new Date(new Date(clanData.boostedUntil).getTime() + day * 24 * 60 * 60 * 1000);
+        boostedUntil = newDate.toISOString();
+    }
+
+    const { error } = await supabase
+        .from('clans')
+        .update({ boostedUntil })
+        .eq('id', clanId)
+
+    if (error) {
+        throw new Error(error.message);
+    }
+}
+
+export function isBoostActive(clanData: { boostedUntil?: string | null }): boolean {
+    if (!clanData.boostedUntil) {
+        return false;
+    }
+
+    return new Date(clanData.boostedUntil) > new Date();
 }
