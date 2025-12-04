@@ -1,5 +1,5 @@
 import supabase from '@src/client/supabase'
-import { gdapi } from '@src/classes/GDApi'
+import { gdapi } from '@src/client/GDApi'
 import { addChangelog } from '@src/services/changelog.service'
 import type { TLevel } from '@src/types'
 
