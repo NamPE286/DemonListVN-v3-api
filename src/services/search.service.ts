@@ -7,7 +7,7 @@ function isNumeric(value: string) {
 async function getPlayerByDiscordID(id: string) {
     const { data, error } = await supabase
         .from("players")
-        .select("*")
+        .select("*, clans!id(*)")
         .eq("discord", id)
 
     if (error) {
