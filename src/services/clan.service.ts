@@ -1,9 +1,8 @@
 import supabase from "@src/client/supabase"
 import type { Database } from '@src/types/supabase'
-import ClanInvitation from '@src/classes/ClanInvitation'
 import Player from '@src/classes/Player'
 import { sendNotification } from '@src/services/notification.service'
-import type { TClan } from '@src/types'
+import type { TClan, TClanInvitation } from '@src/types'
 
 type Clan = Database['public']['Tables']['clans']['Update']
 
@@ -190,8 +189,7 @@ export async function inviteToClan(clanId: number, clanName: string, uid: string
         throw new Error('Player is already in a clan')
     }
 
-    const invitation = new ClanInvitation({ to: player.uid, clan: clanId })
-    await invitation.update()
+    await upsertClanInvitation({ to: player.uid, clan: clanId })
     await sendNotification({ to: uid, content: `You've been invited to ${clanName} clan!`, redirect: `/clan/${clanId}` })
 }
 
@@ -241,4 +239,75 @@ export function isBoostActive(clanData: { boostedUntil?: string | null }): boole
     }
 
     return new Date(clanData.boostedUntil) > new Date();
+}
+
+// Clan Invitation Functions
+
+export async function clanInvitationExists(to: string, clanId: number): Promise<boolean> {
+    const { data, error } = await supabase
+        .from('clanInvitations')
+        .select('*')
+        .match({ to, clan: clanId })
+
+    if (error) {
+        return false
+    }
+
+    return data.length > 0
+}
+
+export async function getClanInvitation(to: string, clanId: number): Promise<TClanInvitation> {
+    const { data, error } = await supabase
+        .from('clanInvitations')
+        .select('*')
+        .match({ to, clan: clanId })
+        .single()
+
+    if (error || !data) {
+        throw new Error(error?.message || 'Invitation not found')
+    }
+
+    return data
+}
+
+export async function upsertClanInvitation(invitation: TClanInvitation): Promise<void> {
+    const { error } = await supabase
+        .from('clanInvitations')
+        .upsert(invitation as any)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+}
+
+export async function acceptClanInvitation(to: string, clanId: number): Promise<void> {
+    if (!(await clanInvitationExists(to, clanId))) {
+        throw new Error('Invalid invitation')
+    }
+
+    await addClanMember(clanId, to)
+
+    const { error } = await supabase
+        .from('clanInvitations')
+        .delete()
+        .eq('to', to)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+}
+
+export async function rejectClanInvitation(to: string, clanId: number): Promise<void> {
+    if (!(await clanInvitationExists(to, clanId))) {
+        throw new Error('Invalid invitation')
+    }
+
+    const { error } = await supabase
+        .from('clanInvitations')
+        .delete()
+        .match({ to, clan: clanId })
+
+    if (error) {
+        throw new Error(error.message)
+    }
 }

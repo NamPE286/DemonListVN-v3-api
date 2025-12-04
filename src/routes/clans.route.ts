@@ -1,8 +1,7 @@
 import supabase from '@src/client/supabase'
-import ClanInvitation from '@src/classes/ClanInvitation'
 import userAuth from '@src/middleware/userAuth.middleware'
 import express from 'express'
-import { getClans, getClan, createClan, updateClan, fetchClanMembers, addClanMember, removeClanMember, inviteToClan, fetchClanRecords } from '@src/services/clan.service'
+import { getClans, getClan, createClan, updateClan, fetchClanMembers, addClanMember, removeClanMember, inviteToClan, fetchClanRecords, acceptClanInvitation, rejectClanInvitation, getClanInvitation } from '@src/services/clan.service'
 
 const router = express.Router()
 
@@ -458,10 +457,9 @@ router.route('/:id/invite')
     .patch(userAuth, async (req, res) => {
         const { user } = res.locals
         const { id } = req.params
-        const invitation = new ClanInvitation({ to: user.uid, clan: parseInt(id) })
 
         try {
-            await invitation.accept()
+            await acceptClanInvitation(user.uid!, parseInt(id))
             res.send()
         } catch (err) {
             console.error(err)
@@ -490,10 +488,9 @@ router.route('/:id/invite')
     .delete(userAuth, async (req, res) => {
         const { user } = res.locals
         const { id } = req.params
-        const invitation = new ClanInvitation({ to: user.uid, clan: parseInt(id) })
 
         try {
-            await invitation.reject()
+            await rejectClanInvitation(user.uid!, parseInt(id))
             res.send()
         } catch (err) {
             console.error(err)
@@ -606,9 +603,7 @@ router.route('/:id/invitation/:uid')
         const { id, uid } = req.params
 
         try {
-            const invitation = new ClanInvitation({ clan: parseInt(id), to: uid })
-            await invitation.pull()
-
+            const invitation = await getClanInvitation(uid, parseInt(id))
             res.send(invitation)
         } catch (err) {
             console.error(err)
@@ -651,8 +646,7 @@ router.route('/:id/invitation/:uid')
         }
 
         try {
-            const invitation = new ClanInvitation({ clan: parseInt(id), to: uid })
-            await invitation.reject()
+            await rejectClanInvitation(uid, parseInt(id))
 
             res.send()
         } catch (err) {
