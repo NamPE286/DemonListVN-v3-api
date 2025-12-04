@@ -8,6 +8,7 @@ import { handleProduct } from "@src/services/handleProduct.service";
 import { sepay } from "@src/client/sepay";
 import type { SepayWebhookOrder } from "@src/types/sepayWebhook";
 import { getClan, extendClanBoost } from "@src/services/clan.service";
+import { getPlayer, extendPlayerSupporter } from "@src/services/player.service";
 
 interface Item {
     id: number;
@@ -165,7 +166,7 @@ export async function redeem(code: string, player: Player) {
     }
 
     if (coupon.productID == 1) {
-        await player.extendSupporter(coupon.quantity)
+        await extendPlayerSupporter(player.uid!, coupon.quantity)
     }
 
     if (coupon.productID == 3) {
@@ -173,7 +174,7 @@ export async function redeem(code: string, player: Player) {
     }
 
     if (coupon.productID == 4) {
-        await player.extendSupporter(0, coupon.quantity)
+        await extendPlayerSupporter(player.uid!, 0, coupon.quantity)
     }
 
     const orderID = new Date().getTime();
@@ -407,11 +408,8 @@ export async function handlePayment(id: number , sepayOrderData: SepayWebhookOrd
         return;
     }
 
-    const buyer = new Player({ uid: order.userID })
-    const recipient = new Player({ uid: order.giftTo ? order.giftTo : order.userID })
-
-    await buyer.pull();
-    await recipient.pull();
+    const buyer = await getPlayer(order.userID)
+    const recipient = await getPlayer(order.giftTo ? order.giftTo : order.userID)
 
     if (!handleProduct.has(order.productID!)) {
         return

@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import jwt from 'jsonwebtoken'
 import Player from "@src/classes/Player";
 import supabase from "@src/client/supabase";
+import { getPlayer } from '@src/services/player.service';
 
 export default async function (req: Request, res: Response, next: NextFunction) {
     res.locals.authenticated = false;
@@ -16,13 +17,18 @@ export default async function (req: Request, res: Response, next: NextFunction) 
         const token = req.headers.authorization.split(' ')[1]
         const decoded = jwt.verify(token, process.env.JWT_SECRET!)
         const uid = String(decoded.sub)
-        const player = new Player({ uid: uid })
+        let player;
 
         try {
-            await player.pull()
+            player = await getPlayer(uid)
         } catch { }
 
-        if (player.isBanned) {
+        if (player?.isBanned) {
+            res.status(401).send();
+            return;
+        }
+
+        if (!player) {
             res.status(401).send();
             return;
         }

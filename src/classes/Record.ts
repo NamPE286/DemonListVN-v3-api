@@ -2,6 +2,7 @@ import supabase from '@src/client/supabase'
 import Player from '@src/classes/Player';
 import { approved } from '@src/services/pointercrate.service';
 import { getLevel, fetchLevelFromGD, updateLevel } from '@src/services/level.service'
+import { getPlayer } from '@src/services/player.service'
 import type { TRecord } from '@src/types'
 import getVideoId from 'get-video-id';
 
@@ -60,9 +61,7 @@ class Record {
 
         const record = new Record(this)
         const level = await getLevel(this.levelid!)
-        const player = new Player({ uid: this.userid })
-
-        await player.pull();
+        const player = await getPlayer(this.userid)
 
         try {
             await record.pull()

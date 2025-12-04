@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import jwt from 'jsonwebtoken'
 import Player from "@src/classes/Player";
 import logger from "@src/utils/logger";
+import { getPlayer } from '@src/services/player.service';
 
 export default async function (req: Request, res: Response, next: NextFunction) {
     if (!req.headers.authorization ||
@@ -15,11 +16,9 @@ export default async function (req: Request, res: Response, next: NextFunction) 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET!)
         const uid = String(decoded.sub)
-        const player = new Player({uid: uid})
+        const player = await getPlayer(uid)
 
-        await player.pull()
-
-        if(!player.isAdmin) {
+        if(!player?.isAdmin) {
             return
         }
 

@@ -2,6 +2,7 @@ import supabase from "@src/client/supabase"
 import type { Database } from '@src/types/supabase'
 import Player from '@src/classes/Player'
 import { sendNotification } from '@src/services/notification.service'
+import { getPlayer, updatePlayer } from '@src/services/player.service'
 import type { TClan, TClanInvitation } from '@src/types'
 
 type Clan = Database['public']['Tables']['clans']['Update']
@@ -57,20 +58,16 @@ export async function createClan(clanData: TClan): Promise<TClan> {
         throw new Error(error.message)
     }
 
-    const player = new Player({ uid: data.owner })
-    await player.pull()
+    const player = await getPlayer(data.owner)
 
-    player.clan = data.id
-
-    await player.update({ updateClan: true })
+    await updatePlayer({ ...player, clan: data.id }, { updateClan: true })
     
     const updatedClanData = await getClan(data.id)
     return updatedClanData as TClan
 }
 
 export async function updateClan(clanData: TClan): Promise<TClan> {
-    const player = new Player({ uid: clanData.owner! })
-    await player.pull()
+    const player = await getPlayer(clanData.owner!)
 
     if (player.clan != clanData.id) {
         throw new Error("Cannot give ownership. This player is not this clan's member")
@@ -124,8 +121,7 @@ export async function addClanMember(clanId: number, uid: string): Promise<TClan>
         throw new Error('Member limit exceeded')
     }
 
-    const player = new Player({ uid: uid })
-    await player.pull()
+    const player = await getPlayer(uid)
 
     if (player.clan) {
         throw new Error('Player is already in a clan')
@@ -144,8 +140,7 @@ export async function addClanMember(clanId: number, uid: string): Promise<TClan>
         throw new Error(error.message)
     }
 
-    player.clan = clanId
-    await player.update({ updateClan: true })
+    await updatePlayer({ ...player, clan: clanId }, { updateClan: true })
     
     const updatedClanData = await getClan(clanId)
     return updatedClanData as TClan
@@ -154,8 +149,7 @@ export async function addClanMember(clanId: number, uid: string): Promise<TClan>
 export async function removeClanMember(clanId: number, uid: string): Promise<TClan> {
     const clanData = await getClan(clanId)
     
-    const player = new Player({ uid: uid })
-    await player.pull()
+    const player = await getPlayer(uid)
 
     if (player.clan != clanId) {
         throw new Error('Player is not in this clan')
@@ -174,16 +168,14 @@ export async function removeClanMember(clanId: number, uid: string): Promise<TCl
         throw new Error(error.message)
     }
 
-    player.clan = null
-    await player.update({ updateClan: true })
+    await updatePlayer({ ...player, clan: null }, { updateClan: true })
     
     const updatedClanData = await getClan(clanId)
     return updatedClanData as TClan
 }
 
 export async function inviteToClan(clanId: number, clanName: string, uid: string): Promise<void> {
-    const player = new Player({ uid: uid })
-    await player.pull()
+    const player = await getPlayer(uid)
 
     if (player.clan) {
         throw new Error('Player is already in a clan')

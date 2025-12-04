@@ -1,4 +1,5 @@
 import Player from "@src/classes/Player";
+import { getPlayer, updatePlayer, isPlayerSupporterActive, getPlayerTitle } from '@src/services/player.service'
 
 export async function getAccessToken(code: string) {
     const response = await fetch("https://discord.com/api/v10/oauth2/token", {
@@ -66,25 +67,25 @@ export async function createDirectMessageChannel(userID: string): Promise<string
 }
 
 export async function sendDirectMessage(uid: string, content: string, bypass: boolean = false) {
-    const player = new Player({ uid: uid })
+    const player = await getPlayer(uid)
 
-    await player.pull();
-
-    if (!bypass && (!player.isSupporterActive() || !player.discord)) {
+    if (!bypass && (!isPlayerSupporterActive(player) || !player.discord)) {
         return;
     }
 
-    if (player.DiscordDMChannelID == null) {
-        player.DiscordDMChannelID = await createDirectMessageChannel(player.discord!)
+    let DiscordDMChannelID = player.DiscordDMChannelID
 
-        if (player.DiscordDMChannelID == null) {
+    if (DiscordDMChannelID == null) {
+        DiscordDMChannelID = await createDirectMessageChannel(player.discord!)
+
+        if (DiscordDMChannelID == null) {
             throw new Error("Failed to create channel")
         }
 
-        await player.update();
+        await updatePlayer({ ...player, DiscordDMChannelID });
     }
 
-    await fetch(`https://discord.com/api/v10/channels/${player.DiscordDMChannelID}/messages`, {
+    await fetch(`https://discord.com/api/v10/channels/${DiscordDMChannelID}/messages`, {
         method: "POST",
         body: JSON.stringify({
             "content": content
@@ -166,11 +167,11 @@ export async function syncRoleDLVN(player: Player) {
         s.delete(value);
     }
 
-    if (player.isSupporterActive()) {
+    if (isPlayerSupporterActive(player)) {
         s.add(roles.supporter)
     }
 
-    const title = player.getTitle('dl')
+    const title = getPlayerTitle(player, 'dl')
 
     if (title != null) {
         // @ts-ignore
@@ -212,11 +213,11 @@ export async function syncRoleGDVN(player: Player) {
         s.delete(value);
     }
 
-    if (player.isSupporterActive()) {
+    if (isPlayerSupporterActive(player)) {
         s.add(roles.supporter)
     }
 
-    const title = player.getTitle('dl')
+    const title = getPlayerTitle(player, 'dl')
 
     if (title != null) {
         if (title.title == "SP" || title.title == "C" || title.title == "B" || title.title == "A") {

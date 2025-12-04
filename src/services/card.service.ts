@@ -1,5 +1,6 @@
 import supabase from "@src/client/supabase";
 import type Player from "@src/classes/Player";
+import { extendPlayerSupporter } from '@src/services/player.service';
 
 export async function getCard(id: string) {
     const { data, error } = await supabase
@@ -37,7 +38,7 @@ export async function linkCard(id: string, player: Player) {
         throw new Error(error.message)
     }
 
-    await player.extendSupporter(card.supporterIncluded)
+    await extendPlayerSupporter(player.uid!, card.supporterIncluded)
 }
 
 export async function updateCardContent(id: string, content: string) {

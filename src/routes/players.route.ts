@@ -8,7 +8,7 @@ import { getPlayerSubmissions } from '@src/services/record.service'
 import { syncRoleDLVN, syncRoleGDVN } from '@src/services/discord.service'
 import supabase from '@src/client/supabase'
 import { EVENT_SELECT_STR } from '@src/services/event.service'
-import { getPlayers, getPlayersBatch } from '@src/services/player.service'
+import { getPlayers, getPlayersBatch, getPlayer, updatePlayer, getPlayerInventoryItems } from '@src/services/player.service'
 
 const router = express.Router()
 
@@ -98,8 +98,7 @@ router.route('/')
         }
 
         try {
-            const player = new Player(data)
-            await player.update()
+            await updatePlayer(data)
 
             res.send()
         } catch (err) {
@@ -170,15 +169,10 @@ router.route('/:uid')
         const { cached } = req.query
 
         try {
-            const player = new Player({})
-
-            if (uid.startsWith('@')) {
-                player.name = uid.slice(1)
-            } else {
-                player.uid = uid
-            }
-
-            await player.pull()
+            const player = await getPlayer(
+                uid.startsWith('@') ? undefined : uid,
+                uid.startsWith('@') ? uid.slice(1) : undefined
+            )
 
             res.send(player)
         } catch (err) {
@@ -379,9 +373,8 @@ router.route('/:id/medals')
      */
     .get(async (req, res) => {
         const { id } = req.params
-        const player = new Player({ uid: id })
         try {
-            res.send(await player.getInventoryItems())
+            res.send(await getPlayerInventoryItems(id))
         } catch (err) {
             console.error(err)
             res.status(500).send()
