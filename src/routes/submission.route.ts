@@ -35,8 +35,8 @@ router.route('/')
         }
 
         try {
-            await submitRecord(req.body)
-            res.send()
+            const result = await submitRecord(req.body)
+            res.send(result)
             logger.notice(`New record submitted! Please check it out.`)
         } catch (err: any) {
             res.status(500).send(err)

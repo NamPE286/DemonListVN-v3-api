@@ -29,8 +29,7 @@ export async function approved(name: string, levelName: string) {
     const response = await fetch(`https://pointercrate.com/api/v1/players?name=${name}`);
     
     if (!response.ok) {
-        console.log(await response.text());
-        return false;
+        throw response.status;
     }
     
     const res: any = await response.json();
