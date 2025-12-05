@@ -166,3 +166,4 @@ dist
 !.env.example
 .wrangler/
 test.ts
+.vercel
