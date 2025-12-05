@@ -4,6 +4,7 @@ import { getPlayer } from "@src/services/player.service";
 import { approved } from "@src/services/pointercrate.service";
 import type { TRecord, TPlayer } from "@src/types";
 import getVideoId from "get-video-id";
+import logger from "@src/utils/logger";
 
 async function isLevelExists(id: number) {
     const { data, error } = await supabase
@@ -353,11 +354,13 @@ export async function submitRecord(recordData: TRecord) {
                 logs.push(`Checking Pointercrate approval for: ${player.pointercrate}, ${level.name}`);
                 const apv = await approved(player.pointercrate, level.name!);
                 logs.push(`Pointercrate approval result: ${apv}`);
-                await updateRecord(recordData, true, apv)
+                const updateLogs = await updateRecord(recordData, true, apv);
+                logs.push(...updateLogs);
                 logs.push('Record updated with Pointercrate approval');
             } else {
                 logs.push('Updating record without Pointercrate check');
-                await updateRecord(recordData, true)
+                const updateLogs = await updateRecord(recordData, true, false);
+                logs.push(...updateLogs);
                 logs.push('Record updated');
             }
             logs.push('Completed - new record created');
@@ -391,18 +394,21 @@ export async function submitRecord(recordData: TRecord) {
             try {
                 const apv = await approved(player.pointercrate, level.name!);
                 logs.push(`Pointercrate approval result: ${apv}`);
-                await updateRecord(recordData, true, apv)
-                logs.push('Record updated with Pointercrate approval');
+                const updateLogs = await updateRecord(recordData, true, apv);
+                logs.push(...updateLogs);
+                logs.push(`Record updated with Pointercrate approval: ${apv}`);
             } catch (err) {
                 logs.push(`Failed to fetch from Pointercrate: ${JSON.stringify(err)}`);
                 logs.push('Updating record without Pointercrate check');
-                await updateRecord(recordData, true)
+                const updateLogs = await updateRecord(recordData, true, false);
+                logs.push(...updateLogs);
                 logs.push('Record updated');
             }
 
         } else {
             logs.push('Updating record without Pointercrate check');
-            await updateRecord(recordData, true)
+            const updateLogs = await updateRecord(recordData, true, false);
+            logs.push(...updateLogs);
             logs.push('Record updated');
         }
         logs.push('Completed - record updated');
@@ -418,7 +424,13 @@ export async function submitRecord(recordData: TRecord) {
 }
 
 export async function validateRecord(recordData: TRecord) {
+    const logs: string[] = [];
+    const logMsg = `Starting validation for record: levelId=${recordData.levelid}, userId=${recordData.userid}, progress=${recordData.progress}`;
+    logs.push(logMsg);
+    
     if (!recordData.videoLink) {
+        const logMsg = `Validation failed: Missing video link for levelId=${recordData.levelid}`;
+        logs.push(logMsg);
         throw {
             en: "Missing video's link",
             vi: "Thiếu liên kết video"
@@ -429,6 +441,8 @@ export async function validateRecord(recordData: TRecord) {
     const { id, service } = getVideoId(recordData.videoLink)
 
     if (!id || !service) {
+        const logMsg = `Validation failed: Invalid video link - ${recordData.videoLink}`;
+        logs.push(logMsg);
         throw {
             en: "Invalid video's link",
             vi: "Liên kết video không hợp lệ"
@@ -436,11 +450,16 @@ export async function validateRecord(recordData: TRecord) {
     }
 
     if (service != 'youtube') {
+        const logMsg = `Validation failed: Video service is ${service}, not YouTube - ${recordData.videoLink}`;
+        logs.push(logMsg);
         throw {
             en: "Video's link is not YouTube",
             vi: "Liên kết video không phải YouTube"
         }
     }
+    
+    const validatedMsg = `Video validated: id=${id}, service=${service}`;
+    logs.push(validatedMsg);
 
     const video: any = await (
         (await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${id}&key=${process.env.GOOGLE_API_KEY}`)).json()
@@ -451,6 +470,8 @@ export async function validateRecord(recordData: TRecord) {
     const desc: string = video.items[0].snippet.description.toLowerCase()
 
     if (!title.includes(name) && !desc.includes(name)) {
+        const logMsg = `Validation failed: Level name "${level.name}" not found in video title or description`;
+        logs.push(logMsg);
         throw {
             en: "Level's name is not in the title or description of the video",
             vi: "Tên level không có trong tiêu đề hay mô tả của video"
@@ -458,20 +479,31 @@ export async function validateRecord(recordData: TRecord) {
     }
 
     if (recordData.progress == 100 && !level.isPlatformer) {
-        return;
+        const logMsg = `Validation successful: 100% progress on non-platformer level ${level.name}`;
+        logs.push(logMsg);
+        return logs;
     }
 
     if (!level.isPlatformer && !title.includes(recordData.progress!.toString()) && !desc.includes(recordData.progress!.toString())) {
+        const logMsg = `Validation failed: Progress ${recordData.progress}% not found in video title or description`;
+        logs.push(logMsg);
         throw {
             en: "Progress is not 100% and is not in the title or description of the video",
             vi: "Tiến độ không phải 100% và không có trong tiêu đề hay mô tả của video"
         }
     }
+    
+    const successMsg = `Validation successful for record: levelId=${recordData.levelid}, progress=${recordData.progress}%`;
+    logs.push(successMsg);
+    return logs;
 }
 
 export async function updateRecord(recordData: TRecord, validate = false, accepted: boolean | null = null) {
+    const logs: string[] = [];
+    
     if (validate) {
-        await validateRecord(recordData)
+        const validationLogs = await validateRecord(recordData);
+        logs.push(...validationLogs);
     }
 
     if (accepted !== null) {
@@ -486,6 +518,8 @@ export async function updateRecord(recordData: TRecord, validate = false, accept
         console.error(error)
         throw new Error(error.message)
     }
+    
+    return logs;
 }
 
 export async function deleteRecord(userid: string, levelid: number) {
