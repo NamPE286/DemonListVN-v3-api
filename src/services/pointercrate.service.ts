@@ -26,10 +26,17 @@ export async function hasRecord(id: number, levelName: string) {
 }
 
 export async function approved(name: string, levelName: string) {
-    const res: any = await (await fetch(`https://pointercrate.com/api/v1/players?name=${name}`)).json();
+    const response = await fetch(`https://pointercrate.com/api/v1/players?name=${name}`);
+    
+    if (!response.ok) {
+        console.log(await response.text());
+        return false;
+    }
+    
+    const res: any = await response.json();
 
-    for(const i of res) {
-        if(await hasRecord(i.id, levelName)) {
+    for (const i of res) {
+        if (await hasRecord(i.id, levelName)) {
             return true;
         }
     }
