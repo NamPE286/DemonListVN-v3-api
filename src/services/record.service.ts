@@ -303,113 +303,118 @@ export async function changeSuggestedRating(uid: string, levelID: number, rating
 export async function submitRecord(recordData: TRecord) {
     const logs: string[] = [];
 
-    logs.push(`Starting with recordData: ${JSON.stringify(recordData, null, 2)}`);
+    try {
+        logs.push(`Starting with recordData: ${JSON.stringify(recordData, null, 2)}`);
 
-    const levelExists = await isLevelExists(recordData.levelid!);
-    logs.push(`Level exists check: ${levelExists}`);
+        const levelExists = await isLevelExists(recordData.levelid!);
+        logs.push(`Level exists check: ${levelExists}`);
 
-    if (!levelExists) {
-        logs.push(`Fetching level from GD, levelID: ${recordData.levelid}`);
-        let apiLevel = await fetchLevelFromGD(recordData.levelid!)
-        logs.push(`Fetched GD level: ${JSON.stringify(apiLevel, null, 2)}`);
+        if (!levelExists) {
+            logs.push(`Fetching level from GD, levelID: ${recordData.levelid}`);
+            let apiLevel = await fetchLevelFromGD(recordData.levelid!)
+            logs.push(`Fetched GD level: ${JSON.stringify(apiLevel, null, 2)}`);
 
-        if (apiLevel.length != 5 && apiLevel.difficulty != 'Extreme Demon' && apiLevel.difficulty != 'Insane Demon') {
-            logs.push(`Level not hard enough. Length: ${apiLevel.length}, Difficulty: ${apiLevel.difficulty}`);
+            if (apiLevel.length != 5 && apiLevel.difficulty != 'Extreme Demon' && apiLevel.difficulty != 'Insane Demon') {
+                logs.push(`Level not hard enough. Length: ${apiLevel.length}, Difficulty: ${apiLevel.difficulty}`);
+                throw {
+                    en: 'Level is not hard enough',
+                    vi: 'Level không đủ khó'
+                }
+            }
+
+            logs.push('Updating level in database');
+            await updateLevel({
+                id: recordData.levelid,
+                name: apiLevel.name,
+                creator: apiLevel.author,
+                isPlatformer: apiLevel.length == 5
+            })
+            logs.push('Level updated successfully');
+        }
+
+        logs.push(`Getting level data for levelID: ${recordData.levelid}`);
+        const level = await getLevel(recordData.levelid!)
+        logs.push(`Level data: ${JSON.stringify(level, null, 2)}`);
+
+        logs.push(`Getting player data for userID: ${recordData.userid}`);
+        const player = await getPlayer(recordData.userid)
+        logs.push(`Player data: ${JSON.stringify(player, null, 2)}`);
+
+        let existingRecord;
+        try {
+            logs.push('Checking for existing record');
+            existingRecord = await getRecord(recordData.userid!, recordData.levelid!)
+            logs.push(`Existing record found: ${JSON.stringify(existingRecord, null, 2)}`);
+        } catch (e) {
+            logs.push(`No existing record found, error: ${JSON.stringify(e)}`);
+            logs.push(`Player pointercrate: ${player.pointercrate}`);
+
+            if (player.pointercrate) {
+                logs.push(`Checking Pointercrate approval for: ${player.pointercrate}, ${level.name}`);
+                const apv = await approved(player.pointercrate, level.name!);
+                logs.push(`Pointercrate approval result: ${apv}`);
+                await updateRecord(recordData, true, apv)
+                logs.push('Record updated with Pointercrate approval');
+            } else {
+                logs.push('Updating record without Pointercrate check');
+                await updateRecord(recordData, true)
+                logs.push('Record updated');
+            }
+            logs.push('Completed - new record created');
+            return { logs }
+        }
+
+        logs.push(`Comparing progress. Level isPlatformer: ${level.isPlatformer}`);
+        logs.push(`Existing progress: ${existingRecord.progress}, New progress: ${recordData.progress}`);
+
+        if (!level.isPlatformer && (existingRecord.progress! >= recordData.progress!)) {
+            logs.push('Non-platformer: existing record is better or equal');
             throw {
-                en: 'Level is not hard enough',
-                vi: 'Level không đủ khó',
-                logs
+                en: 'Better record is submitted',
+                vi: "Đã có bản ghi tốt hơn"
             }
         }
 
-        logs.push('Updating level in database');
-        await updateLevel({
-            id: recordData.levelid,
-            name: apiLevel.name,
-            creator: apiLevel.author,
-            isPlatformer: apiLevel.length == 5
-        })
-        logs.push('Level updated successfully');
-    }
+        if (level.isPlatformer && (existingRecord.progress! <= recordData.progress!)) {
+            logs.push('Platformer: existing record is better or equal');
+            throw {
+                en: 'Better record is submitted',
+                vi: "Đã có bản ghi tốt hơn"
+            }
+        }
 
-    logs.push(`Getting level data for levelID: ${recordData.levelid}`);
-    const level = await getLevel(recordData.levelid!)
-    logs.push(`Level data: ${JSON.stringify(level, null, 2)}`);
-
-    logs.push(`Getting player data for userID: ${recordData.userid}`);
-    const player = await getPlayer(recordData.userid)
-    logs.push(`Player data: ${JSON.stringify(player, null, 2)}`);
-
-    let existingRecord;
-    try {
-        logs.push('Checking for existing record');
-        existingRecord = await getRecord(recordData.userid!, recordData.levelid!)
-        logs.push(`Existing record found: ${JSON.stringify(existingRecord, null, 2)}`);
-    } catch (e) {
-        logs.push(`No existing record found, error: ${JSON.stringify(e)}`);
+        logs.push('New record is better, updating');
         logs.push(`Player pointercrate: ${player.pointercrate}`);
 
         if (player.pointercrate) {
             logs.push(`Checking Pointercrate approval for: ${player.pointercrate}, ${level.name}`);
-            const apv = await approved(player.pointercrate, level.name!);
-            logs.push(`Pointercrate approval result: ${apv}`);
-            await updateRecord(recordData, true, apv)
-            logs.push('Record updated with Pointercrate approval');
+            try {
+                const apv = await approved(player.pointercrate, level.name!);
+                logs.push(`Pointercrate approval result: ${apv}`);
+                await updateRecord(recordData, true, apv)
+                logs.push('Record updated with Pointercrate approval');
+            } catch (err) {
+                logs.push(`Failed to fetch from Pointercrate: ${JSON.stringify(err)}`);
+                logs.push('Updating record without Pointercrate check');
+                await updateRecord(recordData, true)
+                logs.push('Record updated');
+            }
+
         } else {
             logs.push('Updating record without Pointercrate check');
             await updateRecord(recordData, true)
             logs.push('Record updated');
         }
-        logs.push('Completed - new record created');
+        logs.push('Completed - record updated');
+
         return { logs }
-    }
-
-    logs.push(`Comparing progress. Level isPlatformer: ${level.isPlatformer}`);
-    logs.push(`Existing progress: ${existingRecord.progress}, New progress: ${recordData.progress}`);
-
-    if (!level.isPlatformer && (existingRecord.progress! >= recordData.progress!)) {
-        logs.push('Non-platformer: existing record is better or equal');
+    } catch (error) {
+        logs.push(`Error occurred: ${JSON.stringify(error)}`);
         throw {
-            en: 'Better record is submitted',
-            vi: "Đã có bản ghi tốt hơn",
+            ...(typeof error === 'object' && error !== null ? error : {}),
             logs
         }
     }
-
-    if (level.isPlatformer && (existingRecord.progress! <= recordData.progress!)) {
-        logs.push('Platformer: existing record is better or equal');
-        throw {
-            en: 'Better record is submitted',
-            vi: "Đã có bản ghi tốt hơn",
-            logs
-        }
-    }
-
-    logs.push('New record is better, updating');
-    logs.push(`Player pointercrate: ${player.pointercrate}`);
-
-    if (player.pointercrate) {
-        logs.push(`Checking Pointercrate approval for: ${player.pointercrate}, ${level.name}`);
-        try {
-            const apv = await approved(player.pointercrate, level.name!);
-            logs.push(`Pointercrate approval result: ${apv}`);
-            await updateRecord(recordData, true, apv)
-            logs.push('Record updated with Pointercrate approval');
-        } catch (err) {
-            logs.push(`Failed to fetch from Pointercrate: ${JSON.stringify(err)}`);
-            logs.push('Updating record without Pointercrate check');
-            await updateRecord(recordData, true)
-            logs.push('Record updated');
-        }
-
-    } else {
-        logs.push('Updating record without Pointercrate check');
-        await updateRecord(recordData, true)
-        logs.push('Record updated');
-    }
-    logs.push('Completed - record updated');
-
-    return { logs }
 }
 
 export async function validateRecord(recordData: TRecord) {
