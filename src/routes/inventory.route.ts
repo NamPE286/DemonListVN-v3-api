@@ -3,6 +3,7 @@ import itemOwnerCheck from '@src/middleware/item-owner-check.middleware'
 import express from 'express'
 import { consumeCase } from '@src/services/inventory.service'
 import supabase from '@src/client/supabase'
+import { getPlayerInventoryItems } from '@src/services/player.service'
 
 const router = express.Router()
 
@@ -11,7 +12,7 @@ router.route('/')
         const { user } = res.locals
 
         try {
-            res.send(await user.getInventoryItems());
+            res.send(await getPlayerInventoryItems(user.uid));
         } catch (err) {
             console.error(err);
             res.status(500).send()
