@@ -74,7 +74,7 @@ export function calcLeaderboard(players: any[]): Diff[] {
     }
 
     for (let i = 0; i < data.length; i++) {
-        data[i].elo = Math.max(100, data[i].elo);
+        data[i].elo = Math.max(500, data[i].elo);
     }
 
     for (let i = 0; i < data.length; i++) {
