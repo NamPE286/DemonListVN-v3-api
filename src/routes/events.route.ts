@@ -28,6 +28,7 @@ import supabase from '@src/client/supabase'
 import { calcLeaderboard } from '@src/services/elo.service'
 import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted } from '@src/services/event-quest.service'
 import { addInventoryItem, receiveReward } from '@src/services/inventory.service'
+import { isActive } from '@src/utils'
 
 const router = express.Router()
 
@@ -149,7 +150,7 @@ router.route('/proof')
 
         const event = await getEvent(parseInt(req.body.eventID));
 
-        if (event.isSupporterOnly && !user.isSupporterActive()) {
+        if (event.isSupporterOnly && !isActive(user.supporterUntil)) {
             res.status(401).send();
             return;
         }
