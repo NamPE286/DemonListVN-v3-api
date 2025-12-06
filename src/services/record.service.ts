@@ -342,6 +342,7 @@ export async function submitRecord(recordData: TRecord) {
         logs.push(`Player data: ${JSON.stringify(player, null, 2)}`);
 
         let existingRecord;
+        
         try {
             logs.push('Checking for existing record');
             existingRecord = await getRecord(recordData.userid!, recordData.levelid!)
@@ -352,11 +353,20 @@ export async function submitRecord(recordData: TRecord) {
 
             if (player.pointercrate) {
                 logs.push(`Checking Pointercrate approval for: ${player.pointercrate}, ${level.name}`);
-                const apv = await approved(player.pointercrate, level.name!);
-                logs.push(`Pointercrate approval result: ${apv}`);
-                const updateLogs = await updateRecord(recordData, true, apv);
-                logs.push(...updateLogs);
-                logs.push('Record updated with Pointercrate approval');
+
+                try {
+                    const apv = await approved(player.pointercrate, level.name!);
+                    logs.push(`Pointercrate approval result: ${apv}`);
+                    const updateLogs = await updateRecord(recordData, true, apv);
+                    logs.push(...updateLogs);
+                    logs.push(`Record updated with Pointercrate approval: ${apv}`);
+                } catch (err) {
+                    logs.push(`Failed to fetch from Pointercrate: ${JSON.stringify(err)}`);
+                    logs.push('Updating record without Pointercrate check');
+                    const updateLogs = await updateRecord(recordData, true, false);
+                    logs.push(...updateLogs);
+                    logs.push('Record updated');
+                }
             } else {
                 logs.push('Updating record without Pointercrate check');
                 const updateLogs = await updateRecord(recordData, true, false);
@@ -391,6 +401,7 @@ export async function submitRecord(recordData: TRecord) {
 
         if (player.pointercrate) {
             logs.push(`Checking Pointercrate approval for: ${player.pointercrate}, ${level.name}`);
+
             try {
                 const apv = await approved(player.pointercrate, level.name!);
                 logs.push(`Pointercrate approval result: ${apv}`);
@@ -404,7 +415,6 @@ export async function submitRecord(recordData: TRecord) {
                 logs.push(...updateLogs);
                 logs.push('Record updated');
             }
-
         } else {
             logs.push('Updating record without Pointercrate check');
             const updateLogs = await updateRecord(recordData, true, false);
@@ -427,7 +437,7 @@ export async function validateRecord(recordData: TRecord) {
     const logs: string[] = [];
     const logMsg = `Starting validation for record: levelId=${recordData.levelid}, userId=${recordData.userid}, progress=${recordData.progress}`;
     logs.push(logMsg);
-    
+
     if (!recordData.videoLink) {
         const logMsg = `Validation failed: Missing video link for levelId=${recordData.levelid}`;
         logs.push(logMsg);
@@ -457,7 +467,7 @@ export async function validateRecord(recordData: TRecord) {
             vi: "Liên kết video không phải YouTube"
         }
     }
-    
+
     const validatedMsg = `Video validated: id=${id}, service=${service}`;
     logs.push(validatedMsg);
 
@@ -492,7 +502,7 @@ export async function validateRecord(recordData: TRecord) {
             vi: "Tiến độ không phải 100% và không có trong tiêu đề hay mô tả của video"
         }
     }
-    
+
     const successMsg = `Validation successful for record: levelId=${recordData.levelid}, progress=${recordData.progress}%`;
     logs.push(successMsg);
     return logs;
@@ -500,7 +510,7 @@ export async function validateRecord(recordData: TRecord) {
 
 export async function updateRecord(recordData: TRecord, validate = false, accepted: boolean | null = null) {
     const logs: string[] = [];
-    
+
     if (validate) {
         const validationLogs = await validateRecord(recordData);
         logs.push(...validationLogs);
@@ -518,7 +528,7 @@ export async function updateRecord(recordData: TRecord, validate = false, accept
         console.error(error)
         throw new Error(error.message)
     }
-    
+
     return logs;
 }
 
