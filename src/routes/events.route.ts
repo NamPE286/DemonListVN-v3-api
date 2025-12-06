@@ -341,7 +341,6 @@ router.route('/quest/:questId/check')
 
 router.route('/quest/:questId/claim')
     .post(userAuth, async (req, res) => {
-
         const { questId } = req.params
         const { user } = res.locals
 
@@ -360,11 +359,6 @@ router.route('/quest/:questId/claim')
 
             const quest = await getEventQuest(Number(questId))
             const event = await getEvent(quest.eventId)
-
-            if (event.end && new Date() >= new Date(event.end)) {
-                res.status(401).send()
-                return
-            }
 
             var { error } = await supabase
                 .from('eventQuestClaims')
