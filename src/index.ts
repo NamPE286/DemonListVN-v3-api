@@ -4,6 +4,7 @@ import express from 'express'
 import cors from 'cors'
 import swaggerDocs from '@src/utils/swagger.ts'
 import { version } from '../package.json'
+import { httpServerHandler } from 'cloudflare:node';
 
 import listRoute from './routes/list.route'
 import mergeAccountRoute from './routes/merge-account.route'
@@ -34,14 +35,11 @@ import rulesRoute from './routes/rules.route'
 import itemRoute from './routes/item.route'
 import inventoryRoute from './routes/inventory.route'
 
-import routeLog from '@src/middleware/route-log.middleware'
-
 const app = express()
 const port = 8080
 
 app.use(express.json())
 app.use(cors())
-app.use(routeLog)
 
 app.get('/', (req, res) => {
     res.send({
@@ -84,3 +82,5 @@ app.listen(port, async () => {
     console.log('Timezone: ' + Intl.DateTimeFormat().resolvedOptions().timeZone)
     await swaggerDocs(app, port)
 })
+
+export default httpServerHandler({ port: 8080 });
