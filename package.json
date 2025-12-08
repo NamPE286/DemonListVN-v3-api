@@ -15,7 +15,6 @@
     "@types/uuid": "^9.0.8",
     "@whatwg-node/server": "^0.10.17",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-rate-limit": "^7.2.0",
     "get-video-id": "^4.1.7",
@@ -40,7 +39,7 @@
     "typescript": "^5.0.0"
   },
   "scripts": {
-    "build": "pkgroll",
+    "build": "echo Skip build",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
