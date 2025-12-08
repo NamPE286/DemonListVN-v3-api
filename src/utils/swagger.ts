@@ -1,22 +1,17 @@
 import type { Express, Request, Response } from "express";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import express from "express";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 async function swaggerDocs(app: Express, port: number) {
   try {
     let swaggerSpec;
     
-    // Try to load pre-compiled OpenAPI JSON file
-    const preCompiledPath = path.join(__dirname, '../../static/openapi.json');
-    if (fs.existsSync(preCompiledPath)) {
+    // Try to dynamically import the pre-compiled spec
+    try {
+      // Attempt to import the generated OpenAPI spec
+      const spec = await import('../../static/openapi.json', { with: { type: 'json' } });
+      swaggerSpec = spec.default;
       console.log('Loading pre-compiled OpenAPI spec from static/openapi.json');
-      swaggerSpec = JSON.parse(fs.readFileSync(preCompiledPath, 'utf-8'));
-    } else {
+    } catch {
       // Fall back to dynamic generation
       console.log('Pre-compiled OpenAPI spec not found, generating dynamically');
       const swaggerJsdoc = (await import("swagger-jsdoc")).default;
