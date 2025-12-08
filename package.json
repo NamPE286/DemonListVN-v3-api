@@ -40,6 +40,7 @@
     "typescript": "^5.0.0"
   },
   "scripts": {
+    "build": "pkgroll",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",

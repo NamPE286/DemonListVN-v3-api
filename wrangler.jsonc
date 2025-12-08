@@ -1,5 +1,5 @@
 {
-	"name": "dlvn-api",
+	"name": "dlvnapiv3",
 	"compatibility_date": "2025-11-18",
 	"main": "src/index.ts",
 	"compatibility_flags": [
