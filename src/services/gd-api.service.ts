@@ -3,8 +3,14 @@
  * Replaces the new-gd.js library with a lightweight custom implementation
  */
 
+// Note: The official Geometry Dash API only supports HTTP, not HTTPS
+// This is a limitation of the official servers at boomlings.com
 const GD_API_URL = 'http://www.boomlings.com/database';
 const CORS_PROXY = 'https://www.demonlistvn.com/';
+
+// Standard GD API secret - this is a public value used by all GD API clients
+// Source: https://github.com/MahouSirin/gd.js and other GD API implementations
+const GD_API_SECRET = 'Wmfd2893gb7';
 
 // Difficulty mappings from GD API
 const DIFFICULTY_MAP: Record<number, string> = {
@@ -26,23 +32,16 @@ const DEMON_DIFFICULTY_MAP: Record<number, string> = {
     5: 'Extreme Demon'
 };
 
-const LEVEL_LENGTH_MAP: Record<number, string> = {
-    0: 'Tiny',
-    1: 'Short',
-    2: 'Medium',
-    3: 'Long',
-    4: 'XL',
-    5: 'Plat.'
-};
-
 /**
  * Parse GD API response string into key-value pairs
  */
 function parseGDResponse(data: string, splitter: string = ':'): Record<string, string> {
     const split = data.split(splitter);
     const obj: Record<string, string> = {};
-    for (let i = 0; i < split.length; i += 2) {
-        obj[split[i]] = split[i + 1];
+    for (let i = 0; i < split.length - 1; i += 2) {
+        if (split[i + 1] !== undefined) {
+            obj[split[i]] = split[i + 1];
+        }
     }
     return obj;
 }
@@ -80,13 +79,6 @@ function getDifficulty(diff: number, isDemon: boolean, isAuto: boolean): string 
 }
 
 /**
- * Get level length string from raw value
- */
-function getLevelLength(raw: number): number {
-    return raw;
-}
-
-/**
  * Interface for level data returned from GD API
  */
 interface GDLevel {
@@ -108,7 +100,7 @@ export async function fetchLevelFromGD(levelId: number): Promise<GDLevel> {
             levelID: levelId.toString(),
             inc: '1',
             extras: '0',
-            secret: 'Wmfd2893gb7'  // Standard GD secret for level downloads
+            secret: GD_API_SECRET
         });
 
         // Make request to GD API
