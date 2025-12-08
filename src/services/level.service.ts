@@ -1,5 +1,5 @@
 import supabase from "@src/client/supabase"
-import { gdapi } from '@src/client/GDApi'
+import { fetchLevelFromGD as fetchLevelFromGDAPI } from '@src/services/gd-api.service'
 import { addChangelog } from '@src/services/changelog.service'
 import type { TLevel } from "@src/types"
 
@@ -199,16 +199,8 @@ export async function getLevel(levelId: number): Promise<TLevel> {
 }
 
 export async function fetchLevelFromGD(levelId: number) {
-    const data = await gdapi.levels.get(levelId)
-
-    return {
-        id: data.id,
-        name: data.name,
-        description: data.description,
-        length: data.stats.length.raw,
-        author: data.creator.username,
-        difficulty: data.difficulty.level.pretty
-    }
+    // Use our custom GD API service
+    return await fetchLevelFromGDAPI(levelId);
 }
 
 export async function updateLevel(levelData: TLevel): Promise<void> {
