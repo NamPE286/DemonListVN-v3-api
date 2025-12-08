@@ -34,9 +34,8 @@ function parseGDResponse(data: string, splitter: string = ':'): Record<string, s
 function gdDecodeBase64(str: string): string {
     if (!str) return '';
     try {
-        // GD uses URL-safe base64 variant
         const normalized = str.replace(/_/g, '/').replace(/-/g, '+');
-        // Use Buffer in Node.js environment
+
         return Buffer.from(normalized, 'base64').toString('utf-8');
     } catch (e) {
         return '';
