@@ -4,7 +4,7 @@ import { getUsernameByToken as getIDByToken } from "@src/services/pointercrate.s
 import { updatePlayerDiscord } from "@src/services/player.service"
 import userAuth from "@src/middleware/user-auth.middleware"
 import express from "express"
-import { FRONTEND_URL } from "@src/config/constants"
+import { FRONTEND_URL } from "@src/config/url"
 
 /**
  * @swagger

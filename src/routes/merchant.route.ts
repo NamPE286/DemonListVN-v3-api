@@ -3,7 +3,7 @@ import { sendNotification } from '@src/services/notification.service'
 import { getOrder } from '@src/services/store.service'
 import adminAuth from '@src/middleware/admin-auth.middleware'
 import express from 'express'
-import { FRONTEND_URL } from '@src/config/constants'
+import { FRONTEND_URL } from '@src/config/url'
 
 const router = express.Router()
 

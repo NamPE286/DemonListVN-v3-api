@@ -2,7 +2,7 @@ import supabase from "@src/client/supabase";
 import { sendMessageToChannel } from "@src/services/discord.service";
 import { sendNotification } from "@src/services/notification.service";
 import type { getOrder } from "@src/services/store.service";
-import { FRONTEND_URL } from "@src/config/constants";
+import { FRONTEND_URL } from "@src/config/url";
 import { getClan, extendClanBoost } from "@src/services/clan.service";
 import { extendPlayerSupporter } from "@src/services/player.service";
 import type { Tables } from "@src/types/supabase";

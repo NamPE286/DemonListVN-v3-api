@@ -6,7 +6,7 @@ import { getSepayPaymentLink } from '@src/services/payment.service';
 import userAuth from '@src/middleware/user-auth.middleware';
 import webhookAuth from '@src/middleware/webhook-auth.middleware';
 import { sepay } from '@src/client/sepay';
-import { FRONTEND_URL } from '@src/config/constants';
+import { FRONTEND_URL } from '@src/config/url';
 
 const router = express.Router();
 
