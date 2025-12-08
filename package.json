@@ -10,6 +10,7 @@
     "@types/cors": "^2.8.17",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node-cron": "^3.0.11",
+    "@types/swagger-jsdoc": "^6.0.4",
     "@types/uuid": "^9.0.8",
     "@whatwg-node/server": "^0.10.17",
     "cors": "^2.8.5",
@@ -19,6 +20,7 @@
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^3.0.3",
     "sepay-pg-node": "^1.0.0",
+    "swagger-jsdoc": "^6.2.8",
     "swagger-ui-dist": "^5.30.3",
     "tsx": "^4.20.6",
     "wrangler": "^4.50.0"
@@ -44,6 +46,7 @@
     "update-types": "supabase gen types typescript --local > ./src/lib/types/supabase.ts",
     "sync": "echo y | supabase db pull --schema public; supabase db reset; supabase gen types typescript --local > ./src/lib/types/supabase.ts",
     "generate-openapi": "tsx scripts/generate-openapi.ts",
+    "generate-swagger-html": "tsx scripts/generate-swagger-html.ts",
     "validate-openapi": "tsx scripts/validate-openapi.ts"
   }
 }

@@ -18,9 +18,16 @@ async function swaggerDocs(app: Express, port: number) {
       res.send(swaggerSpec);
     });
 
-    // Serve custom index.html that points to our OpenAPI spec (must be before static middleware)
-    app.get("/docs", (req: Request, res: Response) => {
-      const html = `<!DOCTYPE html>
+    // Serve pre-compiled HTML
+    app.get("/docs", async (req: Request, res: Response) => {
+      try {
+        // Try to import the pre-compiled HTML module
+        const { swaggerHtml } = await import('../../static/swagger-ui.html.ts');
+        res.setHeader("Content-Type", "text/html");
+        res.send(swaggerHtml);
+      } catch {
+        // Fallback: generate HTML inline if pre-compiled version not available
+        const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -58,8 +65,9 @@ async function swaggerDocs(app: Express, port: number) {
   </script>
 </body>
 </html>`;
-      res.setHeader("Content-Type", "text/html");
-      res.send(html);
+        res.setHeader("Content-Type", "text/html");
+        res.send(html);
+      }
     });
 
     // Serve Swagger UI static files (CSS, JS, images) - must be after /docs route

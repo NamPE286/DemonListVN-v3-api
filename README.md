@@ -40,6 +40,16 @@ npm run generate-openapi
 
 This will create `static/openapi.json` file that contains the complete API specification.
 
+### Generate Swagger UI HTML
+
+To generate the pre-compiled Swagger UI HTML file:
+
+```bash
+npm run generate-swagger-html
+```
+
+This will create `static/swagger-ui.html.ts` file that contains the Swagger UI page as a TypeScript module.
+
 ### Validate OpenAPI Specification
 
 To validate the generated OpenAPI JSON:
@@ -48,9 +58,13 @@ To validate the generated OpenAPI JSON:
 npm run validate-openapi
 ```
 
-### Using Pre-compiled OpenAPI Spec
+### Using Pre-compiled Files
 
-The Swagger UI will automatically use the pre-compiled `static/openapi.json` file if it exists, which improves startup performance. If the file doesn't exist, it will fall back to generating the spec dynamically from route files.
+The Swagger UI will automatically use:
+- The pre-compiled `static/openapi.json` file for the API specification
+- The pre-compiled `static/swagger-ui.html.ts` file for the HTML page
+
+This improves startup performance significantly. If these files don't exist, the system will fall back to generating them dynamically at runtime.
 
 # Deployment
 ## Deploy Supabase server

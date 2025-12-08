@@ -170,3 +170,6 @@ test.ts
 
 # Generated OpenAPI spec
 static/openapi.json
+
+# Generated Swagger UI HTML
+static/swagger-ui.html.ts
