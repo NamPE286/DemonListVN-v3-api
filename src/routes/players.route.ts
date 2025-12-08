@@ -8,6 +8,7 @@ import { syncRoleDLVN, syncRoleGDVN } from '@src/services/discord.service'
 import supabase from '@src/client/supabase'
 import { EVENT_SELECT_STR } from '@src/services/event.service'
 import { getPlayers, getPlayersBatch, getPlayer, updatePlayer, getPlayerInventoryItems } from '@src/services/player.service'
+import getAuthUid from '@src/middleware/get-auth-uid'
 
 const router = express.Router()
 
@@ -105,13 +106,13 @@ router.route('/')
         }
     })
 
-    .post(userAuth, async (req, res) => {
-        const user = res.locals.user
+    .post(getAuthUid, async (req, res) => {
+        const { userId } = res.locals
 
         const { error } = await supabase
             .from("players")
             .insert({
-                uid: user.uid!,
+                uid: userId,
                 name: String(new Date().getTime())
             })
 
