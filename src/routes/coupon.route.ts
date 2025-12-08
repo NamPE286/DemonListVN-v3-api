@@ -5,6 +5,31 @@ import express from 'express'
 const router = express.Router()
 
 router.route('/:code')
+    /**
+     * @openapi
+     * "/coupon/{code}":
+     *   get:
+     *     tags:
+     *       - Coupon
+     *     summary: Get coupon details by code
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: code
+     *         in: path
+     *         description: The coupon code
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     *       500:
+     *         description: Internal server error
+     */
     .get(userAuth, async (req, res) => {
         const { code } = req.params
 
@@ -18,6 +43,28 @@ router.route('/:code')
     })
 
 router.route('/:code')
+    /**
+     * @openapi
+     * "/coupon/{code}":
+     *   delete:
+     *     tags:
+     *       - Coupon
+     *     summary: Redeem a coupon code
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: code
+     *         in: path
+     *         description: The coupon code to redeem
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Coupon redeemed successfully
+     *       500:
+     *         description: Internal server error
+     */
     .delete(userAuth, async (req, res) => {
         const { code } = req.params
         const { user } = res.locals

@@ -30,6 +30,43 @@ function validate(path: string, user: Player) {
 const router = express.Router()
 
 router.route('/presign')
+    /**
+     * @openapi
+     * "/storage/presign":
+     *   get:
+     *     tags:
+     *       - Storage
+     *     summary: Get a presigned URL for file upload to S3
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: path
+     *         in: query
+     *         description: File path for upload
+     *         required: true
+     *         schema:
+     *           type: string
+     *       - name: bucket
+     *         in: query
+     *         description: S3 bucket name (defaults to 'cdn')
+     *         required: false
+     *         schema:
+     *           type: string
+     *           default: cdn
+     *     responses:
+     *       200:
+     *         description: Presigned URL generated successfully
+     *         content:
+     *           text/plain:
+     *             schema:
+     *               type: string
+     *       400:
+     *         description: Missing file path
+     *       403:
+     *         description: Forbidden - user not authorized for this path
+     *       500:
+     *         description: Internal server error
+     */
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
         const { path } = req.query as { path: string }

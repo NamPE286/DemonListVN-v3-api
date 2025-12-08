@@ -10,6 +10,53 @@ import { FRONTEND_URL } from '@src/config/constants';
 
 const router = express.Router();
 
+/**
+ * @openapi
+ * "/payment/getPaymentLink/{productID}/{quantity}":
+ *   get:
+ *     tags:
+ *       - Payment
+ *     summary: Get payment link for a product
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: productID
+ *         in: path
+ *         description: The ID of the product
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: quantity
+ *         in: path
+ *         description: Quantity to purchase
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: giftTo
+ *         in: query
+ *         description: UID to gift the product to
+ *         required: false
+ *         schema:
+ *           type: string
+ *       - name: targetClanID
+ *         in: query
+ *         description: Clan ID for clan-related products
+ *         required: false
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 checkoutUrl:
+ *                   type: string
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/getPaymentLink/:productID/:quantity')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals;
@@ -49,6 +96,54 @@ router.route('/getPaymentLink/:productID/:quantity')
         res.status(500).send();
     });
 
+/**
+ * @openapi
+ * "/payment/getPaymentLink":
+ *   post:
+ *     tags:
+ *       - Payment
+ *     summary: Get payment link for multiple items
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     orderID:
+ *                       type: integer
+ *                     productID:
+ *                       type: integer
+ *                     quantity:
+ *                       type: integer
+ *               address:
+ *                 type: string
+ *               phone:
+ *                 type: integer
+ *               recipientName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 checkoutUrl:
+ *                   type: string
+ *       400:
+ *         description: Missing required information
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/getPaymentLink')
     .post(userAuth, async (req, res) => {
         interface Item {
@@ -181,6 +276,25 @@ router.route('/cancelled')
         res.redirect(`${FRONTEND_URL}/orders/${id}`)
     })
 
+/**
+ * @openapi
+ * "/payment/webhook":
+ *   post:
+ *     tags:
+ *       - Payment
+ *     summary: Webhook endpoint for payment provider callbacks
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Webhook processed successfully
+ *       500:
+ *         description: Webhook processing failed
+ */
 router.route('/webhook')
     .post(webhookAuth, async (req: Request<{}, any, SepayWebhookBody>, res) => {
         try {

@@ -8,6 +8,24 @@ import { getPlayerInventoryItems } from '@src/services/player.service'
 const router = express.Router()
 
 router.route('/')
+    /**
+     * @openapi
+     * "/inventory":
+     *   get:
+     *     tags:
+     *       - Inventory
+     *     summary: Get user's inventory items
+     *     security:
+     *       - bearerAuth: []
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     *       500:
+     *         description: Internal server error
+     */
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
 
@@ -20,6 +38,31 @@ router.route('/')
     })
 
 router.route('/:id')
+    /**
+     * @openapi
+     * "/inventory/{id}":
+     *   get:
+     *     tags:
+     *       - Inventory
+     *     summary: Get a specific inventory item by ID
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The ID of the inventory item
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     *       500:
+     *         description: Internal server error
+     */
     .get(userAuth, itemOwnerCheck, async (req, res) => {
         try {
             res.send(res.locals.item);
@@ -30,6 +73,30 @@ router.route('/:id')
     })
 
 router.route('/:id/consume')
+    /**
+     * @openapi
+     * "/inventory/{id}/consume":
+     *   delete:
+     *     tags:
+     *       - Inventory
+     *     summary: Consume/use an inventory item
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The ID of the inventory item to consume
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Item consumed successfully
+     *       404:
+     *         description: Item not found
+     *       500:
+     *         description: Internal server error
+     */
     .delete(userAuth, itemOwnerCheck, async (req, res) => {
         const { item, user } = res.locals
 

@@ -5,6 +5,59 @@ import { sepay } from '@src/client/sepay';
 
 const router = express.Router()
 
+/**
+ * @openapi
+ * "/orders":
+ *   get:
+ *     tags:
+ *       - Orders
+ *     summary: Get all orders for authenticated user
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *       500:
+ *         description: Internal server error
+ *   post:
+ *     tags:
+ *       - Orders
+ *     summary: Create a new order
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     orderID:
+ *                       type: integer
+ *                     productID:
+ *                       type: integer
+ *                     quantity:
+ *                       type: integer
+ *               address:
+ *                 type: string
+ *               phone:
+ *                 type: integer
+ *               recipientName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Order created successfully
+ *       400:
+ *         description: Missing required information
+ */
 router.route('/')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals;
@@ -48,6 +101,33 @@ router.route('/')
         }
     })
 
+/**
+ * @openapi
+ * "/orders/{id}":
+ *   get:
+ *     tags:
+ *       - Orders
+ *     summary: Get a specific order by ID
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The ID of the order
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/:id')
     .get(userAuth, async (req, res) => {
         const { id } = req.params

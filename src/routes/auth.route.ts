@@ -86,6 +86,30 @@ router.route("/link/discord")
         res.send();
     })
 
+/**
+ * @swagger
+ * /auth/link/pointercrate:
+ *   patch:
+ *     summary: Link Pointercrate account to user
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: Pointercrate access token
+ *     responses:
+ *       200:
+ *         description: Successfully linked Pointercrate account
+ *       500:
+ *         description: Internal server error
+ */
 router.route("/link/pointercrate")
     .patch(userAuth, async (req, res) => {
         const { user } = res.locals

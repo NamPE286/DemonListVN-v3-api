@@ -290,6 +290,35 @@ async function getIDBound(list: string, min: boolean) {
     return data.id
 }
 
+/**
+ * @openapi
+ * "/list/{list}/random":
+ *   get:
+ *     tags:
+ *       - List
+ *     summary: Get a random level from a list
+ *     parameters:
+ *       - name: list
+ *         in: path
+ *         description: List type (dl, pl, or fl)
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [dl, pl, fl]
+ *       - name: exclude
+ *         in: query
+ *         description: Level IDs to exclude
+ *         required: false
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success - Returns a random level object
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ */
 router.route('/:list/random')
     .get(async (req, res) => {
         const { list } = req.params

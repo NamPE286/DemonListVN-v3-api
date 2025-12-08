@@ -8,6 +8,24 @@ import { FRONTEND_URL } from '@src/config/constants'
 const router = express.Router()
 
 router.route('/orders')
+    /**
+     * @openapi
+     * "/merchant/orders":
+     *   get:
+     *     tags:
+     *       - Merchant
+     *     summary: Get all pending and paid orders for merchant
+     *     security:
+     *       - bearerAuth: []
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     *       500:
+     *         description: Internal server error
+     */
     .get(adminAuth, async (req, res) => {
         const { data, error } = await supabase
             .from("orders")
@@ -25,6 +43,41 @@ router.route('/orders')
     })
 
 router.route('/order/:id/tracking')
+    /**
+     * @openapi
+     * "/merchant/order/{id}/tracking":
+     *   post:
+     *     tags:
+     *       - Merchant
+     *     summary: Add tracking information to an order
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The order ID
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               content:
+     *                 type: string
+     *                 description: Tracking update content
+     *               link:
+     *                 type: string
+     *                 description: Optional tracking link
+     *     responses:
+     *       200:
+     *         description: Tracking information added successfully
+     *       500:
+     *         description: Internal server error
+     */
     .post(adminAuth, async (req, res) => {
         const { content, link } = req.body as { content: string; link?: string }
         const { id } = req.params

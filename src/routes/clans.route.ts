@@ -735,11 +735,83 @@ router.route('/:id/invitations')
         res.send(data)
     })
 
+/**
+ * @openapi
+ * "/clan/{id}/ban/{uid}":
+ *   post:
+ *     tags:
+ *       - Clan
+ *     summary: Ban a user from a clan
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The ID of the clan
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: uid
+ *         in: path
+ *         description: The UID of the user to ban
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User banned successfully
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/:id/ban/:uid')
     .post(userAuth, async (req, res) => {
 
     })
 
+/**
+ * @openapi
+ * "/clan/{id}/list/{list}":
+ *   get:
+ *     tags:
+ *       - Clan
+ *     summary: Get levels completed by clan members
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The ID of the clan
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: list
+ *         in: path
+ *         description: List type (dl, pl, or fl)
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [dl, pl, fl]
+ *       - name: from
+ *         in: query
+ *         description: Range start index
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *       - name: to
+ *         in: query
+ *         description: Range end index
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 49
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/:id/list/:list')
     .get(async (req, res) => {
         const { id, list } = req.params;

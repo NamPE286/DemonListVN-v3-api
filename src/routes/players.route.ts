@@ -124,6 +124,34 @@ router.route('/')
         res.send();
     })
 
+/**
+ * @openapi
+ * "/players/batch":
+ *   post:
+ *     tags:
+ *       - Player
+ *     summary: Get multiple players by UIDs
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               batch:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of player UIDs
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/batch')
     .post(async (req, res) => {
         const { batch } = req.body
@@ -380,6 +408,29 @@ router.route('/:id/medals')
         }
     })
 
+/**
+ * @openapi
+ * "/players/{uid}/events":
+ *   get:
+ *     tags:
+ *       - Player
+ *     summary: Get player's event proofs
+ *     parameters:
+ *       - name: uid
+ *         in: path
+ *         description: The UID of the player
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/:uid/events')
     .get(async (req, res) => {
         const { uid } = req.params
@@ -398,6 +449,29 @@ router.route('/:uid/events')
         res.send(data)
     })
 
+/**
+ * @openapi
+ * "/players/{uid}/cards":
+ *   get:
+ *     tags:
+ *       - Player
+ *     summary: Get player's supporter cards
+ *     parameters:
+ *       - name: uid
+ *         in: path
+ *         description: The UID of the player
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/:uid/cards')
     .get(async (req, res) => {
         const { uid } = req.params
