@@ -1,0 +1,31 @@
+# Cloudflare Workers Development Environment Variables
+# Copy this file to .dev.vars and fill in your actual values
+
+SUPABASE_API_KEY=your_supabase_api_key_here
+SUPABASE_API_URL=https://your_project.supabase.co
+JWT_SECRET=your_jwt_secret_here
+DISCORD_BOT_TOKEN=your_discord_bot_token
+DISCORD_WEBHOOK_LOG=your_webhook_url
+DISCORD_WEBHOOK_NOTICE=your_webhook_url
+DISCORD_WEBHOOK_CHANGELOG=your_webhook_url
+DISCORD_GENERAL_CHANNEL_ID=your_channel_id
+GOOGLE_API_KEY=your_google_api_key
+CF_ACCOUNT_ID=your_cloudflare_account_id
+CF_ACCESS_KEY_ID=your_cf_access_key
+CF_SECRET_ACCESS_KEY=your_cf_secret_key
+SUBMIT_PASSWORD=your_submit_password
+DEVELOPMENT=true
+
+# Optional - for payment integration
+# SEPAY_ENV=sandbox
+# SEPAY_MERCHANT_ID=your_merchant_id
+# SEPAY_SECRET_PAY=your_secret_key
+
+# Optional - for Discord auth
+# DISCORD_AUTH_CLIENT_ID=your_client_id
+# DISCORD_AUTH_CLIENT_SECRET=your_secret
+# DISCORD_AUTH_REDIRECT_URI=your_redirect_uri
+
+# Optional - for Google auth (local only)
+# SUPABASE_AUTH_GOOGLE_CLIENT_ID=your_client_id
+# SUPABASE_AUTH_GOOGLE_SECRET=your_secret

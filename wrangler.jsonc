@@ -1,8 +1,12 @@
 {
 	"name": "dlvn-api",
-	"compatibility_date": "2025-11-20",
-	"main": "src/index.ts",
+	"compatibility_date": "2025-11-18",
+	"main": "src/worker.ts",
 	"compatibility_flags": [
-		"nodejs_compat"
-	]
+		"nodejs_compat",
+		"nodejs_als"
+	],
+	"define": {
+		"window": "globalThis"
+	}
 }

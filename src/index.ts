@@ -79,8 +79,8 @@ app.use('/rules', rulesRoute)
 app.use('/item', itemRoute)
 app.use('/inventory', inventoryRoute)
 
-app.listen(port, () => {
+app.listen(port, async () => {
     console.log(`Server started on port ${port}`)
     console.log('Timezone: ' + Intl.DateTimeFormat().resolvedOptions().timeZone)
-    swaggerDocs(app, port)
+    await swaggerDocs(app, port)
 })
