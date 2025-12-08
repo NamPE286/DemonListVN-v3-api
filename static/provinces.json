@@ -2,21 +2,21 @@
     "Bắc Giang": {
         "name": "Bắc Giang",
         "region": "Northeast",
-        "cities": [
+        "wards": [
             "Bắc Giang"
         ]
     },
     "Bắc Kạn": {
         "name": "Bắc Kạn",
         "region": "Northeast",
-        "cities": [
+        "wards": [
             "Bắc Kạn"
         ]
     },
     "Cao Bằng": {
         "name": "Cao Bằng",
         "region": "Northeast",
-        "cities": [
+        "wards": [
             "Bạch Đằng",
             "Bảo Lâm",
             "Bảo Lạc",
@@ -78,14 +78,14 @@
     "Hà Giang": {
         "name": "Hà Giang",
         "region": "Northeast",
-        "cities": [
+        "wards": [
             "Hà Giang"
         ]
     },
     "Lạng Sơn": {
         "name": "Lạng Sơn",
         "region": "Northeast",
-        "cities": [
+        "wards": [
             "Ba Sơn",
             "Bình Gia",
             "Bắc Sơn",
@@ -156,7 +156,7 @@
     "Phú Thọ": {
         "name": "Phú Thọ",
         "region": "Northeast",
-        "cities": [
+        "wards": [
             "An Bình",
             "An Nghĩa",
             "Bao La",
@@ -310,7 +310,7 @@
     "Quảng Ninh": {
         "name": "Quảng Ninh",
         "region": "Northeast",
-        "cities": [
+        "wards": [
             "An Sinh",
             "Ba Chẽ",
             "Bãi Cháy",
@@ -370,7 +370,7 @@
     "Thái Nguyên": {
         "name": "Thái Nguyên",
         "region": "Northeast",
-        "cities": [
+        "wards": [
             "An Khánh",
             "Ba Bể",
             "Bá Xuyên",
@@ -468,7 +468,7 @@
     "Tuyên Quang": {
         "name": "Tuyên Quang",
         "region": "Northeast",
-        "cities": [
+        "wards": [
             "An Tường",
             "Bình An",
             "Bình Ca",
@@ -598,7 +598,7 @@
     "Lào Cai": {
         "name": "Lào Cai",
         "region": "Northeast",
-        "cities": [
+        "wards": [
             "A Mú Sung",
             "Bát Xát",
             "Bản Hồ",
@@ -703,14 +703,14 @@
     "Yên Bái": {
         "name": "Yên Bái",
         "region": "Northwest",
-        "cities": [
+        "wards": [
             "Yên Bái"
         ]
     },
     "Điện Biên": {
         "name": "Điện Biên",
         "region": "Northwest",
-        "cities": [
+        "wards": [
             "Búng Lao",
             "Chiềng Sinh",
             "Chà Tở",
@@ -761,14 +761,14 @@
     "Hòa Bình": {
         "name": "Hòa Bình",
         "region": "Northwest",
-        "cities": [
+        "wards": [
             "Hòa Bình"
         ]
     },
     "Lai Châu": {
         "name": "Lai Châu",
         "region": "Northwest",
-        "cities": [
+        "wards": [
             "Bum Nưa",
             "Bum Tở",
             "Bình Lư",
@@ -812,7 +812,7 @@
     "Sơn La": {
         "name": "Sơn La",
         "region": "Northwest",
-        "cities": [
+        "wards": [
             "Bình Thuận",
             "Bó Sinh",
             "Bắc Yên",
@@ -893,7 +893,7 @@
     "Bắc Ninh": {
         "name": "Bắc Ninh",
         "region": "Red River Delta",
-        "cities": [
+        "wards": [
             "An Lạc",
             "Biên Sơn",
             "Biển Động",
@@ -998,14 +998,14 @@
     "Hà Nam": {
         "name": "Hà Nam",
         "region": "Red River Delta",
-        "cities": [
+        "wards": [
             "Phủ Lý"
         ]
     },
     "Hải Dương": {
         "name": "Hải Dương",
         "region": "Red River Delta",
-        "cities": [
+        "wards": [
             "Chí Linh",
             "Hải Dương"
         ]
@@ -1013,7 +1013,7 @@
     "Hưng Yên": {
         "name": "Hưng Yên",
         "region": "Red River Delta",
-        "cities": [
+        "wards": [
             "A Sào",
             "Bình Nguyên",
             "Bình Thanh",
@@ -1123,14 +1123,14 @@
     "Nam Định": {
         "name": "Nam Định",
         "region": "Red River Delta",
-        "cities": [
+        "wards": [
             "Nam Định"
         ]
     },
     "Ninh Bình": {
         "name": "Ninh Bình",
         "region": "Red River Delta",
-        "cities": [
+        "wards": [
             "Bình An",
             "Bình Giang",
             "Bình Lục",
@@ -1265,14 +1265,14 @@
     "Thái Bình": {
         "name": "Thái Bình",
         "region": "Red River Delta",
-        "cities": [
+        "wards": [
             "Thái Bình"
         ]
     },
     "Vĩnh Phúc": {
         "name": "Vĩnh Phúc",
         "region": "Red River Delta",
-        "cities": [
+        "wards": [
             "Phúc Yên",
             "Vĩnh Yên"
         ]
@@ -1280,7 +1280,7 @@
     "Hà Nội": {
         "name": "Hà Nội",
         "region": "Red River Delta",
-        "cities": [
+        "wards": [
             "An Khánh",
             "Ba Vì",
             "Ba Đình",
@@ -1412,7 +1412,7 @@
     "Hải Phòng": {
         "name": "Hải Phòng",
         "region": "Red River Delta",
-        "cities": [
+        "wards": [
             "An Biên",
             "An Dương",
             "An Hưng",
@@ -1532,7 +1532,7 @@
     "Hà Tĩnh": {
         "name": "Hà Tĩnh",
         "region": "North Central Coast",
-        "cities": [
+        "wards": [
             "Bắc Hồng Lĩnh",
             "Can Lộc",
             "Cẩm Bình",
@@ -1607,7 +1607,7 @@
     "Nghệ An": {
         "name": "Nghệ An",
         "region": "North Central Coast",
-        "cities": [
+        "wards": [
             "An Châu",
             "Anh Sơn",
             "Anh Sơn Đông",
@@ -1743,14 +1743,14 @@
     "Quảng Bình": {
         "name": "Quảng Bình",
         "region": "North Central Coast",
-        "cities": [
+        "wards": [
             "Đồng Hới"
         ]
     },
     "Quảng Trị": {
         "name": "Quảng Trị",
         "region": "North Central Coast",
-        "cities": [
+        "wards": [
             "A Dơi",
             "Ba Lòng",
             "Ba Đồn",
@@ -1834,7 +1834,7 @@
     "Thanh Hóa": {
         "name": "Thanh Hóa",
         "region": "North Central Coast",
-        "cities": [
+        "wards": [
             "An Nông",
             "Ba Đình",
             "Biện Thượng",
@@ -2006,14 +2006,14 @@
     "Thừa Thiên Huế": {
         "name": "Thừa Thiên Huế",
         "region": "North Central Coast",
-        "cities": [
+        "wards": [
             "Huế"
         ]
     },
     "Đắk Lắk": {
         "name": "Đắk Lắk",
         "region": "Central Highlands",
-        "cities": [
+        "wards": [
             "Buôn Hồ",
             "Buôn Ma Thuột",
             "Buôn Đôn",
@@ -2121,14 +2121,14 @@
     "Đắk Nông": {
         "name": "Đắk Nông",
         "region": "Central Highlands",
-        "cities": [
+        "wards": [
             "Gia Nghĩa"
         ]
     },
     "Gia Lai": {
         "name": "Gia Lai",
         "region": "Central Highlands",
-        "cities": [
+        "wards": [
             "Al Bá",
             "An Bình",
             "An Hòa",
@@ -2269,14 +2269,14 @@
     "Kon Tum": {
         "name": "Kon Tum",
         "region": "Central Highlands",
-        "cities": [
+        "wards": [
             "Kon Tum"
         ]
     },
     "Lâm Đồng": {
         "name": "Lâm Đồng",
         "region": "Central Highlands",
-        "cities": [
+        "wards": [
             "1 Bảo Lộc",
             "2 Bảo Lộc",
             "3 Bảo Lộc",
@@ -2406,21 +2406,21 @@
     "Bình Định": {
         "name": "Bình Định",
         "region": "South Central Coast",
-        "cities": [
+        "wards": [
             "Quy Nhơn"
         ]
     },
     "Bình Thuận": {
         "name": "Bình Thuận",
         "region": "South Central Coast",
-        "cities": [
+        "wards": [
             "Phan Thiết"
         ]
     },
     "Khánh Hòa": {
         "name": "Khánh Hòa",
         "region": "South Central Coast",
-        "cities": [
+        "wards": [
             "Anh Dũng",
             "Ba Ngòi",
             "Bác Ái",
@@ -2491,21 +2491,21 @@
     "Ninh Thuận": {
         "name": "Ninh Thuận",
         "region": "South Central Coast",
-        "cities": [
+        "wards": [
             "Phan Rang - Tháp Chàm"
         ]
     },
     "Phú Yên": {
         "name": "Phú Yên",
         "region": "South Central Coast",
-        "cities": [
+        "wards": [
             "Tuy Hòa"
         ]
     },
     "Quảng Nam": {
         "name": "Quảng Nam",
         "region": "South Central Coast",
-        "cities": [
+        "wards": [
             "Hội An",
             "Tam Kỳ"
         ]
@@ -2513,7 +2513,7 @@
     "Quảng Ngãi": {
         "name": "Quảng Ngãi",
         "region": "South Central Coast",
-        "cities": [
+        "wards": [
             "An Phú",
             "Ba Dinh",
             "Ba Gia",
@@ -2615,7 +2615,7 @@
     "Đà Nẵng": {
         "name": "Đà Nẵng",
         "region": "South Central Coast",
-        "cities": [
+        "wards": [
             "An Hải",
             "An Khê",
             "An Thắng",
@@ -2715,7 +2715,7 @@
     "Bà Rịa-Vũng Tàu": {
         "name": "Bà Rịa-Vũng Tàu",
         "region": "Southeast",
-        "cities": [
+        "wards": [
             "Bà Rịa",
             "Vũng Tàu"
         ]
@@ -2723,7 +2723,7 @@
     "Bình Dương": {
         "name": "Bình Dương",
         "region": "Southeast",
-        "cities": [
+        "wards": [
             "Dĩ An",
             "Tân Uyên",
             "Thủ Dầu Một",
@@ -2733,14 +2733,14 @@
     "Bình Phước": {
         "name": "Bình Phước",
         "region": "Southeast",
-        "cities": [
+        "wards": [
             "Đồng Xoài"
         ]
     },
     "Đồng Nai": {
         "name": "Đồng Nai",
         "region": "Southeast",
-        "cities": [
+        "wards": [
             "An Lộc",
             "An Phước",
             "An Viễn",
@@ -2841,7 +2841,7 @@
     "Tây Ninh": {
         "name": "Tây Ninh",
         "region": "Southeast",
-        "cities": [
+        "wards": [
             "An Lục Long",
             "An Ninh",
             "An Tịnh",
@@ -2943,7 +2943,7 @@
     "Hồ Chí Minh": {
         "name": "Hồ Chí Minh",
         "region": "Southeast",
-        "cities": [
+        "wards": [
             "An Hội Tây",
             "An Hội Đông",
             "An Khánh",
@@ -3117,7 +3117,7 @@
     "An Giang": {
         "name": "An Giang",
         "region": "Mekong Delta",
-        "cities": [
+        "wards": [
             "An Biên",
             "An Châu",
             "An Cư",
@@ -3225,21 +3225,21 @@
     "Bạc Liêu": {
         "name": "Bạc Liêu",
         "region": "Mekong Delta",
-        "cities": [
+        "wards": [
             "Bạc Liêu"
         ]
     },
     "Bến Tre": {
         "name": "Bến Tre",
         "region": "Mekong Delta",
-        "cities": [
+        "wards": [
             "Bến Tre"
         ]
     },
     "Cà Mau": {
         "name": "Cà Mau",
         "region": "Mekong Delta",
-        "cities": [
+        "wards": [
             "An Trạch",
             "An Xuyên",
             "Biển Bạch",
@@ -3309,7 +3309,7 @@
     "Đồng Tháp": {
         "name": "Đồng Tháp",
         "region": "Mekong Delta",
-        "cities": [
+        "wards": [
             "An Bình",
             "An Hòa",
             "An Hữu",
@@ -3417,7 +3417,7 @@
     "Hậu Giang": {
         "name": "Hậu Giang",
         "region": "Mekong Delta",
-        "cities": [
+        "wards": [
             "Ngã Bảy",
             "Vị Thanh"
         ]
@@ -3425,7 +3425,7 @@
     "Kiên Giang": {
         "name": "Kiên Giang",
         "region": "Mekong Delta",
-        "cities": [
+        "wards": [
             "Hà Tiên",
             "Phú Quốc",
             "Rạch Giá"
@@ -3434,35 +3434,35 @@
     "Long An": {
         "name": "Long An",
         "region": "Mekong Delta",
-        "cities": [
+        "wards": [
             "Tân An"
         ]
     },
     "Sóc Trăng": {
         "name": "Sóc Trăng",
         "region": "Mekong Delta",
-        "cities": [
+        "wards": [
             "Sóc Trăng"
         ]
     },
     "Tiền Giang": {
         "name": "Tiền Giang",
         "region": "Mekong Delta",
-        "cities": [
+        "wards": [
             "Mỹ Tho"
         ]
     },
     "Trà Vinh": {
         "name": "Trà Vinh",
         "region": "Mekong Delta",
-        "cities": [
+        "wards": [
             "Trà Vinh"
         ]
     },
     "Vĩnh Long": {
         "name": "Vĩnh Long",
         "region": "Mekong Delta",
-        "cities": [
+        "wards": [
             "An Bình",
             "An Hiệp",
             "An Hội",
@@ -3592,7 +3592,7 @@
     "Cần Thơ": {
         "name": "Cần Thơ",
         "region": "Mekong Delta",
-        "cities": [
+        "wards": [
             "An Bình",
             "An Lạc Thôn",
             "An Ninh",
