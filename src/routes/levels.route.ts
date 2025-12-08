@@ -77,6 +77,22 @@ router.route('/')
  *       500:
  *         description: Internal server error.
  */
+/**
+ * @openapi
+ * "/levels/new":
+ *   get:
+ *     tags:
+ *       - Level
+ *     summary: Get new unrated levels
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *       500:
+ *         description: Internal server error
+ */
 router.route("/new")
     .get(async (req, res) => {
         const { data, error } = await supabase
@@ -96,6 +112,36 @@ router.route("/new")
         res.send(data);
     });
 
+/**
+ * @openapi
+ * "/levels/random":
+ *   get:
+ *     tags:
+ *       - Level
+ *     summary: Get random levels
+ *     parameters:
+ *       - name: list
+ *         in: query
+ *         description: Filter by list type (dl, fl, pl)
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [dl, fl, pl]
+ *       - name: limit
+ *         in: query
+ *         description: Number of levels to return
+ *         required: false
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *       500:
+ *         description: Internal server error
+ */
 router.route("/random")
     .get(async (req, res) => {
         const { list, limit } = req.query;
@@ -268,6 +314,38 @@ router.route('/:id/deathCount')
         }
     })
 
+/**
+ * @openapi
+ * "/levels/{id}/inEvent":
+ *   get:
+ *     tags:
+ *       - Level
+ *     summary: Check if level is in any active events for user
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The ID of the level
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: type
+ *         in: query
+ *         description: Event type filter
+ *         required: false
+ *         schema:
+ *           type: string
+ *           default: basic
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/:id/inEvent')
     .get(userAuth, async (req, res) => {
         let { type } = req.query

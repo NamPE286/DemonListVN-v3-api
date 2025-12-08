@@ -32,6 +32,74 @@ import { isActive } from '@src/utils'
 
 const router = express.Router()
 
+/**
+ * @openapi
+ * "/events":
+ *   get:
+ *     tags:
+ *       - Event
+ *     summary: Get all events with filters
+ *     parameters:
+ *       - name: search
+ *         in: query
+ *         description: Search term
+ *         required: false
+ *         schema:
+ *           type: string
+ *       - name: eventType
+ *         in: query
+ *         description: Event type filter
+ *         required: false
+ *         schema:
+ *           type: string
+ *           default: all
+ *       - name: contestType
+ *         in: query
+ *         description: Contest type filter
+ *         required: false
+ *         schema:
+ *           type: string
+ *           default: all
+ *       - name: from
+ *         in: query
+ *         description: Range start index
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *       - name: to
+ *         in: query
+ *         description: Range end index
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *       500:
+ *         description: Internal server error
+ *   post:
+ *     tags:
+ *       - Event
+ *     summary: Create a new event (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Event created successfully
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/')
     .get(async (req, res) => {
         let defaultFilter = {
@@ -91,6 +159,35 @@ router.route('/ongoing')
         }
     })
 
+/**
+ * @openapi
+ * "/events/proof":
+ *   get:
+ *     tags:
+ *       - Event
+ *     summary: Get event proofs
+ *     parameters:
+ *       - name: from
+ *         in: query
+ *         description: Range start index
+ *         required: false
+ *         schema:
+ *           type: integer
+ *       - name: to
+ *         in: query
+ *         description: Range end index
+ *         required: false
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/proof')
     .get(async (req, res) => {
         try {
@@ -173,6 +270,42 @@ router.route('/proof')
         }
     })
 
+/**
+ * @openapi
+ * "/events/submitLevel/{levelID}":
+ *   put:
+ *     tags:
+ *       - Event
+ *     summary: Submit event level completion
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: levelID
+ *         in: path
+ *         description: The ID of the level
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: progress
+ *         in: query
+ *         description: Completion progress
+ *         required: false
+ *         schema:
+ *           type: integer
+ *       - name: password
+ *         in: query
+ *         description: Submit password for authentication
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Level submitted successfully
+ *       403:
+ *         description: Invalid password
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/submitLevel/:levelID')
     .put(userAuth, async (req, res) => {
         const { user } = res.locals
@@ -305,6 +438,34 @@ router.route('/submitLevel/:levelID')
         res.send();
     })
 
+/**
+ * @openapi
+ * "/events/quest/{questId}/check":
+ *   get:
+ *     tags:
+ *       - Event
+ *     summary: Check quest completion status
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: questId
+ *         in: path
+ *         description: The ID of the quest
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Quest status returned (claimed, claimable, or unclaimable)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: [claimed, claimable, unclaimable]
+ */
 router.route('/quest/:questId/check')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
@@ -339,6 +500,30 @@ router.route('/quest/:questId/check')
         }
     })
 
+/**
+ * @openapi
+ * "/events/quest/{questId}/claim":
+ *   post:
+ *     tags:
+ *       - Event
+ *     summary: Claim quest reward
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: questId
+ *         in: path
+ *         description: The ID of the quest
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Quest reward claimed successfully
+ *       400:
+ *         description: Quest already claimed or not completed
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/quest/:questId/claim')
     .post(userAuth, async (req, res) => {
         const { questId } = req.params
@@ -391,6 +576,27 @@ router.route('/quest/:questId/claim')
 
     })
 
+/**
+ * @openapi
+ * "/events/submission":
+ *   patch:
+ *     tags:
+ *       - Event
+ *     summary: Update event submission (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Submission updated successfully
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/submission')
     .patch(adminAuth, async (req, res) => {
         try {
@@ -402,6 +608,34 @@ router.route('/submission')
         }
     })
 
+/**
+ * @openapi
+ * "/events/{id}":
+ *   patch:
+ *     tags:
+ *       - Event
+ *     summary: Update an event (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The ID of the event
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Event updated successfully
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/:id')
     .patch(adminAuth, async (req, res) => {
         const { id } = req.params
@@ -478,6 +712,34 @@ router.route('/:id/levels')
         }
     })
 
+/**
+ * @openapi
+ * "/events/{id}/level/{levelID}":
+ *   delete:
+ *     tags:
+ *       - Event
+ *     summary: Delete a level from an event (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The ID of the event
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: levelID
+ *         in: path
+ *         description: The ID of the level
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Level deleted successfully
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/:id/level/:levelID')
     .delete(adminAuth, async (req, res) => {
         const { id, levelID } = req.params;
@@ -788,6 +1050,30 @@ router.route('/:id/proof/:uid')
         }
     })
 
+/**
+ * @openapi
+ * "/events/{id}/calc":
+ *   patch:
+ *     tags:
+ *       - Event
+ *     summary: Calculate event leaderboard (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The ID of the event
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Leaderboard calculated successfully
+ *       403:
+ *         description: Event is unranked
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/:id/calc')
     .patch(adminAuth, async (req, res) => {
         const { id } = req.params
@@ -889,6 +1175,29 @@ router.route('/:id/calc')
         res.send()
     })
 
+/**
+ * @openapi
+ * "/events/{id}/quest":
+ *   get:
+ *     tags:
+ *       - Event
+ *     summary: Get quests for an event
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The ID of the event
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/:id/quest')
     .get(async (req, res) => {
         const { id } = req.params
