@@ -6,8 +6,5 @@
 		"nodejs_compat",
 		"nodejs_als",
 		"nodejs_compat_populate_process_env"
-	],
-	"define": {
-		"window": "globalThis"
-	}
+	]
 }
