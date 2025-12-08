@@ -105,10 +105,8 @@ export async function fetchLevelFromGD(levelId: number): Promise<GDLevel> {
         let author = 'Unknown';
 
         if (userData) {
-            const userParts = userData.split(':');
-            if (userParts.length >= 2) {
-                author = userParts[1];
-            }
+            const parsedUser = parseGDResponse(userData);
+            author = parsedUser['1'] || 'Unknown';
         }
         
         const diffValue = parseInt(parsed['9'] || '0');
