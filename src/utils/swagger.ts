@@ -1,37 +1,55 @@
 import type { Express, Request, Response } from "express";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function swaggerDocs(app: Express, port: number) {
   try {
     // Dynamically import swagger modules - they use __dirname which isn't available in Workers
-    const swaggerJsdoc = (await import("swagger-jsdoc")).default;
     const swaggerUi = (await import("swagger-ui-express")).default;
 
-    const options = {
-      definition: {
-        openapi: "3.0.0",
-        info: {
-          title: "Demon List VN v3 REST API Docs",
-          version: '1.0.0',
-        },
-        components: {
-          securitySchemes: {
-            bearerAuth: {
-              type: "http",
-              scheme: "bearer",
-              bearerFormat: "JWT",
+    let swaggerSpec;
+    
+    // Try to load pre-compiled OpenAPI JSON file
+    const preCompiledPath = path.join(__dirname, '../../static/openapi.json');
+    if (fs.existsSync(preCompiledPath)) {
+      console.log('Loading pre-compiled OpenAPI spec from static/openapi.json');
+      swaggerSpec = JSON.parse(fs.readFileSync(preCompiledPath, 'utf-8'));
+    } else {
+      // Fall back to dynamic generation
+      console.log('Pre-compiled OpenAPI spec not found, generating dynamically');
+      const swaggerJsdoc = (await import("swagger-jsdoc")).default;
+      
+      const options = {
+        definition: {
+          openapi: "3.0.0",
+          info: {
+            title: "Demon List VN v3 REST API Docs",
+            version: '1.0.0',
+          },
+          components: {
+            securitySchemes: {
+              bearerAuth: {
+                type: "http",
+                scheme: "bearer",
+                bearerFormat: "JWT",
+              },
             },
           },
+          security: [
+            {
+              bearerAuth: [],
+            },
+          ],
         },
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
-      },
-      apis: ["./src/routes/*.ts"],
-    };
+        apis: ["./src/routes/*.ts"],
+      };
 
-    const swaggerSpec = swaggerJsdoc(options);
+      swaggerSpec = swaggerJsdoc(options);
+    }
 
     // Swagger page
     app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));

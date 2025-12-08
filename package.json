@@ -44,6 +44,8 @@
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "update-types": "supabase gen types typescript --local > ./src/lib/types/supabase.ts",
-    "sync": "echo y | supabase db pull --schema public; supabase db reset; supabase gen types typescript --local > ./src/lib/types/supabase.ts"
+    "sync": "echo y | supabase db pull --schema public; supabase db reset; supabase gen types typescript --local > ./src/lib/types/supabase.ts",
+    "generate-openapi": "tsx scripts/generate-openapi.ts",
+    "validate-openapi": "tsx scripts/validate-openapi.ts"
   }
 }

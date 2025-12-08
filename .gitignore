@@ -167,3 +167,6 @@ dist
 .wrangler/
 test.ts
 .vercel
+
+# Generated OpenAPI spec
+static/openapi.json

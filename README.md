@@ -26,6 +26,32 @@ bun run dev
 
 Local development server is avaliable on `localhost:8080`. Documentation is avaliable at `/docs`.
 
+## Generate OpenAPI Documentation
+
+The API uses OpenAPI 3.0 specification with JSDoc comments in route files.
+
+### Generate OpenAPI JSON
+
+To compile all OpenAPI comments from route files into a single JSON file:
+
+```bash
+npm run generate-openapi
+```
+
+This will create `static/openapi.json` file that contains the complete API specification.
+
+### Validate OpenAPI Specification
+
+To validate the generated OpenAPI JSON:
+
+```bash
+npm run validate-openapi
+```
+
+### Using Pre-compiled OpenAPI Spec
+
+The Swagger UI will automatically use the pre-compiled `static/openapi.json` file if it exists, which improves startup performance. If the file doesn't exist, it will fall back to generating the spec dynamically from route files.
+
 # Deployment
 ## Deploy Supabase server
 
