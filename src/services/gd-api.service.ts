@@ -1,13 +1,10 @@
 import { fetchFromGDAPI, parseGDLevel, type GDLevel } from '@src/utils';
 
-const GD_API_SECRET = 'Wmfd2893gb7';
-
 export async function fetchLevelFromGD(levelId: number): Promise<GDLevel> {
     try {
         const rawData = await fetchFromGDAPI('getGJLevels21.php', {
             str: levelId.toString(),
-            type: '0',
-            secret: GD_API_SECRET
+            type: '0'
         });
 
         return parseGDLevel(rawData);

@@ -25,9 +25,14 @@ export function gdDecodeBase64(str: string): string {
     }
 }
 
+export const GD_API_SECRET = 'Wmfd2893gb7';
+
 export async function fetchFromGDAPI(endpoint: string, params: Record<string, string>): Promise<string> {
     const GD_API_URL = 'http://www.boomlings.com/database';
-    const urlParams = new URLSearchParams(params);
+    const urlParams = new URLSearchParams({
+        ...params,
+        secret: GD_API_SECRET
+    });
     
     const url = `${GD_API_URL}/${endpoint}`;
     const response = await fetch(url, {
