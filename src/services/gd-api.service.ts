@@ -1,18 +1,6 @@
-/**
- * Custom Geometry Dash API Service
- * Replaces the new-gd.js library with a lightweight custom implementation
- */
-
-// Note: The official Geometry Dash API only supports HTTP, not HTTPS
-// This is a limitation of the official servers at boomlings.com
 const GD_API_URL = 'http://www.boomlings.com/database';
-const CORS_PROXY = 'https://www.demonlistvn.com/';
-
-// Standard GD API secret - this is a public value used by all GD API clients
-// Source: https://github.com/MahouSirin/gd.js and other GD API implementations
 const GD_API_SECRET = 'Wmfd2893gb7';
 
-// Difficulty mappings from GD API
 const DIFFICULTY_MAP: Record<number, string> = {
     [-1]: 'N/A',
     0: 'Auto',
@@ -32,9 +20,6 @@ const DEMON_DIFFICULTY_MAP: Record<number, string> = {
     5: 'Extreme Demon'
 };
 
-/**
- * Parse GD API response string into key-value pairs
- */
 function parseGDResponse(data: string, splitter: string = ':'): Record<string, string> {
     const split = data.split(splitter);
     const obj: Record<string, string> = {};
@@ -46,9 +31,6 @@ function parseGDResponse(data: string, splitter: string = ':'): Record<string, s
     return obj;
 }
 
-/**
- * Decode GD Base64 string
- */
 function gdDecodeBase64(str: string): string {
     if (!str) return '';
     try {
@@ -61,9 +43,6 @@ function gdDecodeBase64(str: string): string {
     }
 }
 
-/**
- * Get difficulty string from raw values
- */
 function getDifficulty(diff: number, isDemon: boolean, isAuto: boolean): string {
     if (isAuto) {
         return 'Auto';
@@ -78,9 +57,6 @@ function getDifficulty(diff: number, isDemon: boolean, isAuto: boolean): string 
     return DIFFICULTY_MAP[raw] || 'N/A';
 }
 
-/**
- * Interface for level data returned from GD API
- */
 interface GDLevel {
     id: number;
     name: string;
@@ -90,12 +66,8 @@ interface GDLevel {
     difficulty: string;
 }
 
-/**
- * Fetch level data from Geometry Dash servers
- */
 export async function fetchLevelFromGD(levelId: number): Promise<GDLevel> {
     try {
-        // Prepare request parameters
         const params = new URLSearchParams({
             levelID: levelId.toString(),
             inc: '1',
@@ -103,8 +75,7 @@ export async function fetchLevelFromGD(levelId: number): Promise<GDLevel> {
             secret: GD_API_SECRET
         });
 
-        // Make request to GD API
-        const url = `${CORS_PROXY}${GD_API_URL}/downloadGJLevel22.php`;
+        const url = `${GD_API_URL}/downloadGJLevel22.php`;
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -119,32 +90,21 @@ export async function fetchLevelFromGD(levelId: number): Promise<GDLevel> {
 
         const rawData = await response.text();
         
-        // Check for error response
         if (rawData === '-1' || !rawData) {
             throw new Error(`Level ${levelId} not found`);
         }
 
-        // Parse the response - GD API returns: levelData#userData#songData
         const parts = rawData.split('#');
         const levelData = parts[0];
         const userData = parts[1] || '';
-        
         const parsed = parseGDResponse(levelData);
-
-        // Extract level data from parsed response
-        // Field mappings based on GD API protocol:
-        // 1: Level ID, 2: Level name, 3: Description (base64), 
-        // 6: Creator user ID, 15: Length, 9: Difficulty value
-        // 17: Is demon (0/1), 25: Is auto (0/1)
-        
         const id = parseInt(parsed['1'] || '0');
         const name = parsed['2'] || 'Unknown';
         const description = gdDecodeBase64(parsed['3'] || '');
         const length = parseInt(parsed['15'] || '0');
         
-        // Parse user data to get creator username
-        // User data format: userID:username:accountID
         let author = 'Unknown';
+
         if (userData) {
             const userParts = userData.split(':');
             if (userParts.length >= 2) {
