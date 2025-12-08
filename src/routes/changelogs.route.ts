@@ -17,6 +17,21 @@ interface Changelog {
 }
 
 router.route('/publish')
+    /**
+     * @openapi
+     * "/changelogs/publish":
+     *   post:
+     *     tags:
+     *       - Changelogs
+     *     summary: Publish pending changelogs
+     *     security:
+     *       - bearerAuth: []
+     *     responses:
+     *       200:
+     *         description: Changelogs published successfully
+     *       500:
+     *         description: Internal server error
+     */
     .post(adminAuth, async (req, res) => {
         const { data, error } = await supabase
             .from('changelogs')

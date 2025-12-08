@@ -4,6 +4,29 @@ import express from 'express'
 const router = express.Router()
 
 router.route('/:id')
+    /**
+     * @openapi
+     * "/item/{id}":
+     *   get:
+     *     tags:
+     *       - Item
+     *     summary: Get item details by ID
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The ID of the item
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     *       500:
+     *         description: Internal server error
+     */
     .get(async (req, res) => {
         const { id } = req.params
 
