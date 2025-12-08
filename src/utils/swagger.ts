@@ -59,7 +59,7 @@ async function swaggerDocs(app: Express, port: number) {
       res.send(swaggerSpec);
     });
 
-    // Serve custom index.html that points to our OpenAPI spec
+    // Serve custom index.html that points to our OpenAPI spec (must be before static middleware)
     app.get("/docs", (req: Request, res: Response) => {
       const html = `<!DOCTYPE html>
 <html lang="en">
@@ -103,7 +103,7 @@ async function swaggerDocs(app: Express, port: number) {
       res.send(html);
     });
 
-    // Serve Swagger UI static files (CSS, JS, images)
+    // Serve Swagger UI static files (CSS, JS, images) - must be after /docs route
     app.use("/docs", express.static(swaggerUiPath));
 
     // Docs in JSON format (backwards compatibility)
