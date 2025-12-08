@@ -24,7 +24,7 @@ bun install
 bun run dev
 ```
 
-Local development server is avaliable on `localhost:8080`. Documentation is avaliable at `/docs`.
+Local development server is available on `localhost:8080`. Documentation is available at `/docs`.
 
 ## Generate OpenAPI Documentation
 

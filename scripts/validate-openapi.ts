@@ -23,7 +23,7 @@ try {
   spec = JSON.parse(content);
   console.log('✓ Valid JSON format');
 } catch (error) {
-  console.error('❌ Invalid JSON:', error.message);
+  console.error('❌ Invalid JSON:', String(error));
   process.exit(1);
 }
 
