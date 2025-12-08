@@ -3,46 +3,10 @@ import express from "express";
 
 async function swaggerDocs(app: Express, port: number) {
   try {
-    let swaggerSpec;
-    
-    // Try to dynamically import the pre-compiled spec
-    try {
-      // Attempt to import the generated OpenAPI spec
-      const spec = await import('../../static/openapi.json', { with: { type: 'json' } });
-      swaggerSpec = spec.default;
-      console.log('Loading pre-compiled OpenAPI spec from static/openapi.json');
-    } catch {
-      // Fall back to dynamic generation
-      console.log('Pre-compiled OpenAPI spec not found, generating dynamically');
-      const swaggerJsdoc = (await import("swagger-jsdoc")).default;
-      
-      const options = {
-        definition: {
-          openapi: "3.0.0",
-          info: {
-            title: "Demon List VN v3 REST API Docs",
-            version: '1.0.0',
-          },
-          components: {
-            securitySchemes: {
-              bearerAuth: {
-                type: "http",
-                scheme: "bearer",
-                bearerFormat: "JWT",
-              },
-            },
-          },
-          security: [
-            {
-              bearerAuth: [],
-            },
-          ],
-        },
-        apis: ["./src/routes/*.ts"],
-      };
-
-      swaggerSpec = swaggerJsdoc(options);
-    }
+    // Load the pre-compiled OpenAPI spec
+    const spec = await import('../../static/openapi.json', { with: { type: 'json' } });
+    const swaggerSpec = spec.default;
+    console.log('Loading pre-compiled OpenAPI spec from static/openapi.json');
 
     // Dynamically import swagger-ui-dist to get the path to static assets
     const swaggerUiDist = await import("swagger-ui-dist");
@@ -109,6 +73,7 @@ async function swaggerDocs(app: Express, port: number) {
 
     console.log(`Docs available at /docs`);
   } catch (error) {
+    console.error(error)
     // Swagger UI not available (e.g., in Cloudflare Workers)
     console.log('Swagger UI not available in this environment');
   }

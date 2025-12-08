@@ -10,7 +10,6 @@
     "@types/cors": "^2.8.17",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node-cron": "^3.0.11",
-    "@types/swagger-jsdoc": "^6.0.4",
     "@types/uuid": "^9.0.8",
     "@whatwg-node/server": "^0.10.17",
     "cors": "^2.8.5",
@@ -20,7 +19,6 @@
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^3.0.3",
     "sepay-pg-node": "^1.0.0",
-    "swagger-jsdoc": "^6.2.8",
     "swagger-ui-dist": "^5.30.3",
     "tsx": "^4.20.6",
     "wrangler": "^4.50.0"
@@ -30,6 +28,7 @@
     "@types/bun": "latest",
     "@types/express": "^5.0.5",
     "@types/node": "^24.10.1",
+    "@types/swagger-ui-dist": "^3.30.6",
     "nodemon": "^3.1.11",
     "pkgroll": "^2.21.3",
     "typescript": "^5.9.3"
