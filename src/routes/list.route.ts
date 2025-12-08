@@ -313,10 +313,11 @@ async function getIDBound(list: string, min: boolean) {
  *           type: string
  *     responses:
  *       200:
- *         description: Success
+ *         description: Success - Returns a random level object
  *         content:
  *           application/json:
  *             schema:
+ *               type: object
  */
 router.route('/:list/random')
     .get(async (req, res) => {
