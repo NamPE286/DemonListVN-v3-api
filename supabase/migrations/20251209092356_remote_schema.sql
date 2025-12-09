@@ -1083,26 +1083,24 @@ END;
 $function$
 ;
 
-CREATE OR REPLACE FUNCTION public.get_top_buyers(p_interval interval, p_limit integer, p_offset integer)
- RETURNS TABLE(uid uuid, name text, "totalAmount" double precision)
+CREATE OR REPLACE FUNCTION public.get_top_buyers(interval_ms bigint, limit_count integer, offset_count integer)
+ RETURNS TABLE(uid uuid, "totalAmount" double precision)
  LANGUAGE plpgsql
  STABLE
 AS $function$
 BEGIN
-    RETURN QUERY
-    SELECT 
-        p.uid,
-        p.name,
-        SUM(o.amount) AS "totalAmount"
-    FROM orders o
-    JOIN players p ON p.uid = o."userID"
-    WHERE 
-        o.created_at >= NOW() - p_interval
-        AND p.uid != '3e788ac1-989c-4d2b-bfaf-f99059d258cf'
-    GROUP BY p.uid, o."userID"
-    ORDER BY "totalAmount" DESC
-    LIMIT p_limit
-    OFFSET p_offset;
+  RETURN QUERY
+  SELECT 
+    p.uid,
+    SUM(o.amount) AS "totalAmount"
+  FROM orders o
+  JOIN players p ON p.uid = o."userID"
+  WHERE o.created_at >= NOW() - (interval '1 millisecond' * interval_ms)
+    AND p.uid != '3e788ac1-989c-4d2b-bfaf-f99059d258cf'
+  GROUP BY p.uid
+  ORDER BY "totalAmount" DESC
+  LIMIT limit_count
+  OFFSET offset_count;
 END;
 $function$
 ;

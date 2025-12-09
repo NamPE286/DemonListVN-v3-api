@@ -358,3 +358,31 @@ export async function getPlayerInventoryItems(uid: string): Promise<TInventoryIt
 
     return mapped
 }
+
+export async function getTopBuyers(interval: number, limit: number, offset: number) {
+    const { data, error } = await supabase
+        .rpc('get_top_buyers', {
+            interval_ms: interval,
+            limit_count: limit,
+            offset_count: offset
+        })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    const uids = []
+
+    for (const i of data) {
+        uids.push(i.uid)
+    }
+
+    const players = getPlayersBatch(uids)
+    const playerMap = new Map((await players).map(p => [p!.uid, p]));
+    const res = data.map(i => ({
+        player: playerMap.get(i.uid),
+        totalAmount: i.totalAmount
+    }));
+
+    return res;
+}

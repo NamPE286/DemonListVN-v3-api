@@ -1664,9 +1664,8 @@ export type Database = {
         }
       }
       get_top_buyers: {
-        Args: { p_interval: unknown; p_limit: number; p_offset: number }
+        Args: { interval_ms: number; limit_count: number; offset_count: number }
         Returns: {
-          name: string
           totalAmount: number
           uid: string
         }[]
