@@ -1628,6 +1628,16 @@ export type Database = {
     }
     Functions: {
       add_event_levels_progress: { Args: { updates: Json }; Returns: undefined }
+      get_event_leaderboard: {
+        Args: { event_id: number }
+        Returns: {
+          elo: number
+          matchCount: number
+          penalty: number
+          point: number
+          userID: string
+        }[]
+      }
       get_random_levels: {
         Args: { filter_type: string; row_count: number }
         Returns: {
@@ -1653,19 +1663,17 @@ export type Database = {
           isSetofReturn: true
         }
       }
-      get_event_leaderboard: {
-        Args: { event_id: number }
+      get_top_buyers: {
+        Args: { p_interval: unknown; p_limit: number; p_offset: number }
         Returns: {
-          elo: number
-          matchCount: number
-          penalty: number
-          point: number
-          userID: string
+          name: string
+          totalAmount: number
+          uid: string
         }[]
       }
-      update_supporter_until: { Args: never; Returns: undefined }
       update_list: { Args: never; Returns: undefined }
       update_rank: { Args: never; Returns: undefined }
+      update_supporter_until: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
