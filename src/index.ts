@@ -81,4 +81,4 @@ app.listen(port, async () => {
     await swaggerDocs(app, port)
 })
 
-export default httpServerHandler({ port: 8080 });
+export default httpServerHandler({ port: port });
