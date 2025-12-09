@@ -5,7 +5,7 @@ const router = express.Router()
 
 router.route('/top')
     .get(async (req, res) => {
-        const { interval = 2592000000, limit = 10, offset = 0 } = req.query
+        const { interval = 2592000000, limit = 1000, offset = 0 } = req.query
 
         res.send(await getTopBuyers(
             parseInt(String(interval)),
