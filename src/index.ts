@@ -34,7 +34,7 @@ import itemRoute from './routes/item.route'
 import inventoryRoute from './routes/inventory.route'
 
 const app = express()
-const port = 8080
+const port = 8787
 
 app.use(express.json())
 app.use(cors())
