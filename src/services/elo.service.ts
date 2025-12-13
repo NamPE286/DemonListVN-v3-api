@@ -15,9 +15,9 @@ interface Diff {
 
 const getK = (count: number): number => {
     if (count < 5) {
-        return 40;
+        return 50;
     } else if (count < 15) {
-        return 20;
+        return 25;
     } else {
         return 10;
     }
@@ -78,7 +78,7 @@ export function calcLeaderboard(players: any[]): Diff[] {
     }
 
     for (let i = 0; i < data.length; i++) {
-        const diffLimit = 200;
+        const diffLimit = 300;
 
         data[i].diff = data[i].elo - players[i].elo;
 

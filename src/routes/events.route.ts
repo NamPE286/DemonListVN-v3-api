@@ -1133,31 +1133,6 @@ router.route('/:id/calc')
             return;
         }
 
-        const a = await supabase
-            .from('eventProofs')
-            .select('userid, eventID, diff, players(uid, elo)')
-            .eq('eventID', Number(id))
-            .is('diff', null)
-
-        if (a.error) {
-            console.error(a.error)
-            res.status(500).send()
-            return;
-        }
-
-        var { error } = await supabase
-            .from('players')
-            .upsert(a.data!.map(item => ({
-                uid: item.players?.uid,
-                elo: item.players?.elo! - 200
-            })))
-
-        var { error } = await supabase
-            .from('eventProofs')
-            .update({ diff: -200 })
-            .eq('eventID', Number(id))
-            .is('diff', null)
-
         if (error) {
             console.error(error)
             res.status(500).send()
