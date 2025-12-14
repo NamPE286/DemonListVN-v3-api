@@ -80,7 +80,7 @@ router.route('/presign')
         }
 
         const command = new PutObjectCommand({
-            Bucket: 'cdn',
+            Bucket: process.env.S3_CDN_BUCKET,
             Key: path
         })
 
