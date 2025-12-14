@@ -70,11 +70,6 @@ router.route('/presign')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
         const { path } = req.query as { path: string }
-        let { bucket } = req.query as { bucket?: string }
-
-        if (!bucket) {
-            bucket = 'cdn'
-        }
 
         if (!path) {
             res.status(400).send({
@@ -85,7 +80,7 @@ router.route('/presign')
         }
 
         const command = new PutObjectCommand({
-            Bucket: bucket,
+            Bucket: 'cdn',
             Key: path
         })
 
