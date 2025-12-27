@@ -71,6 +71,8 @@ export async function addInventoryItem(player: Player, caseItem: CaseItem) {
         throw new Error('player.uid is undefined');
     }
 
+
+
     if (caseItem.items?.productId) {
         if (!caseItem.expireAfter) {
             throw new Error("expireAfter is null")
@@ -82,14 +84,15 @@ export async function addInventoryItem(player: Player, caseItem: CaseItem) {
                 percent: 1,
                 validUntil: new Date(new Date().getTime() + caseItem.expireAfter).toISOString(),
                 productID: caseItem.items?.productId,
-                owner: player.uid
+                owner: player.uid,
+                quantity: caseItem.items.quantity
             })
             .select()
             .single()
 
 
         if (!data || error) {
-            throw new Error(error.message)
+            throw new Error(error?.message)
         }
 
         var { error } = await supabase
@@ -156,7 +159,7 @@ export async function receiveReward(player: Player, reward: Reward) {
 
 
         if (!data || error) {
-            throw new Error(error.message)
+            throw new Error(error?.message)
         }
 
         var { error } = await supabase
