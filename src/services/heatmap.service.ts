@@ -1,6 +1,6 @@
 import supabase from "@src/client/supabase";
 
-async function fetchData(uid: string, year: number): Promise<any> {
+async function fetchData(uid: string, year: number) {
     let { data, error } = await supabase
         .from('heatmap')
         .select('*')
@@ -8,6 +8,10 @@ async function fetchData(uid: string, year: number): Promise<any> {
         .eq('year', year)
         .limit(1)
         .single()
+
+    if (error) {
+        throw error
+    }
 
     if (data == null) {
         return { uid: uid, year: year, days: Array(366).fill(0) }
@@ -28,7 +32,7 @@ export async function getHeatmap(uid: string, year: number) {
 }
 
 export async function updateHeatmap(uid: string, count: number) {
-    const date = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}))
+    const date = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }))
     const data = await fetchData(uid, date.getFullYear())
     const year = date.getFullYear()
     const month = date.getMonth()

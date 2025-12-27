@@ -317,10 +317,13 @@ router.route('/heatmap/:count')
      *         description: Success
      */
     .post(userAuth, async (req, res) => {
-        res.send()
         try {
-            updateHeatmap(res.locals.user.uid!, parseInt(req.params.count))
-        } catch { }
+            await updateHeatmap(res.locals.user.uid!, parseInt(req.params.count))
+        } catch (err) {
+            console.error(err)
+        }
+
+        res.send()
     })
 
 router.route('/:uid/submissions')
