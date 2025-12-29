@@ -457,14 +457,14 @@ export async function isFollowing(followerId: string, followingId: string) {
 }
 
 export async function getUserFollowStats(userId: string) {
-    const { data: followers, error: followersError } = await supabase
+    const { count: followersCount, error: followersError } = await supabase
         .from('userFollows')
-        .select('followerId', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('followingId', userId)
 
-    const { data: following, error: followingError } = await supabase
+    const { count: followingCount, error: followingError } = await supabase
         .from('userFollows')
-        .select('followerId', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('followerId', userId)
 
     if (followersError || followingError) {
@@ -472,8 +472,8 @@ export async function getUserFollowStats(userId: string) {
     }
 
     return {
-        followers: followers || 0,
-        following: following || 0
+        followers: followersCount || 0,
+        following: followingCount || 0
     }
 }
 
