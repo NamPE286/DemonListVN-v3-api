@@ -51,14 +51,14 @@ export async function getPost(postId: number, userId?: string) {
             .select('userId')
             .eq('postId', postId)
             .eq('userId', userId)
-            .single()
+            .maybeSingle()
 
         const { data: userRepost } = await supabase
             .from('postReposts')
             .select('id')
             .eq('postId', postId)
             .eq('userId', userId)
-            .single()
+            .maybeSingle()
 
         return {
             ...post,
@@ -442,16 +442,12 @@ export async function getFollowing(userId: string, start = 0, end = 20) {
 }
 
 export async function isFollowing(followerId: string, followingId: string) {
-    const { data, error } = await supabase
+    const { data } = await supabase
         .from('userFollows')
         .select('followerId')
         .eq('followerId', followerId)
         .eq('followingId', followingId)
-        .single()
-
-    if (error && error.code !== 'PGRST116') {
-        throw new Error(error.message)
-    }
+        .maybeSingle()
 
     return !!data
 }

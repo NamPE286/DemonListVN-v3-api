@@ -131,52 +131,52 @@ create index "userFollows_followingId_idx" on "public"."userFollows" using btree
 
 -- Create RLS policies (allow all for now, can be restricted later)
 create policy "Enable read access for all users" on "public"."posts"
-  for select using (true);
+  for select using (not "isDeleted");
 
 create policy "Enable insert for authenticated users" on "public"."posts"
-  for insert with check (true);
+  for insert with check (auth.uid()::text = "authorId");
 
 create policy "Enable update for post authors" on "public"."posts"
-  for update using (true);
+  for update using (auth.uid()::text = "authorId" and not "isDeleted");
 
 create policy "Enable delete for post authors" on "public"."posts"
-  for delete using (true);
+  for delete using (auth.uid()::text = "authorId");
 
 create policy "Enable read access for all users" on "public"."postLikes"
   for select using (true);
 
 create policy "Enable insert for authenticated users" on "public"."postLikes"
-  for insert with check (true);
+  for insert with check (auth.uid()::text = "userId");
 
 create policy "Enable delete for like owners" on "public"."postLikes"
-  for delete using (true);
+  for delete using (auth.uid()::text = "userId");
 
 create policy "Enable read access for all users" on "public"."postComments"
-  for select using (true);
+  for select using (not "isDeleted");
 
 create policy "Enable insert for authenticated users" on "public"."postComments"
-  for insert with check (true);
+  for insert with check (auth.uid()::text = "authorId");
 
 create policy "Enable update for comment authors" on "public"."postComments"
-  for update using (true);
+  for update using (auth.uid()::text = "authorId" and not "isDeleted");
 
 create policy "Enable delete for comment authors" on "public"."postComments"
-  for delete using (true);
+  for delete using (auth.uid()::text = "authorId");
 
 create policy "Enable read access for all users" on "public"."postReposts"
   for select using (true);
 
 create policy "Enable insert for authenticated users" on "public"."postReposts"
-  for insert with check (true);
+  for insert with check (auth.uid()::text = "userId");
 
 create policy "Enable delete for repost owners" on "public"."postReposts"
-  for delete using (true);
+  for delete using (auth.uid()::text = "userId");
 
 create policy "Enable read access for all users" on "public"."userFollows"
   for select using (true);
 
 create policy "Enable insert for authenticated users" on "public"."userFollows"
-  for insert with check (true);
+  for insert with check (auth.uid()::text = "followerId");
 
 create policy "Enable delete for followers" on "public"."userFollows"
-  for delete using (true);
+  for delete using (auth.uid()::text = "followerId");

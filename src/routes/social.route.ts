@@ -248,7 +248,9 @@ router.put('/posts/:postId', userAuth, async (req, res) => {
         const authorId = res.locals.user.uid
         const { content, imageUrl, linkEmbed } = req.body
 
-        const updateData: any = { updated_at: new Date().toISOString() }
+        const updateData: { content?: string; imageUrl?: string | null; linkEmbed?: string | null; updated_at: string } = { 
+            updated_at: new Date().toISOString() 
+        }
         if (content !== undefined) updateData.content = content
         if (imageUrl !== undefined) updateData.imageUrl = imageUrl
         if (linkEmbed !== undefined) updateData.linkEmbed = linkEmbed
