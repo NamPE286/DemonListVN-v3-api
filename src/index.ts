@@ -14,6 +14,7 @@ import searchRoute from './routes/search.route'
 import submissionRoute from './routes/submission.route'
 import leaderboardRoute from './routes/leaderboard.route'
 import playersRoute from './routes/players.route'
+import playerRoute from './routes/player.route'
 import APIKeyRoute from './routes/api-key.route'
 import submitVerdictRoute from './routes/submit-verdict.route'
 import clansRoute from './routes/clans.route'
@@ -56,6 +57,7 @@ app.use('/refresh', refreshRoute)
 app.use('/search', searchRoute)
 app.use('/submission', submissionRoute)
 app.use('/leaderboard', leaderboardRoute)
+app.use('/player', playerRoute)
 app.use('/players', playersRoute)
 app.use('/APIKey', APIKeyRoute)
 app.use('/submitVerdict', submitVerdictRoute)
