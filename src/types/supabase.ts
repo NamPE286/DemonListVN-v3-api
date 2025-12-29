@@ -1329,6 +1329,161 @@ export type Database = {
           },
         ]
       }
+      postComments: {
+        Row: {
+          authorId: string
+          content: string
+          created_at: string
+          id: number
+          isDeleted: boolean
+          postId: number
+          updated_at: string | null
+        }
+        Insert: {
+          authorId: string
+          content: string
+          created_at?: string
+          id?: number
+          isDeleted?: boolean
+          postId: number
+          updated_at?: string | null
+        }
+        Update: {
+          authorId?: string
+          content?: string
+          created_at?: string
+          id?: number
+          isDeleted?: boolean
+          postId?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "postComments_authorId_fkey"
+            columns: ["authorId"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "postComments_postId_fkey"
+            columns: ["postId"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      postLikes: {
+        Row: {
+          created_at: string
+          postId: number
+          userId: string
+        }
+        Insert: {
+          created_at?: string
+          postId: number
+          userId: string
+        }
+        Update: {
+          created_at?: string
+          postId?: number
+          userId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "postLikes_postId_fkey"
+            columns: ["postId"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "postLikes_userId_fkey"
+            columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      postReposts: {
+        Row: {
+          created_at: string
+          id: number
+          postId: number
+          userId: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          postId: number
+          userId: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          postId?: number
+          userId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "postReposts_postId_fkey"
+            columns: ["postId"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "postReposts_userId_fkey"
+            columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      posts: {
+        Row: {
+          authorId: string
+          content: string
+          created_at: string
+          id: number
+          imageUrl: string | null
+          isDeleted: boolean
+          linkEmbed: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          authorId: string
+          content: string
+          created_at?: string
+          id?: number
+          imageUrl?: string | null
+          isDeleted?: boolean
+          linkEmbed?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          authorId?: string
+          content?: string
+          created_at?: string
+          id?: number
+          imageUrl?: string | null
+          isDeleted?: boolean
+          linkEmbed?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_authorId_fkey"
+            columns: ["authorId"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       playersAchievement: {
         Row: {
           achievementid: number
@@ -1586,6 +1741,39 @@ export type Database = {
           type?: string
         }
         Relationships: []
+      }
+      userFollows: {
+        Row: {
+          created_at: string
+          followerId: string
+          followingId: string
+        }
+        Insert: {
+          created_at?: string
+          followerId: string
+          followingId: string
+        }
+        Update: {
+          created_at?: string
+          followerId?: string
+          followingId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "userFollows_followerId_fkey"
+            columns: ["followerId"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "userFollows_followingId_fkey"
+            columns: ["followingId"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
       }
       userSocial: {
         Row: {
