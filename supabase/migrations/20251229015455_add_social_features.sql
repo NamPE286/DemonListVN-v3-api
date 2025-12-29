@@ -134,49 +134,49 @@ create policy "Enable read access for all users" on "public"."posts"
   for select using (not "isDeleted");
 
 create policy "Enable insert for authenticated users" on "public"."posts"
-  for insert with check (auth.uid()::text = "authorId");
+  for insert with check (auth.uid() = "authorId"::uuid);
 
 create policy "Enable update for post authors" on "public"."posts"
-  for update using (auth.uid()::text = "authorId" and not "isDeleted");
+  for update using (auth.uid() = "authorId"::uuid and not "isDeleted");
 
 create policy "Enable delete for post authors" on "public"."posts"
-  for delete using (auth.uid()::text = "authorId");
+  for delete using (auth.uid() = "authorId"::uuid);
 
 create policy "Enable read access for all users" on "public"."postLikes"
   for select using (true);
 
 create policy "Enable insert for authenticated users" on "public"."postLikes"
-  for insert with check (auth.uid()::text = "userId");
+  for insert with check (auth.uid() = "userId"::uuid);
 
 create policy "Enable delete for like owners" on "public"."postLikes"
-  for delete using (auth.uid()::text = "userId");
+  for delete using (auth.uid() = "userId"::uuid);
 
 create policy "Enable read access for all users" on "public"."postComments"
   for select using (not "isDeleted");
 
 create policy "Enable insert for authenticated users" on "public"."postComments"
-  for insert with check (auth.uid()::text = "authorId");
+  for insert with check (auth.uid() = "authorId"::uuid);
 
 create policy "Enable update for comment authors" on "public"."postComments"
-  for update using (auth.uid()::text = "authorId" and not "isDeleted");
+  for update using (auth.uid() = "authorId"::uuid and not "isDeleted");
 
 create policy "Enable delete for comment authors" on "public"."postComments"
-  for delete using (auth.uid()::text = "authorId");
+  for delete using (auth.uid() = "authorId"::uuid);
 
 create policy "Enable read access for all users" on "public"."postReposts"
   for select using (true);
 
 create policy "Enable insert for authenticated users" on "public"."postReposts"
-  for insert with check (auth.uid()::text = "userId");
+  for insert with check (auth.uid() = "userId"::uuid);
 
 create policy "Enable delete for repost owners" on "public"."postReposts"
-  for delete using (auth.uid()::text = "userId");
+  for delete using (auth.uid() = "userId"::uuid);
 
 create policy "Enable read access for all users" on "public"."userFollows"
   for select using (true);
 
 create policy "Enable insert for authenticated users" on "public"."userFollows"
-  for insert with check (auth.uid()::text = "followerId");
+  for insert with check (auth.uid() = "followerId"::uuid);
 
 create policy "Enable delete for followers" on "public"."userFollows"
-  for delete using (auth.uid()::text = "followerId");
+  for delete using (auth.uid() = "followerId"::uuid);

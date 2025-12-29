@@ -38,10 +38,14 @@ export async function getPost(postId: number, userId?: string) {
         .eq('id', postId)
         .eq('isDeleted', false)
 
-    const { data: post, error } = await query.single()
+    const { data: post, error } = await query.maybeSingle()
 
     if (error) {
         throw new Error(error.message)
+    }
+
+    if (!post) {
+        throw new Error('Post not found')
     }
 
     // Check if current user has liked, commented, or reposted
