@@ -188,7 +188,7 @@ router.route('/ongoing')
  *       500:
  *         description: Internal server error
  */
-router.route('/proof')
+router.route('/proofs')
     .get(async (req, res) => {
         try {
             res.send(await getEventProofs(null, req.query))
