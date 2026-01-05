@@ -215,8 +215,12 @@ export async function getEventProofs(eventID: number | null, { start = 0, end = 
         query = query.eq('eventID', eventID)
     }
 
+    if (accepted !== 'all') {
+        query = query
+            .eq('accepted', accepted == 'true')
+    }
+
     query = query
-        .eq('accepted', accepted == 'true')
         .order('created_at', { ascending: true })
         .range(start, end)
 
