@@ -983,10 +983,10 @@ router.route('/:id/proofs')
         }
     })
 
-router.route('/:id/proof/:uid')
+router.route('/:id/proofs/:uid')
     /**
      * @openapi
-     * "/event/{id}/proof/{uid}":
+     * "/event/{id}/proofs/{uid}":
      *   get:
      *     tags:
      *       - Event
@@ -1022,7 +1022,7 @@ router.route('/:id/proof/:uid')
     })
     /**
      * @openapi
-     * "/event/{id}/proof/{uid}":
+     * "/event/{id}/proofs/{uid}":
      *   delete:
      *     tags:
      *       - Event

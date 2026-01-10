@@ -1278,7 +1278,7 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
-    "/event/proof": {
+    "/event/proofs": {
       "put": {
         "tags": [
           "Event"
@@ -1790,7 +1790,7 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
-    "/event/{id}/proof/{uid}": {
+    "/event/{id}/proofs/{uid}": {
       "get": {
         "tags": [
           "Event"
