@@ -26,7 +26,7 @@ import adminAuth from '@src/middleware/admin-auth.middleware'
 import optionalUserAuth from '@src/middleware/optional-user-auth.middleware'
 import supabase from '@src/client/supabase'
 import { calcLeaderboard } from '@src/services/elo.service'
-import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted } from '@src/services/event-quest.service'
+import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted, createEventQuest, updateEventQuest, deleteEventQuest, addQuestReward, removeQuestReward } from '@src/services/event-quest.service'
 import { addInventoryItem, receiveReward } from '@src/services/inventory.service'
 import { isActive } from '@src/utils'
 
@@ -1181,6 +1181,239 @@ router.route('/:id/quest')
         } catch (err) {
             console.error(err)
             res.status(500).send()
+        }
+    })
+    /**
+     * @openapi
+     * "/events/{id}/quest":
+     *   post:
+     *     tags:
+     *       - Event
+     *     summary: Create a new quest for an event (Admin only)
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The ID of the event
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               title:
+     *                 type: string
+     *               condition:
+     *                 type: array
+     *     responses:
+     *       200:
+     *         description: Quest created successfully
+     *       500:
+     *         description: Internal server error
+     */
+    .post(adminAuth, async (req, res) => {
+        const { id } = req.params;
+        const { title, condition } = req.body;
+
+        try {
+            const quest = await createEventQuest(Number(id), title, condition);
+            res.send(quest);
+        } catch (err) {
+            console.error(err);
+            res.status(500).send();
+        }
+    })
+
+/**
+ * @openapi
+ * "/events/{id}/quest/{questId}":
+ *   patch:
+ *     tags:
+ *       - Event
+ *     summary: Update a quest (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The ID of the event
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: questId
+ *         in: path
+ *         description: The ID of the quest
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               condition:
+ *                 type: array
+ *     responses:
+ *       200:
+ *         description: Quest updated successfully
+ *       500:
+ *         description: Internal server error
+ *   delete:
+ *     tags:
+ *       - Event
+ *     summary: Delete a quest (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The ID of the event
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: questId
+ *         in: path
+ *         description: The ID of the quest
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Quest deleted successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/:id/quest/:questId')
+    .patch(adminAuth, async (req, res) => {
+        const { questId } = req.params;
+        const updates = req.body;
+
+        try {
+            const quest = await updateEventQuest(Number(questId), updates);
+            res.send(quest);
+        } catch (err) {
+            console.error(err);
+            res.status(500).send();
+        }
+    })
+    .delete(adminAuth, async (req, res) => {
+        const { questId } = req.params;
+
+        try {
+            await deleteEventQuest(Number(questId));
+            res.send({ success: true });
+        } catch (err) {
+            console.error(err);
+            res.status(500).send();
+        }
+    })
+
+/**
+ * @openapi
+ * "/events/{id}/quest/{questId}/reward":
+ *   post:
+ *     tags:
+ *       - Event
+ *     summary: Add a reward to a quest (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The ID of the event
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: questId
+ *         in: path
+ *         description: The ID of the quest
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               rewardId:
+ *                 type: integer
+ *               expireAfter:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Reward added successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/:id/quest/:questId/reward')
+    .post(adminAuth, async (req, res) => {
+        const { questId } = req.params;
+        const { rewardId, expireAfter } = req.body;
+
+        try {
+            const reward = await addQuestReward(Number(questId), Number(rewardId), expireAfter);
+            res.send(reward);
+        } catch (err) {
+            console.error(err);
+            res.status(500).send();
+        }
+    })
+
+/**
+ * @openapi
+ * "/events/{id}/quest/{questId}/reward/{rewardId}":
+ *   delete:
+ *     tags:
+ *       - Event
+ *     summary: Remove a reward from a quest (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The ID of the event
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: questId
+ *         in: path
+ *         description: The ID of the quest
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: rewardId
+ *         in: path
+ *         description: The ID of the reward item
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Reward removed successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/:id/quest/:questId/reward/:rewardId')
+    .delete(adminAuth, async (req, res) => {
+        const { questId, rewardId } = req.params;
+
+        try {
+            await removeQuestReward(Number(questId), Number(rewardId));
+            res.send({ success: true });
+        } catch (err) {
+            console.error(err);
+            res.status(500).send();
         }
     })
 

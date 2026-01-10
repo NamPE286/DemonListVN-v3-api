@@ -46,6 +46,93 @@ export async function getEventQuest(questId: number) {
     return quest
 }
 
+export async function createEventQuest(eventId: number, title: string, condition: any) {
+    const { data, error } = await supabase
+        .from('eventQuests')
+        .insert({
+            eventId,
+            title,
+            condition
+        })
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+export async function updateEventQuest(questId: number, updates: { title?: string; condition?: any }) {
+    const { data, error } = await supabase
+        .from('eventQuests')
+        .update(updates)
+        .eq('id', questId)
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+export async function deleteEventQuest(questId: number) {
+    // First delete all rewards associated with this quest
+    await supabase
+        .from('eventQuestRewards')
+        .delete()
+        .eq('questId', questId);
+
+    // Then delete all claims associated with this quest
+    await supabase
+        .from('eventQuestClaims')
+        .delete()
+        .eq('questId', questId);
+
+    // Finally delete the quest itself
+    const { error } = await supabase
+        .from('eventQuests')
+        .delete()
+        .eq('id', questId);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+}
+
+export async function addQuestReward(questId: number, rewardId: number, expireAfter: number | null) {
+    const { data, error } = await supabase
+        .from('eventQuestRewards')
+        .insert({
+            questId,
+            rewardId,
+            expireAfter
+        })
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+export async function removeQuestReward(questId: number, rewardId: number) {
+    const { error } = await supabase
+        .from('eventQuestRewards')
+        .delete()
+        .eq('questId', questId)
+        .eq('rewardId', rewardId);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+}
+
 export async function isQuestClaimed(user: Tables<"players">, questId: number) {
     const { data, error } = await supabase
         .from('eventQuestClaims')
