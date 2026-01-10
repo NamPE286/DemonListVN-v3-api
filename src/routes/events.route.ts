@@ -161,7 +161,7 @@ router.route('/ongoing')
 
 /**
  * @openapi
- * "/events/proof":
+ * "/events/proofs":
  *   get:
  *     tags:
  *       - Event
@@ -198,7 +198,7 @@ router.route('/proofs')
     })
     /**
      * @openapi
-     * "/event/proof":
+     * "/event/proofs":
      *   put:
      *     tags:
      *       - Event
@@ -223,7 +223,7 @@ router.route('/proofs')
     })
     /**
      * @openapi
-     * "/event/proof":
+     * "/event/proofs":
      *   post:
      *     tags:
      *       - Event

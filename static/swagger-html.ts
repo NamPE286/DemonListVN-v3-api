@@ -1237,7 +1237,7 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
-    "/events/proof": {
+    "/events/proofs": {
       "get": {
         "tags": [
           "Event"
