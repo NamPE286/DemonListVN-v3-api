@@ -354,7 +354,7 @@ router.route('/:id/inEvent')
         const now = new Date().toISOString()
 
         if (!type) {
-            type = 'basic'
+            type = 'contest'
         }
 
         const { data, error } = await supabase
