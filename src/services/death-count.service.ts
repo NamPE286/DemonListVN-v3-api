@@ -1,7 +1,7 @@
 import supabase from "@src/client/supabase";
 import { fetchLevelFromGD } from "@src/services/level.service";
 
-async function fetchPlayerData(uid: string, levelID: number): Promise<any> {
+async function fetchPlayerData(uid: string, levelID: number) {
     let { data, error } = await supabase
         .from('deathCount')
         .select('*')
@@ -17,7 +17,7 @@ async function fetchPlayerData(uid: string, levelID: number): Promise<any> {
     return data
 }
 
-async function fetchLevelData(levelID: number): Promise<any> {
+async function fetchLevelData(levelID: number) {
     let { data, error } = await supabase
         .from('levelDeathCount')
         .select('*')
@@ -33,43 +33,41 @@ async function fetchLevelData(levelID: number): Promise<any> {
 }
 
 async function isEligible(levelID: number): Promise<boolean> {
-    const data = await fetchLevelFromGD(levelID)
     const now = new Date();
-
-    if (data.difficulty == 'Extreme Demon' || data.difficulty == 'Insane Demon') {
-        return true;
-    }
-
     const a = await supabase
         .from('eventLevels')
         .select('*, events(*)')
         .eq('levelID', levelID)
 
-    if (a.error) {
-        return false;
+    if (!a.error) {
+        for (const lv of a.data) {
+            if (!lv.events) {
+                continue
+            }
+
+            const { start, end } = lv.events
+
+            if (!end) {
+                const startDate = new Date(start);
+
+                if (now >= startDate) {
+                    return true;
+                }
+            } else {
+                const startDate = new Date(start);
+                const endDate = new Date(end);
+
+                if (now >= startDate && now <= endDate) {
+                    return true;
+                }
+            }
+        }
     }
 
-    for (const lv of a.data) {
-        if (!lv.events) {
-            continue
-        }
+    const data = await fetchLevelFromGD(levelID)
 
-        const { start, end } = lv.events
-
-        if (!end) {
-            const startDate = new Date(start);
-
-            if (now >= startDate) {
-                return true;
-            }
-        } else {
-            const startDate = new Date(start);
-            const endDate = new Date(end);
-
-            if (now >= startDate && now <= endDate) {
-                return true;
-            }
-        }
+    if (data.difficulty == 'Extreme Demon' || data.difficulty == 'Insane Demon') {
+        return true;
     }
 
     return false;
