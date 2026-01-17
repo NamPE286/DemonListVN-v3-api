@@ -7,17 +7,16 @@ async function fetchData(uid: string, year: number) {
         .eq('uid', uid)
         .eq('year', year)
         .limit(1)
-        .single()
 
     if (error) {
         throw error
     }
 
-    if (data == null) {
+    if (data == null || data.length === 0) {
         return { uid: uid, year: year, days: Array(366).fill(0) }
     }
 
-    return data
+    return data[0]
 }
 
 function dayOfYear(year: number, month: number, date: number) {
