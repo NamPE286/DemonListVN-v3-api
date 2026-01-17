@@ -356,7 +356,7 @@ router.route('/submitLevel/:levelID')
                 let totalProgress = 0;
 
                 for (const record of level.eventRecords) {
-                    if (record.progress < Number(progress) && event.events!.type == 'basic') {
+                    if (record.progress < Number(progress) && event.events!.type == 'contest') {
                         // @ts-ignore
                         record.created_at = new Date().toISOString()
                         record.progress = Number(progress)
