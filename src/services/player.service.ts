@@ -331,7 +331,8 @@ export async function getPlayerInventoryItems(uid: string): Promise<TInventoryIt
             created_at: row.created_at,
             inventoryId: row.id,
             useRedirect: row.redirectTo,
-            expireAt: row.expireAt
+            expireAt: row.expireAt,
+            inventoryQuantity: row.quantity
         }
 
         const itemFields = items ? {

@@ -27,7 +27,9 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             rarity: item.items?.rarity!,
             quantity: item.items?.quantity!,
             expireAt: item.expireAt,
-            useRedirect: item.redirectTo
+            useRedirect: item.redirectTo,
+            inventoryQuantity: item.quantity,
+            stackable: item.items.stackable
         }
 
         res.locals.item = mapped
