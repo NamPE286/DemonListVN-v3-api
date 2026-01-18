@@ -98,7 +98,7 @@ router.route('/:id/consume')
      *         description: Internal server error
      */
     .delete(userAuth, itemOwnerCheck, async (req, res) => {
-        const { item } = res.locals
+        const { item, user } = res.locals
         const { quantity } = req.query
 
         if (!item) {
@@ -108,6 +108,12 @@ router.route('/:id/consume')
 
         try {
             await consumeItem(item.inventoryId, Number(quantity));
+
+
+            if (item.type == 'case') {
+                await consumeCase(user, item.inventoryId, item.itemId)
+            }
+
             res.status(200).send()
         } catch (err) {
             console.error(err);

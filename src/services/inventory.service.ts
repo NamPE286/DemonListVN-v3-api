@@ -77,10 +77,6 @@ export async function consumeItem(inventoryItemId: number, quantity?: number) {
             throw new Error(error.message);
         }
     }
-
-    if (item.type == 'case') {
-        await consumeCase(player, inventoryItem.id, item.id)
-    }
 }
 
 export async function addCaseResult(player: Player, inventoryItemId: number, caseItem: CaseItem | null) {
