@@ -1,7 +1,7 @@
 import supabase from "@src/client/supabase";
 import { getEventQuest } from "@src/services/event-quest.service";
 import { getCase as getCaseItems, getItem } from "@src/services/item.service";
-import type { getPlayer } from "@src/services/player.service";
+import { getPlayer } from "@src/services/player.service";
 import type { TablesInsert } from "@src/types/supabase";
 
 type Player = Awaited<ReturnType<typeof getPlayer>>;
@@ -40,6 +40,47 @@ export async function consumeCase(player: Player, inventoryItemId: number, itemI
 
     await addCaseResult(player, inventoryItemId, null)
     return {};
+}
+
+export async function consumeItem(inventoryItemId: number, quantity?: number) {
+    const inventoryItem = await getInventoryItem(inventoryItemId);
+    const item = await getItem(inventoryItem.itemId);
+    const player = await getPlayer(inventoryItem.userID);
+
+    if (item.stackable) {
+        const consumeQty = quantity || 1;
+        const newQuantity = inventoryItem.quantity - consumeQty;
+
+        if (newQuantity < 0) {
+            throw new Error('Not enough item')
+        } else {
+            var { error } = await supabase
+                .from('inventory')
+                .update({ quantity: newQuantity })
+                .eq('id', inventoryItemId);
+        }
+
+        if (error) {
+            throw new Error(error.message);
+        }
+    } else {
+        if (inventoryItem.consumed) {
+            throw new Error('Item is consumed')
+        }
+
+        var { error } = await supabase
+            .from('inventory')
+            .update({ consumed: true })
+            .eq('id', inventoryItemId);
+
+        if (error) {
+            throw new Error(error.message);
+        }
+    }
+
+    if (item.type == 'case') {
+        await consumeCase(player, inventoryItem.id, item.id)
+    }
 }
 
 export async function addCaseResult(player: Player, inventoryItemId: number, caseItem: CaseItem | null) {
@@ -82,7 +123,10 @@ export async function addInventoryItem(insertData: TablesInsert<"inventory">) {
 
             var { error } = await supabase
                 .from('inventory')
-                .update({ quantity: newQuantity })
+                .update({
+                    quantity: newQuantity,
+                    consumed: false
+                })
                 .eq('id', existingItem.id)
 
             if (error) {
