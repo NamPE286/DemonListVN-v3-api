@@ -9,7 +9,7 @@ async function fetchData(uid: string, year: number) {
         .limit(1)
 
     if (error) {
-        throw error
+        throw new Error(error.message)
     }
 
     if (data == null || data.length === 0) {

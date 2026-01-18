@@ -289,6 +289,26 @@ export async function getPlayerSubmissions(uid: string, { start = '0', end = '50
     return data
 }
 
+export async function getEstimatedQueue(userID: string, levelID: number, prioritizedBy: number) {
+    const prioritizedDate = new Date(prioritizedBy).toISOString()
+    const { data, error } = await supabase
+        .rpc('get_queue_no', {
+            userid: userID,
+            levelid: levelID,
+            p: prioritizedBy
+        })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    if(data == null) {
+        return 0;
+    }
+
+    return data
+}
+
 export async function changeSuggestedRating(uid: string, levelID: number, rating: number) {
     const { data, error } = await supabase
         .from('records')
@@ -556,6 +576,6 @@ export async function prioritizeRecord(userID: string, levelID: number, ms: numb
         .match({ userid: userID, levelid: levelID })
 
     if (error) {
-        throw error;
+        throw new Error(error.message);
     }
 }

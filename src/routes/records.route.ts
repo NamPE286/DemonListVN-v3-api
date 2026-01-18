@@ -2,7 +2,7 @@ import express from 'express'
 import adminAuth from '@src/middleware/admin-auth.middleware'
 import userAuth from '@src/middleware/user-auth.middleware'
 import { getRecord, getRecords, retrieveRecord, updateRecord, deleteRecord } from '@src/services/record.service'
-import { changeSuggestedRating } from '@src/services/record.service'
+import { changeSuggestedRating, getEstimatedQueue } from '@src/services/record.service'
 import logger from '@src/utils/logger'
 
 const router = express.Router()
@@ -226,6 +226,55 @@ router.route('/retrieve')
 
         try {
             res.send(await retrieveRecord(user))
+        } catch (err) {
+            res.status(500).send()
+        }
+    })
+
+router.route('/:userID/:levelID/getEstimatedQueue/:prioritizedBy')
+    /**
+     * @openapi
+     * "/records/{userID}/{levelID}/getEstimatedQueue/{prioritizedBy}":
+     *   GET:
+     *     tags:
+     *       - Record
+     *     summary: Get estimated queue number for a record
+     *     parameters:
+     *       - name: userID
+     *         in: path
+     *         description: The uid of the player
+     *         required: true
+     *         schema:
+     *           type: string
+     *       - name: levelID
+     *         in: path
+     *         description: The id of the level
+     *         required: true
+     *         schema:
+     *           type: number
+     *       - name: prioritizedBy
+     *         in: path
+     *         description: The timestamp in milliseconds to prioritize the record
+     *         required: true
+     *         schema:
+     *           type: number
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 estimatedQueueNo:
+     *                   type: number
+     */
+    .get(async (req, res) => {
+        const { userID, levelID, prioritizedBy } = req.params
+
+        try {
+            const estimatedQueueNo = await getEstimatedQueue(userID, parseInt(levelID), parseInt(prioritizedBy))
+            res.send({ no: estimatedQueueNo })
         } catch (err) {
             res.status(500).send()
         }

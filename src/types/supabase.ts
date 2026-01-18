@@ -1673,6 +1673,10 @@ export type Database = {
           userID: string
         }[]
       }
+      get_queue_no: {
+        Args: { levelid: number; p: number; userid: string }
+        Returns: number
+      }
       get_random_levels: {
         Args: { filter_type: string; row_count: number }
         Returns: {
