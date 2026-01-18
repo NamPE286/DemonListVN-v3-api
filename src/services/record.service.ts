@@ -551,7 +551,7 @@ export async function prioritizeRecord(userID: string, levelID: number, ms: numb
     const { error } = await supabase
         .from('records')
         .update({
-            prioritizeBy: record.prioritizeBy + ms
+            prioritizedBy: record.prioritizedBy + ms
         })
         .match({ userid: userID, levelid: levelID })
 

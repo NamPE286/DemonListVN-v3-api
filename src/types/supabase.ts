@@ -1495,7 +1495,7 @@ export type Database = {
           needMod: boolean
           no: number | null
           plPt: number | null
-          prioritizeBy: number
+          prioritizedBy: number
           progress: number
           queueNo: number | null
           raw: string | null
@@ -1517,7 +1517,7 @@ export type Database = {
           needMod?: boolean
           no?: number | null
           plPt?: number | null
-          prioritizeBy?: number
+          prioritizedBy?: number
           progress?: number
           queueNo?: number | null
           raw?: string | null
@@ -1539,7 +1539,7 @@ export type Database = {
           needMod?: boolean
           no?: number | null
           plPt?: number | null
-          prioritizeBy?: number
+          prioritizedBy?: number
           progress?: number
           queueNo?: number | null
           raw?: string | null
