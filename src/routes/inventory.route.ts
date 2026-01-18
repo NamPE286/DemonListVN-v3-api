@@ -111,10 +111,12 @@ router.route('/:id/consume')
 
 
             if (item.type == 'case') {
-                await consumeCase(user, item.inventoryId, item.itemId)
+                res.send(
+                    await consumeCase(user, item.inventoryId, item.itemId)
+                )
+            } else {
+                res.send()
             }
-
-            res.status(200).send()
         } catch (err) {
             console.error(err);
             res.status(500).send()
