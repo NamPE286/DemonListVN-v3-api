@@ -553,7 +553,7 @@ export async function prioritizeRecord(userID: string, levelID: number, ms: numb
         .update({
             prioritizeBy: record.prioritizeBy + ms
         })
-        .match({ userID: userID, levelID: levelID })
+        .match({ userid: userID, levelid: levelID })
 
     if (error) {
         throw error;
