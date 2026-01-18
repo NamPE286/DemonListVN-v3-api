@@ -1,7 +1,8 @@
 import supabase from "@src/client/supabase";
 import { getEventQuest } from "@src/services/event-quest.service";
-import { getCase as getCaseItems } from "@src/services/item.service";
+import { getCase as getCaseItems, getItem } from "@src/services/item.service";
 import type { getPlayer } from "@src/services/player.service";
+import type { TablesInsert } from "@src/types/supabase";
 
 type Player = Awaited<ReturnType<typeof getPlayer>>;
 
@@ -31,7 +32,7 @@ export async function consumeCase(player: Player, inventoryItemId: number, itemI
         x += i.rate!;
 
         if (x >= roll) {
-            await addInventoryItem(player, i);
+            await addInventoryCaseItem(player, i);
             await addCaseResult(player, inventoryItemId, i)
             return i;
         }
@@ -64,14 +65,52 @@ export async function addCaseResult(player: Player, inventoryItemId: number, cas
     }
 }
 
+export async function addInventoryItem(insertData: TablesInsert<"inventory">) {
+    const item = await getItem(insertData.itemId)
+
+    if (item.stackable) {
+        const { data: existingItem } = await supabase
+            .from('inventory')
+            .select('id, quantity')
+            .eq('userID', insertData.userID)
+            .eq('itemId', insertData.itemId)
+            .eq('consumed', false)
+            .maybeSingle()
+
+        if (existingItem) {
+            const newQuantity = existingItem.quantity + (insertData.quantity || 1)
+
+            var { error } = await supabase
+                .from('inventory')
+                .update({ quantity: newQuantity })
+                .eq('id', existingItem.id)
+
+            if (error) {
+                throw new Error(error.message)
+            }
+
+            return
+        }
+    }
+
+    var { error } = await supabase
+        .from('inventory')
+        .insert({
+            ...insertData,
+            consumed: false
+        })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+}
+
 type CaseItem = Awaited<ReturnType<typeof getCaseItems>> extends Array<infer T> ? T : never;
 
-export async function addInventoryItem(player: Player, caseItem: CaseItem) {
+export async function addInventoryCaseItem(player: Player, caseItem: CaseItem) {
     if (!player.uid) {
         throw new Error('player.uid is undefined');
     }
-
-
 
     if (caseItem.items?.productId) {
         if (!caseItem.expireAfter) {
@@ -95,31 +134,17 @@ export async function addInventoryItem(player: Player, caseItem: CaseItem) {
             throw new Error(error?.message)
         }
 
-        var { error } = await supabase
-            .from('inventory')
-            .insert({
-                userID: player.uid,
-                itemId: caseItem.itemId,
-                consumed: false,
-                redirectTo: '/redeem/' + data?.code,
-                expireAt: new Date(new Date().getTime() + caseItem.expireAfter).toISOString()
-            })
-
-        if (error) {
-            throw new Error(error.message)
-        }
+        await addInventoryItem({
+            userID: player.uid,
+            itemId: caseItem.itemId,
+            redirectTo: '/redeem/' + data?.code,
+            expireAt: new Date(new Date().getTime() + caseItem.expireAfter).toISOString()
+        })
     } else {
-        var { error } = await supabase
-            .from('inventory')
-            .insert({
-                userID: player.uid,
-                itemId: caseItem.id,
-                consumed: false
-            })
-
-        if (error) {
-            throw new Error(error.message)
-        }
+        await addInventoryItem({
+            userID: player.uid,
+            itemId: caseItem.id
+        })
     }
 }
 
@@ -162,30 +187,18 @@ export async function receiveReward(player: Player, reward: Reward) {
             throw new Error(error?.message)
         }
 
-        var { error } = await supabase
-            .from('inventory')
-            .insert({
-                userID: player.uid,
-                itemId: reward.id!,
-                consumed: false,
-                redirectTo: '/redeem/' + data?.code,
-                expireAt: new Date(new Date().getTime() + reward.expireAfter).toISOString()
-            })
+        await addInventoryItem({
+            userID: player.uid,
+            itemId: reward.id!,
+            redirectTo: '/redeem/' + data?.code,
+            expireAt: new Date(new Date().getTime() + reward.expireAfter).toISOString()
+        })
 
-        if (error) {
-            throw new Error(error.message)
-        }
+
     } else {
-        var { error } = await supabase
-            .from('inventory')
-            .insert({
-                userID: player.uid,
-                itemId: reward.id!,
-                consumed: false
-            })
-
-        if (error) {
-            throw new Error(error.message)
-        }
+        await addInventoryItem({
+            userID: player.uid,
+            itemId: reward.id!,
+        })
     }
 }

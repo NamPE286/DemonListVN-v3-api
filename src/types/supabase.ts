@@ -831,6 +831,7 @@ export type Database = {
           expireAt: string | null
           id: number
           itemId: number
+          quantity: number
           redirectTo: string | null
           userID: string
         }
@@ -841,6 +842,7 @@ export type Database = {
           expireAt?: string | null
           id?: number
           itemId: number
+          quantity?: number
           redirectTo?: string | null
           userID: string
         }
@@ -851,6 +853,7 @@ export type Database = {
           expireAt?: string | null
           id?: number
           itemId?: number
+          quantity?: number
           redirectTo?: string | null
           userID?: string
         }
@@ -880,6 +883,7 @@ export type Database = {
           quantity: number
           rarity: number
           redirect: string | null
+          stackable: boolean
           type: string
         }
         Insert: {
@@ -890,6 +894,7 @@ export type Database = {
           quantity?: number
           rarity?: number
           redirect?: string | null
+          stackable?: boolean
           type?: string
         }
         Update: {
@@ -900,6 +905,7 @@ export type Database = {
           quantity?: number
           rarity?: number
           redirect?: string | null
+          stackable?: boolean
           type?: string
         }
         Relationships: [

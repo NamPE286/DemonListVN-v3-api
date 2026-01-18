@@ -27,7 +27,7 @@ import optionalUserAuth from '@src/middleware/optional-user-auth.middleware'
 import supabase from '@src/client/supabase'
 import { calcLeaderboard } from '@src/services/elo.service'
 import { getEventQuest, getEventQuests, isQuestClaimed, isQuestCompleted, createEventQuest, updateEventQuest, deleteEventQuest, addQuestReward, removeQuestReward } from '@src/services/event-quest.service'
-import { addInventoryItem, receiveReward } from '@src/services/inventory.service'
+import { addInventoryCaseItem, receiveReward } from '@src/services/inventory.service'
 import { isActive } from '@src/utils'
 
 const router = express.Router()
