@@ -82,7 +82,7 @@ router.route('/')
 router.route('/:userID/:levelID')
     /**
      * @openapi
-     * "/record/{userID}/{levelID}":
+     * "/records/{userID}/{levelID}":
      *   delete:
      *     tags:
      *       - Record

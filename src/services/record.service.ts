@@ -2,6 +2,7 @@ import supabase from "@src/client/supabase";
 import { getLevel, fetchLevelFromGD, updateLevel } from "@src/services/level.service";
 import { getPlayer } from "@src/services/player.service";
 import { approved } from "@src/services/pointercrate.service";
+import { addInventoryItem } from "@src/services/inventory.service";
 import type { TRecord, TPlayer } from "@src/types";
 import getVideoId from "get-video-id";
 import logger from "@src/utils/logger";
@@ -553,6 +554,20 @@ export async function updateRecord(recordData: TRecord, validate = false, accept
 }
 
 export async function deleteRecord(userid: string, levelid: number) {
+    const record = await getRecord(userid, levelid);
+    
+    if (record.prioritizedBy && record.prioritizedBy > 0) {
+        const days = Math.floor(record.prioritizedBy / (1000 * 60 * 60 * 24));
+        
+        if (days > 0) {
+            await addInventoryItem({
+                userID: userid,
+                itemId: 15,
+                quantity: days
+            });
+        }
+    }
+    
     const { error } = await supabase
         .from('records')
         .delete()
