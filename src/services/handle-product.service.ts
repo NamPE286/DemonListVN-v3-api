@@ -6,6 +6,13 @@ import { FRONTEND_URL } from "@src/config/url";
 import { getClan, extendClanBoost } from "@src/services/clan.service";
 import { extendPlayerSupporter } from "@src/services/player.service";
 import type { Tables } from "@src/types/supabase";
+import { getRecord, prioritizeRecord } from "@src/services/record.service";
+
+const ProductIDConst = {
+    SUPPORTER: 1,
+    CLAN_BOOST: 3,
+    QUEUE_BOOST: 5
+}
 
 interface HandleProduct {
     pre: (buyer: Tables<"players">, recipient: Tables<"players">, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>;
@@ -14,9 +21,8 @@ interface HandleProduct {
 
 export const handleProduct: Map<number, HandleProduct> = new Map()
 
-handleProduct.set(1, {
+handleProduct.set(ProductIDConst.SUPPORTER, {
     pre: async (buyer, recipient, order) => {
-        console.log(recipient)
         await extendPlayerSupporter(recipient.uid!, order.quantity!);
 
         const { error } = await supabase
@@ -61,7 +67,7 @@ handleProduct.set(1, {
     }
 })
 
-handleProduct.set(3, {
+handleProduct.set(ProductIDConst.CLAN_BOOST, {
     pre: async (buyer, recipient, order) => {
         await extendClanBoost(order.targetClanID!, order.quantity!);
 
@@ -86,6 +92,31 @@ handleProduct.set(3, {
         }
 
         msg += ` boosted [${clan.name}](${FRONTEND_URL}/clan/${clan.id}) for ${order.quantity} day${order.quantity! > 1 ? "s" : ""}!`
+        await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
+    }
+})
+
+handleProduct.set(ProductIDConst.QUEUE_BOOST, {
+    pre: async (buyer, recipient, order) => {
+        interface OrderData {
+            userID: string,
+            levelID: number
+        }
+
+        const data: OrderData = order.data as unknown as OrderData
+
+        await prioritizeRecord(data.userID, data.levelID, order.quantity! * 86400000)
+    },
+    post: async (buyer, recipient, order) => {
+        let msg = ''
+
+        if (buyer.discord) {
+            msg = `<@${buyer.discord}>`
+        } else {
+            msg = `[${buyer.name}](${FRONTEND_URL}/player/${buyer.uid})`
+        }
+
+        msg += ` boosted their record by ${order.quantity} day${order.quantity! > 1 ? 's' : 's'}`
         await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
     }
 })

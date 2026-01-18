@@ -1059,6 +1059,7 @@ export type Database = {
           coupon: string | null
           created_at: string
           currency: string
+          data: Json | null
           delivered: boolean
           discount: number
           fee: number
@@ -1079,6 +1080,7 @@ export type Database = {
           coupon?: string | null
           created_at?: string
           currency?: string
+          data?: Json | null
           delivered?: boolean
           discount?: number
           fee?: number
@@ -1099,6 +1101,7 @@ export type Database = {
           coupon?: string | null
           created_at?: string
           currency?: string
+          data?: Json | null
           delivered?: boolean
           discount?: number
           fee?: number
@@ -1492,6 +1495,7 @@ export type Database = {
           needMod: boolean
           no: number | null
           plPt: number | null
+          prioritizeBy: number
           progress: number
           queueNo: number | null
           raw: string | null
@@ -1513,6 +1517,7 @@ export type Database = {
           needMod?: boolean
           no?: number | null
           plPt?: number | null
+          prioritizeBy?: number
           progress?: number
           queueNo?: number | null
           raw?: string | null
@@ -1534,6 +1539,7 @@ export type Database = {
           needMod?: boolean
           no?: number | null
           plPt?: number | null
+          prioritizeBy?: number
           progress?: number
           queueNo?: number | null
           raw?: string | null
@@ -1586,6 +1592,35 @@ export type Database = {
           type?: string
         }
         Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          expireAt: string | null
+          type: string
+          userID: string
+        }
+        Insert: {
+          created_at?: string
+          expireAt?: string | null
+          type: string
+          userID: string
+        }
+        Update: {
+          created_at?: string
+          expireAt?: string | null
+          type?: string
+          userID?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
       }
       userSocial: {
         Row: {

@@ -342,7 +342,7 @@ export async function submitRecord(recordData: TRecord) {
         logs.push(`Player data: ${JSON.stringify(player, null, 2)}`);
 
         let existingRecord;
-        
+
         try {
             logs.push('Checking for existing record');
             existingRecord = await getRecord(recordData.userid!, recordData.levelid!)
@@ -543,5 +543,19 @@ export async function deleteRecord(userid: string, levelid: number) {
             en: error.message,
             vi: error.message
         }
+    }
+}
+
+export async function prioritizeRecord(userID: string, levelID: number, ms: number) {
+    const record = await getRecord(userID, levelID)
+    const { error } = await supabase
+        .from('records')
+        .update({
+            prioritizeBy: record.prioritizeBy + ms
+        })
+        .match({ userID: userID, levelID: levelID })
+
+    if (error) {
+        throw error;
     }
 }
