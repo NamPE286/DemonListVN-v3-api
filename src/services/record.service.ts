@@ -303,7 +303,7 @@ export async function getEstimatedQueue(userID: string, levelID: number, priorit
     }
 
     if(data == null) {
-        return 0;
+        return 1;
     }
 
     return data
