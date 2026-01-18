@@ -58,7 +58,7 @@ const router = express.Router();
  *         description: Internal server error
  */
 router.route('/getPaymentLink/:productID/:quantity')
-    .get(userAuth, async (req, res) => {
+    .post(userAuth, async (req, res) => {
         const { user } = res.locals;
         const { giftTo, targetClanID } = req.query;
         const { productID, quantity } = req.params;
@@ -86,7 +86,8 @@ router.route('/getPaymentLink/:productID/:quantity')
                 null,
                 0,
                 null,
-                targetClanID ? Number(targetClanID) : null
+                targetClanID ? Number(targetClanID) : null,
+                req.body
             );
 
             res.send({ checkoutUrl: redirectUrl });
