@@ -4,7 +4,8 @@ import express from 'express'
 import { consumeItem } from '@src/services/inventory.service'
 import supabase from '@src/client/supabase'
 import { getPlayerInventoryItems } from '@src/services/player.service'
-import { consumeCase } from '@src/services/item-consumer.service'
+import { consumeCase, consumeQueueBoost } from '@src/services/item-consumer.service'
+import { ItemId } from '@src/const/itemIdConst'
 
 const router = express.Router()
 
@@ -73,6 +74,25 @@ router.route('/:id')
         }
     })
 
+router.route('/item/:id/consume')
+    .delete(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { id } = req.params
+
+        try {
+            if (Number(id) == ItemId.QUEUE_BOOST) {
+                const { levelID, quantity } = req.body
+
+                await consumeQueueBoost(user.uid, Number(levelID), Number(quantity));
+            }
+
+            res.send()
+        } catch (err) {
+            console.error(err);
+            res.status(500).send()
+        }
+    })
+
 router.route('/:id/consume')
     /**
      * @openapi
@@ -100,7 +120,6 @@ router.route('/:id/consume')
      */
     .delete(userAuth, itemOwnerCheck, async (req, res) => {
         const { item, user } = res.locals
-        const { quantity } = req.query
 
         if (!item) {
             res.status(404).send()
@@ -108,8 +127,6 @@ router.route('/:id/consume')
         }
 
         try {
-            await consumeItem(item.inventoryId, Number(quantity));
-
             let result: any;
 
             if (item.type == 'case') {

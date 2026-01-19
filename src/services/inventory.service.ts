@@ -24,7 +24,7 @@ export async function getInventoryItem(inventoryItemId: number) {
 }
 
 
-export async function consumeItem(inventoryItemId: number, quantity?: number, data: any = null) {
+export async function consumeItem(inventoryItemId: number, quantity: number = 1, data: any = null) {
     const inventoryItem = await getInventoryItem(inventoryItemId);
     const item = await getItem(inventoryItem.itemId);
 
