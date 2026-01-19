@@ -19,6 +19,17 @@ router.route('/')
      *     summary: Get user's inventory items
      *     security:
      *       - bearerAuth: []
+     *     parameters:
+     *       - name: itemType
+     *         in: query
+     *         description: Filter by item type
+     *         schema:
+     *           type: string
+     *       - name: itemId
+     *         in: query
+     *         description: Filter by item ID
+     *         schema:
+     *           type: string
      *     responses:
      *       200:
      *         description: Success
@@ -30,9 +41,17 @@ router.route('/')
      */
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
+        const { itemType, itemId } = req.query
 
         try {
-            res.send(await getPlayerInventoryItems(user.uid));
+            const filters = {
+                ...(itemType && { itemType: itemType as string }),
+                ...(itemId && { itemId: Number(itemId) })
+            }
+
+            const items = await getPlayerInventoryItems(user.uid, Object.keys(filters).length > 0 ? filters : undefined);
+            
+            res.send(items);
         } catch (err) {
             console.error(err);
             res.status(500).send()

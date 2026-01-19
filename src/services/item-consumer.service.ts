@@ -3,6 +3,7 @@ import { ItemId } from "@src/const/itemIdConst";
 import { addCaseResult, addInventoryCaseItem, consumeItem } from "@src/services/inventory.service";
 import { getCase as getCaseItems, getItem } from "@src/services/item.service";
 import { getPlayer } from "@src/services/player.service";
+import { prioritizeRecord } from "@src/services/record.service";
 
 type Player = Awaited<ReturnType<typeof getPlayer>>;
 
@@ -40,5 +41,5 @@ export async function consumeQueueBoost(userID: string, levelID: number, numOfDa
     }
 
     await consumeItem(data.id, numOfDay, { userID, levelID })
-
+    await prioritizeRecord(userID, levelID, numOfDay * 86400000)
 }

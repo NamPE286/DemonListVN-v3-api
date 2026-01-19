@@ -301,16 +301,26 @@ export async function updatePlayerDiscord(uid: string, discordId: string): Promi
     await sendDirectMessage(uid, `Your Discord account is linked to [${player.name}](${FRONTEND_URL}/player/${uid}) DLVN account.`, true)
 }
 
-export async function getPlayerInventoryItems(uid: string): Promise<TInventoryItem[]> {
+export async function getPlayerInventoryItems(uid: string, filters?: { itemType?: string; itemId?: number }): Promise<TInventoryItem[]> {
     type InventoryRow = Database['public']['Tables']['inventory']['Row']
     type ItemRow = Database['public']['Tables']['items']['Row']
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('inventory')
         .select('*, items!inner(*)')
         .eq('userID', uid)
         .eq('consumed', false)
         .or(`expireAt.is.null,expireAt.gt.${new Date().toISOString()}`)
+
+    if (filters?.itemType) {
+        query = query.eq('items.type', filters.itemType)
+    }
+
+    if (filters?.itemId) {
+        query = query.eq('itemId', filters.itemId)
+    }
+
+    const { data, error } = await query
         .order('created_at', { ascending: false })
 
     if (error) {
