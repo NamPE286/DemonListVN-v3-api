@@ -60,27 +60,6 @@ export type Database = {
           },
         ]
       }
-      battlePass: {
-        Row: {
-          created_at: string
-          endAt: string
-          id: number
-          name: string
-        }
-        Insert: {
-          created_at?: string
-          endAt: string
-          id?: number
-          name: string
-        }
-        Update: {
-          created_at?: string
-          endAt?: string
-          id?: number
-          name?: string
-        }
-        Relationships: []
-      }
       cards: {
         Row: {
           activationDate: string | null
