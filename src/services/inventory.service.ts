@@ -102,6 +102,10 @@ export async function addCaseResult(player: Player, inventoryItemId: number, cas
 export async function addInventoryItem(insertData: TablesInsert<"inventory">) {
     const item = await getItem(insertData.itemId)
 
+    if (insertData.expireAt === null && item.defaultExpireAfter) {
+        insertData.expireAt = new Date(new Date().getTime() + item.defaultExpireAfter).toISOString()
+    }
+
     if (item.stackable) {
         const { data: existingItem } = await supabase
             .from('inventory')
@@ -177,7 +181,9 @@ export async function addInventoryCaseItem(player: Player, caseItem: CaseItem) {
     }
 
     if (caseItem.items?.productId) {
-        if (!caseItem.expireAfter) {
+        const expireAfter = caseItem.expireAfter || caseItem.items.defaultExpireAfter
+
+        if (!expireAfter) {
             throw new Error("expireAfter is null")
         }
 
@@ -185,7 +191,7 @@ export async function addInventoryCaseItem(player: Player, caseItem: CaseItem) {
             .from('coupons')
             .insert({
                 percent: 1,
-                validUntil: new Date(new Date().getTime() + caseItem.expireAfter).toISOString(),
+                validUntil: new Date(new Date().getTime() + expireAfter).toISOString(),
                 productID: caseItem.items?.productId,
                 owner: player.uid,
                 quantity: caseItem.items.quantity
@@ -202,7 +208,7 @@ export async function addInventoryCaseItem(player: Player, caseItem: CaseItem) {
             userID: player.uid,
             itemId: caseItem.itemId,
             redirectTo: '/redeem/' + data?.code,
-            expireAt: new Date(new Date().getTime() + caseItem.expireAfter).toISOString()
+            expireAt: new Date(new Date().getTime() + expireAfter).toISOString()
         })
     } else {
         await addInventoryItem({

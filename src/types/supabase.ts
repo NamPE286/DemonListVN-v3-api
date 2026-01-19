@@ -60,6 +60,27 @@ export type Database = {
           },
         ]
       }
+      battlePass: {
+        Row: {
+          created_at: string
+          endAt: string
+          id: number
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          endAt: string
+          id?: number
+          name: string
+        }
+        Update: {
+          created_at?: string
+          endAt?: string
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
       cards: {
         Row: {
           activationDate: string | null
@@ -876,6 +897,7 @@ export type Database = {
       }
       items: {
         Row: {
+          defaultExpireAfter: number | null
           description: string | null
           id: number
           name: string
@@ -887,6 +909,7 @@ export type Database = {
           type: string
         }
         Insert: {
+          defaultExpireAfter?: number | null
           description?: string | null
           id?: number
           name?: string
@@ -898,6 +921,7 @@ export type Database = {
           type?: string
         }
         Update: {
+          defaultExpireAfter?: number | null
           description?: string | null
           id?: number
           name?: string

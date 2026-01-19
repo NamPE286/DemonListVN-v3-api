@@ -39,7 +39,7 @@ export async function getEventQuest(questId: number) {
         ...data,
         rewards: (data.rewards || []).map((r) => ({
             ...r.reward,
-            expireAfter: r.expireAfter
+            expireAfter: r.expireAfter || r.reward!.defaultExpireAfter
         }))
     }
 
@@ -103,7 +103,19 @@ export async function deleteEventQuest(questId: number) {
     }
 }
 
-export async function addQuestReward(questId: number, rewardId: number, expireAfter: number | null) {
+export async function addQuestReward(questId: number, rewardId: number, expireAfter: number | null = null) {
+    if (expireAfter === null) {
+        const { data, error } = await supabase
+            .from('items')
+            .select('*')
+            .eq('id', rewardId)
+            .single()
+
+        if (!error) {
+            expireAfter = data.defaultExpireAfter
+        }
+    }
+
     const { data, error } = await supabase
         .from('eventQuestRewards')
         .insert({
