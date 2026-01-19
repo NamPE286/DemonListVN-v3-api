@@ -138,51 +138,34 @@ export type Database = {
           },
         ]
       }
-      battlePassMapPacks: {
+      mapPacks: {
         Row: {
           id: number
           created_at: string
-          seasonId: number
           name: string
           description: string | null
           difficulty: string
           xp: number
-          unlockWeek: number
-          order: number
         }
         Insert: {
           id?: number
           created_at?: string
-          seasonId: number
           name: string
           description?: string | null
           difficulty: string
           xp: number
-          unlockWeek: number
-          order?: number
         }
         Update: {
           id?: number
           created_at?: string
-          seasonId?: number
           name?: string
           description?: string | null
           difficulty?: string
           xp?: number
-          unlockWeek?: number
-          order?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "battlePassMapPacks_seasonId_fkey"
-            columns: ["seasonId"]
-            isOneToOne: false
-            referencedRelation: "battlePassSeasons"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
-      battlePassMapPackLevels: {
+      mapPackLevels: {
         Row: {
           id: number
           created_at: string
@@ -206,17 +189,59 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "battlePassMapPackLevels_mapPackId_fkey"
+            foreignKeyName: "mapPackLevels_mapPackId_fkey"
             columns: ["mapPackId"]
             isOneToOne: false
-            referencedRelation: "battlePassMapPacks"
+            referencedRelation: "mapPacks"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "battlePassMapPackLevels_levelID_fkey"
+            foreignKeyName: "mapPackLevels_levelID_fkey"
             columns: ["levelID"]
             isOneToOne: false
             referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battlePassMapPacks: {
+        Row: {
+          id: number
+          created_at: string
+          seasonId: number
+          mapPackId: number
+          unlockWeek: number
+          order: number
+        }
+        Insert: {
+          id?: number
+          created_at?: string
+          seasonId: number
+          mapPackId: number
+          unlockWeek: number
+          order?: number
+        }
+        Update: {
+          id?: number
+          created_at?: string
+          seasonId?: number
+          mapPackId?: number
+          unlockWeek?: number
+          order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassMapPacks_seasonId_fkey"
+            columns: ["seasonId"]
+            isOneToOne: false
+            referencedRelation: "battlePassSeasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassMapPacks_mapPackId_fkey"
+            columns: ["mapPackId"]
+            isOneToOne: false
+            referencedRelation: "mapPacks"
             referencedColumns: ["id"]
           },
         ]
@@ -227,21 +252,18 @@ export type Database = {
           seasonId: number
           userID: string
           xp: number
-          isPremium: boolean
         }
         Insert: {
           created_at?: string
           seasonId: number
           userID: string
           xp?: number
-          isPremium?: boolean
         }
         Update: {
           created_at?: string
           seasonId?: number
           userID?: string
           xp?: number
-          isPremium?: boolean
         }
         Relationships: [
           {
@@ -257,6 +279,78 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["uid"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          id: number
+          created_at: string
+          name: string
+          description: string | null
+          type: string
+          price: number
+        }
+        Insert: {
+          id?: number
+          created_at?: string
+          name: string
+          description?: string | null
+          type: string
+          price: number
+        }
+        Update: {
+          id?: number
+          created_at?: string
+          name?: string
+          description?: string | null
+          type?: string
+          price?: number
+        }
+        Relationships: []
+      }
+      playerSubscriptions: {
+        Row: {
+          id: number
+          created_at: string
+          userID: string
+          subscriptionId: number
+          refId: number | null
+          start: string
+          end: string | null
+        }
+        Insert: {
+          id?: number
+          created_at?: string
+          userID: string
+          subscriptionId: number
+          refId?: number | null
+          start?: string
+          end?: string | null
+        }
+        Update: {
+          id?: number
+          created_at?: string
+          userID?: string
+          subscriptionId?: number
+          refId?: number | null
+          start?: string
+          end?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playerSubscriptions_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "playerSubscriptions_subscriptionId_fkey"
+            columns: ["subscriptionId"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -305,29 +399,29 @@ export type Database = {
       battlePassMapPackProgress: {
         Row: {
           created_at: string
-          mapPackId: number
+          battlePassMapPackId: number
           userID: string
           completedLevels: number[]
           claimed: boolean
         }
         Insert: {
           created_at?: string
-          mapPackId: number
+          battlePassMapPackId: number
           userID: string
           completedLevels?: number[]
           claimed?: boolean
         }
         Update: {
           created_at?: string
-          mapPackId?: number
+          battlePassMapPackId?: number
           userID?: string
           completedLevels?: number[]
           claimed?: boolean
         }
         Relationships: [
           {
-            foreignKeyName: "battlePassMapPackProgress_mapPackId_fkey"
-            columns: ["mapPackId"]
+            foreignKeyName: "battlePassMapPackProgress_battlePassMapPackId_fkey"
+            columns: ["battlePassMapPackId"]
             isOneToOne: false
             referencedRelation: "battlePassMapPacks"
             referencedColumns: ["id"]

@@ -17,12 +17,17 @@ import {
     deleteSeasonLevel,
     getSeasonMapPacks,
     getAllSeasonMapPacks,
-    getMapPack,
-    createMapPack,
-    updateMapPack,
-    deleteMapPack,
-    addMapPackLevel,
-    deleteMapPackLevel,
+    getBattlePassMapPack,
+    addBattlePassMapPack,
+    updateBattlePassMapPack,
+    deleteBattlePassMapPack,
+    getAllMapPacks,
+    getMapPackById,
+    createMapPackGeneral,
+    updateMapPackGeneral,
+    deleteMapPackGeneral,
+    addMapPackLevelGeneral,
+    deleteMapPackLevelGeneral,
     getPlayerMapPackProgress,
     claimMapPackReward,
     getTierRewards,
@@ -40,7 +45,9 @@ import {
     claimMission,
     getPlayerMissionStatus,
     updateLevelProgressWithMissionCheck,
-    getPlayerLevelProgress
+    getPlayerLevelProgress,
+    getPlayerSubscriptions,
+    addPlayerSubscription
 } from '@src/services/battlepass.service'
 
 const router = express.Router()
@@ -693,11 +700,11 @@ router.route('/season/:id/mappacks')
     .post(adminAuth, async (req, res) => {
         const { id } = req.params
         try {
-            const mapPack = await createMapPack({
+            const bpMapPack = await addBattlePassMapPack({
                 seasonId: Number(id),
                 ...req.body
             })
-            res.send(mapPack)
+            res.send(bpMapPack)
         } catch (err: any) {
             console.error(err)
             res.status(500).send({ message: err.message })
@@ -710,6 +717,161 @@ router.route('/season/:id/mappacks')
  *   get:
  *     tags:
  *       - Battle Pass
+ *     summary: Get a specific battle pass map pack
+ *     parameters:
+ *       - name: mapPackId
+ *         in: path
+ *         description: Battle Pass Map Pack ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *       500:
+ *         description: Internal server error
+ *   patch:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Update a battle pass map pack (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: mapPackId
+ *         in: path
+ *         description: Battle Pass Map Pack ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Map pack updated successfully
+ *       500:
+ *         description: Internal server error
+ *   delete:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Delete a battle pass map pack (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: mapPackId
+ *         in: path
+ *         description: Battle Pass Map Pack ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Map pack deleted successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/mappack/:mapPackId')
+    .get(async (req, res) => {
+        const { mapPackId } = req.params
+        try {
+            const bpMapPack = await getBattlePassMapPack(Number(mapPackId))
+            res.send(bpMapPack)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+    .patch(adminAuth, async (req, res) => {
+        const { mapPackId } = req.params
+        try {
+            await updateBattlePassMapPack(Number(mapPackId), req.body)
+            res.send()
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+    .delete(adminAuth, async (req, res) => {
+        const { mapPackId } = req.params
+        try {
+            await deleteBattlePassMapPack(Number(mapPackId))
+            res.send()
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+// ==================== General Map Pack Routes ====================
+
+/**
+ * @openapi
+ * "/battlepass/mappacks/general":
+ *   get:
+ *     tags:
+ *       - Map Packs
+ *     summary: Get all map packs
+ *     responses:
+ *       200:
+ *         description: Success
+ *       500:
+ *         description: Internal server error
+ *   post:
+ *     tags:
+ *       - Map Packs
+ *     summary: Create a new map pack (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               difficulty:
+ *                 type: string
+ *               xp:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Map pack created successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/mappacks/general')
+    .get(async (req, res) => {
+        try {
+            const mapPacks = await getAllMapPacks()
+            res.send(mapPacks)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+    .post(adminAuth, async (req, res) => {
+        try {
+            const mapPack = await createMapPackGeneral(req.body)
+            res.send(mapPack)
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+
+/**
+ * @openapi
+ * "/battlepass/mappacks/general/{mapPackId}":
+ *   get:
+ *     tags:
+ *       - Map Packs
  *     summary: Get a specific map pack
  *     parameters:
  *       - name: mapPackId
@@ -725,7 +887,7 @@ router.route('/season/:id/mappacks')
  *         description: Internal server error
  *   patch:
  *     tags:
- *       - Battle Pass
+ *       - Map Packs
  *     summary: Update a map pack (Admin only)
  *     security:
  *       - bearerAuth: []
@@ -749,7 +911,7 @@ router.route('/season/:id/mappacks')
  *         description: Internal server error
  *   delete:
  *     tags:
- *       - Battle Pass
+ *       - Map Packs
  *     summary: Delete a map pack (Admin only)
  *     security:
  *       - bearerAuth: []
@@ -766,11 +928,11 @@ router.route('/season/:id/mappacks')
  *       500:
  *         description: Internal server error
  */
-router.route('/mappack/:mapPackId')
+router.route('/mappacks/general/:mapPackId')
     .get(async (req, res) => {
         const { mapPackId } = req.params
         try {
-            const mapPack = await getMapPack(Number(mapPackId))
+            const mapPack = await getMapPackById(Number(mapPackId))
             res.send(mapPack)
         } catch (err) {
             console.error(err)
@@ -780,7 +942,7 @@ router.route('/mappack/:mapPackId')
     .patch(adminAuth, async (req, res) => {
         const { mapPackId } = req.params
         try {
-            await updateMapPack(Number(mapPackId), req.body)
+            await updateMapPackGeneral(Number(mapPackId), req.body)
             res.send()
         } catch (err: any) {
             console.error(err)
@@ -790,7 +952,7 @@ router.route('/mappack/:mapPackId')
     .delete(adminAuth, async (req, res) => {
         const { mapPackId } = req.params
         try {
-            await deleteMapPack(Number(mapPackId))
+            await deleteMapPackGeneral(Number(mapPackId))
             res.send()
         } catch (err) {
             console.error(err)
@@ -800,10 +962,10 @@ router.route('/mappack/:mapPackId')
 
 /**
  * @openapi
- * "/battlepass/mappack/{mapPackId}/level":
+ * "/battlepass/mappacks/general/{mapPackId}/level":
  *   post:
  *     tags:
- *       - Battle Pass
+ *       - Map Packs
  *     summary: Add a level to a map pack (Admin only)
  *     security:
  *       - bearerAuth: []
@@ -831,11 +993,11 @@ router.route('/mappack/:mapPackId')
  *       500:
  *         description: Internal server error
  */
-router.route('/mappack/:mapPackId/level')
+router.route('/mappacks/general/:mapPackId/level')
     .post(adminAuth, async (req, res) => {
         const { mapPackId } = req.params
         try {
-            const level = await addMapPackLevel({
+            const level = await addMapPackLevelGeneral({
                 mapPackId: Number(mapPackId),
                 ...req.body
             })
@@ -848,10 +1010,10 @@ router.route('/mappack/:mapPackId/level')
 
 /**
  * @openapi
- * "/battlepass/mappack/{mapPackId}/level/{levelId}":
+ * "/battlepass/mappacks/general/{mapPackId}/level/{levelId}":
  *   delete:
  *     tags:
- *       - Battle Pass
+ *       - Map Packs
  *     summary: Remove a level from a map pack (Admin only)
  *     security:
  *       - bearerAuth: []
@@ -864,7 +1026,7 @@ router.route('/mappack/:mapPackId/level')
  *           type: integer
  *       - name: levelId
  *         in: path
- *         description: Map Pack Level ID
+ *         description: Level ID
  *         required: true
  *         schema:
  *           type: integer
@@ -874,11 +1036,11 @@ router.route('/mappack/:mapPackId/level')
  *       500:
  *         description: Internal server error
  */
-router.route('/mappack/:mapPackId/level/:levelId')
+router.route('/mappacks/general/:mapPackId/level/:levelId')
     .delete(adminAuth, async (req, res) => {
         const { levelId } = req.params
         try {
-            await deleteMapPackLevel(Number(levelId))
+            await deleteMapPackLevelGeneral(Number(levelId))
             res.send()
         } catch (err) {
             console.error(err)
@@ -898,7 +1060,7 @@ router.route('/mappack/:mapPackId/level/:levelId')
  *     parameters:
  *       - name: mapPackId
  *         in: path
- *         description: Map Pack ID
+ *         description: Battle Pass Map Pack ID
  *         required: true
  *         schema:
  *           type: integer

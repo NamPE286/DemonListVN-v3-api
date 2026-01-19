@@ -6,6 +6,9 @@ const XP_PER_TIER = 100;
 const MAX_TIER = 100;
 const COMPLETION_THRESHOLD = 100;
 
+// Subscription type constants
+const SUBSCRIPTION_TYPE_BATTLEPASS_PREMIUM = 'battlepass_premium';
+
 // ==================== Season Functions ====================
 
 export async function getActiveseason() {
@@ -78,6 +81,63 @@ export async function archiveSeason(seasonId: number) {
     }
 }
 
+// ==================== Player Subscription Functions ====================
+
+export async function hasPlayerSubscription(userId: string, subscriptionType: string, refId?: number) {
+    const now = new Date().toISOString();
+    
+    let query = supabase
+        .from('playerSubscriptions')
+        .select('*, subscriptions!inner(*)')
+        .eq('userID', userId)
+        .eq('subscriptions.type', subscriptionType)
+        .lte('start', now);
+    
+    if (refId !== undefined) {
+        query = query.eq('refId', refId);
+    }
+    
+    const { data, error } = await query;
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    // Check if any subscription is still valid (end is null for permanent or end > now)
+    return data.some(sub => sub.end === null || new Date(sub.end) > new Date());
+}
+
+export async function hasBattlePassPremium(userId: string, seasonId: number) {
+    return hasPlayerSubscription(userId, SUBSCRIPTION_TYPE_BATTLEPASS_PREMIUM, seasonId);
+}
+
+export async function addPlayerSubscription(subscription: TablesInsert<"playerSubscriptions">) {
+    const { data, error } = await supabase
+        .from('playerSubscriptions')
+        .insert(subscription)
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+export async function getPlayerSubscriptions(userId: string) {
+    const { data, error } = await supabase
+        .from('playerSubscriptions')
+        .select('*, subscriptions(*)')
+        .eq('userID', userId);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
 // ==================== Progress Functions ====================
 
 export async function getPlayerProgress(seasonId: number, userId: string) {
@@ -92,18 +152,22 @@ export async function getPlayerProgress(seasonId: number, userId: string) {
         throw new Error(error.message);
     }
 
+    // Check for premium subscription
+    const isPremium = await hasBattlePassPremium(userId, seasonId);
+
     if (!data) {
         return {
             seasonId,
             userID: userId,
             xp: 0,
-            isPremium: false,
+            isPremium,
             tier: 0
         };
     }
 
     return {
         ...data,
+        isPremium,
         tier: calculateTier(data.xp)
     };
 }
@@ -117,8 +181,7 @@ export async function addXp(seasonId: number, userId: string, xp: number) {
         .upsert({
             seasonId,
             userID: userId,
-            xp: newXp,
-            isPremium: progress?.isPremium || false
+            xp: newXp
         });
 
     if (error) {
@@ -134,18 +197,29 @@ export async function addXp(seasonId: number, userId: string, xp: number) {
 }
 
 export async function upgradeToPremium(seasonId: number, userId: string) {
-    // Get existing progress to preserve XP
-    const existingProgress = await getPlayerProgress(seasonId, userId);
-    
+    // Find or create a battlepass premium subscription type
+    const { data: subscription, error: subError } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('type', SUBSCRIPTION_TYPE_BATTLEPASS_PREMIUM)
+        .maybeSingle();
+
+    if (subError) {
+        throw new Error(subError.message);
+    }
+
+    if (!subscription) {
+        throw new Error('Battle pass premium subscription type not found');
+    }
+
+    // Add player subscription with refId pointing to seasonId
     const { error } = await supabase
-        .from('battlePassProgress')
-        .upsert({
-            seasonId,
+        .from('playerSubscriptions')
+        .insert({
             userID: userId,
-            xp: existingProgress?.xp || 0,
-            isPremium: true
-        }, {
-            onConflict: 'seasonId,userID'
+            subscriptionId: subscription.id,
+            refId: seasonId,
+            end: null // Permanent for the season
         });
 
     if (error) {
@@ -268,14 +342,26 @@ export async function updateLevelProgressWithMissionCheck(
 
     // If progress is at completion threshold, also update map pack progress for any map packs that contain this level
     if (progress >= COMPLETION_THRESHOLD) {
+        // Find all mapPackLevels that contain this levelID
         const { data: mapPackLevels } = await supabase
-            .from('battlePassMapPackLevels')
+            .from('mapPackLevels')
             .select('mapPackId, levelID')
             .eq('levelID', bpLevel.levelID);
 
         if (mapPackLevels && mapPackLevels.length > 0) {
+            // Find all battlePassMapPacks for this season that reference these mapPacks
             for (const mpl of mapPackLevels) {
-                await completeMapPackLevel(mpl.mapPackId, userId, mpl.levelID);
+                const { data: bpMapPacks } = await supabase
+                    .from('battlePassMapPacks')
+                    .select('id')
+                    .eq('seasonId', bpLevel.seasonId)
+                    .eq('mapPackId', mpl.mapPackId);
+
+                if (bpMapPacks && bpMapPacks.length > 0) {
+                    for (const bpmp of bpMapPacks) {
+                        await completeMapPackLevel(bpmp.id, userId, mpl.levelID);
+                    }
+                }
             }
         }
     }
@@ -310,6 +396,102 @@ export async function checkAndUpdateMissionProgress(seasonId: number, userId: st
 
 // ==================== Map Pack Functions ====================
 
+// Get map pack by id (from mapPacks table)
+export async function getMapPackById(mapPackId: number) {
+    const { data, error } = await supabase
+        .from('mapPacks')
+        .select('*, mapPackLevels(*, levels(*))')
+        .eq('id', mapPackId)
+        .single();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+// Get all map packs
+export async function getAllMapPacks() {
+    const { data, error } = await supabase
+        .from('mapPacks')
+        .select('*, mapPackLevels(*, levels(*))');
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+// Create a map pack (in mapPacks table)
+export async function createMapPackGeneral(mapPack: TablesInsert<"mapPacks">) {
+    const { data, error } = await supabase
+        .from('mapPacks')
+        .insert(mapPack)
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+// Update a map pack (in mapPacks table)
+export async function updateMapPackGeneral(mapPackId: number, updates: Partial<TablesInsert<"mapPacks">>) {
+    const { error } = await supabase
+        .from('mapPacks')
+        .update(updates)
+        .eq('id', mapPackId);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+}
+
+// Delete a map pack (from mapPacks table)
+export async function deleteMapPackGeneral(mapPackId: number) {
+    const { error } = await supabase
+        .from('mapPacks')
+        .delete()
+        .eq('id', mapPackId);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+}
+
+// Add level to a map pack (in mapPackLevels table)
+export async function addMapPackLevelGeneral(level: TablesInsert<"mapPackLevels">) {
+    const { data, error } = await supabase
+        .from('mapPackLevels')
+        .insert(level)
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+// Delete level from a map pack (from mapPackLevels table)
+export async function deleteMapPackLevelGeneral(levelId: number) {
+    const { error } = await supabase
+        .from('mapPackLevels')
+        .delete()
+        .eq('id', levelId);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+}
+
+// ==================== Battle Pass Map Pack Functions ====================
+
 export async function getSeasonMapPacks(seasonId: number) {
     const now = new Date();
     const season = await getSeason(seasonId);
@@ -318,7 +500,7 @@ export async function getSeasonMapPacks(seasonId: number) {
 
     const { data, error } = await supabase
         .from('battlePassMapPacks')
-        .select('*, battlePassMapPackLevels(*, levels(*))')
+        .select('*, mapPacks(*, mapPackLevels(*, levels(*)))')
         .eq('seasonId', seasonId)
         .lte('unlockWeek', weeksSinceStart + 1)
         .order('unlockWeek', { ascending: false })
@@ -334,7 +516,7 @@ export async function getSeasonMapPacks(seasonId: number) {
 export async function getAllSeasonMapPacks(seasonId: number) {
     const { data, error } = await supabase
         .from('battlePassMapPacks')
-        .select('*, battlePassMapPackLevels(*, levels(*))')
+        .select('*, mapPacks(*, mapPackLevels(*, levels(*)))')
         .eq('seasonId', seasonId)
         .order('unlockWeek', { ascending: true })
         .order('order', { ascending: true });
@@ -346,11 +528,11 @@ export async function getAllSeasonMapPacks(seasonId: number) {
     return data;
 }
 
-export async function getMapPack(mapPackId: number) {
+export async function getBattlePassMapPack(battlePassMapPackId: number) {
     const { data, error } = await supabase
         .from('battlePassMapPacks')
-        .select('*, battlePassMapPackLevels(*, levels(*))')
-        .eq('id', mapPackId)
+        .select('*, mapPacks(*, mapPackLevels(*, levels(*)))')
+        .eq('id', battlePassMapPackId)
         .single();
 
     if (error) {
@@ -360,10 +542,10 @@ export async function getMapPack(mapPackId: number) {
     return data;
 }
 
-export async function createMapPack(mapPack: TablesInsert<"battlePassMapPacks">) {
+export async function addBattlePassMapPack(bpMapPack: TablesInsert<"battlePassMapPacks">) {
     const { data, error } = await supabase
         .from('battlePassMapPacks')
-        .insert(mapPack)
+        .insert(bpMapPack)
         .select()
         .single();
 
@@ -374,58 +556,33 @@ export async function createMapPack(mapPack: TablesInsert<"battlePassMapPacks">)
     return data;
 }
 
-export async function updateMapPack(mapPackId: number, updates: Partial<TablesInsert<"battlePassMapPacks">>) {
+export async function updateBattlePassMapPack(battlePassMapPackId: number, updates: Partial<TablesInsert<"battlePassMapPacks">>) {
     const { error } = await supabase
         .from('battlePassMapPacks')
         .update(updates)
-        .eq('id', mapPackId);
+        .eq('id', battlePassMapPackId);
 
     if (error) {
         throw new Error(error.message);
     }
 }
 
-export async function deleteMapPack(mapPackId: number) {
+export async function deleteBattlePassMapPack(battlePassMapPackId: number) {
     const { error } = await supabase
         .from('battlePassMapPacks')
         .delete()
-        .eq('id', mapPackId);
+        .eq('id', battlePassMapPackId);
 
     if (error) {
         throw new Error(error.message);
     }
 }
 
-export async function addMapPackLevel(level: TablesInsert<"battlePassMapPackLevels">) {
-    const { data, error } = await supabase
-        .from('battlePassMapPackLevels')
-        .insert(level)
-        .select()
-        .single();
-
-    if (error) {
-        throw new Error(error.message);
-    }
-
-    return data;
-}
-
-export async function deleteMapPackLevel(levelId: number) {
-    const { error } = await supabase
-        .from('battlePassMapPackLevels')
-        .delete()
-        .eq('id', levelId);
-
-    if (error) {
-        throw new Error(error.message);
-    }
-}
-
-export async function getPlayerMapPackProgress(mapPackId: number, userId: string) {
+export async function getPlayerMapPackProgress(battlePassMapPackId: number, userId: string) {
     const { data, error } = await supabase
         .from('battlePassMapPackProgress')
         .select('*')
-        .eq('mapPackId', mapPackId)
+        .eq('battlePassMapPackId', battlePassMapPackId)
         .eq('userID', userId)
         .maybeSingle();
 
@@ -436,8 +593,8 @@ export async function getPlayerMapPackProgress(mapPackId: number, userId: string
     return data;
 }
 
-export async function completeMapPackLevel(mapPackId: number, userId: string, levelId: number) {
-    const progress = await getPlayerMapPackProgress(mapPackId, userId);
+export async function completeMapPackLevel(battlePassMapPackId: number, userId: string, levelId: number) {
+    const progress = await getPlayerMapPackProgress(battlePassMapPackId, userId);
     const completedLevels = progress?.completedLevels || [];
     
     if (!completedLevels.includes(levelId)) {
@@ -447,7 +604,7 @@ export async function completeMapPackLevel(mapPackId: number, userId: string, le
     const { error } = await supabase
         .from('battlePassMapPackProgress')
         .upsert({
-            mapPackId,
+            battlePassMapPackId,
             userID: userId,
             completedLevels,
             claimed: progress?.claimed || false
@@ -460,9 +617,9 @@ export async function completeMapPackLevel(mapPackId: number, userId: string, le
     return completedLevels;
 }
 
-export async function claimMapPackReward(mapPackId: number, userId: string) {
-    const mapPack = await getMapPack(mapPackId);
-    const progress = await getPlayerMapPackProgress(mapPackId, userId);
+export async function claimMapPackReward(battlePassMapPackId: number, userId: string) {
+    const bpMapPack = await getBattlePassMapPack(battlePassMapPackId);
+    const progress = await getPlayerMapPackProgress(battlePassMapPackId, userId);
     
     if (!progress) {
         throw new Error('No progress found');
@@ -472,7 +629,7 @@ export async function claimMapPackReward(mapPackId: number, userId: string) {
         throw new Error('Already claimed');
     }
 
-    const totalLevels = mapPack.battlePassMapPackLevels?.length || 0;
+    const totalLevels = bpMapPack.mapPacks?.mapPackLevels?.length || 0;
     
     if (progress.completedLevels.length < totalLevels) {
         throw new Error('Map pack not completed');
@@ -481,17 +638,20 @@ export async function claimMapPackReward(mapPackId: number, userId: string) {
     const { error } = await supabase
         .from('battlePassMapPackProgress')
         .update({ claimed: true })
-        .eq('mapPackId', mapPackId)
+        .eq('battlePassMapPackId', battlePassMapPackId)
         .eq('userID', userId);
 
     if (error) {
         throw new Error(error.message);
     }
 
-    // Add XP to player
-    await addXp(mapPack.seasonId, userId, mapPack.xp);
+    // Get the XP from the mapPacks table
+    const mapPackXp = bpMapPack.mapPacks?.xp || 0;
 
-    return mapPack.xp;
+    // Add XP to player
+    await addXp(bpMapPack.seasonId, userId, mapPackXp);
+
+    return mapPackXp;
 }
 
 // ==================== Tier Reward Functions ====================
@@ -818,7 +978,7 @@ export async function isMissionCompleted(userId: string, missionId: number) {
                 break;
             }
             case 'clear_mappack': {
-                // Check if user has cleared all levels in a map pack
+                // Check if user has cleared all levels in a battle pass map pack
                 if (!condition.targetId) {
                     console.error(`Mission ${missionId}: clear_mappack condition missing targetId`);
                     return false;
@@ -826,8 +986,8 @@ export async function isMissionCompleted(userId: string, missionId: number) {
                 const progress = await getPlayerMapPackProgress(condition.targetId, userId);
                 if (!progress) return false;
                 
-                const mapPack = await getMapPack(condition.targetId);
-                const totalLevels = mapPack.battlePassMapPackLevels?.length || 0;
+                const bpMapPack = await getBattlePassMapPack(condition.targetId);
+                const totalLevels = bpMapPack.mapPacks?.mapPackLevels?.length || 0;
                 
                 if (progress.completedLevels.length < totalLevels) return false;
                 break;
@@ -847,7 +1007,7 @@ export async function isMissionCompleted(userId: string, missionId: number) {
             case 'clear_level_count': {
                 // Check if user has cleared at least X number of levels in the season
                 const seasonLevels = await getSeasonLevels(mission.seasonId);
-                const mapPacks = await getAllSeasonMapPacks(mission.seasonId);
+                const bpMapPacks = await getAllSeasonMapPacks(mission.seasonId);
                 
                 let completedCount = 0;
                 
@@ -860,7 +1020,7 @@ export async function isMissionCompleted(userId: string, missionId: number) {
                 }
                 
                 // Count completed map pack levels
-                for (const pack of mapPacks) {
+                for (const pack of bpMapPacks) {
                     const packProgress = await getPlayerMapPackProgress(pack.id, userId);
                     if (packProgress) {
                         completedCount += packProgress.completedLevels.length;
@@ -872,13 +1032,13 @@ export async function isMissionCompleted(userId: string, missionId: number) {
             }
             case 'clear_mappack_count': {
                 // Check if user has completed at least X map packs
-                const mapPacks = await getAllSeasonMapPacks(mission.seasonId);
+                const bpMapPacks = await getAllSeasonMapPacks(mission.seasonId);
                 let completedPackCount = 0;
                 
-                for (const pack of mapPacks) {
+                for (const pack of bpMapPacks) {
                     const packProgress = await getPlayerMapPackProgress(pack.id, userId);
                     if (packProgress) {
-                        const totalLevels = pack.battlePassMapPackLevels?.length || 0;
+                        const totalLevels = pack.mapPacks?.mapPackLevels?.length || 0;
                         if (packProgress.completedLevels.length >= totalLevels) {
                             completedPackCount++;
                         }
