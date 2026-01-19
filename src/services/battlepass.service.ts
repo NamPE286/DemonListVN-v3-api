@@ -562,3 +562,320 @@ export async function getClaimableRewards(seasonId: number, userId: string) {
         return true;
     });
 }
+
+// ==================== Mission Functions ====================
+
+export async function getSeasonMissions(seasonId: number) {
+    const { data, error } = await supabase
+        .from('battlePassMissions')
+        .select('*, rewards:battlePassMissionRewards(*, items(*))')
+        .eq('seasonId', seasonId)
+        .order('order', { ascending: true });
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+export async function getMission(missionId: number) {
+    const { data, error } = await supabase
+        .from('battlePassMissions')
+        .select('*, rewards:battlePassMissionRewards(*, items(*))')
+        .eq('id', missionId)
+        .single();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+export async function createMission(mission: TablesInsert<"battlePassMissions">) {
+    const { data, error } = await supabase
+        .from('battlePassMissions')
+        .insert(mission)
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+export async function updateMission(missionId: number, updates: Partial<TablesInsert<"battlePassMissions">>) {
+    const { error } = await supabase
+        .from('battlePassMissions')
+        .update(updates)
+        .eq('id', missionId);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+}
+
+export async function deleteMission(missionId: number) {
+    // CASCADE DELETE is configured on foreign keys, so we only need to delete the mission
+    const { error } = await supabase
+        .from('battlePassMissions')
+        .delete()
+        .eq('id', missionId);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+}
+
+export async function addMissionReward(missionId: number, itemId: number, quantity: number = 1, expireAfter: number | null = null) {
+    if (expireAfter === null) {
+        const { data } = await supabase
+            .from('items')
+            .select('defaultExpireAfter')
+            .eq('id', itemId)
+            .single();
+
+        if (data) {
+            expireAfter = data.defaultExpireAfter;
+        }
+    }
+
+    const { data, error } = await supabase
+        .from('battlePassMissionRewards')
+        .insert({
+            missionId,
+            itemId,
+            quantity,
+            expireAfter
+        })
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+export async function removeMissionReward(rewardId: number) {
+    const { error } = await supabase
+        .from('battlePassMissionRewards')
+        .delete()
+        .eq('id', rewardId);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+}
+
+export async function isMissionClaimed(userId: string, missionId: number) {
+    const { data, error } = await supabase
+        .from('battlePassMissionClaims')
+        .select('*')
+        .eq('userID', userId)
+        .eq('missionId', missionId)
+        .maybeSingle();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return !!data;
+}
+
+interface MissionCondition {
+    type: string;
+    value: number;
+    target?: string;
+    targetId?: number;
+}
+
+export async function isMissionCompleted(userId: string, missionId: number) {
+    const mission = await getMission(missionId);
+    
+    // Validate condition is an array
+    if (!Array.isArray(mission.condition)) {
+        console.error(`Mission ${missionId} has invalid condition format - expected array`);
+        return false;
+    }
+    
+    const conditions: MissionCondition[] = mission.condition as MissionCondition[];
+
+    for (const condition of conditions) {
+        switch (condition.type) {
+            case 'clear_level': {
+                // Check if user has cleared the specific level
+                if (!condition.targetId) {
+                    console.error(`Mission ${missionId}: clear_level condition missing targetId`);
+                    return false;
+                }
+                const { data } = await supabase
+                    .from('records')
+                    .select('*')
+                    .eq('userid', userId)
+                    .eq('levelid', condition.targetId)
+                    .eq('progress', 100)
+                    .not('isChecked', 'is', null)
+                    .maybeSingle();
+
+                if (!data) return false;
+                break;
+            }
+            case 'clear_mappack': {
+                // Check if user has cleared all levels in a map pack
+                if (!condition.targetId) {
+                    console.error(`Mission ${missionId}: clear_mappack condition missing targetId`);
+                    return false;
+                }
+                const progress = await getPlayerMapPackProgress(condition.targetId, userId);
+                if (!progress) return false;
+                
+                const mapPack = await getMapPack(condition.targetId);
+                const totalLevels = mapPack.battlePassMapPackLevels?.length || 0;
+                
+                if (progress.completedLevels.length < totalLevels) return false;
+                break;
+            }
+            case 'reach_tier': {
+                // Check if user has reached a specific tier
+                const seasonProgress = await getPlayerProgress(mission.seasonId, userId);
+                if (seasonProgress.tier < condition.value) return false;
+                break;
+            }
+            case 'earn_xp': {
+                // Check if user has earned at least X amount of XP
+                const seasonProgress = await getPlayerProgress(mission.seasonId, userId);
+                if (seasonProgress.xp < condition.value) return false;
+                break;
+            }
+            case 'clear_level_count': {
+                // Check if user has cleared at least X number of levels in the season
+                const seasonLevels = await getSeasonLevels(mission.seasonId);
+                const mapPacks = await getAllSeasonMapPacks(mission.seasonId);
+                
+                let completedCount = 0;
+                
+                // Count completed battle pass levels
+                for (const level of seasonLevels) {
+                    const levelProgress = await getPlayerLevelProgress(level.id, userId);
+                    if (levelProgress && levelProgress.progress >= 100) {
+                        completedCount++;
+                    }
+                }
+                
+                // Count completed map pack levels
+                for (const pack of mapPacks) {
+                    const packProgress = await getPlayerMapPackProgress(pack.id, userId);
+                    if (packProgress) {
+                        completedCount += packProgress.completedLevels.length;
+                    }
+                }
+                
+                if (completedCount < condition.value) return false;
+                break;
+            }
+            case 'clear_mappack_count': {
+                // Check if user has completed at least X map packs
+                const mapPacks = await getAllSeasonMapPacks(mission.seasonId);
+                let completedPackCount = 0;
+                
+                for (const pack of mapPacks) {
+                    const packProgress = await getPlayerMapPackProgress(pack.id, userId);
+                    if (packProgress) {
+                        const totalLevels = pack.battlePassMapPackLevels?.length || 0;
+                        if (packProgress.completedLevels.length >= totalLevels) {
+                            completedPackCount++;
+                        }
+                    }
+                }
+                
+                if (completedPackCount < condition.value) return false;
+                break;
+            }
+        }
+    }
+
+    return true;
+}
+
+export async function claimMission(missionId: number, userId: string) {
+    // Check if already claimed
+    const alreadyClaimed = await isMissionClaimed(userId, missionId);
+    if (alreadyClaimed) {
+        throw new Error('Already claimed');
+    }
+
+    // Check if mission is completed
+    const isCompleted = await isMissionCompleted(userId, missionId);
+    if (!isCompleted) {
+        throw new Error('Mission not completed');
+    }
+
+    const mission = await getMission(missionId);
+
+    // Insert claim record
+    const { error: claimError } = await supabase
+        .from('battlePassMissionClaims')
+        .insert({
+            missionId,
+            userID: userId
+        });
+
+    if (claimError) {
+        throw new Error(claimError.message);
+    }
+
+    // Add XP to player
+    await addXp(mission.seasonId, userId, mission.xp);
+
+    // Add reward items to inventory
+    if (mission.rewards && Array.isArray(mission.rewards)) {
+        for (const reward of mission.rewards) {
+            const expireAt = reward.expireAfter 
+                ? new Date(Date.now() + reward.expireAfter).toISOString() 
+                : null;
+
+            for (let i = 0; i < (reward.quantity || 1); i++) {
+                await addInventoryItem({
+                    userID: userId,
+                    itemId: reward.itemId,
+                    expireAt
+                });
+            }
+        }
+    }
+
+    return mission;
+}
+
+export async function getPlayerMissionStatus(seasonId: number, userId: string) {
+    const missions = await getSeasonMissions(seasonId);
+    const status = [];
+
+    for (const mission of missions) {
+        const claimed = await isMissionClaimed(userId, mission.id);
+        let completed = false;
+
+        if (!claimed) {
+            try {
+                completed = await isMissionCompleted(userId, mission.id);
+            } catch (err) {
+                console.error(`Error checking mission ${mission.id} completion for user ${userId}:`, err);
+                completed = false;
+            }
+        }
+
+        status.push({
+            ...mission,
+            claimed,
+            completed: claimed || completed,
+            claimable: !claimed && completed
+        });
+    }
+
+    return status;
+}

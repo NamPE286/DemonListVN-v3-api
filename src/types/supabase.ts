@@ -422,6 +422,122 @@ export type Database = {
           },
         ]
       }
+      battlePassMissions: {
+        Row: {
+          id: number
+          created_at: string
+          seasonId: number
+          title: string
+          description: string | null
+          condition: Json
+          xp: number
+          order: number
+        }
+        Insert: {
+          id?: number
+          created_at?: string
+          seasonId: number
+          title: string
+          description?: string | null
+          condition: Json
+          xp: number
+          order?: number
+        }
+        Update: {
+          id?: number
+          created_at?: string
+          seasonId?: number
+          title?: string
+          description?: string | null
+          condition?: Json
+          xp?: number
+          order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassMissions_seasonId_fkey"
+            columns: ["seasonId"]
+            isOneToOne: false
+            referencedRelation: "battlePassSeasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battlePassMissionRewards: {
+        Row: {
+          id: number
+          created_at: string
+          missionId: number
+          itemId: number
+          quantity: number
+          expireAfter: number | null
+        }
+        Insert: {
+          id?: number
+          created_at?: string
+          missionId: number
+          itemId: number
+          quantity?: number
+          expireAfter?: number | null
+        }
+        Update: {
+          id?: number
+          created_at?: string
+          missionId?: number
+          itemId?: number
+          quantity?: number
+          expireAfter?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassMissionRewards_missionId_fkey"
+            columns: ["missionId"]
+            isOneToOne: false
+            referencedRelation: "battlePassMissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassMissionRewards_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battlePassMissionClaims: {
+        Row: {
+          created_at: string
+          missionId: number
+          userID: string
+        }
+        Insert: {
+          created_at?: string
+          missionId: number
+          userID: string
+        }
+        Update: {
+          created_at?: string
+          missionId?: number
+          userID?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassMissionClaims_missionId_fkey"
+            columns: ["missionId"]
+            isOneToOne: false
+            referencedRelation: "battlePassMissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassMissionClaims_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       cards: {
         Row: {
           activationDate: string | null

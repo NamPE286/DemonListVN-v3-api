@@ -30,7 +30,18 @@ import {
     createTierReward,
     deleteTierReward,
     claimTierReward,
-    getClaimableRewards
+    getClaimableRewards,
+    getSeasonMissions,
+    getMission,
+    createMission,
+    updateMission,
+    deleteMission,
+    addMissionReward,
+    removeMissionReward,
+    isMissionClaimed,
+    isMissionCompleted,
+    claimMission,
+    getPlayerMissionStatus
 } from '@src/services/battlepass.service'
 
 const router = express.Router()
@@ -1166,6 +1177,406 @@ router.route('/xp/add')
         } catch (err: any) {
             console.error(err)
             res.status(500).send({ message: err.message })
+        }
+    })
+
+// ==================== Mission Routes ====================
+
+/**
+ * @openapi
+ * "/battlepass/missions":
+ *   get:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Get active season's missions with user status
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
+ *       404:
+ *         description: No active season
+ */
+router.route('/missions')
+    .get(userAuth, async (req, res) => {
+        const { user } = res.locals
+        try {
+            const season = await getActiveseason()
+            if (!season) {
+                res.status(404).send({ message: 'No active season' })
+                return
+            }
+            const missions = await getPlayerMissionStatus(season.id, user.uid!)
+            res.send(missions)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+/**
+ * @openapi
+ * "/battlepass/season/{id}/missions":
+ *   get:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Get missions for a specific season
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: Season ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *       500:
+ *         description: Internal server error
+ *   post:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Create a mission for a season (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: Season ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               condition:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     type:
+ *                       type: string
+ *                       enum: [clear_level, clear_mappack, reach_tier, earn_xp, clear_level_count, clear_mappack_count]
+ *                     value:
+ *                       type: integer
+ *                     targetId:
+ *                       type: integer
+ *               xp:
+ *                 type: integer
+ *               order:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Mission created successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/season/:id/missions')
+    .get(async (req, res) => {
+        const { id } = req.params
+        try {
+            const missions = await getSeasonMissions(Number(id))
+            res.send(missions)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+    .post(adminAuth, async (req, res) => {
+        const { id } = req.params
+        try {
+            const mission = await createMission({
+                seasonId: Number(id),
+                ...req.body
+            })
+            res.send(mission)
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+
+/**
+ * @openapi
+ * "/battlepass/mission/{missionId}":
+ *   get:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Get a specific mission
+ *     parameters:
+ *       - name: missionId
+ *         in: path
+ *         description: Mission ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *       500:
+ *         description: Internal server error
+ *   patch:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Update a mission (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: missionId
+ *         in: path
+ *         description: Mission ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Mission updated successfully
+ *       500:
+ *         description: Internal server error
+ *   delete:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Delete a mission (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: missionId
+ *         in: path
+ *         description: Mission ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Mission deleted successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/mission/:missionId')
+    .get(async (req, res) => {
+        const { missionId } = req.params
+        try {
+            const mission = await getMission(Number(missionId))
+            res.send(mission)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+    .patch(adminAuth, async (req, res) => {
+        const { missionId } = req.params
+        try {
+            await updateMission(Number(missionId), req.body)
+            res.send()
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+    .delete(adminAuth, async (req, res) => {
+        const { missionId } = req.params
+        try {
+            await deleteMission(Number(missionId))
+            res.send()
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+/**
+ * @openapi
+ * "/battlepass/mission/{missionId}/check":
+ *   get:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Check if a mission is completed
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: missionId
+ *         in: path
+ *         description: Mission ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Mission status returned
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: [claimed, claimable, incomplete]
+ */
+router.route('/mission/:missionId/check')
+    .get(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { missionId } = req.params
+
+        try {
+            const claimed = await isMissionClaimed(user.uid!, Number(missionId))
+            if (claimed) {
+                res.send({ status: 'claimed' })
+                return
+            }
+
+            const completed = await isMissionCompleted(user.uid!, Number(missionId))
+            res.send({ status: completed ? 'claimable' : 'incomplete' })
+        } catch (err) {
+            console.error(err)
+            res.send({ status: 'incomplete' })
+        }
+    })
+
+/**
+ * @openapi
+ * "/battlepass/mission/{missionId}/claim":
+ *   post:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Claim a completed mission reward
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: missionId
+ *         in: path
+ *         description: Mission ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Mission reward claimed successfully
+ *       400:
+ *         description: Already claimed or mission not completed
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/mission/:missionId/claim')
+    .post(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { missionId } = req.params
+        try {
+            const mission = await claimMission(Number(missionId), user.uid!)
+            res.send(mission)
+        } catch (err: any) {
+            console.error(err)
+            if (err.message === 'Already claimed' || err.message === 'Mission not completed') {
+                res.status(400).send({ message: err.message })
+            } else {
+                res.status(500).send({ message: err.message })
+            }
+        }
+    })
+
+/**
+ * @openapi
+ * "/battlepass/mission/{missionId}/reward":
+ *   post:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Add a reward to a mission (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: missionId
+ *         in: path
+ *         description: Mission ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               itemId:
+ *                 type: integer
+ *               quantity:
+ *                 type: integer
+ *               expireAfter:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Reward added successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/mission/:missionId/reward')
+    .post(adminAuth, async (req, res) => {
+        const { missionId } = req.params
+        const { itemId, quantity, expireAfter } = req.body
+        try {
+            const reward = await addMissionReward(
+                Number(missionId),
+                Number(itemId),
+                Number(quantity) || 1,
+                expireAfter ? Number(expireAfter) : null
+            )
+            res.send(reward)
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+
+/**
+ * @openapi
+ * "/battlepass/mission/{missionId}/reward/{rewardId}":
+ *   delete:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Remove a reward from a mission (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: missionId
+ *         in: path
+ *         description: Mission ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: rewardId
+ *         in: path
+ *         description: Reward ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Reward removed successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/mission/:missionId/reward/:rewardId')
+    .delete(adminAuth, async (req, res) => {
+        const { rewardId } = req.params
+        try {
+            await removeMissionReward(Number(rewardId))
+            res.send()
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
         }
     })
 
