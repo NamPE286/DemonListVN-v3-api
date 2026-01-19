@@ -7,12 +7,7 @@ import { getClan, extendClanBoost } from "@src/services/clan.service";
 import { extendPlayerSupporter } from "@src/services/player.service";
 import type { Tables } from "@src/types/supabase";
 import { getRecord, prioritizeRecord } from "@src/services/record.service";
-
-const ProductIDConst = {
-    SUPPORTER: 1,
-    CLAN_BOOST: 3,
-    QUEUE_BOOST: 5
-}
+import { ProductID } from "@src/const/productIDConst";
 
 interface HandleProduct {
     pre: (buyer: Tables<"players">, recipient: Tables<"players">, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>;
@@ -21,7 +16,7 @@ interface HandleProduct {
 
 export const handleProduct: Map<number, HandleProduct> = new Map()
 
-handleProduct.set(ProductIDConst.SUPPORTER, {
+handleProduct.set(ProductID.SUPPORTER, {
     pre: async (buyer, recipient, order) => {
         await extendPlayerSupporter(recipient.uid!, order.quantity!);
 
@@ -67,7 +62,7 @@ handleProduct.set(ProductIDConst.SUPPORTER, {
     }
 })
 
-handleProduct.set(ProductIDConst.CLAN_BOOST, {
+handleProduct.set(ProductID.CLAN_BOOST, {
     pre: async (buyer, recipient, order) => {
         await extendClanBoost(order.targetClanID!, order.quantity!);
 
@@ -96,7 +91,7 @@ handleProduct.set(ProductIDConst.CLAN_BOOST, {
     }
 })
 
-handleProduct.set(ProductIDConst.QUEUE_BOOST, {
+handleProduct.set(ProductID.QUEUE_BOOST, {
     pre: async (buyer, recipient, order) => {
         interface OrderData {
             userID: string,
