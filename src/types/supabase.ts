@@ -918,6 +918,38 @@ export type Database = {
           },
         ]
       }
+      itemTransactions: {
+        Row: {
+          created_at: string
+          data: Json | null
+          diff: number
+          id: number
+          inventoryItemId: number
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          diff: number
+          id?: number
+          inventoryItemId: number
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          diff?: number
+          id?: number
+          inventoryItemId?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stackableItemTransactions_inventoryItemId_fkey"
+            columns: ["inventoryItemId"]
+            isOneToOne: false
+            referencedRelation: "inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       levelDeathCount: {
         Row: {
           count: number[]

@@ -1,3 +1,4 @@
+import { InventoryIncludedObjectVersions } from "@aws-sdk/client-s3";
 import supabase from "@src/client/supabase";
 import { getEventQuest } from "@src/services/event-quest.service";
 import { getCase as getCaseItems, getItem } from "@src/services/item.service";
@@ -42,10 +43,9 @@ export async function consumeCase(player: Player, inventoryItemId: number, itemI
     return {};
 }
 
-export async function consumeItem(inventoryItemId: number, quantity?: number) {
+export async function consumeItem(inventoryItemId: number, quantity?: number, data: any = null) {
     const inventoryItem = await getInventoryItem(inventoryItemId);
     const item = await getItem(inventoryItem.itemId);
-    const player = await getPlayer(inventoryItem.userID);
 
     if (item.stackable) {
         const consumeQty = quantity || 1;
@@ -58,10 +58,18 @@ export async function consumeItem(inventoryItemId: number, quantity?: number) {
                 .from('inventory')
                 .update({ quantity: newQuantity })
                 .eq('id', inventoryItemId);
-        }
 
-        if (error) {
-            throw new Error(error.message);
+            if (error) {
+                throw new Error(error.message);
+            }
+
+            var { error } = await supabase
+                .from('itemTransactions')
+                .insert({
+                    inventoryItemId: inventoryItemId,
+                    diff: -consumeQty,
+                    data: data
+                })
         }
     } else {
         if (inventoryItem.consumed) {
@@ -72,6 +80,14 @@ export async function consumeItem(inventoryItemId: number, quantity?: number) {
             .from('inventory')
             .update({ consumed: true })
             .eq('id', inventoryItemId);
+
+        var { error } = await supabase
+            .from('itemTransactions')
+            .insert({
+                inventoryItemId: inventoryItemId,
+                diff: -1,
+                data: data
+            })
 
         if (error) {
             throw new Error(error.message);
@@ -115,7 +131,8 @@ export async function addInventoryItem(insertData: TablesInsert<"inventory">) {
             .maybeSingle()
 
         if (existingItem) {
-            const newQuantity = existingItem.quantity + (insertData.quantity || 1)
+            const addedQuantity = insertData.quantity || 1
+            const newQuantity = existingItem.quantity + addedQuantity
 
             var { error } = await supabase
                 .from('inventory')
@@ -129,15 +146,41 @@ export async function addInventoryItem(insertData: TablesInsert<"inventory">) {
                 throw new Error(error.message)
             }
 
+            var { error } = await supabase
+                .from('itemTransactions')
+                .insert({
+                    inventoryItemId: existingItem.id,
+                    diff: addedQuantity,
+                    data: null
+                })
+
+            if (error) {
+                throw new Error(error.message)
+            }
+
             return
         }
     }
 
-    var { error } = await supabase
+    var { data: newItem, error } = await supabase
         .from('inventory')
         .insert({
             ...insertData,
             consumed: false
+        })
+        .select()
+        .single()
+
+    if (error || !newItem) {
+        throw new Error(error?.message || 'Failed to insert item')
+    }
+
+    var { error } = await supabase
+        .from('itemTransactions')
+        .insert({
+            inventoryItemId: newItem.id,
+            diff: insertData.quantity || 1,
+            data: null
         })
 
     if (error) {
