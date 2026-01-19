@@ -133,11 +133,15 @@ export async function addXp(seasonId: number, userId: string, xp: number) {
 }
 
 export async function upgradeToPremium(seasonId: number, userId: string) {
+    // Get existing progress to preserve XP
+    const existingProgress = await getPlayerProgress(seasonId, userId);
+    
     const { error } = await supabase
         .from('battlePassProgress')
         .upsert({
             seasonId,
             userID: userId,
+            xp: existingProgress?.xp || 0,
             isPremium: true
         }, {
             onConflict: 'seasonId,userID'
@@ -247,7 +251,7 @@ export async function getSeasonMapPacks(seasonId: number) {
     const now = new Date();
     const season = await getSeason(seasonId);
     const seasonStart = new Date(season.start);
-    const weeksSinceStart = Math.floor((now.getTime() - seasonStart.getTime()) / (7 * 24 * 60 * 60 * 1000));
+    const weeksSinceStart = Math.max(0, Math.floor((now.getTime() - seasonStart.getTime()) / (7 * 24 * 60 * 60 * 1000)));
 
     const { data, error } = await supabase
         .from('battlePassMapPacks')
