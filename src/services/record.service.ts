@@ -307,7 +307,7 @@ export async function getEstimatedQueue(userID: string, levelID: number, priorit
         return 1;
     }
 
-    return data
+    return data + 1
 }
 
 export async function changeSuggestedRating(uid: string, levelID: number, rating: number) {
