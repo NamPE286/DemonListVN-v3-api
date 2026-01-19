@@ -407,3 +407,28 @@ GRANT ALL ON SEQUENCE "public"."battlePassMissions_id_seq" TO "service_role";
 GRANT ALL ON SEQUENCE "public"."battlePassMissionRewards_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."battlePassMissionRewards_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."battlePassMissionRewards_id_seq" TO "service_role";
+
+-- Battle Pass Mission Progress - Tracks player mission completion status
+CREATE TABLE IF NOT EXISTS "public"."battlePassMissionProgress" (
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "missionId" bigint NOT NULL,
+    "userID" "uuid" NOT NULL,
+    "completed" boolean DEFAULT false NOT NULL
+);
+
+ALTER TABLE "public"."battlePassMissionProgress" OWNER TO "postgres";
+
+ALTER TABLE ONLY "public"."battlePassMissionProgress"
+    ADD CONSTRAINT "battlePassMissionProgress_pkey" PRIMARY KEY ("missionId", "userID");
+
+ALTER TABLE ONLY "public"."battlePassMissionProgress"
+    ADD CONSTRAINT "battlePassMissionProgress_missionId_fkey" FOREIGN KEY ("missionId") REFERENCES "public"."battlePassMissions"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE ONLY "public"."battlePassMissionProgress"
+    ADD CONSTRAINT "battlePassMissionProgress_userID_fkey" FOREIGN KEY ("userID") REFERENCES "public"."players"("uid") ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE "public"."battlePassMissionProgress" ENABLE ROW LEVEL SECURITY;
+
+GRANT ALL ON TABLE "public"."battlePassMissionProgress" TO "anon";
+GRANT ALL ON TABLE "public"."battlePassMissionProgress" TO "authenticated";
+GRANT ALL ON TABLE "public"."battlePassMissionProgress" TO "service_role";

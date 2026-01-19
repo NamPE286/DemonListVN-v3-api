@@ -4,6 +4,7 @@ import { addInventoryItem } from "@src/services/inventory.service";
 
 const XP_PER_TIER = 100;
 const MAX_TIER = 100;
+const COMPLETION_THRESHOLD = 100;
 
 // ==================== Season Functions ====================
 
@@ -243,6 +244,68 @@ export async function updatePlayerLevelProgress(
     if (error) {
         throw new Error(error.message);
     }
+}
+
+// Update level progress, also update map pack progress if the level is in a map pack, and check missions
+export async function updateLevelProgressWithMissionCheck(
+    battlePassLevelId: number,
+    userId: string,
+    progress: number
+) {
+    // Get the battle pass level details
+    const { data: bpLevel, error: bpLevelError } = await supabase
+        .from('battlePassLevels')
+        .select('*, levels(*)')
+        .eq('id', battlePassLevelId)
+        .single();
+
+    if (bpLevelError || !bpLevel) {
+        throw new Error('Battle pass level not found');
+    }
+
+    // Update level progress
+    await updatePlayerLevelProgress(battlePassLevelId, userId, progress);
+
+    // If progress is at completion threshold, also update map pack progress for any map packs that contain this level
+    if (progress >= COMPLETION_THRESHOLD) {
+        const { data: mapPackLevels } = await supabase
+            .from('battlePassMapPackLevels')
+            .select('mapPackId, levelID')
+            .eq('levelID', bpLevel.levelID);
+
+        if (mapPackLevels && mapPackLevels.length > 0) {
+            for (const mpl of mapPackLevels) {
+                await completeMapPackLevel(mpl.mapPackId, userId, mpl.levelID);
+            }
+        }
+    }
+
+    // Check and update mission progress
+    await checkAndUpdateMissionProgress(bpLevel.seasonId, userId);
+
+    return { battlePassLevelId, progress };
+}
+
+// Check all missions for the season and mark as completed if conditions are met
+export async function checkAndUpdateMissionProgress(seasonId: number, userId: string) {
+    const missions = await getSeasonMissions(seasonId);
+    
+    // Process missions in parallel for better performance
+    await Promise.allSettled(missions.map(async (mission) => {
+        // Skip if already claimed
+        const claimed = await isMissionClaimed(userId, mission.id);
+        if (claimed) return;
+
+        // Skip if already marked as completed
+        const existingProgress = await getMissionProgress(userId, mission.id);
+        if (existingProgress?.completed) return;
+
+        // Check if mission conditions are met
+        const isCompleted = await isMissionCompleted(userId, mission.id);
+        if (isCompleted) {
+            await setMissionCompleted(userId, mission.id);
+        }
+    }));
 }
 
 // ==================== Map Pack Functions ====================
@@ -687,6 +750,35 @@ export async function isMissionClaimed(userId: string, missionId: number) {
     return !!data;
 }
 
+export async function getMissionProgress(userId: string, missionId: number) {
+    const { data, error } = await supabase
+        .from('battlePassMissionProgress')
+        .select('*')
+        .eq('userID', userId)
+        .eq('missionId', missionId)
+        .maybeSingle();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+export async function setMissionCompleted(userId: string, missionId: number) {
+    const { error } = await supabase
+        .from('battlePassMissionProgress')
+        .upsert({
+            missionId,
+            userID: userId,
+            completed: true
+        });
+
+    if (error) {
+        throw new Error(error.message);
+    }
+}
+
 interface MissionCondition {
     type: string;
     value: number;
@@ -809,9 +901,9 @@ export async function claimMission(missionId: number, userId: string) {
         throw new Error('Already claimed');
     }
 
-    // Check if mission is completed
-    const isCompleted = await isMissionCompleted(userId, missionId);
-    if (!isCompleted) {
+    // Check if mission is completed using battlePassMissionProgress table
+    const missionProgress = await getMissionProgress(userId, missionId);
+    if (!missionProgress || !missionProgress.completed) {
         throw new Error('Mission not completed');
     }
 
@@ -861,12 +953,9 @@ export async function getPlayerMissionStatus(seasonId: number, userId: string) {
         let completed = false;
 
         if (!claimed) {
-            try {
-                completed = await isMissionCompleted(userId, mission.id);
-            } catch (err) {
-                console.error(`Error checking mission ${mission.id} completion for user ${userId}:`, err);
-                completed = false;
-            }
+            // Check battlePassMissionProgress table for completion status
+            const missionProgress = await getMissionProgress(userId, mission.id);
+            completed = missionProgress?.completed || false;
         }
 
         status.push({

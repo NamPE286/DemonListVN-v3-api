@@ -24,7 +24,6 @@ import {
     addMapPackLevel,
     deleteMapPackLevel,
     getPlayerMapPackProgress,
-    completeMapPackLevel,
     claimMapPackReward,
     getTierRewards,
     createTierReward,
@@ -38,10 +37,10 @@ import {
     deleteMission,
     addMissionReward,
     removeMissionReward,
-    isMissionClaimed,
-    isMissionCompleted,
     claimMission,
-    getPlayerMissionStatus
+    getPlayerMissionStatus,
+    updateLevelProgressWithMissionCheck,
+    getPlayerLevelProgress
 } from '@src/services/battlepass.service'
 
 const router = express.Router()
@@ -502,6 +501,94 @@ router.route('/level/:levelId')
 
 /**
  * @openapi
+ * "/battlepass/levels/{levelId}/progress":
+ *   get:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Get user's progress on a specific level
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: levelId
+ *         in: path
+ *         description: Battle Pass Level ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *       500:
+ *         description: Internal server error
+ *   put:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Update level progress (also updates map pack progress and checks missions)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: levelId
+ *         in: path
+ *         description: Battle Pass Level ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: p
+ *         in: query
+ *         description: Progress percentage (0-100)
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           maximum: 100
+ *     responses:
+ *       200:
+ *         description: Progress updated successfully
+ *       400:
+ *         description: Invalid progress value
+ *       500:
+ *         description: Internal server error
+ */
+const DEFAULT_LEVEL_PROGRESS = { progress: 0, minProgressClaimed: false, completionClaimed: false };
+
+router.route('/levels/:levelId/progress')
+    .get(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { levelId } = req.params
+        try {
+            const progress = await getPlayerLevelProgress(Number(levelId), user.uid!)
+            res.send(progress || DEFAULT_LEVEL_PROGRESS)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+    .put(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { levelId } = req.params
+        const progressParam = req.query.p
+        
+        const progress = Number(progressParam)
+        if (isNaN(progress) || progress < 0 || progress > 100) {
+            res.status(400).send({ message: 'Invalid progress value. Must be between 0 and 100.' })
+            return
+        }
+
+        try {
+            const result = await updateLevelProgressWithMissionCheck(
+                Number(levelId),
+                user.uid!,
+                progress
+            )
+            res.send(result)
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+
+/**
+ * @openapi
  * "/battlepass/mappacks":
  *   get:
  *     tags:
@@ -831,51 +918,6 @@ router.route('/mappack/:mapPackId/progress')
         } catch (err) {
             console.error(err)
             res.status(500).send()
-        }
-    })
-
-/**
- * @openapi
- * "/battlepass/mappack/{mapPackId}/complete/{levelId}":
- *   post:
- *     tags:
- *       - Battle Pass
- *     summary: Mark a level in a map pack as complete
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: mapPackId
- *         in: path
- *         description: Map Pack ID
- *         required: true
- *         schema:
- *           type: integer
- *       - name: levelId
- *         in: path
- *         description: Level ID (from levels table)
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Level marked as complete
- *       500:
- *         description: Internal server error
- */
-router.route('/mappack/:mapPackId/complete/:levelId')
-    .post(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { mapPackId, levelId } = req.params
-        try {
-            const completedLevels = await completeMapPackLevel(
-                Number(mapPackId), 
-                user.uid!, 
-                Number(levelId)
-            )
-            res.send({ completedLevels })
-        } catch (err: any) {
-            console.error(err)
-            res.status(500).send({ message: err.message })
         }
     })
 
@@ -1395,54 +1437,6 @@ router.route('/mission/:missionId')
         } catch (err) {
             console.error(err)
             res.status(500).send()
-        }
-    })
-
-/**
- * @openapi
- * "/battlepass/mission/{missionId}/check":
- *   get:
- *     tags:
- *       - Battle Pass
- *     summary: Check if a mission is completed
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: missionId
- *         in: path
- *         description: Mission ID
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Mission status returned
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   enum: [claimed, claimable, incomplete]
- */
-router.route('/mission/:missionId/check')
-    .get(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { missionId } = req.params
-
-        try {
-            const claimed = await isMissionClaimed(user.uid!, Number(missionId))
-            if (claimed) {
-                res.send({ status: 'claimed' })
-                return
-            }
-
-            const completed = await isMissionCompleted(user.uid!, Number(missionId))
-            res.send({ status: completed ? 'claimable' : 'incomplete' })
-        } catch (err) {
-            console.error(err)
-            res.send({ status: 'incomplete' })
         }
     })
 

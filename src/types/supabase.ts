@@ -538,6 +538,42 @@ export type Database = {
           },
         ]
       }
+      battlePassMissionProgress: {
+        Row: {
+          created_at: string
+          missionId: number
+          userID: string
+          completed: boolean
+        }
+        Insert: {
+          created_at?: string
+          missionId: number
+          userID: string
+          completed?: boolean
+        }
+        Update: {
+          created_at?: string
+          missionId?: number
+          userID?: string
+          completed?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassMissionProgress_missionId_fkey"
+            columns: ["missionId"]
+            isOneToOne: false
+            referencedRelation: "battlePassMissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassMissionProgress_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       cards: {
         Row: {
           activationDate: string | null
