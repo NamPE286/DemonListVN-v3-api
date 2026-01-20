@@ -54,6 +54,42 @@ router.route('/dl')
      *         schema:
      *           type: string
      *           default: false
+     *       - name: topStart
+     *         in: query
+     *         description: Minimum dlTop position to filter
+     *         required: false
+     *         schema:
+     *           type: number
+     *       - name: topEnd
+     *         in: query
+     *         description: Maximum dlTop position to filter
+     *         required: false
+     *         schema:
+     *           type: number
+     *       - name: ratingMin
+     *         in: query
+     *         description: Minimum rating to filter
+     *         required: false
+     *         schema:
+     *           type: number
+     *       - name: ratingMax
+     *         in: query
+     *         description: Maximum rating to filter
+     *         required: false
+     *         schema:
+     *           type: number
+     *       - name: nameSearch
+     *         in: query
+     *         description: Search levels by name (case insensitive)
+     *         required: false
+     *         schema:
+     *           type: string
+     *       - name: creatorSearch
+     *         in: query
+     *         description: Search levels by creator name (case insensitive)
+     *         required: false
+     *         schema:
+     *           type: string
      *     responses:
      *       200:
      *         description: Success
@@ -113,6 +149,42 @@ router.route('/pl')
      *         schema:
      *           type: string
      *           default: false
+     *       - name: topStart
+     *         in: query
+     *         description: Minimum dlTop position to filter
+     *         required: false
+     *         schema:
+     *           type: number
+     *       - name: topEnd
+     *         in: query
+     *         description: Maximum dlTop position to filter
+     *         required: false
+     *         schema:
+     *           type: number
+     *       - name: ratingMin
+     *         in: query
+     *         description: Minimum rating to filter
+     *         required: false
+     *         schema:
+     *           type: number
+     *       - name: ratingMax
+     *         in: query
+     *         description: Maximum rating to filter
+     *         required: false
+     *         schema:
+     *           type: number
+     *       - name: nameSearch
+     *         in: query
+     *         description: Search levels by name (case insensitive)
+     *         required: false
+     *         schema:
+     *           type: string
+     *       - name: creatorSearch
+     *         in: query
+     *         description: Search levels by creator name (case insensitive)
+     *         required: false
+     *         schema:
+     *           type: string
      *     responses:
      *       200:
      *         description: Success
@@ -165,6 +237,42 @@ router.route('/fl')
      *         schema:
      *           type: boolean
      *           default: false
+     *       - name: topStart
+     *         in: query
+     *         description: Minimum flTop position to filter
+     *         required: false
+     *         schema:
+     *           type: number
+     *       - name: topEnd
+     *         in: query
+     *         description: Maximum flTop position to filter
+     *         required: false
+     *         schema:
+     *           type: number
+     *       - name: ratingMin
+     *         in: query
+     *         description: Minimum rating to filter
+     *         required: false
+     *         schema:
+     *           type: number
+     *       - name: ratingMax
+     *         in: query
+     *         description: Maximum rating to filter
+     *         required: false
+     *         schema:
+     *           type: number
+     *       - name: nameSearch
+     *         in: query
+     *         description: Search levels by name (case insensitive)
+     *         required: false
+     *         schema:
+     *           type: string
+     *       - name: creatorSearch
+     *         in: query
+     *         description: Search levels by creator name (case insensitive)
+     *         required: false
+     *         schema:
+     *           type: string
      *     responses:
      *       200:
      *         description: Success

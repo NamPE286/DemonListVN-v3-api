@@ -13,19 +13,41 @@ function convertToIDArray(levels: TLevel[]) {
     return res
 }
 
-export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '' } = {}) {
+export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '' } = {}) {
     if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
 
-    const a = await supabase
+    let query = supabase
         .from('levels')
         .select('*')
         .not('dlTop', 'is', null)
-        .order(sortBy, { ascending: ascending })
-        .range(start, end)
         .eq('isPlatformer', false)
 
+    // Apply filters
+    if (topStart !== null && topStart !== '') {
+        query = query.gte('dlTop', topStart)
+    }
+    if (topEnd !== null && topEnd !== '') {
+        query = query.lte('dlTop', topEnd)
+    }
+    if (ratingMin !== null && ratingMin !== '') {
+        query = query.gte('rating', ratingMin)
+    }
+    if (ratingMax !== null && ratingMax !== '') {
+        query = query.lte('rating', ratingMax)
+    }
+    if (nameSearch && nameSearch.trim() !== '') {
+        query = query.ilike('name', `%${nameSearch}%`)
+    }
+    if (creatorSearch && creatorSearch.trim() !== '') {
+        query = query.ilike('creator', `%${creatorSearch}%`)
+    }
+
+    const a = await query
+        .order(sortBy, { ascending: ascending })
+        .range(start, end)
+
     if (a.error || !a.data) {
         throw a.error
     }
@@ -70,18 +92,40 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
     return res
 }
 
-export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '' } = {}) {
+export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '' } = {}) {
     if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
 
-    const a = await supabase
+    let query = supabase
         .from('levels')
         .select('*')
         .not('dlTop', 'is', null)
+        .eq('isPlatformer', true)
+
+    // Apply filters
+    if (topStart !== null && topStart !== '') {
+        query = query.gte('dlTop', topStart)
+    }
+    if (topEnd !== null && topEnd !== '') {
+        query = query.lte('dlTop', topEnd)
+    }
+    if (ratingMin !== null && ratingMin !== '') {
+        query = query.gte('rating', ratingMin)
+    }
+    if (ratingMax !== null && ratingMax !== '') {
+        query = query.lte('rating', ratingMax)
+    }
+    if (nameSearch && nameSearch.trim() !== '') {
+        query = query.ilike('name', `%${nameSearch}%`)
+    }
+    if (creatorSearch && creatorSearch.trim() !== '') {
+        query = query.ilike('creator', `%${creatorSearch}%`)
+    }
+
+    const a = await query
         .order(sortBy, { ascending: ascending })
         .range(start, end)
-        .eq('isPlatformer', true)
 
     if (a.error || !a.data) {
         throw a.error
@@ -127,15 +171,38 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
     return res
 }
 
-export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flTop', ascending = true, uid = '' } = {}) {
+export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '' } = {}) {
     if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
 
-    const a = await supabase
+    let query = supabase
         .from('levels')
         .select('*')
         .not('flTop', 'is', null)
+
+    // Apply filters
+    if (topStart !== null && topStart !== '') {
+        query = query.gte('flTop', topStart)
+    }
+    if (topEnd !== null && topEnd !== '') {
+        query = query.lte('flTop', topEnd)
+    }
+    if (ratingMin !== null && ratingMin !== '') {
+        // For featured list, we can still filter by rating even though sorting is by flTop
+        query = query.gte('flPt', ratingMin)
+    }
+    if (ratingMax !== null && ratingMax !== '') {
+        query = query.lte('flPt', ratingMax)
+    }
+    if (nameSearch && nameSearch.trim() !== '') {
+        query = query.ilike('name', `%${nameSearch}%`)
+    }
+    if (creatorSearch && creatorSearch.trim() !== '') {
+        query = query.ilike('creator', `%${creatorSearch}%`)
+    }
+
+    const a = await query
         .order(sortBy, { ascending: ascending })
         .range(start, end)
 
