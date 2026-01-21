@@ -13,7 +13,7 @@ const SUBSCRIPTION_TYPE_BATTLEPASS_PREMIUM = 'battlepass_premium';
 
 export async function getActiveseason() {
     const now = new Date().toISOString();
-    
+
     const { data, error } = await supabase
         .from('battlePassSeasons')
         .select('*')
@@ -85,18 +85,18 @@ export async function archiveSeason(seasonId: number) {
 
 export async function hasPlayerSubscription(userId: string, subscriptionType: string, refId?: number) {
     const now = new Date().toISOString();
-    
+
     let query = supabase
         .from('playerSubscriptions')
         .select('*, subscriptions!inner(*)')
         .eq('userID', userId)
         .eq('subscriptions.type', subscriptionType)
         .lte('start', now);
-    
+
     if (refId !== undefined) {
         query = query.eq('refId', refId);
     }
-    
+
     const { data, error } = await query;
 
     if (error) {
@@ -299,12 +299,12 @@ export async function getPlayerLevelProgress(battlePassLevelId: number, userId: 
 }
 
 export async function updatePlayerLevelProgress(
-    battlePassLevelId: number, 
-    userId: string, 
+    battlePassLevelId: number,
+    userId: string,
     progress: number
 ) {
     const existing = await getPlayerLevelProgress(battlePassLevelId, userId);
-    
+
     const { error } = await supabase
         .from('battlePassLevelProgress')
         .upsert({
@@ -375,7 +375,7 @@ export async function updateLevelProgressWithMissionCheck(
 // Check all missions for the season and mark as completed if conditions are met
 export async function checkAndUpdateMissionProgress(seasonId: number, userId: string) {
     const missions = await getSeasonMissions(seasonId);
-    
+
     // Process missions in parallel for better performance
     await Promise.allSettled(missions.map(async (mission) => {
         // Skip if already claimed
@@ -543,6 +543,32 @@ export async function getBattlePassMapPack(battlePassMapPackId: number) {
 }
 
 export async function addBattlePassMapPack(bpMapPack: TablesInsert<"battlePassMapPacks">) {
+    // Push all map packs with order >= new order by 1
+    if (bpMapPack.order !== undefined && bpMapPack.seasonId !== undefined) {
+        // Get all map packs that need to be shifted
+        const { data: mapPacksToShift, error: fetchError } = await supabase
+            .from('battlePassMapPacks')
+            .select('id, order')
+            .eq('seasonId', bpMapPack.seasonId)
+            .gte('order', bpMapPack.order);
+
+        if (fetchError) {
+            throw new Error(fetchError.message);
+        }
+
+        // Update each map pack by incrementing its order
+        for (const mapPack of mapPacksToShift || []) {
+            const { error: updateError } = await supabase
+                .from('battlePassMapPacks')
+                .update({ order: mapPack.order + 1 })
+                .eq('id', mapPack.id);
+
+            if (updateError) {
+                throw new Error(updateError.message);
+            }
+        }
+    }
+
     const { data, error } = await supabase
         .from('battlePassMapPacks')
         .insert(bpMapPack)
@@ -557,6 +583,18 @@ export async function addBattlePassMapPack(bpMapPack: TablesInsert<"battlePassMa
 }
 
 export async function updateBattlePassMapPack(battlePassMapPackId: number, updates: Partial<TablesInsert<"battlePassMapPacks">>) {
+    if (updates.order !== undefined) {
+        const { data: currentMapPack, error: fetchError } = await supabase
+            .from('battlePassMapPacks')
+            .select('seasonId, order')
+            .eq('id', battlePassMapPackId)
+            .single();
+
+        if (fetchError) {
+            throw new Error(fetchError.message);
+        }
+    }
+
     const { error } = await supabase
         .from('battlePassMapPacks')
         .update(updates)
@@ -596,7 +634,7 @@ export async function getPlayerMapPackProgress(battlePassMapPackId: number, user
 export async function completeMapPackLevel(battlePassMapPackId: number, userId: string, levelId: number) {
     const progress = await getPlayerMapPackProgress(battlePassMapPackId, userId);
     const completedLevels = progress?.completedLevels || [];
-    
+
     if (!completedLevels.includes(levelId)) {
         completedLevels.push(levelId);
     }
@@ -620,7 +658,7 @@ export async function completeMapPackLevel(battlePassMapPackId: number, userId: 
 export async function claimMapPackReward(battlePassMapPackId: number, userId: string) {
     const bpMapPack = await getBattlePassMapPack(battlePassMapPackId);
     const progress = await getPlayerMapPackProgress(battlePassMapPackId, userId);
-    
+
     if (!progress) {
         throw new Error('No progress found');
     }
@@ -630,7 +668,7 @@ export async function claimMapPackReward(battlePassMapPackId: number, userId: st
     }
 
     const totalLevels = bpMapPack.mapPacks?.mapPackLevels?.length || 0;
-    
+
     if (progress.completedLevels.length < totalLevels) {
         throw new Error('Map pack not completed');
     }
@@ -775,9 +813,9 @@ export async function getClaimableRewards(seasonId: number, userId: string) {
     const progress = await getPlayerProgress(seasonId, userId);
     const allRewards = await getTierRewards(seasonId);
     const claimedRewards = await getPlayerClaimedRewards(seasonId, userId);
-    
+
     const claimedIds = new Set(claimedRewards.map(c => c.rewardId));
-    
+
     return allRewards.filter(reward => {
         if (claimedIds.has(reward.id)) return false;
         if (reward.tier > progress.tier) return false;
@@ -948,14 +986,14 @@ interface MissionCondition {
 
 export async function isMissionCompleted(userId: string, missionId: number) {
     const mission = await getMission(missionId);
-    
+
     // Validate condition is an array
     if (!Array.isArray(mission.condition)) {
         console.error(`Mission ${missionId} has invalid condition format - expected array`);
         return false;
     }
-    
-    const conditions: MissionCondition[] = mission.condition as MissionCondition[];
+
+    const conditions: MissionCondition[] = mission.condition as unknown as MissionCondition[];
 
     for (const condition of conditions) {
         switch (condition.type) {
@@ -985,10 +1023,10 @@ export async function isMissionCompleted(userId: string, missionId: number) {
                 }
                 const progress = await getPlayerMapPackProgress(condition.targetId, userId);
                 if (!progress) return false;
-                
+
                 const bpMapPack = await getBattlePassMapPack(condition.targetId);
                 const totalLevels = bpMapPack.mapPacks?.mapPackLevels?.length || 0;
-                
+
                 if (progress.completedLevels.length < totalLevels) return false;
                 break;
             }
@@ -1008,9 +1046,9 @@ export async function isMissionCompleted(userId: string, missionId: number) {
                 // Check if user has cleared at least X number of levels in the season
                 const seasonLevels = await getSeasonLevels(mission.seasonId);
                 const bpMapPacks = await getAllSeasonMapPacks(mission.seasonId);
-                
+
                 let completedCount = 0;
-                
+
                 // Count completed battle pass levels
                 for (const level of seasonLevels) {
                     const levelProgress = await getPlayerLevelProgress(level.id, userId);
@@ -1018,7 +1056,7 @@ export async function isMissionCompleted(userId: string, missionId: number) {
                         completedCount++;
                     }
                 }
-                
+
                 // Count completed map pack levels
                 for (const pack of bpMapPacks) {
                     const packProgress = await getPlayerMapPackProgress(pack.id, userId);
@@ -1026,7 +1064,7 @@ export async function isMissionCompleted(userId: string, missionId: number) {
                         completedCount += packProgress.completedLevels.length;
                     }
                 }
-                
+
                 if (completedCount < condition.value) return false;
                 break;
             }
@@ -1034,7 +1072,7 @@ export async function isMissionCompleted(userId: string, missionId: number) {
                 // Check if user has completed at least X map packs
                 const bpMapPacks = await getAllSeasonMapPacks(mission.seasonId);
                 let completedPackCount = 0;
-                
+
                 for (const pack of bpMapPacks) {
                     const packProgress = await getPlayerMapPackProgress(pack.id, userId);
                     if (packProgress) {
@@ -1044,7 +1082,7 @@ export async function isMissionCompleted(userId: string, missionId: number) {
                         }
                     }
                 }
-                
+
                 if (completedPackCount < condition.value) return false;
                 break;
             }
@@ -1087,8 +1125,8 @@ export async function claimMission(missionId: number, userId: string) {
     // Add reward items to inventory
     if (mission.rewards && Array.isArray(mission.rewards)) {
         for (const reward of mission.rewards) {
-            const expireAt = reward.expireAfter 
-                ? new Date(Date.now() + reward.expireAfter).toISOString() 
+            const expireAt = reward.expireAfter
+                ? new Date(Date.now() + reward.expireAfter).toISOString()
                 : null;
 
             for (let i = 0; i < (reward.quantity || 1); i++) {
