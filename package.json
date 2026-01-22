@@ -24,7 +24,7 @@
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
     "tsx": "^4.20.6",
-    "wrangler": "^4.50.0"
+    "wrangler": "^4.59.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251205.0",
