@@ -41,7 +41,10 @@ import {
     getPlayerLevelProgress,
     getPlayerSubscriptions,
     addPlayerSubscription,
-    hasBattlePassPremium
+    hasBattlePassPremium,
+    getBatchLevelProgress,
+    getBatchMapPackProgress,
+    getBatchMapPackLevelProgress
 } from '@src/services/battlepass.service'
 
 const router = express.Router()
@@ -547,6 +550,122 @@ router.route('/levels/:levelId/progress')
         try {
             const progress = await getPlayerLevelProgress(Number(levelId), user.uid!)
             res.send(progress || DEFAULT_LEVEL_PROGRESS)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+/**
+ * @openapi
+ * "/battlepass/levels/progress/batch":
+ *   get:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Get user's progress on multiple levels in batch
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: ids
+ *         in: query
+ *         description: Comma-separated Battle Pass Level IDs
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/levels/progress/batch')
+    .get(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { ids } = req.query
+        try {
+            const levelIds = (ids as string).split(',').map(id => Number(id.trim())).filter(id => !isNaN(id))
+            const progress = await getBatchLevelProgress(levelIds, user.uid!)
+            res.send(progress)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+/**
+ * @openapi
+ * "/battlepass/mappacks/progress/batch":
+ *   get:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Get user's progress on multiple map packs in batch
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: ids
+ *         in: query
+ *         description: Comma-separated Battle Pass Map Pack IDs
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/mappacks/progress/batch')
+    .get(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { ids } = req.query
+        try {
+            const mapPackIds = (ids as string).split(',').map(id => Number(id.trim())).filter(id => !isNaN(id))
+            const progress = await getBatchMapPackProgress(mapPackIds, user.uid!)
+            res.send(progress)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+/**
+ * @openapi
+ * "/battlepass/mappacks/levels/progress/batch":
+ *   post:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Get user's progress on multiple map pack levels in batch
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               levels:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     mapPackId:
+ *                       type: integer
+ *                     levelID:
+ *                       type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/mappacks/levels/progress/batch')
+    .post(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { levels } = req.body
+        try {
+            const progress = await getBatchMapPackLevelProgress(levels, user.uid!)
+            res.send(progress)
         } catch (err) {
             console.error(err)
             res.status(500).send()

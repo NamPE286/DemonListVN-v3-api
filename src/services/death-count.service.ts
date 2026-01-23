@@ -108,3 +108,19 @@ export async function updateDeathCount(uid: string, levelID: number, arr: number
 
     return player;
 }
+
+/**
+ * Calculate progress percentage based on death count array.
+ * The death count array contains death counts at each percentage from 0-99.
+ * Progress is calculated as the highest percentage where a death has been recorded.
+ */
+export function getDeathCountProgress(arr: number[]): number {
+    // Find the highest index (percentage) where the player has died
+    let maxProgress = 0;
+    for (let i = 0; i < arr.length; i++) {
+        if (arr[i] > 0) {
+            maxProgress = i + 1; // +1 because if you died at 99%, you reached 99%
+        }
+    }
+    return Math.min(maxProgress, 99); // Cap at 99% since 100% means completed
+}

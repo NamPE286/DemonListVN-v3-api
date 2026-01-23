@@ -1261,3 +1261,166 @@ export async function getPlayerMissionStatus(seasonId: number, userId: string) {
         };
     });
 }
+
+// ==================== Batch Query Functions ====================
+
+/**
+ * Get level progress for multiple battlePassLevel IDs in a single query
+ */
+export async function getBatchLevelProgress(battlePassLevelIds: number[], userId: string) {
+    if (battlePassLevelIds.length === 0) {
+        return [];
+    }
+
+    const { data, error } = await supabase
+        .from('battlePassLevelProgress')
+        .select('*')
+        .eq('userID', userId)
+        .in('battlePassLevelId', battlePassLevelIds);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    // Fill in missing entries with default values
+    const progressMap = new Map<number, any>();
+    data?.forEach(p => progressMap.set(p.battlePassLevelId, p));
+
+    return battlePassLevelIds.map(id => {
+        const existing = progressMap.get(id);
+        if (existing) {
+            return existing;
+        }
+        return {
+            battlePassLevelId: id,
+            userID: userId,
+            progress: 0,
+            minProgressClaimed: false,
+            completionClaimed: false
+        };
+    });
+}
+
+/**
+ * Get map pack progress for multiple battlePassMapPack IDs in a single query
+ */
+export async function getBatchMapPackProgress(battlePassMapPackIds: number[], userId: string) {
+    if (battlePassMapPackIds.length === 0) {
+        return [];
+    }
+
+    const { data, error } = await supabase
+        .from('battlePassMapPackProgress')
+        .select('*')
+        .eq('userID', userId)
+        .in('battlePassMapPackId', battlePassMapPackIds);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    // Fill in missing entries with default values
+    const progressMap = new Map<number, any>();
+    data?.forEach(p => progressMap.set(p.battlePassMapPackId, p));
+
+    return battlePassMapPackIds.map(id => {
+        const existing = progressMap.get(id);
+        if (existing) {
+            return existing;
+        }
+        return {
+            battlePassMapPackId: id,
+            userID: userId,
+            completedLevels: [],
+            claimed: false
+        };
+    });
+}
+
+/**
+ * Get map pack level progress for multiple levels in a single query
+ */
+export async function getBatchMapPackLevelProgress(
+    levels: { mapPackId: number; levelID: number }[],
+    userId: string
+) {
+    if (levels.length === 0) {
+        return [];
+    }
+
+    // Get all unique mapPackIds
+    const mapPackIds = [...new Set(levels.map(l => l.mapPackId))];
+
+    // Cast to any because battlePassMapPackLevelProgress table isn't in generated types yet
+    const { data, error } = await (supabase as any)
+        .from('battlePassMapPackLevelProgress')
+        .select('*')
+        .eq('userID', userId)
+        .in('battlePassMapPackId', mapPackIds);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    // Create a map for quick lookup
+    const progressMap = new Map<string, any>();
+    (data as any[])?.forEach((p: any) => {
+        const key = `${p.battlePassMapPackId}_${p.levelID}`;
+        progressMap.set(key, p);
+    });
+
+    return levels.map(({ mapPackId, levelID }) => {
+        const key = `${mapPackId}_${levelID}`;
+        const existing = progressMap.get(key);
+        if (existing) {
+            return existing;
+        }
+        return {
+            battlePassMapPackId: mapPackId,
+            levelID,
+            userID: userId,
+            progress: 0
+        };
+    });
+}
+
+/**
+ * Update map pack level progress
+ */
+export async function updateMapPackLevelProgress(
+    battlePassMapPackId: number,
+    levelID: number,
+    userId: string,
+    progress: number
+) {
+    // Cast to any because battlePassMapPackLevelProgress table isn't in generated types yet
+    const { error } = await (supabase as any)
+        .from('battlePassMapPackLevelProgress')
+        .upsert({
+            battlePassMapPackId,
+            levelID,
+            userID: userId,
+            progress
+        });
+
+    if (error) {
+        throw new Error(error.message);
+    }
+}
+
+/**
+ * Get all map pack IDs that contain a specific levelID for a season
+ */
+export async function getMapPackIdsForLevel(seasonId: number, levelID: number) {
+    const { data, error } = await supabase
+        .from('battlePassMapPacks')
+        .select('id, mapPackId, mapPacks!inner(mapPackLevels!inner(levelID))')
+        .eq('seasonId', seasonId)
+        .eq('mapPacks.mapPackLevels.levelID', levelID);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data?.map(d => d.id) || [];
+}
