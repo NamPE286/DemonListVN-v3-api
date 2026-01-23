@@ -1,13 +1,11 @@
 import supabase from "@src/client/supabase";
 import type { TablesInsert } from "@src/types/supabase";
 import { addInventoryItem } from "@src/services/inventory.service";
+import { SubscriptionType } from "@src/const/subscriptionTypeConst";
 
 const XP_PER_TIER = 100;
 const MAX_TIER = 100;
 const COMPLETION_THRESHOLD = 100;
-
-// Subscription type constants
-const SUBSCRIPTION_TYPE_BATTLEPASS_PREMIUM = 'battlepass_premium';
 
 // ==================== Season Functions ====================
 
@@ -117,7 +115,7 @@ export async function hasPlayerSubscription(userId: string, subscriptionType: st
 }
 
 export async function hasBattlePassPremium(userId: string, seasonId: number) {
-    return hasPlayerSubscription(userId, SUBSCRIPTION_TYPE_BATTLEPASS_PREMIUM, seasonId);
+    return hasPlayerSubscription(userId, SubscriptionType.BP_PREMIUM, seasonId);
 }
 
 export async function addPlayerSubscription(subscription: TablesInsert<"playerSubscriptions">) {
@@ -210,7 +208,7 @@ export async function upgradeToPremium(seasonId: number, userId: string) {
     let { data: subscription, error: subError } = await supabase
         .from('subscriptions')
         .select('*')
-        .eq('type', SUBSCRIPTION_TYPE_BATTLEPASS_PREMIUM)
+        .eq('type', SubscriptionType.BP_PREMIUM)
         .eq('refId', seasonId)
         .maybeSingle();
 
@@ -224,7 +222,7 @@ export async function upgradeToPremium(seasonId: number, userId: string) {
         const { data: newSubscription, error: createError } = await supabase
             .from('subscriptions')
             .insert({
-                type: SUBSCRIPTION_TYPE_BATTLEPASS_PREMIUM,
+                type: SubscriptionType.BP_PREMIUM,
                 refId: seasonId,
                 name: `Battle Pass Premium - ${season.title}`,
                 price: 0

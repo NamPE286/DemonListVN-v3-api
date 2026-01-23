@@ -102,6 +102,11 @@ handleProduct.set(ProductId.QUEUE_BOOST, {
         const data: OrderData = order.data as unknown as OrderData
 
         await prioritizeRecord(data.userID, data.levelID, order.quantity! * 86400000)
+
+        const { error } = await supabase
+            .from("orders")
+            .update({ delivered: true })
+            .eq("id", order.id)
     },
     post: async (buyer, recipient, order) => {
         let msg = ''
