@@ -456,7 +456,6 @@ export type Database = {
           end: string
           id: number
           isArchived: boolean
-          premiumPrice: number
           primaryColor: string | null
           start: string
           title: string
@@ -467,7 +466,6 @@ export type Database = {
           end: string
           id?: number
           isArchived?: boolean
-          premiumPrice?: number
           primaryColor?: string | null
           start: string
           title: string
@@ -478,7 +476,6 @@ export type Database = {
           end?: string
           id?: number
           isArchived?: boolean
-          premiumPrice?: number
           primaryColor?: string | null
           start?: string
           title?: string
