@@ -1,13 +1,11 @@
 import supabase from "@src/client/supabase";
 import type { TablesInsert } from "@src/types/supabase";
 import { addInventoryItem } from "@src/services/inventory.service";
+import { SubscriptionType } from "@src/const/subscriptionTypeConst";
 
 const XP_PER_TIER = 100;
 const MAX_TIER = 100;
 const COMPLETION_THRESHOLD = 100;
-
-// Subscription type constants
-const SUBSCRIPTION_TYPE_BATTLEPASS_PREMIUM = 'battlepass_premium';
 
 // ==================== Season Functions ====================
 
@@ -43,6 +41,15 @@ export async function getSeason(seasonId: number) {
     }
 
     return data;
+}
+
+export async function isSeasonActive(seasonId: number): Promise<boolean> {
+    const now = new Date().toISOString();
+    const season = await getSeason(seasonId);
+    
+    return !season.isArchived && 
+           new Date(season.start) <= new Date(now) && 
+           new Date(season.end) >= new Date(now);
 }
 
 export async function createSeason(season: TablesInsert<"battlePassSeasons">) {
@@ -94,7 +101,7 @@ export async function hasPlayerSubscription(userId: string, subscriptionType: st
         .lte('start', now);
 
     if (refId !== undefined) {
-        query = query.eq('refId', refId);
+        query = query.eq('subscriptions.refId', refId);
     }
 
     const { data, error } = await query;
@@ -108,7 +115,7 @@ export async function hasPlayerSubscription(userId: string, subscriptionType: st
 }
 
 export async function hasBattlePassPremium(userId: string, seasonId: number) {
-    return hasPlayerSubscription(userId, SUBSCRIPTION_TYPE_BATTLEPASS_PREMIUM, seasonId);
+    return hasPlayerSubscription(userId, SubscriptionType.BP_PREMIUM, seasonId);
 }
 
 export async function addPlayerSubscription(subscription: TablesInsert<"playerSubscriptions">) {
@@ -197,28 +204,44 @@ export async function addXp(seasonId: number, userId: string, xp: number) {
 }
 
 export async function upgradeToPremium(seasonId: number, userId: string) {
-    // Find or create a battlepass premium subscription type
-    const { data: subscription, error: subError } = await supabase
+    // Find or create a battlepass premium subscription for this season
+    let { data: subscription, error: subError } = await supabase
         .from('subscriptions')
         .select('*')
-        .eq('type', SUBSCRIPTION_TYPE_BATTLEPASS_PREMIUM)
+        .eq('type', SubscriptionType.BP_PREMIUM)
+        .eq('refId', seasonId)
         .maybeSingle();
 
     if (subError) {
         throw new Error(subError.message);
     }
 
+    // If subscription for this season doesn't exist, create it
     if (!subscription) {
-        throw new Error('Battle pass premium subscription type not found');
+        const season = await getSeason(seasonId);
+        const { data: newSubscription, error: createError } = await supabase
+            .from('subscriptions')
+            .insert({
+                type: SubscriptionType.BP_PREMIUM,
+                refId: seasonId,
+                name: `Battle Pass Premium - ${season.title}`,
+                price: 0
+            })
+            .select()
+            .single();
+
+        if (createError) {
+            throw new Error(createError.message);
+        }
+        subscription = newSubscription;
     }
 
-    // Add player subscription with refId pointing to seasonId
+    // Add player subscription
     const { error } = await supabase
         .from('playerSubscriptions')
         .insert({
             userID: userId,
             subscriptionId: subscription.id,
-            refId: seasonId,
             end: null // Permanent for the season
         });
 
@@ -681,6 +704,13 @@ export async function completeMapPackLevel(battlePassMapPackId: number, userId: 
 
 export async function claimMapPackReward(battlePassMapPackId: number, userId: string) {
     const bpMapPack = await getBattlePassMapPack(battlePassMapPackId);
+    
+    // Check if season is active
+    const seasonActive = await isSeasonActive(bpMapPack.seasonId);
+    if (!seasonActive) {
+        throw new Error('Season is not active');
+    }
+
     const progress = await getPlayerMapPackProgress(battlePassMapPackId, userId);
 
     if (!progress) {
@@ -782,6 +812,12 @@ export async function claimTierReward(rewardId: number, userId: string) {
 
     if (rewardError || !reward) {
         throw new Error('Reward not found');
+    }
+
+    // Check if season is active
+    const seasonActive = await isSeasonActive(reward.seasonId);
+    if (!seasonActive) {
+        throw new Error('Season is not active');
     }
 
     // Get player progress
@@ -1130,6 +1166,12 @@ export async function claimMission(missionId: number, userId: string) {
     }
 
     const mission = await getMission(missionId);
+
+    // Check if season is active
+    const seasonActive = await isSeasonActive(mission.seasonId);
+    if (!seasonActive) {
+        throw new Error('Season is not active');
+    }
 
     // Insert claim record
     const { error: claimError } = await supabase

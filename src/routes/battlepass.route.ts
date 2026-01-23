@@ -40,7 +40,8 @@ import {
     updateLevelProgressWithMissionCheck,
     getPlayerLevelProgress,
     getPlayerSubscriptions,
-    addPlayerSubscription
+    addPlayerSubscription,
+    hasBattlePassPremium
 } from '@src/services/battlepass.service'
 
 const router = express.Router()
@@ -62,14 +63,22 @@ const router = express.Router()
  *         description: No active season
  */
 router.route('/')
-    .get(async (req, res) => {
+    .get(optionalUserAuth, async (req, res) => {
         try {
             const season = await getActiveseason()
             if (!season) {
                 res.status(404).send({ message: 'No active season' })
                 return
             }
-            res.send(season)
+            
+            const { user, authenticated } = res.locals
+            let isPremium = false
+            
+            if (authenticated && user) {
+                isPremium = await hasBattlePassPremium(user.uid!, season.id)
+            }
+            
+            res.send({ ...season, isPremium })
         } catch (err) {
             console.error(err)
             res.status(500).send()
@@ -162,11 +171,19 @@ router.route('/season')
  *         description: Internal server error
  */
 router.route('/season/:id')
-    .get(async (req, res) => {
+    .get(optionalUserAuth, async (req, res) => {
         const { id } = req.params
         try {
             const season = await getSeason(Number(id))
-            res.send(season)
+            
+            const { user, authenticated } = res.locals
+            let isPremium = false
+            
+            if (authenticated && user) {
+                isPremium = await hasBattlePassPremium(user.uid!, season.id)
+            }
+            
+            res.send({ ...season, isPremium })
         } catch (err) {
             console.error(err)
             res.status(500).send()
@@ -815,7 +832,9 @@ router.route('/mappack/:mapPackId/claim')
             res.send({ xp })
         } catch (err: any) {
             console.error(err)
-            if (err.message === 'Already claimed' || err.message === 'Map pack not completed') {
+            if (err.message === 'Already claimed' || 
+                err.message === 'Map pack not completed' ||
+                err.message === 'Season is not active') {
                 res.status(400).send({ message: err.message })
             } else {
                 res.status(500).send({ message: err.message })
@@ -1001,7 +1020,8 @@ router.route('/reward/:rewardId/claim')
             console.error(err)
             if (err.message === 'Already claimed' || 
                 err.message === 'Tier not reached' || 
-                err.message === 'Premium required') {
+                err.message === 'Premium required' ||
+                err.message === 'Season is not active') {
                 res.status(400).send({ message: err.message })
             } else {
                 res.status(500).send({ message: err.message })
@@ -1334,7 +1354,9 @@ router.route('/mission/:missionId/claim')
             res.send(mission)
         } catch (err: any) {
             console.error(err)
-            if (err.message === 'Already claimed' || err.message === 'Mission not completed') {
+            if (err.message === 'Already claimed' || 
+                err.message === 'Mission not completed' ||
+                err.message === 'Season is not active') {
                 res.status(400).send({ message: err.message })
             } else {
                 res.status(500).send({ message: err.message })
