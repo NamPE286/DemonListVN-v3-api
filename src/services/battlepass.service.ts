@@ -283,6 +283,30 @@ export async function deleteSeasonLevel(levelId: number) {
     }
 }
 
+/**
+ * Check if a level (by its actual levelID) is in the active battlepass season.
+ * Returns the battlePassLevel record if found, null otherwise.
+ */
+export async function getActiveBattlePassLevelByLevelID(levelID: number) {
+    const season = await getActiveseason();
+    if (!season) {
+        return null;
+    }
+
+    const { data, error } = await supabase
+        .from('battlePassLevels')
+        .select('*')
+        .eq('seasonId', season.id)
+        .eq('levelID', levelID)
+        .maybeSingle();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
 export async function getPlayerLevelProgress(battlePassLevelId: number, userId: string) {
     const { data, error } = await supabase
         .from('battlePassLevelProgress')

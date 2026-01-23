@@ -11,7 +11,7 @@ async function fetchPlayerData(uid: string, levelID: number) {
         .single()
 
     if (data == null) {
-        return { uid: uid, levelID: levelID, count: Array(100).fill(0) }
+        return { uid: uid, levelID: levelID, count: Array(100).fill(0), completedTime: null }
     }
 
     return data
@@ -81,17 +81,21 @@ export async function getLevelDeathCount(id: number) {
     return await fetchLevelData(id);
 }
 
-export async function updateDeathCount(uid: string, levelID: number, arr: number[]) {
+export async function updateDeathCount(uid: string, levelID: number, arr: number[], setCompleted?: boolean) {
     if (!(await isEligible(levelID))) {
         throw new Error();
     }
 
     const player = await fetchPlayerData(uid, levelID)
     const level = await fetchLevelData(levelID)
-
+    
     for (let i = 0; i < 100; i++) {
         player.count[i] += arr[i];
         level.count[i] += arr[i];
+    }
+
+    if (setCompleted && !player.completedTime) {
+        player.completedTime = new Date().toISOString();
     }
 
     await supabase
@@ -101,4 +105,6 @@ export async function updateDeathCount(uid: string, levelID: number, arr: number
     await supabase
         .from('levelDeathCount')
         .upsert(level)
+
+    return player;
 }

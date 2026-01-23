@@ -520,34 +520,6 @@ router.route('/level/:levelId')
  *         description: Success
  *       500:
  *         description: Internal server error
- *   put:
- *     tags:
- *       - Battle Pass
- *     summary: Update level progress (also updates map pack progress and checks missions)
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: levelId
- *         in: path
- *         description: Battle Pass Level ID
- *         required: true
- *         schema:
- *           type: integer
- *       - name: p
- *         in: query
- *         description: Progress percentage (0-100)
- *         required: true
- *         schema:
- *           type: integer
- *           minimum: 0
- *           maximum: 100
- *     responses:
- *       200:
- *         description: Progress updated successfully
- *       400:
- *         description: Invalid progress value
- *       500:
- *         description: Internal server error
  */
 const DEFAULT_LEVEL_PROGRESS = { progress: 0, minProgressClaimed: false, completionClaimed: false };
 
@@ -561,29 +533,6 @@ router.route('/levels/:levelId/progress')
         } catch (err) {
             console.error(err)
             res.status(500).send()
-        }
-    })
-    .put(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { levelId } = req.params
-        const progressParam = req.query.p
-        
-        const progress = Number(progressParam)
-        if (isNaN(progress) || progress < 0 || progress > 100) {
-            res.status(400).send({ message: 'Invalid progress value. Must be between 0 and 100.' })
-            return
-        }
-
-        try {
-            const result = await updateLevelProgressWithMissionCheck(
-                Number(levelId),
-                user.uid!,
-                progress
-            )
-            res.send(result)
-        } catch (err: any) {
-            console.error(err)
-            res.status(500).send({ message: err.message })
         }
     })
 
