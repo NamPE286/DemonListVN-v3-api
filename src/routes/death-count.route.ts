@@ -1,12 +1,6 @@
 import express from 'express'
-import { getDeathCount, updateDeathCount, getDeathCountProgress } from '@src/services/death-count.service'
-import { 
-    getActiveBattlePassLevelByLevelID, 
-    updateLevelProgressWithMissionCheck,
-    getMapPackIdsForLevel,
-    updateMapPackLevelProgress,
-    getActiveseason
-} from '@src/services/battlepass.service'
+import { getDeathCount, updateDeathCount } from '@src/services/death-count.service'
+import { trackProgressAfterDeathCount } from '@src/services/battlepass.service'
 import userAuth from '@src/middleware/user-auth.middleware'
 
 const router = express.Router()
@@ -100,30 +94,7 @@ router.route('/:levelID/:count')
 
             const player = await updateDeathCount(uid, levelIDNum, arr, setCompleted);
 
-            // Calculate progress percentage from death count data
-            const progressPercent = getDeathCountProgress(arr);
-
-            // Track battle pass level progress
-            if (setCompleted && player.completedTime) {
-                const bpLevel = await getActiveBattlePassLevelByLevelID(levelIDNum);
-                if (bpLevel) {
-                    await updateLevelProgressWithMissionCheck(bpLevel.id, uid, 100);
-                }
-            }
-
-            // Track map pack level progress for the current season
-            const season = await getActiveseason();
-            if (season) {
-                const mapPackIds = await getMapPackIdsForLevel(season.id, levelIDNum);
-                for (const mapPackId of mapPackIds) {
-                    await updateMapPackLevelProgress(
-                        mapPackId, 
-                        levelIDNum, 
-                        uid, 
-                        setCompleted ? 100 : progressPercent
-                    );
-                }
-            }
+            await trackProgressAfterDeathCount(uid, levelIDNum, arr, setCompleted, player);
         } catch { }
 
         res.send()
