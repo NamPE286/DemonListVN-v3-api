@@ -1,5 +1,6 @@
 import express from 'express'
 import { getDeathCount, updateDeathCount } from '@src/services/death-count.service'
+import { getActiveBattlePassLevelByLevelID, updateLevelProgressWithMissionCheck } from '@src/services/battlepass.service'
 import userAuth from '@src/middleware/user-auth.middleware'
 
 const router = express.Router()
@@ -50,7 +51,7 @@ router.route('/:levelID/:count')
      *       - Death count
      *     summary: Add player's level death count
      *     parameters:
-     *       - name: id
+     *       - name: levelID
      *         in: path
      *         description: The id of the level
      *         required: true
@@ -62,6 +63,12 @@ router.route('/:levelID/:count')
      *         required: true
      *         schema:
      *           type: string
+     *       - name: completed
+     *         in: query
+     *         description: If present, set completedTime to current time (only if not already set)
+     *         required: false
+     *         schema:
+     *           type: boolean
      *     responses:
      *       200:
      *         description: Success
@@ -78,12 +85,21 @@ router.route('/:levelID/:count')
             arr[i] = parseInt(arr[i]);
         }
 
+        const setCompleted = req.query.completed !== undefined
 
         try {
             const { levelID } = req.params
             const uid = res.locals.user.uid!
+            const levelIDNum = parseInt(levelID)
 
-            await updateDeathCount(uid, parseInt(levelID), arr);
+            const player = await updateDeathCount(uid, levelIDNum, arr, setCompleted);
+
+            if (setCompleted && player.completedTime) {
+                const bpLevel = await getActiveBattlePassLevelByLevelID(levelIDNum);
+                if (bpLevel) {
+                    await updateLevelProgressWithMissionCheck(bpLevel.id, uid, 100);
+                }
+            }
         } catch { }
 
         res.send()

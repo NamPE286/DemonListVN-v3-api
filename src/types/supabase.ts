@@ -60,6 +60,476 @@ export type Database = {
           },
         ]
       }
+      battlePassLevelProgress: {
+        Row: {
+          battlePassLevelId: number
+          completionClaimed: boolean
+          created_at: string
+          minProgressClaimed: boolean
+          progress: number
+          userID: string
+        }
+        Insert: {
+          battlePassLevelId: number
+          completionClaimed?: boolean
+          created_at?: string
+          minProgressClaimed?: boolean
+          progress?: number
+          userID: string
+        }
+        Update: {
+          battlePassLevelId?: number
+          completionClaimed?: boolean
+          created_at?: string
+          minProgressClaimed?: boolean
+          progress?: number
+          userID?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassLevelProgress_battlePassLevelId_fkey"
+            columns: ["battlePassLevelId"]
+            isOneToOne: false
+            referencedRelation: "battlePassLevels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassLevelProgress_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      battlePassLevels: {
+        Row: {
+          created_at: string
+          id: number
+          levelID: number
+          minProgress: number
+          minProgressXp: number
+          seasonId: number
+          xp: number
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          levelID: number
+          minProgress?: number
+          minProgressXp?: number
+          seasonId: number
+          xp?: number
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          levelID?: number
+          minProgress?: number
+          minProgressXp?: number
+          seasonId?: number
+          xp?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassLevels_levelID_fkey"
+            columns: ["levelID"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassLevels_seasonId_fkey"
+            columns: ["seasonId"]
+            isOneToOne: false
+            referencedRelation: "battlePassSeasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battlePassMapPackProgress: {
+        Row: {
+          battlePassMapPackId: number
+          claimed: boolean
+          completedLevels: number[]
+          created_at: string
+          userID: string
+        }
+        Insert: {
+          battlePassMapPackId: number
+          claimed?: boolean
+          completedLevels?: number[]
+          created_at?: string
+          userID: string
+        }
+        Update: {
+          battlePassMapPackId?: number
+          claimed?: boolean
+          completedLevels?: number[]
+          created_at?: string
+          userID?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassMapPackProgress_battlePassMapPackId_fkey"
+            columns: ["battlePassMapPackId"]
+            isOneToOne: false
+            referencedRelation: "battlePassMapPacks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassMapPackProgress_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      battlePassMapPacks: {
+        Row: {
+          created_at: string
+          id: number
+          mapPackId: number
+          order: number
+          seasonId: number
+          unlockWeek: number
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          mapPackId: number
+          order?: number
+          seasonId: number
+          unlockWeek: number
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          mapPackId?: number
+          order?: number
+          seasonId?: number
+          unlockWeek?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassMapPacks_mapPackId_fkey"
+            columns: ["mapPackId"]
+            isOneToOne: false
+            referencedRelation: "mapPacks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassMapPacks_seasonId_fkey"
+            columns: ["seasonId"]
+            isOneToOne: false
+            referencedRelation: "battlePassSeasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battlePassMissionClaims: {
+        Row: {
+          created_at: string
+          missionId: number
+          userID: string
+        }
+        Insert: {
+          created_at?: string
+          missionId: number
+          userID: string
+        }
+        Update: {
+          created_at?: string
+          missionId?: number
+          userID?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassMissionClaims_missionId_fkey"
+            columns: ["missionId"]
+            isOneToOne: false
+            referencedRelation: "battlePassMissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassMissionClaims_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      battlePassMissionProgress: {
+        Row: {
+          completed: boolean
+          created_at: string
+          missionId: number
+          userID: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          missionId: number
+          userID: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          missionId?: number
+          userID?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassMissionProgress_missionId_fkey"
+            columns: ["missionId"]
+            isOneToOne: false
+            referencedRelation: "battlePassMissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassMissionProgress_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      battlePassMissionRewards: {
+        Row: {
+          created_at: string
+          expireAfter: number | null
+          id: number
+          itemId: number
+          missionId: number
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          expireAfter?: number | null
+          id?: number
+          itemId: number
+          missionId: number
+          quantity?: number
+        }
+        Update: {
+          created_at?: string
+          expireAfter?: number | null
+          id?: number
+          itemId?: number
+          missionId?: number
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassMissionRewards_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassMissionRewards_missionId_fkey"
+            columns: ["missionId"]
+            isOneToOne: false
+            referencedRelation: "battlePassMissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battlePassMissions: {
+        Row: {
+          condition: Json
+          created_at: string
+          description: string | null
+          id: number
+          order: number
+          seasonId: number
+          title: string
+          xp: number
+        }
+        Insert: {
+          condition: Json
+          created_at?: string
+          description?: string | null
+          id?: number
+          order?: number
+          seasonId: number
+          title: string
+          xp: number
+        }
+        Update: {
+          condition?: Json
+          created_at?: string
+          description?: string | null
+          id?: number
+          order?: number
+          seasonId?: number
+          title?: string
+          xp?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassMissions_seasonId_fkey"
+            columns: ["seasonId"]
+            isOneToOne: false
+            referencedRelation: "battlePassSeasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battlePassProgress: {
+        Row: {
+          created_at: string
+          seasonId: number
+          userID: string
+          xp: number
+        }
+        Insert: {
+          created_at?: string
+          seasonId: number
+          userID: string
+          xp?: number
+        }
+        Update: {
+          created_at?: string
+          seasonId?: number
+          userID?: string
+          xp?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassProgress_seasonId_fkey"
+            columns: ["seasonId"]
+            isOneToOne: false
+            referencedRelation: "battlePassSeasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassProgress_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      battlePassRewardClaims: {
+        Row: {
+          created_at: string
+          rewardId: number
+          userID: string
+        }
+        Insert: {
+          created_at?: string
+          rewardId: number
+          userID: string
+        }
+        Update: {
+          created_at?: string
+          rewardId?: number
+          userID?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassRewardClaims_rewardId_fkey"
+            columns: ["rewardId"]
+            isOneToOne: false
+            referencedRelation: "battlePassTierRewards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassRewardClaims_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      battlePassSeasons: {
+        Row: {
+          created_at: string
+          description: string | null
+          end: string
+          id: number
+          isArchived: boolean
+          primaryColor: string | null
+          start: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end: string
+          id?: number
+          isArchived?: boolean
+          primaryColor?: string | null
+          start: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end?: string
+          id?: number
+          isArchived?: boolean
+          primaryColor?: string | null
+          start?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      battlePassTierRewards: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          isPremium: boolean
+          itemId: number
+          quantity: number
+          seasonId: number
+          tier: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          isPremium?: boolean
+          itemId: number
+          quantity?: number
+          seasonId: number
+          tier: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          isPremium?: boolean
+          itemId?: number
+          quantity?: number
+          seasonId?: number
+          tier?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassTierRewards_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassTierRewards_seasonId_fkey"
+            columns: ["seasonId"]
+            isOneToOne: false
+            referencedRelation: "battlePassSeasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cards: {
         Row: {
           activationDate: string | null
@@ -1019,6 +1489,72 @@ export type Database = {
         }
         Relationships: []
       }
+      mapPackLevels: {
+        Row: {
+          created_at: string
+          id: number
+          levelID: number
+          mapPackId: number
+          order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          levelID: number
+          mapPackId: number
+          order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          levelID?: number
+          mapPackId?: number
+          order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mapPackLevels_levelID_fkey"
+            columns: ["levelID"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mapPackLevels_mapPackId_fkey"
+            columns: ["mapPackId"]
+            isOneToOne: false
+            referencedRelation: "mapPacks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mapPacks: {
+        Row: {
+          created_at: string
+          description: string | null
+          difficulty: string
+          id: number
+          name: string
+          xp: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          difficulty: string
+          id?: number
+          name: string
+          xp: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          difficulty?: string
+          id?: number
+          name?: string
+          xp?: number
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           content: string | null
@@ -1409,6 +1945,48 @@ export type Database = {
           },
         ]
       }
+      playerSubscriptions: {
+        Row: {
+          created_at: string
+          end: string | null
+          id: number
+          start: string
+          subscriptionId: number
+          userID: string
+        }
+        Insert: {
+          created_at?: string
+          end?: string | null
+          id?: number
+          start?: string
+          subscriptionId: number
+          userID: string
+        }
+        Update: {
+          created_at?: string
+          end?: string | null
+          id?: number
+          start?: string
+          subscriptionId?: number
+          userID?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playerSubscriptions_subscriptionId_fkey"
+            columns: ["subscriptionId"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playerSubscriptions_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       products: {
         Row: {
           bannerTextColor: string
@@ -1637,31 +2215,32 @@ export type Database = {
       subscriptions: {
         Row: {
           created_at: string
-          expireAt: string | null
+          description: string | null
+          id: number
+          name: string
+          price: number
+          refId: number | null
           type: string
-          userID: string
         }
         Insert: {
           created_at?: string
-          expireAt?: string | null
+          description?: string | null
+          id?: number
+          name: string
+          price: number
+          refId?: number | null
           type: string
-          userID: string
         }
         Update: {
           created_at?: string
-          expireAt?: string | null
+          description?: string | null
+          id?: number
+          name?: string
+          price?: number
+          refId?: number | null
           type?: string
-          userID?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "subscriptions_userID_fkey"
-            columns: ["userID"]
-            isOneToOne: false
-            referencedRelation: "players"
-            referencedColumns: ["uid"]
-          },
-        ]
+        Relationships: []
       }
       userSocial: {
         Row: {
