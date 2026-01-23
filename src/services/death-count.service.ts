@@ -1,5 +1,6 @@
 import supabase from "@src/client/supabase";
 import { fetchLevelFromGD } from "@src/services/level.service";
+import { isLevelInActiveBattlePassSeason, updateBattlePassLevelProgress } from "@src/services/battlepass.service";
 
 async function fetchPlayerData(uid: string, levelID: number) {
     let { data, error } = await supabase
@@ -11,7 +12,7 @@ async function fetchPlayerData(uid: string, levelID: number) {
         .single()
 
     if (data == null) {
-        return { uid: uid, levelID: levelID, count: Array(100).fill(0) }
+        return { uid: uid, levelID: levelID, count: Array(100).fill(0), completedTime: null as string | null }
     }
 
     return data
@@ -81,7 +82,7 @@ export async function getLevelDeathCount(id: number) {
     return await fetchLevelData(id);
 }
 
-export async function updateDeathCount(uid: string, levelID: number, arr: number[]) {
+export async function updateDeathCount(uid: string, levelID: number, arr: number[], complete?: boolean) {
     if (!(await isEligible(levelID))) {
         throw new Error();
     }
@@ -94,6 +95,11 @@ export async function updateDeathCount(uid: string, levelID: number, arr: number
         level.count[i] += arr[i];
     }
 
+    // Update completedTime if complete param is provided and completedTime is null
+    if (complete && !player.completedTime) {
+        player.completedTime = new Date().toISOString()
+    }
+
     await supabase
         .from('deathCount')
         .upsert(player)
@@ -101,4 +107,12 @@ export async function updateDeathCount(uid: string, levelID: number, arr: number
     await supabase
         .from('levelDeathCount')
         .upsert(level)
+
+    // Update battle pass progress if level is in active battle pass season
+    if (complete) {
+        const isInBattlePass = await isLevelInActiveBattlePassSeason(levelID)
+        if (isInBattlePass) {
+            await updateBattlePassLevelProgress(uid, levelID, 100)
+        }
+    }
 }

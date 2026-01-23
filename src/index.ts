@@ -34,6 +34,7 @@ import rulesRoute from './routes/rules.route'
 import itemRoute from './routes/item.route'
 import inventoryRoute from './routes/inventory.route'
 import buyersRoute from './routes/buyers.route'
+import mappacksRoute from './routes/mappacks.route'
 
 const app = express()
 const port = 8787
@@ -78,6 +79,7 @@ app.use('/rules', rulesRoute)
 app.use('/item', itemRoute)
 app.use('/inventory', inventoryRoute)
 app.use('/buyers', buyersRoute)
+app.use('/mappacks', mappacksRoute)
 
 app.listen(port, async () => {
     console.log(`Server started on port ${port}`)

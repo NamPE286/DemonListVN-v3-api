@@ -62,6 +62,12 @@ router.route('/:levelID/:count')
      *         required: true
      *         schema:
      *           type: string
+     *       - name: complete
+     *         in: query
+     *         description: If present, update completedTime (only if completedTime is null)
+     *         required: false
+     *         schema:
+     *           type: boolean
      *     responses:
      *       200:
      *         description: Success
@@ -73,6 +79,7 @@ router.route('/:levelID/:count')
 
         const { count } = req.params
         const arr: any[] = count.split('|')
+        const complete = req.query.complete !== undefined
 
         for (let i = 0; i < arr.length; i++) {
             arr[i] = parseInt(arr[i]);
@@ -83,7 +90,7 @@ router.route('/:levelID/:count')
             const { levelID } = req.params
             const uid = res.locals.user.uid!
 
-            await updateDeathCount(uid, parseInt(levelID), arr);
+            await updateDeathCount(uid, parseInt(levelID), arr, complete);
         } catch { }
 
         res.send()
