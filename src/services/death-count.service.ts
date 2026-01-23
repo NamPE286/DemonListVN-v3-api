@@ -12,7 +12,7 @@ async function fetchPlayerData(uid: string, levelID: number) {
         .single()
 
     if (data == null) {
-        return { uid: uid, levelID: levelID, count: Array(100).fill(0), completedTime: null as string | null }
+        return { uid: uid, levelID: levelID, count: Array(100).fill(0), completedTime: null }
     }
 
     return data

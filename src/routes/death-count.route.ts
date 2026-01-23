@@ -50,7 +50,7 @@ router.route('/:levelID/:count')
      *       - Death count
      *     summary: Add player's level death count
      *     parameters:
-     *       - name: id
+     *       - name: levelID
      *         in: path
      *         description: The id of the level
      *         required: true
