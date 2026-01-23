@@ -1953,7 +1953,6 @@ export type Database = {
           created_at: string
           end: string | null
           id: number
-          refId: number | null
           start: string
           subscriptionId: number
           userID: string
@@ -1962,7 +1961,6 @@ export type Database = {
           created_at?: string
           end?: string | null
           id?: number
-          refId?: number | null
           start?: string
           subscriptionId: number
           userID: string
@@ -1971,7 +1969,6 @@ export type Database = {
           created_at?: string
           end?: string | null
           id?: number
-          refId?: number | null
           start?: string
           subscriptionId?: number
           userID?: string
@@ -2225,6 +2222,7 @@ export type Database = {
           id: number
           name: string
           price: number
+          refId: number | null
           type: string
         }
         Insert: {
@@ -2233,6 +2231,7 @@ export type Database = {
           id?: number
           name: string
           price: number
+          refId?: number | null
           type: string
         }
         Update: {
@@ -2241,6 +2240,7 @@ export type Database = {
           id?: number
           name?: string
           price?: number
+          refId?: number | null
           type?: string
         }
         Relationships: []
