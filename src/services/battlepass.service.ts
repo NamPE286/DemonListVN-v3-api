@@ -1210,25 +1210,54 @@ export async function claimMission(missionId: number, userId: string) {
 
 export async function getPlayerMissionStatus(seasonId: number, userId: string) {
     const missions = await getSeasonMissions(seasonId);
-    const status = [];
 
-    for (const mission of missions) {
-        const claimed = await isMissionClaimed(userId, mission.id);
-        let completed = false;
-
-        if (!claimed) {
-            // Check battlePassMissionProgress table for completion status
-            const missionProgress = await getMissionProgress(userId, mission.id);
-            completed = missionProgress?.completed || false;
-        }
-
-        status.push({
-            ...mission,
-            claimed,
-            completed: claimed || completed,
-            claimable: !claimed && completed
-        });
+    if (!missions || missions.length === 0) {
+        return [];
     }
 
-    return status;
+    const missionIds = missions.map(m => m.id);
+
+    // Batch fetch claims
+    const { data: claims, error: claimsError } = await supabase
+        .from('battlePassMissionClaims')
+        .select('missionId')
+        .eq('userID', userId)
+        .in('missionId', missionIds);
+
+    if (claimsError) {
+        throw new Error(claimsError.message);
+    }
+
+    const claimedSet = new Set(claims?.map(c => c.missionId));
+
+    // Batch fetch progress
+    const { data: progressList, error: progressError } = await supabase
+        .from('battlePassMissionProgress')
+        .select('missionId, completed')
+        .eq('userID', userId)
+        .in('missionId', missionIds);
+
+    if (progressError) {
+        throw new Error(progressError.message);
+    }
+
+    const progressMap = new Map<number, boolean>();
+    if (progressList) {
+        progressList.forEach(p => progressMap.set(p.missionId, p.completed));
+    }
+
+    return missions.map(mission => {
+        const claimed = claimedSet.has(mission.id);
+        const progressCompleted = progressMap.get(mission.id) || false;
+        
+        // If claimed, it is considered completed
+        const isCompleted = claimed || progressCompleted;
+
+        return {
+            ...mission,
+            claimed,
+            completed: isCompleted,
+            claimable: !claimed && isCompleted
+        };
+    });
 }
