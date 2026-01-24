@@ -1,6 +1,7 @@
 import supabase from "@src/client/supabase"
 import { getGJDailyLevel, getGJLevels21 } from '@src/services/gd-api.service'
 import { addChangelog } from '@src/services/changelog.service'
+import { refreshDailyLevelProgress, refreshWeeklyLevelProgress, getActiveseason, getSeasonLevelByType, addSeasonLevel, updateSeasonLevel } from '@src/services/battlepass.service'
 import type { TLevel } from "@src/types"
 import type { TablesInsert } from "@src/types/supabase"
 
@@ -348,7 +349,8 @@ export async function refreshLevel() {
             creator: p.gd.author,
             created_at: new Date().toISOString(),
             isNonList: false,
-            isPlatformer: false
+            isPlatformer: false,
+            difficulty: p.gd.difficulty
         })
 
         const state = {
@@ -365,6 +367,33 @@ export async function refreshLevel() {
             throw stateErr
         }
     }
+
+    const season = await getActiveseason()
+
+    if (season) {
+        for (const p of pairs) {
+            const type = p.isDaily ? 'daily' : 'weekly'
+
+            const existing = (await getSeasonLevelByType(season.id, type))[0]
+
+            if (existing) {
+                await updateSeasonLevel(existing.id, { levelID: p.gd.id })
+            } else {
+                await addSeasonLevel({
+                    seasonId: season.id,
+                    levelID: p.gd.id,
+                    type,
+                    created_at: new Date().toISOString(),
+                    xp: p.isDaily ? 25 : 100,
+                    minProgress: 100,
+                    minProgressXp: 0
+                })
+            }
+        }
+    }
+
+    await refreshDailyLevelProgress()
+    await refreshWeeklyLevelProgress()
 
     return { daily: dailyLevel.id, weekly: weeklyLevel.id }
 }

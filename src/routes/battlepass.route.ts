@@ -47,7 +47,12 @@ import {
     getBatchMapPackProgress,
     getBatchMapPackLevelProgress,
     refreshMissionsByType,
-    type RefreshType
+    getDailyWeeklyLevels,
+    claimDailyWeeklyReward,
+    refreshDailyLevelProgress,
+    refreshWeeklyLevelProgress,
+    type RefreshType,
+    type LevelType
 } from '@src/services/battlepass.service'
 
 const router = express.Router()
@@ -564,6 +569,171 @@ router.route('/levels/progress')
         } catch (err) {
             console.error(err)
             res.status(500).send()
+        }
+    })
+
+// ==================== Daily/Weekly Level Routes ====================
+
+/**
+ * @openapi
+ * "/battlepass/daily-weekly":
+ *   get:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Get daily and weekly levels for active season with user progress
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success - Returns daily and weekly level info with progress
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 daily:
+ *                   type: object
+ *                   nullable: true
+ *                 weekly:
+ *                   type: object
+ *                   nullable: true
+ *       404:
+ *         description: No active season
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/daily-weekly')
+    .get(optionalUserAuth, async (req, res) => {
+        try {
+            const season = await getActiveseason()
+            if (!season) {
+                res.status(404).send({ message: 'No active season' })
+                return
+            }
+            
+            const { user, authenticated } = res.locals
+            const userId = authenticated && user ? user.uid : undefined
+            
+            const levels = await getDailyWeeklyLevels(season.id, userId)
+            res.send(levels)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+/**
+ * @openapi
+ * "/battlepass/season/{id}/daily-weekly":
+ *   get:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Get daily and weekly levels for a specific season with user progress
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: Season ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/season/:id/daily-weekly')
+    .get(optionalUserAuth, async (req, res) => {
+        const { id } = req.params
+        try {
+            const { user, authenticated } = res.locals
+            const userId = authenticated && user ? user.uid : undefined
+            
+            const levels = await getDailyWeeklyLevels(Number(id), userId)
+            res.send(levels)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+/**
+ * @openapi
+ * "/battlepass/level/{levelId}/claim/{claimType}":
+ *   post:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Claim XP reward for daily/weekly level progress
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: levelId
+ *         in: path
+ *         description: Battle Pass Level ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: claimType
+ *         in: path
+ *         description: Type of reward to claim
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [minProgress, completion]
+ *     responses:
+ *       200:
+ *         description: XP claimed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 xp:
+ *                   type: integer
+ *                 previousXp:
+ *                   type: integer
+ *                 newXp:
+ *                   type: integer
+ *                 previousTier:
+ *                   type: integer
+ *                 newTier:
+ *                   type: integer
+ *       400:
+ *         description: Invalid claim type or conditions not met
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/level/:levelId/claim/:claimType')
+    .post(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { levelId, claimType } = req.params
+        
+        if (claimType !== 'minProgress' && claimType !== 'completion') {
+            res.status(400).send({ message: 'Invalid claim type. Must be "minProgress" or "completion".' })
+            return
+        }
+        
+        try {
+            const result = await claimDailyWeeklyReward(
+                Number(levelId),
+                user.uid!,
+                claimType as 'minProgress' | 'completion'
+            )
+            res.send(result)
+        } catch (err: any) {
+            console.error(err)
+            if (err.message.includes('already claimed') ||
+                err.message.includes('not completed') ||
+                err.message.includes('not a daily or weekly') ||
+                err.message.includes('Need') ||
+                err.message.includes('No progress') ||
+                err.message === 'Season is not active') {
+                res.status(400).send({ message: err.message })
+            } else {
+                res.status(500).send({ message: err.message })
+            }
         }
     })
 
@@ -1673,6 +1843,102 @@ router.route('/webhook/refresh/:type')
             })
         } catch (err: any) {
             console.error(`[Cron] ${type} mission refresh failed:`, err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+
+// ==================== Daily/Weekly Level Refresh Webhook Routes ====================
+
+/**
+ * @openapi
+ * "/battlepass/webhook/refresh-levels/daily":
+ *   post:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Webhook to refresh daily level progress (Cron only)
+ *     description: Called by cron service to reset all daily level progress. Removes all progress and claims for levels with type='daily'. Should be called daily at 0:00 AM UTC+7.
+ *     security:
+ *       - apiKeyAuth: []
+ *     responses:
+ *       200:
+ *         description: Daily level progress refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 refreshed:
+ *                   type: integer
+ *                 levelIds:
+ *                   type: array
+ *                   items:
+ *                     type: integer
+ *                 seasonId:
+ *                   type: integer
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/webhook/refresh-levels/daily')
+    .post(webhookAuth, async (req, res) => {
+        try {
+            const result = await refreshDailyLevelProgress()
+            console.log(`[Cron] Daily level progress refresh completed: ${result.refreshed} records removed`)
+            res.send({
+                type: 'daily',
+                ...result,
+                timestamp: new Date().toISOString()
+            })
+        } catch (err: any) {
+            console.error('[Cron] Daily level progress refresh failed:', err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+
+/**
+ * @openapi
+ * "/battlepass/webhook/refresh-levels/weekly":
+ *   post:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Webhook to refresh weekly level progress (Cron only)
+ *     description: Called by cron service to reset all weekly level progress. Removes all progress and claims for levels with type='weekly'. Should be called on Mondays at 0:00 AM UTC+7.
+ *     security:
+ *       - apiKeyAuth: []
+ *     responses:
+ *       200:
+ *         description: Weekly level progress refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 refreshed:
+ *                   type: integer
+ *                 levelIds:
+ *                   type: array
+ *                   items:
+ *                     type: integer
+ *                 seasonId:
+ *                   type: integer
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/webhook/refresh-levels/weekly')
+    .post(webhookAuth, async (req, res) => {
+        try {
+            const result = await refreshWeeklyLevelProgress()
+            console.log(`[Cron] Weekly level progress refresh completed: ${result.refreshed} records removed`)
+            res.send({
+                type: 'weekly',
+                ...result,
+                timestamp: new Date().toISOString()
+            })
+        } catch (err: any) {
+            console.error('[Cron] Weekly level progress refresh failed:', err)
             res.status(500).send({ message: err.message })
         }
     })

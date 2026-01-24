@@ -1562,6 +1562,7 @@ export type Database = {
           accepted: boolean
           created_at: string
           creator: string | null
+          difficulty: string | null
           dlTop: number | null
           flPt: number | null
           flTop: number | null
@@ -1578,6 +1579,7 @@ export type Database = {
           accepted?: boolean
           created_at?: string
           creator?: string | null
+          difficulty?: string | null
           dlTop?: number | null
           flPt?: number | null
           flTop?: number | null
@@ -1594,6 +1596,7 @@ export type Database = {
           accepted?: boolean
           created_at?: string
           creator?: string | null
+          difficulty?: string | null
           dlTop?: number | null
           flPt?: number | null
           flTop?: number | null
@@ -2422,6 +2425,7 @@ export type Database = {
           accepted: boolean
           created_at: string
           creator: string | null
+          difficulty: string | null
           dlTop: number | null
           flPt: number | null
           flTop: number | null
