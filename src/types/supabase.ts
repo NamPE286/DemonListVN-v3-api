@@ -147,6 +147,45 @@ export type Database = {
           },
         ]
       }
+      battlePassMapPackLevelProgress: {
+        Row: {
+          battlePassMapPackId: number
+          created_at: string
+          levelID: number
+          progress: number
+          userID: string
+        }
+        Insert: {
+          battlePassMapPackId: number
+          created_at?: string
+          levelID: number
+          progress?: number
+          userID: string
+        }
+        Update: {
+          battlePassMapPackId?: number
+          created_at?: string
+          levelID?: number
+          progress?: number
+          userID?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassMapPackLevelProgress_battlePassMapPackId_fkey"
+            columns: ["battlePassMapPackId"]
+            isOneToOne: false
+            referencedRelation: "battlePassMapPacks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassMapPackLevelProgress_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       battlePassMapPackProgress: {
         Row: {
           battlePassMapPackId: number
@@ -383,54 +422,6 @@ export type Database = {
           },
         ]
       }
-      battlePassXPLogs: {
-        Row: {
-          id: number
-          created_at: string
-          userID: string
-          seasonId: number
-          amount: number
-          source: string
-          refId: number | null
-          description: string | null
-        }
-        Insert: {
-          id?: number
-          created_at?: string
-          userID: string
-          seasonId: number
-          amount: number
-          source: string
-          refId?: number | null
-          description?: string | null
-        }
-        Update: {
-          id?: number
-          created_at?: string
-          userID?: string
-          seasonId?: number
-          amount?: number
-          source?: string
-          refId?: number | null
-          description?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "battlePassXPLogs_userID_fkey"
-            columns: ["userID"]
-            isOneToOne: false
-            referencedRelation: "players"
-            referencedColumns: ["uid"]
-          },
-          {
-            foreignKeyName: "battlePassXPLogs_seasonId_fkey"
-            columns: ["seasonId"]
-            isOneToOne: false
-            referencedRelation: "battlePassSeasons"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       battlePassProgress: {
         Row: {
           created_at: string
@@ -578,6 +569,54 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "battlePassSeasons"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      battlePassXPLogs: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: number
+          refId: number | null
+          seasonId: number
+          source: string
+          userID: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: number
+          refId?: number | null
+          seasonId: number
+          source: string
+          userID: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: number
+          refId?: number | null
+          seasonId?: number
+          source?: string
+          userID?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassXPLogs_seasonId_fkey"
+            columns: ["seasonId"]
+            isOneToOne: false
+            referencedRelation: "battlePassSeasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassXPLogs_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
           },
         ]
       }
