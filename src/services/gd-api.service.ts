@@ -1,4 +1,4 @@
-import { fetchFromGDAPI, parseGDLevel, selectGDLevelSegment, type GDLevel } from '@src/utils';
+import { fetchFromGDAPI, parseGDLevel, getGDLevelSegment, type GDLevel } from '@src/utils';
 
 const LevelType = {
     SEARCH_QUERY: '0',
@@ -12,9 +12,22 @@ export async function getGJLevels21(levelId: number, type = LevelType.SEARCH_QUE
             str: levelId.toString(),
             type: type
         });
-        const segment = selectGDLevelSegment(rawData, levelId);
+        const segments = getGDLevelSegment(rawData);
 
-        return parseGDLevel(segment);
+        let res;
+
+        if (segments.length === 1) {
+            res = parseGDLevel(segments[0]);
+        } else if (segments.length > 1) {
+            const match = segments.find(p => parseGDLevel(p).id == levelId);
+            res = parseGDLevel(match || segments[0]);
+        }
+
+        if (!res) {
+            throw new Error("Level does not exists")
+        }
+
+        return res;
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         throw new Error(`Failed to fetch level ${levelId}: ${message}`);

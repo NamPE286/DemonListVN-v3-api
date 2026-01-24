@@ -65,29 +65,26 @@ export async function fetchFromGDAPI(endpoint: string, params: Record<string, st
     return rawData;
 }
 
-export function selectGDLevelSegment(rawData: string, levelId: number): string {
-    if (!rawData) return rawData;
+export function getGDLevelSegment(rawData: string): string[] {
+    if (!rawData) return [];
 
-    // If there is no '|' separator, the whole payload is the segment
-    if (!rawData.includes('|')) return rawData;
+    // If there is no '|' separator, return the whole payload as single segment
+    if (!rawData.includes('|')) return [rawData];
 
-    const parts = rawData.split('|');
+    // There may be a global suffix after the levels (e.g., creators and other metadata) separated by '#'
+    const hashIndex = rawData.indexOf('#');
+    let levelsPart = rawData;
+    let suffix = '';
 
-    // Prefer exact match that starts with `1:<levelId>:`
-    const exact = parts.find(p => p.trim().startsWith(`1:${levelId}:`));
-    if (exact) return exact;
-
-    // Fallback: try to find a part where the first field (before ':') equals '1' and second equals levelId
-    for (const p of parts) {
-        const trimmed = p.trim();
-        const fields = trimmed.split(':');
-        if (fields.length >= 2 && fields[0] === '1' && Number(fields[1]) === levelId) {
-            return p;
-        }
+    if (hashIndex !== -1) {
+        levelsPart = rawData.slice(0, hashIndex);
+        suffix = rawData.slice(hashIndex); // includes leading '#'
     }
 
-    // As last resort, return first segment
-    return parts[0];
+    const parts = levelsPart.split('|').filter(p => p !== '');
+
+    // Append the global suffix to each level segment so `parseGDLevel` can read creators etc.
+    return parts.map(p => (p + suffix));
 }
 
 const DIFFICULTY_MAP: Record<number, string> = {
