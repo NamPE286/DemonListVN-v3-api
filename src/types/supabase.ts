@@ -1528,6 +1528,32 @@ export type Database = {
         }
         Relationships: []
       }
+      levelGDStates: {
+        Row: {
+          isDaily: boolean | null
+          isWeekly: boolean | null
+          levelId: number
+        }
+        Insert: {
+          isDaily?: boolean | null
+          isWeekly?: boolean | null
+          levelId: number
+        }
+        Update: {
+          isDaily?: boolean | null
+          isWeekly?: boolean | null
+          levelId?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "levelGDStates_levelId_fkey"
+            columns: ["levelId"]
+            isOneToOne: true
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       levels: {
         Row: {
           accepted: boolean

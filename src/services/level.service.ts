@@ -1,5 +1,5 @@
 import supabase from "@src/client/supabase"
-import { fetchLevelFromGD as fetchLevelFromGDAPI } from '@src/services/gd-api.service'
+import { getGJDailyLevel, getGJLevels21 } from '@src/services/gd-api.service'
 import { addChangelog } from '@src/services/changelog.service'
 import type { TLevel } from "@src/types"
 
@@ -267,7 +267,7 @@ export async function getLevel(levelId: number): Promise<TLevel> {
 
 export async function fetchLevelFromGD(levelId: number) {
     // Use our custom GD API service
-    return await fetchLevelFromGDAPI(levelId);
+    return await getGJLevels21(levelId);
 }
 
 export async function updateLevel(levelData: TLevel): Promise<void> {
@@ -300,4 +300,11 @@ export async function deleteLevel(levelId: number): Promise<void> {
     if (error) {
         throw new Error(error.message)
     }
+}
+
+export async function refreshLevel() {
+    const dailyLevel = await getGJDailyLevel(false)
+    const weeklyLevel = await getGJDailyLevel(true)
+
+    console.log(dailyLevel, weeklyLevel)
 }

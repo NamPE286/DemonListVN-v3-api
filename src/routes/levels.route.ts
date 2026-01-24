@@ -3,7 +3,7 @@ import type { NextFunction, Response, Request } from 'express'
 import adminAuth from '@src/middleware/admin-auth.middleware'
 import { getLevelDeathCount } from '@src/services/death-count.service'
 import { getLevelRecords } from '@src/services/record.service'
-import { updateLevel, getLevel, fetchLevelFromGD, deleteLevel } from '@src/services/level.service'
+import { updateLevel, getLevel, fetchLevelFromGD, deleteLevel, refreshLevel } from '@src/services/level.service'
 import userAuth from '@src/middleware/user-auth.middleware'
 import supabase from '@src/client/supabase'
 import { getEventLevelsSafe } from '@src/services/event.service'
@@ -23,6 +23,18 @@ function checkID(req: Request, res: Response, next: NextFunction) {
 
     next()
 }
+
+router.route('/refresh')
+    .put(async (req, res) => {
+        try {
+            await refreshLevel()
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+
+        res.send()
+    })
 
 router.route('/')
     /**
@@ -76,22 +88,6 @@ router.route('/')
  *               type: array
  *       500:
  *         description: Internal server error.
- */
-/**
- * @openapi
- * "/levels/new":
- *   get:
- *     tags:
- *       - Level
- *     summary: Get new unrated levels
- *     responses:
- *       200:
- *         description: Success
- *         content:
- *           application/json:
- *             schema:
- *       500:
- *         description: Internal server error
  */
 router.route("/new")
     .get(async (req, res) => {
@@ -148,10 +144,10 @@ router.route("/random")
         const { data, error } = await supabase.rpc("get_random_levels", {
             row_count: Number(limit),
             // @ts-ignore
-            filter_type: list ? String(list): null,
+            filter_type: list ? String(list) : null,
         });
 
-        if(error) {
+        if (error) {
             console.error(error);
             res.status(500).send();
 

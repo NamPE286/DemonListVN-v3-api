@@ -19,7 +19,16 @@ export function parseGDResponse(data: string, splitter: string = ':'): Record<st
 
 export function gdDecodeBase64(str: string): string {
     try {
-        return Buffer.from(str, 'base64').toString('utf-8');
+        if (!str) return '';
+
+        // Support URL-safe base64 (replace '-' and '_' with '+' and '/')
+        let s = str.replace(/-/g, '+').replace(/_/g, '/');
+
+        // Add padding if missing
+        const padLen = (4 - (s.length % 4)) % 4;
+        if (padLen) s += '='.repeat(padLen);
+
+        return Buffer.from(s, 'base64').toString('utf-8');
     } catch {
         return '';
     }
@@ -54,6 +63,31 @@ export async function fetchFromGDAPI(endpoint: string, params: Record<string, st
     }
 
     return rawData;
+}
+
+export function selectGDLevelSegment(rawData: string, levelId: number): string {
+    if (!rawData) return rawData;
+
+    // If there is no '|' separator, the whole payload is the segment
+    if (!rawData.includes('|')) return rawData;
+
+    const parts = rawData.split('|');
+
+    // Prefer exact match that starts with `1:<levelId>:`
+    const exact = parts.find(p => p.trim().startsWith(`1:${levelId}:`));
+    if (exact) return exact;
+
+    // Fallback: try to find a part where the first field (before ':') equals '1' and second equals levelId
+    for (const p of parts) {
+        const trimmed = p.trim();
+        const fields = trimmed.split(':');
+        if (fields.length >= 2 && fields[0] === '1' && Number(fields[1]) === levelId) {
+            return p;
+        }
+    }
+
+    // As last resort, return first segment
+    return parts[0];
 }
 
 const DIFFICULTY_MAP: Record<number, string> = {
