@@ -521,20 +521,20 @@ router.route('/level/:levelId')
 
 /**
  * @openapi
- * "/battlepass/levels/{levelId}/progress":
+ * "/battlepass/levels/progress":
  *   get:
  *     tags:
  *       - Battle Pass
- *     summary: Get user's progress on a specific level
+ *     summary: Get user's progress on levels (single or batch)
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: levelId
- *         in: path
- *         description: Battle Pass Level ID
+ *       - name: ids
+ *         in: query
+ *         description: Comma-separated Battle Pass Level IDs, or single ID
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     responses:
  *       200:
  *         description: Success
@@ -543,49 +543,21 @@ router.route('/level/:levelId')
  */
 const DEFAULT_LEVEL_PROGRESS = { progress: 0, minProgressClaimed: false, completionClaimed: false };
 
-router.route('/levels/:levelId/progress')
-    .get(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { levelId } = req.params
-        try {
-            const progress = await getPlayerLevelProgress(Number(levelId), user.uid!)
-            res.send(progress || DEFAULT_LEVEL_PROGRESS)
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
-
-/**
- * @openapi
- * "/battlepass/levels/progress/batch":
- *   get:
- *     tags:
- *       - Battle Pass
- *     summary: Get user's progress on multiple levels in batch
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: ids
- *         in: query
- *         description: Comma-separated Battle Pass Level IDs
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Success
- *       500:
- *         description: Internal server error
- */
-router.route('/levels/progress/batch')
+router.route('/levels/progress')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
         const { ids } = req.query
         try {
             const levelIds = (ids as string).split(',').map(id => Number(id.trim())).filter(id => !isNaN(id))
-            const progress = await getBatchLevelProgress(levelIds, user.uid!)
-            res.send(progress)
+            
+            // If single ID, return single object for backward compatibility
+            if (levelIds.length === 1) {
+                const progress = await getPlayerLevelProgress(levelIds[0], user.uid!)
+                res.send(progress || DEFAULT_LEVEL_PROGRESS)
+            } else {
+                const progress = await getBatchLevelProgress(levelIds, user.uid!)
+                res.send(progress)
+            }
         } catch (err) {
             console.error(err)
             res.status(500).send()
@@ -594,17 +566,17 @@ router.route('/levels/progress/batch')
 
 /**
  * @openapi
- * "/battlepass/mappacks/progress/batch":
+ * "/battlepass/mappacks/progress":
  *   get:
  *     tags:
  *       - Battle Pass
- *     summary: Get user's progress on multiple map packs in batch
+ *     summary: Get user's progress on map packs (single or batch)
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - name: ids
  *         in: query
- *         description: Comma-separated Battle Pass Map Pack IDs
+ *         description: Comma-separated Battle Pass Map Pack IDs, or single ID
  *         required: true
  *         schema:
  *           type: string
@@ -614,14 +586,21 @@ router.route('/levels/progress/batch')
  *       500:
  *         description: Internal server error
  */
-router.route('/mappacks/progress/batch')
+router.route('/mappacks/progress')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
         const { ids } = req.query
         try {
             const mapPackIds = (ids as string).split(',').map(id => Number(id.trim())).filter(id => !isNaN(id))
-            const progress = await getBatchMapPackProgress(mapPackIds, user.uid!)
-            res.send(progress)
+            
+            // If single ID, return single object for backward compatibility
+            if (mapPackIds.length === 1) {
+                const progress = await getPlayerMapPackProgress(mapPackIds[0], user.uid!)
+                res.send(progress || { completedLevels: [], claimed: false })
+            } else {
+                const progress = await getBatchMapPackProgress(mapPackIds, user.uid!)
+                res.send(progress)
+            }
         } catch (err) {
             console.error(err)
             res.status(500).send()
@@ -630,11 +609,11 @@ router.route('/mappacks/progress/batch')
 
 /**
  * @openapi
- * "/battlepass/mappacks/levels/progress/batch":
+ * "/battlepass/mappacks/levels/progress":
  *   post:
  *     tags:
  *       - Battle Pass
- *     summary: Get user's progress on multiple map pack levels in batch
+ *     summary: Get user's progress on map pack levels
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -659,7 +638,7 @@ router.route('/mappacks/progress/batch')
  *       500:
  *         description: Internal server error
  */
-router.route('/mappacks/levels/progress/batch')
+router.route('/mappacks/levels/progress')
     .post(userAuth, async (req, res) => {
         const { user } = res.locals
         const { levels } = req.body
@@ -877,41 +856,6 @@ router.route('/mappack/:mapPackId')
         try {
             await deleteBattlePassMapPack(Number(mapPackId))
             res.send()
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
-
-/**
- * @openapi
- * "/battlepass/mappack/{mapPackId}/progress":
- *   get:
- *     tags:
- *       - Battle Pass
- *     summary: Get user's progress on a map pack
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: mapPackId
- *         in: path
- *         description: Battle Pass Map Pack ID
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Success
- *       500:
- *         description: Internal server error
- */
-router.route('/mappack/:mapPackId/progress')
-    .get(userAuth, async (req, res) => {
-        const { user } = res.locals
-        const { mapPackId } = req.params
-        try {
-            const progress = await getPlayerMapPackProgress(Number(mapPackId), user.uid!)
-            res.send(progress || { completedLevels: [], claimed: false })
         } catch (err) {
             console.error(err)
             res.status(500).send()

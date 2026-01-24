@@ -218,17 +218,40 @@ Update a season level.
 
 Delete a season level.
 
-### GET `/battlepass/levels/:levelId/progress` 🔐
+### GET `/battlepass/levels/progress?ids=1,2,3` 🔐
 
-Get user's progress on a specific battle pass level.
+Get user's progress on battle pass levels (single or multiple).
 
-**Response:**
+**Query Parameters:**
+- `ids` (required): Comma-separated Battle Pass Level IDs, or single ID
+
+**Response (single ID):**
 ```json
 {
   "progress": 75,
   "minProgressClaimed": true,
   "completionClaimed": false
 }
+```
+
+**Response (multiple IDs):**
+```json
+[
+  {
+    "battlePassLevelId": 1,
+    "userID": "uuid",
+    "progress": 75,
+    "minProgressClaimed": true,
+    "completionClaimed": false
+  },
+  {
+    "battlePassLevelId": 2,
+    "userID": "uuid",
+    "progress": 0,
+    "minProgressClaimed": false,
+    "completionClaimed": false
+  }
+]
 ```
 
 ### PUT `/battlepass/levels/:levelId/progress?p=100` 🔐
@@ -317,11 +340,14 @@ Update a battle pass map pack.
 
 Delete a battle pass map pack.
 
-### GET `/battlepass/mappack/:mapPackId/progress` 🔐
+### GET `/battlepass/mappacks/progress?ids=1,2,3` 🔐
 
-Get user's progress on a map pack.
+Get user's progress on map packs (single or multiple).
 
-**Response:**
+**Query Parameters:**
+- `ids` (required): Comma-separated Battle Pass Map Pack IDs, or single ID
+
+**Response (single ID):**
 ```json
 {
   "battlePassMapPackId": 1,
@@ -329,6 +355,56 @@ Get user's progress on a map pack.
   "completedLevels": [11111111, 22222222],
   "claimed": false
 }
+```
+
+**Response (multiple IDs):**
+```json
+[
+  {
+    "battlePassMapPackId": 1,
+    "userID": "user-uuid",
+    "completedLevels": [11111111, 22222222],
+    "claimed": false
+  },
+  {
+    "battlePassMapPackId": 2,
+    "userID": "user-uuid",
+    "completedLevels": [],
+    "claimed": false
+  }
+]
+```
+
+### POST `/battlepass/mappacks/levels/progress` 🔐
+
+Get user's progress on multiple map pack levels.
+
+**Request Body:**
+```json
+{
+  "levels": [
+    { "mapPackId": 1, "levelID": 11111111 },
+    { "mapPackId": 1, "levelID": 22222222 }
+  ]
+}
+```
+
+**Response:**
+```json
+[
+  {
+    "battlePassMapPackId": 1,
+    "levelID": 11111111,
+    "userID": "user-uuid",
+    "progress": 75
+  },
+  {
+    "battlePassMapPackId": 1,
+    "levelID": 22222222,
+    "userID": "user-uuid",
+    "progress": 0
+  }
+]
 ```
 
 ### POST `/battlepass/mappack/:mapPackId/claim` 🔐
