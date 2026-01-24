@@ -303,33 +303,32 @@ export async function deleteLevel(levelId: number): Promise<void> {
     }
 }
 
-export async function retrieveOrCreateLevel(levelPayload: TablesInsert<'levels'>): Promise<TLevel> {
-    const id = levelPayload.id
-
+export async function retrieveOrCreateLevel(payload: TablesInsert<'levels'>): Promise<TLevel> {
     const sel = await supabase
         .from('levels')
         .select('*')
-        .eq('id', id)
-        .limit(1)
+        .eq('id', payload.id)
+        .maybeSingle()
 
     if (sel.error) {
-        throw sel.error
+        throw new Error(sel.error.message)
     }
 
-    if (!sel.data || (Array.isArray(sel.data) && sel.data.length === 0)) {
-        const ins = await supabase
-            .from('levels')
-            .insert([levelPayload as any])
-            .select('*')
-
-        if (ins.error) {
-            throw ins.error
-        }
-
-        return ins.data![0]
+    if (sel.data) {
+        return sel.data
     }
 
-    return sel.data[0]
+    const ins = await supabase
+        .from('levels')
+        .insert([payload as any])
+        .select('*')
+        .maybeSingle()
+
+    if (ins.error) {
+        throw new Error(ins.error.message)
+    }
+
+    return ins.data!
 }
 
 export async function refreshLevel() {
@@ -343,7 +342,7 @@ export async function refreshLevel() {
     for (const p of pairs) {
         const id = p.gd.id
 
-        const levelRow = await retrieveOrCreateLevel({
+        await retrieveOrCreateLevel({
             id: id,
             name: p.gd.name,
             creator: p.gd.author,
@@ -351,16 +350,6 @@ export async function refreshLevel() {
             isNonList: false,
             isPlatformer: false
         })
-
-        // Ensure name/creator are up-to-date
-        const upd = await supabase
-            .from('levels')
-            .update({ name: p.gd.name, creator: p.gd.author } as any)
-            .eq('id', id)
-
-        if (upd.error) {
-            throw upd.error
-        }
 
         const state = {
             levelId: id,
