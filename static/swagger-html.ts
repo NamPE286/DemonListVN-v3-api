@@ -24,7 +24,7 @@ export const swaggerHtml = `<!DOCTYPE html>
   "openapi": "3.0.0",
   "info": {
     "title": "Demon List VN v3 REST API Docs",
-    "version": "1.0.0"
+    "version": "3.0"
   },
   "components": {
     "securitySchemes": {
@@ -191,6 +191,1505 @@ export const swaggerHtml = `<!DOCTYPE html>
         "responses": {
           "200": {
             "description": "Successfully linked Pointercrate account"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get active battle pass season",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": null
+              }
+            }
+          },
+          "404": {
+            "description": "No active season"
+          }
+        }
+      }
+    },
+    "/battlepass/season": {
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Create a new battle pass season (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "start": {
+                    "type": "string"
+                  },
+                  "end": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Season created successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/season/{id}": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get a specific battle pass season",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Season ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Update a battle pass season (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Season ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Season updated successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/season/{id}/archive": {
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Archive a battle pass season (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Season ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Season archived successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/progress": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get current user's battle pass progress",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "404": {
+            "description": "No active season"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/progress/{seasonId}": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get current user's battle pass progress for a specific season",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "path",
+            "description": "Season ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/upgrade": {
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Upgrade to premium battle pass (Admin only - typically called after payment)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "seasonId": {
+                    "type": "integer"
+                  },
+                  "userId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upgraded successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/levels": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get active season's levels",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "404": {
+            "description": "No active season"
+          }
+        }
+      }
+    },
+    "/battlepass/season/{id}/levels": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get levels for a specific season",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Season ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Add a level to a season (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Season ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "levelID": {
+                    "type": "integer"
+                  },
+                  "xp": {
+                    "type": "integer"
+                  },
+                  "minProgressXp": {
+                    "type": "integer"
+                  },
+                  "minProgress": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Level added successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/level/{levelId}": {
+      "patch": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Update a season level (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "levelId",
+            "in": "path",
+            "description": "Battle Pass Level ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Level updated successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Delete a season level (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "levelId",
+            "in": "path",
+            "description": "Battle Pass Level ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Level deleted successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/levels/progress": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get user's progress on levels (single or batch)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "description": "Comma-separated Battle Pass Level IDs, or single ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/mappacks/progress": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get user's progress on map packs (single or batch)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "description": "Comma-separated Battle Pass Map Pack IDs, or single ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/mappacks/levels/progress": {
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get user's progress on map pack levels",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "levels": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "mapPackId": {
+                          "type": "integer"
+                        },
+                        "levelID": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/mappacks": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get active season's unlocked map packs",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "404": {
+            "description": "No active season"
+          }
+        }
+      }
+    },
+    "/battlepass/season/{id}/mappacks": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get all map packs for a season (Admin gets all, users get unlocked only)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Season ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Create a map pack for a season (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Season ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "difficulty": {
+                    "type": "string",
+                    "enum": [
+                      "easier",
+                      "harder",
+                      "medium_demon",
+                      "insane_demon"
+                    ]
+                  },
+                  "xp": {
+                    "type": "integer"
+                  },
+                  "unlockWeek": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Map pack created successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/mappack/{mapPackId}": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get a specific battle pass map pack",
+        "parameters": [
+          {
+            "name": "mapPackId",
+            "in": "path",
+            "description": "Battle Pass Map Pack ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Update a battle pass map pack (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "mapPackId",
+            "in": "path",
+            "description": "Battle Pass Map Pack ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Map pack updated successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Delete a battle pass map pack (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "mapPackId",
+            "in": "path",
+            "description": "Battle Pass Map Pack ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Map pack deleted successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/mappack/{mapPackId}/claim": {
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Claim XP reward for completing a map pack",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "mapPackId",
+            "in": "path",
+            "description": "Map Pack ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "XP claimed successfully"
+          },
+          "400": {
+            "description": "Map pack not completed or already claimed"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/rewards": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get active season's tier rewards",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "404": {
+            "description": "No active season"
+          }
+        }
+      }
+    },
+    "/battlepass/season/{id}/rewards": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get tier rewards for a specific season",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Season ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Create a tier reward (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Season ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tier": {
+                    "type": "integer"
+                  },
+                  "isPremium": {
+                    "type": "boolean"
+                  },
+                  "itemId": {
+                    "type": "integer"
+                  },
+                  "quantity": {
+                    "type": "integer"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reward created successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/reward/{rewardId}": {
+      "delete": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Delete a tier reward (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "rewardId",
+            "in": "path",
+            "description": "Reward ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reward deleted successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/reward/{rewardId}/claim": {
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Claim a tier reward",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "rewardId",
+            "in": "path",
+            "description": "Reward ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reward claimed successfully"
+          },
+          "400": {
+            "description": "Already claimed, tier not reached, or premium required"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/rewards/claimable": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get all claimable rewards for current user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "404": {
+            "description": "No active season"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/xp/add": {
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Add XP to a user (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "seasonId": {
+                    "type": "integer"
+                  },
+                  "userId": {
+                    "type": "string"
+                  },
+                  "xp": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "XP added successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/missions": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get active season's missions with user status",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "404": {
+            "description": "No active season"
+          }
+        }
+      }
+    },
+    "/battlepass/season/{id}/missions": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get missions for a specific season",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Season ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Create a mission for a season (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Season ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "condition": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "clear_level",
+                            "clear_mappack",
+                            "reach_tier",
+                            "earn_xp",
+                            "clear_level_count",
+                            "clear_mappack_count"
+                          ]
+                        },
+                        "value": {
+                          "type": "integer"
+                        },
+                        "targetId": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  },
+                  "xp": {
+                    "type": "integer"
+                  },
+                  "order": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mission created successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/mission/{missionId}": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get a specific mission",
+        "parameters": [
+          {
+            "name": "missionId",
+            "in": "path",
+            "description": "Mission ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Update a mission (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "missionId",
+            "in": "path",
+            "description": "Mission ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mission updated successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Delete a mission (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "missionId",
+            "in": "path",
+            "description": "Mission ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mission deleted successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/mission/{missionId}/claim": {
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Claim a completed mission reward",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "missionId",
+            "in": "path",
+            "description": "Mission ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mission reward claimed successfully"
+          },
+          "400": {
+            "description": "Already claimed or mission not completed"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/mission/{missionId}/reward": {
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Add a reward to a mission (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "missionId",
+            "in": "path",
+            "description": "Mission ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "itemId": {
+                    "type": "integer"
+                  },
+                  "quantity": {
+                    "type": "integer"
+                  },
+                  "expireAfter": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reward added successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/mission/{missionId}/reward/{rewardId}": {
+      "delete": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Remove a reward from a mission (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "missionId",
+            "in": "path",
+            "description": "Mission ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "rewardId",
+            "in": "path",
+            "description": "Reward ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reward removed successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/webhook/refresh/daily": {
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Webhook to refresh daily missions (Cron only)",
+        "description": "Called by cron service to reset all daily missions. Removes all progress and claims for missions with refreshType='daily'.",
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daily missions refreshed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "refreshType": {
+                      "type": "string"
+                    },
+                    "refreshed": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "missions": {
+                      "type": "array"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/webhook/refresh/weekly": {
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Webhook to refresh weekly missions (Cron only)",
+        "description": "Called by cron service to reset all weekly missions. Removes all progress and claims for missions with refreshType='weekly'. Should be called on Mondays at 0:00 AM UTC+7.",
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Weekly missions refreshed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "refreshType": {
+                      "type": "string"
+                    },
+                    "refreshed": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "missions": {
+                      "type": "array"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/webhook/refresh/{type}": {
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Webhook to refresh missions by type (Cron only)",
+        "description": "Generic endpoint to refresh missions by refresh type.",
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "description": "Refresh type (daily or weekly)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "daily",
+                "weekly"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Missions refreshed successfully"
+          },
+          "400": {
+            "description": "Invalid refresh type"
+          },
+          "401": {
+            "description": "Unauthorized"
           },
           "500": {
             "description": "Internal server error"
@@ -1088,7 +2587,7 @@ export const swaggerHtml = `<!DOCTYPE html>
         "summary": "Add player's level death count",
         "parameters": [
           {
-            "name": "id",
+            "name": "levelID",
             "in": "path",
             "description": "The id of the level",
             "required": true,
@@ -1103,6 +2602,15 @@ export const swaggerHtml = `<!DOCTYPE html>
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "completed",
+            "in": "query",
+            "description": "If present, set completedTime to current time (only if not already set)",
+            "required": false,
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -1909,6 +3417,261 @@ export const swaggerHtml = `<!DOCTYPE html>
             "description": "Internal server error"
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Event"
+        ],
+        "summary": "Create a new quest for an event (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID of the event",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "condition": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Quest created successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/events/{id}/quest/{questId}": {
+      "patch": {
+        "tags": [
+          "Event"
+        ],
+        "summary": "Update a quest (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID of the event",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "questId",
+            "in": "path",
+            "description": "The ID of the quest",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "condition": {
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Quest updated successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Event"
+        ],
+        "summary": "Delete a quest (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID of the event",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "questId",
+            "in": "path",
+            "description": "The ID of the quest",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Quest deleted successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/events/{id}/quest/{questId}/reward": {
+      "post": {
+        "tags": [
+          "Event"
+        ],
+        "summary": "Add a reward to a quest (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID of the event",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "questId",
+            "in": "path",
+            "description": "The ID of the quest",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rewardId": {
+                    "type": "integer"
+                  },
+                  "expireAfter": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reward added successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/events/{id}/quest/{questId}/reward/{rewardId}": {
+      "delete": {
+        "tags": [
+          "Event"
+        ],
+        "summary": "Remove a reward from a quest (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID of the event",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "questId",
+            "in": "path",
+            "description": "The ID of the quest",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "rewardId",
+            "in": "path",
+            "description": "The ID of the reward item",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reward removed successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
       }
     },
     "/inventory": {
@@ -1920,6 +3683,24 @@ export const swaggerHtml = `<!DOCTYPE html>
         "security": [
           {
             "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemType",
+            "in": "query",
+            "description": "Filter by item type",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "query",
+            "description": "Filter by item ID",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2002,6 +3783,43 @@ export const swaggerHtml = `<!DOCTYPE html>
           },
           "404": {
             "description": "Item not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/items/search": {
+      "get": {
+        "tags": [
+          "Item"
+        ],
+        "summary": "Search items by name or ID (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Search query (item name or ID)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": null
+              }
+            }
           },
           "500": {
             "description": "Internal server error"
@@ -2462,6 +4280,60 @@ export const swaggerHtml = `<!DOCTYPE html>
               "type": "string",
               "default": false
             }
+          },
+          {
+            "name": "topStart",
+            "in": "query",
+            "description": "Minimum dlTop position to filter",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "topEnd",
+            "in": "query",
+            "description": "Maximum dlTop position to filter",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "ratingMin",
+            "in": "query",
+            "description": "Minimum rating to filter",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "ratingMax",
+            "in": "query",
+            "description": "Maximum rating to filter",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "nameSearch",
+            "in": "query",
+            "description": "Search levels by name (case insensitive)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "creatorSearch",
+            "in": "query",
+            "description": "Search levels by creator name (case insensitive)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2532,6 +4404,60 @@ export const swaggerHtml = `<!DOCTYPE html>
               "type": "string",
               "default": false
             }
+          },
+          {
+            "name": "topStart",
+            "in": "query",
+            "description": "Minimum dlTop position to filter",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "topEnd",
+            "in": "query",
+            "description": "Maximum dlTop position to filter",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "ratingMin",
+            "in": "query",
+            "description": "Minimum rating to filter",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "ratingMax",
+            "in": "query",
+            "description": "Maximum rating to filter",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "nameSearch",
+            "in": "query",
+            "description": "Search levels by name (case insensitive)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "creatorSearch",
+            "in": "query",
+            "description": "Search levels by creator name (case insensitive)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2591,6 +4517,60 @@ export const swaggerHtml = `<!DOCTYPE html>
             "schema": {
               "type": "boolean",
               "default": false
+            }
+          },
+          {
+            "name": "topStart",
+            "in": "query",
+            "description": "Minimum flTop position to filter",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "topEnd",
+            "in": "query",
+            "description": "Maximum flTop position to filter",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "ratingMin",
+            "in": "query",
+            "description": "Minimum rating to filter",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "ratingMax",
+            "in": "query",
+            "description": "Maximum rating to filter",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "nameSearch",
+            "in": "query",
+            "description": "Search levels by name (case insensitive)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "creatorSearch",
+            "in": "query",
+            "description": "Search levels by creator name (case insensitive)",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -2747,6 +4727,253 @@ export const swaggerHtml = `<!DOCTYPE html>
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/mappacks": {
+      "get": {
+        "tags": [
+          "Map Packs"
+        ],
+        "summary": "Get all map packs",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Map Packs"
+        ],
+        "summary": "Create a new map pack (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "difficulty": {
+                    "type": "string"
+                  },
+                  "xp": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Map pack created successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/mappacks/{mapPackId}": {
+      "get": {
+        "tags": [
+          "Map Packs"
+        ],
+        "summary": "Get a specific map pack",
+        "parameters": [
+          {
+            "name": "mapPackId",
+            "in": "path",
+            "description": "Map Pack ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Map Packs"
+        ],
+        "summary": "Update a map pack (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "mapPackId",
+            "in": "path",
+            "description": "Map Pack ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Map pack updated successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Map Packs"
+        ],
+        "summary": "Delete a map pack (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "mapPackId",
+            "in": "path",
+            "description": "Map Pack ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Map pack deleted successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/mappacks/{mapPackId}/level": {
+      "post": {
+        "tags": [
+          "Map Packs"
+        ],
+        "summary": "Add a level to a map pack (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "mapPackId",
+            "in": "path",
+            "description": "Map Pack ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "levelID": {
+                    "type": "integer"
+                  },
+                  "order": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Level added successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/mappacks/{mapPackId}/level/{levelId}": {
+      "delete": {
+        "tags": [
+          "Map Packs"
+        ],
+        "summary": "Remove a level from a map pack (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "mapPackId",
+            "in": "path",
+            "description": "Map Pack ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "levelId",
+            "in": "path",
+            "description": "Level ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Level removed successfully"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         }
       }
@@ -3276,6 +5503,30 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
+    "/player/heatmap/{count}": {
+      "post": {
+        "tags": [
+          "Player"
+        ],
+        "summary": "Add 1 attempt to the heatmap",
+        "parameters": [
+          {
+            "name": "count",
+            "in": "path",
+            "description": "Amount of attempt to add",
+            "required": true,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
     "/players": {
       "get": {
         "tags": [
@@ -3514,30 +5765,6 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
-    "/player/heatmap/{count}": {
-      "post": {
-        "tags": [
-          "Player"
-        ],
-        "summary": "Add 1 attempt to the heatmap",
-        "parameters": [
-          {
-            "name": "count",
-            "in": "path",
-            "description": "Amount of attempt to add",
-            "required": true,
-            "schema": {
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      }
-    },
     "/{uid}/submissions": {
       "get": {
         "tags": [
@@ -3758,7 +5985,7 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
-    "/record/{userID}/{levelID}": {
+    "/records/{userID}/{levelID}": {
       "delete": {
         "tags": [
           "Record"
@@ -3789,7 +6016,9 @@ export const swaggerHtml = `<!DOCTYPE html>
             "description": "Success"
           }
         }
-      },
+      }
+    },
+    "/record/{userID}/{levelID}": {
       "GET": {
         "tags": [
           "Record"
@@ -3864,6 +6093,60 @@ export const swaggerHtml = `<!DOCTYPE html>
         "responses": {
           "200": {
             "description": "Success"
+          }
+        }
+      }
+    },
+    "/records/{userID}/{levelID}/getEstimatedQueue/{prioritizedBy}": {
+      "GET": {
+        "tags": [
+          "Record"
+        ],
+        "summary": "Get estimated queue number for a record",
+        "parameters": [
+          {
+            "name": "userID",
+            "in": "path",
+            "description": "The uid of the player",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "levelID",
+            "in": "path",
+            "description": "The id of the level",
+            "required": true,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "prioritizedBy",
+            "in": "path",
+            "description": "The timestamp in milliseconds to prioritize the record",
+            "required": true,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "estimatedQueueNo": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
