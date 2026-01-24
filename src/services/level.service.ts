@@ -2,6 +2,7 @@ import supabase from "@src/client/supabase"
 import { getGJDailyLevel, getGJLevels21 } from '@src/services/gd-api.service'
 import { addChangelog } from '@src/services/changelog.service'
 import type { TLevel } from "@src/types"
+import type { TablesInsert } from "@src/types/supabase"
 
 function convertToIDArray(levels: TLevel[]) {
     let res: number[] = []
@@ -302,9 +303,79 @@ export async function deleteLevel(levelId: number): Promise<void> {
     }
 }
 
+export async function retrieveOrCreateLevel(levelPayload: TablesInsert<'levels'>): Promise<TLevel> {
+    const id = levelPayload.id
+
+    const sel = await supabase
+        .from('levels')
+        .select('*')
+        .eq('id', id)
+        .limit(1)
+
+    if (sel.error) {
+        throw sel.error
+    }
+
+    if (!sel.data || (Array.isArray(sel.data) && sel.data.length === 0)) {
+        const ins = await supabase
+            .from('levels')
+            .insert([levelPayload as any])
+            .select('*')
+
+        if (ins.error) {
+            throw ins.error
+        }
+
+        return ins.data![0]
+    }
+
+    return sel.data[0]
+}
+
 export async function refreshLevel() {
     const dailyLevel = await getGJDailyLevel(false)
     const weeklyLevel = await getGJDailyLevel(true)
+    const pairs = [
+        { gd: dailyLevel, isDaily: true, isWeekly: false },
+        { gd: weeklyLevel, isDaily: false, isWeekly: true }
+    ]
 
-    console.log(dailyLevel, weeklyLevel)
+    for (const p of pairs) {
+        const id = p.gd.id
+
+        const levelRow = await retrieveOrCreateLevel({
+            id: id,
+            name: p.gd.name,
+            creator: p.gd.author,
+            created_at: new Date().toISOString(),
+            isNonList: false,
+            isPlatformer: false
+        })
+
+        // Ensure name/creator are up-to-date
+        const upd = await supabase
+            .from('levels')
+            .update({ name: p.gd.name, creator: p.gd.author } as any)
+            .eq('id', id)
+
+        if (upd.error) {
+            throw upd.error
+        }
+
+        const state = {
+            levelId: id,
+            isDaily: p.isDaily,
+            isWeekly: p.isWeekly
+        }
+
+        const { error: stateErr } = await supabase
+            .from('levelGDStates')
+            .upsert(state as any)
+
+        if (stateErr) {
+            throw stateErr
+        }
+    }
+
+    return { daily: dailyLevel.id, weekly: weeklyLevel.id }
 }
