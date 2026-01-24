@@ -110,6 +110,7 @@ export type Database = {
           minProgress: number
           minProgressXp: number
           seasonId: number
+          type: string
           xp: number
         }
         Insert: {
@@ -119,6 +120,7 @@ export type Database = {
           minProgress?: number
           minProgressXp?: number
           seasonId: number
+          type?: string
           xp?: number
         }
         Update: {
@@ -128,6 +130,7 @@ export type Database = {
           minProgress?: number
           minProgressXp?: number
           seasonId?: number
+          type?: string
           xp?: number
         }
         Relationships: [
