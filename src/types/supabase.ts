@@ -346,6 +346,7 @@ export type Database = {
           description: string | null
           id: number
           order: number
+          refreshType: string
           seasonId: number
           title: string
           xp: number
@@ -356,6 +357,7 @@ export type Database = {
           description?: string | null
           id?: number
           order?: number
+          refreshType?: string
           seasonId: number
           title: string
           xp: number
@@ -366,6 +368,7 @@ export type Database = {
           description?: string | null
           id?: number
           order?: number
+          refreshType?: string
           seasonId?: number
           title?: string
           xp?: number
@@ -373,6 +376,54 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "battlePassMissions_seasonId_fkey"
+            columns: ["seasonId"]
+            isOneToOne: false
+            referencedRelation: "battlePassSeasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battlePassXPLogs: {
+        Row: {
+          id: number
+          created_at: string
+          userID: string
+          seasonId: number
+          amount: number
+          source: string
+          refId: number | null
+          description: string | null
+        }
+        Insert: {
+          id?: number
+          created_at?: string
+          userID: string
+          seasonId: number
+          amount: number
+          source: string
+          refId?: number | null
+          description?: string | null
+        }
+        Update: {
+          id?: number
+          created_at?: string
+          userID?: string
+          seasonId?: number
+          amount?: number
+          source?: string
+          refId?: number | null
+          description?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassXPLogs_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "battlePassXPLogs_seasonId_fkey"
             columns: ["seasonId"]
             isOneToOne: false
             referencedRelation: "battlePassSeasons"

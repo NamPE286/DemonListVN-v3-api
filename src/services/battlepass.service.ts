@@ -180,7 +180,14 @@ export async function getPlayerProgress(seasonId: number, userId: string) {
     };
 }
 
-export async function addXp(seasonId: number, userId: string, xp: number) {
+export async function addXp(
+    seasonId: number, 
+    userId: string, 
+    xp: number,
+    source: string = 'unknown',
+    refId: number | null = null,
+    description: string | null = null
+) {
     const progress = await getPlayerProgress(seasonId, userId);
     const newXp = (progress?.xp || 0) + xp;
 
@@ -196,12 +203,58 @@ export async function addXp(seasonId: number, userId: string, xp: number) {
         throw new Error(error.message);
     }
 
+    // Log the XP transaction
+    await logXP(userId, seasonId, xp, source, refId, description);
+
     return {
         previousXp: progress?.xp || 0,
         newXp,
         previousTier: calculateTier(progress?.xp || 0),
         newTier: calculateTier(newXp)
     };
+}
+
+// ==================== XP Logging Functions ====================
+
+export async function logXP(
+    userId: string,
+    seasonId: number,
+    amount: number,
+    source: string,
+    refId: number | null = null,
+    description: string | null = null
+) {
+    const { error } = await supabase
+        .from('battlePassXPLogs')
+        .insert({
+            userID: userId,
+            seasonId,
+            amount,
+            source,
+            refId,
+            description
+        });
+
+    if (error) {
+        console.error('Failed to log XP:', error.message);
+        // Don't throw - XP logging should not block the main operation
+    }
+}
+
+export async function getPlayerXPLogs(seasonId: number, userId: string, limit: number = 50) {
+    const { data, error } = await supabase
+        .from('battlePassXPLogs')
+        .select('*')
+        .eq('userID', userId)
+        .eq('seasonId', seasonId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
 }
 
 export async function upgradeToPremium(seasonId: number, userId: string) {
@@ -741,8 +794,15 @@ export async function claimMapPackReward(battlePassMapPackId: number, userId: st
     // Get the XP from the mapPacks table
     const mapPackXp = bpMapPack.mapPacks?.xp || 0;
 
-    // Add XP to player
-    await addXp(bpMapPack.seasonId, userId, mapPackXp);
+    // Add XP to player with logging
+    await addXp(
+        bpMapPack.seasonId, 
+        userId, 
+        mapPackXp, 
+        'mappack', 
+        battlePassMapPackId, 
+        `Claimed map pack: ${bpMapPack.mapPacks?.name || 'Unknown'}`
+    );
 
     return mapPackXp;
 }
@@ -1186,8 +1246,15 @@ export async function claimMission(missionId: number, userId: string) {
         throw new Error(claimError.message);
     }
 
-    // Add XP to player
-    await addXp(mission.seasonId, userId, mission.xp);
+    // Add XP to player with logging
+    await addXp(
+        mission.seasonId, 
+        userId, 
+        mission.xp, 
+        'mission', 
+        missionId, 
+        `Claimed mission: ${mission.title}`
+    );
 
     // Add reward items to inventory
     if (mission.rewards && Array.isArray(mission.rewards)) {
@@ -1431,4 +1498,89 @@ export async function trackProgressAfterDeathCount(
             );
         }
     }
+}
+
+// ==================== Mission Refresh Functions ====================
+
+export type RefreshType = 'none' | 'daily' | 'weekly';
+
+/**
+ * Get missions that need to be refreshed based on refresh type
+ * Daily: Reset at 0:00 AM UTC+7
+ * Weekly: Reset at Monday 0:00 AM UTC+7
+ */
+export async function getMissionsToRefresh(refreshType: RefreshType) {
+    const { data, error } = await supabase
+        .from('battlePassMissions')
+        .select('*, battlePassSeasons!inner(*)')
+        .eq('refreshType', refreshType)
+        .eq('battlePassSeasons.isArchived', false);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    // Filter to only active seasons
+    const now = new Date();
+    return data?.filter(mission => {
+        const season = mission.battlePassSeasons;
+        return new Date(season.start) <= now && new Date(season.end) >= now;
+    }) || [];
+}
+
+/**
+ * Refresh a specific mission - removes all progress and claims for that mission
+ */
+export async function refreshMission(missionId: number) {
+    // Delete all mission claims for this mission
+    const { error: claimsError } = await supabase
+        .from('battlePassMissionClaims')
+        .delete()
+        .eq('missionId', missionId);
+
+    if (claimsError) {
+        console.error(`Failed to delete claims for mission ${missionId}:`, claimsError.message);
+        throw new Error(claimsError.message);
+    }
+
+    // Delete all mission progress for this mission
+    const { error: progressError } = await supabase
+        .from('battlePassMissionProgress')
+        .delete()
+        .eq('missionId', missionId);
+
+    if (progressError) {
+        console.error(`Failed to delete progress for mission ${missionId}:`, progressError.message);
+        throw new Error(progressError.message);
+    }
+
+    return { missionId, refreshed: true };
+}
+
+/**
+ * Refresh all missions of a specific type (daily or weekly)
+ * Called by the cron webhook
+ */
+export async function refreshMissionsByType(refreshType: RefreshType) {
+    if (refreshType === 'none') {
+        return { refreshed: 0, missions: [] };
+    }
+
+    const missions = await getMissionsToRefresh(refreshType);
+    const results = [];
+
+    for (const mission of missions) {
+        try {
+            await refreshMission(mission.id);
+            results.push({ id: mission.id, title: mission.title, success: true });
+        } catch (error: any) {
+            results.push({ id: mission.id, title: mission.title, success: false, error: error.message });
+        }
+    }
+
+    return {
+        refreshed: results.filter(r => r.success).length,
+        total: missions.length,
+        missions: results
+    };
 }

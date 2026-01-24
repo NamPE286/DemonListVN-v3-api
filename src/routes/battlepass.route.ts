@@ -2,6 +2,7 @@ import express from 'express'
 import userAuth from '@src/middleware/user-auth.middleware'
 import adminAuth from '@src/middleware/admin-auth.middleware'
 import optionalUserAuth from '@src/middleware/optional-user-auth.middleware'
+import webhookAuth from '@src/middleware/webhook-auth.middleware'
 import {
     getActiveseason,
     getSeason,
@@ -44,7 +45,9 @@ import {
     hasBattlePassPremium,
     getBatchLevelProgress,
     getBatchMapPackProgress,
-    getBatchMapPackLevelProgress
+    getBatchMapPackLevelProgress,
+    refreshMissionsByType,
+    type RefreshType
 } from '@src/services/battlepass.service'
 
 const router = express.Router()
@@ -1156,9 +1159,16 @@ router.route('/rewards/claimable')
  */
 router.route('/xp/add')
     .post(adminAuth, async (req, res) => {
-        const { seasonId, userId, xp } = req.body
+        const { seasonId, userId, xp, description } = req.body
         try {
-            const result = await addXp(Number(seasonId), userId, Number(xp))
+            const result = await addXp(
+                Number(seasonId), 
+                userId, 
+                Number(xp),
+                'admin',
+                null,
+                description || 'Admin granted XP'
+            )
             res.send(result)
         } catch (err: any) {
             console.error(err)
@@ -1517,6 +1527,153 @@ router.route('/mission/:missionId/reward/:rewardId')
         } catch (err) {
             console.error(err)
             res.status(500).send()
+        }
+    })
+
+// ==================== Mission Refresh Webhook Routes ====================
+
+/**
+ * @openapi
+ * "/battlepass/webhook/refresh/daily":
+ *   post:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Webhook to refresh daily missions (Cron only)
+ *     description: Called by cron service to reset all daily missions. Removes all progress and claims for missions with refreshType='daily'.
+ *     security:
+ *       - apiKeyAuth: []
+ *     responses:
+ *       200:
+ *         description: Daily missions refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 refreshType:
+ *                   type: string
+ *                 refreshed:
+ *                   type: integer
+ *                 total:
+ *                   type: integer
+ *                 missions:
+ *                   type: array
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/webhook/refresh/daily')
+    .post(webhookAuth, async (req, res) => {
+        try {
+            const result = await refreshMissionsByType('daily')
+            console.log(`[Cron] Daily mission refresh completed: ${result.refreshed}/${result.total} missions refreshed`)
+            res.send({
+                refreshType: 'daily',
+                ...result,
+                timestamp: new Date().toISOString()
+            })
+        } catch (err: any) {
+            console.error('[Cron] Daily mission refresh failed:', err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+
+/**
+ * @openapi
+ * "/battlepass/webhook/refresh/weekly":
+ *   post:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Webhook to refresh weekly missions (Cron only)
+ *     description: Called by cron service to reset all weekly missions. Removes all progress and claims for missions with refreshType='weekly'. Should be called on Mondays at 0:00 AM UTC+7.
+ *     security:
+ *       - apiKeyAuth: []
+ *     responses:
+ *       200:
+ *         description: Weekly missions refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 refreshType:
+ *                   type: string
+ *                 refreshed:
+ *                   type: integer
+ *                 total:
+ *                   type: integer
+ *                 missions:
+ *                   type: array
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/webhook/refresh/weekly')
+    .post(webhookAuth, async (req, res) => {
+        try {
+            const result = await refreshMissionsByType('weekly')
+            console.log(`[Cron] Weekly mission refresh completed: ${result.refreshed}/${result.total} missions refreshed`)
+            res.send({
+                refreshType: 'weekly',
+                ...result,
+                timestamp: new Date().toISOString()
+            })
+        } catch (err: any) {
+            console.error('[Cron] Weekly mission refresh failed:', err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+
+/**
+ * @openapi
+ * "/battlepass/webhook/refresh/{type}":
+ *   post:
+ *     tags:
+ *       - Battle Pass
+ *     summary: Webhook to refresh missions by type (Cron only)
+ *     description: Generic endpoint to refresh missions by refresh type.
+ *     security:
+ *       - apiKeyAuth: []
+ *     parameters:
+ *       - name: type
+ *         in: path
+ *         description: Refresh type (daily or weekly)
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [daily, weekly]
+ *     responses:
+ *       200:
+ *         description: Missions refreshed successfully
+ *       400:
+ *         description: Invalid refresh type
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/webhook/refresh/:type')
+    .post(webhookAuth, async (req, res) => {
+        const { type } = req.params
+        
+        if (type !== 'daily' && type !== 'weekly') {
+            res.status(400).send({ message: 'Invalid refresh type. Must be "daily" or "weekly".' })
+            return
+        }
+
+        try {
+            const result = await refreshMissionsByType(type as RefreshType)
+            console.log(`[Cron] ${type} mission refresh completed: ${result.refreshed}/${result.total} missions refreshed`)
+            res.send({
+                refreshType: type,
+                ...result,
+                timestamp: new Date().toISOString()
+            })
+        } catch (err: any) {
+            console.error(`[Cron] ${type} mission refresh failed:`, err)
+            res.status(500).send({ message: err.message })
         }
     })
 
