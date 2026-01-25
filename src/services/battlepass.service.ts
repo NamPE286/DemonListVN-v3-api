@@ -1781,6 +1781,7 @@ export async function getBatchMapPackLevelProgress(
     }
 
     const progressMap = new Map<string, any>();
+    
     (data as any[])?.forEach((p: any) => {
         const key = `${p.battlePassMapPackId}_${p.levelID}`;
         progressMap.set(key, p);

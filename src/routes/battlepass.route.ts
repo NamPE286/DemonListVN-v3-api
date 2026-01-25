@@ -1036,11 +1036,15 @@ router.route('/mappack/:mapPackId')
                 progress = await getPlayerMapPackProgress(Number(mapPackId), user.uid!)
                 
                  if (bpMapPack.mapPacks && bpMapPack.mapPacks.mapPackLevels) {
-                    const levelIds = bpMapPack.mapPacks.mapPackLevels.map(mpl => mpl.levelID)
-                    const levelsProgress = await getBatchLevelProgress(levelIds, user.uid!)
+                    const levelsInput = bpMapPack.mapPacks.mapPackLevels.map(mpl => ({
+                        mapPackId: Number(mapPackId),
+                        levelID: mpl.levelID
+                    }))
+                    
+                    const levelsProgress = await getBatchMapPackLevelProgress(levelsInput, user.uid!)
                     
                     levelsProgress.forEach((p: any) => {
-                         levelProgressMap[p.battlePassLevelId] = p.progress
+                         levelProgressMap[p.levelID] = p.progress
                     })
                 }
             }
