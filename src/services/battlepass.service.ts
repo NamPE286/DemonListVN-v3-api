@@ -1876,6 +1876,50 @@ export async function trackProgressAfterDeathCount(
         if (bpLevel) {
             const finalProgress = setCompleted && player.completedTime ? 100 : progressPercent;
             await updateLevelProgressWithMissionCheck(bpLevel.id, uid, finalProgress);
+
+            // Check and award XP if milestones are reached
+            const bpProgress = await getPlayerLevelProgress(bpLevel.id, uid);
+
+            if (bpProgress) {
+                // Min progress reward
+                if (bpLevel.minProgress > 0 && finalProgress >= bpLevel.minProgress && !bpProgress.minProgressClaimed) {
+                    await addXp(
+                        bpLevel.seasonId,
+                        uid,
+                        bpLevel.minProgressXp,
+                        'level_min_progress',
+                        bpLevel.id,
+                        `Level ${bpLevel.levelID} min progress reward`
+                    );
+
+                    await supabase
+                        .from('battlePassLevelProgress')
+                        .update({ minProgressClaimed: true })
+                        .eq('battlePassLevelId', bpLevel.id)
+                        .eq('userID', uid);
+                }
+
+                // Completion reward
+                if (finalProgress >= 100 && !bpProgress.completionClaimed) {
+                    const xpAmount = bpLevel.xp - bpLevel.minProgressXp;
+                    if (xpAmount > 0) {
+                        await addXp(
+                            bpLevel.seasonId,
+                            uid,
+                            xpAmount,
+                            'level_completion',
+                            bpLevel.id,
+                            `Level ${bpLevel.levelID} completion reward`
+                        );
+                    }
+
+                    await supabase
+                        .from('battlePassLevelProgress')
+                        .update({ completionClaimed: true })
+                        .eq('battlePassLevelId', bpLevel.id)
+                        .eq('userID', uid);
+                }
+            }
         }
     } catch { }
 

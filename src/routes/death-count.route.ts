@@ -92,7 +92,6 @@ router.route('/:levelID/:count')
             const levelIDNum = parseInt(levelID)
 
             const player = await updateDeathCount(uid, levelIDNum, arr, setCompleted);
-
             await trackProgressAfterDeathCount(uid, levelIDNum, arr, setCompleted, player);
         } catch (err) {
             console.error(err)
