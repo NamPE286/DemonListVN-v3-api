@@ -77,7 +77,6 @@ router.route('/:levelID/:count')
      *             schema:
      */
     .post(userAuth, async (req, res) => {
-
         const { count } = req.params
         const arr: any[] = count.split('|')
 
@@ -95,7 +94,9 @@ router.route('/:levelID/:count')
             const player = await updateDeathCount(uid, levelIDNum, arr, setCompleted);
 
             await trackProgressAfterDeathCount(uid, levelIDNum, arr, setCompleted, player);
-        } catch { }
+        } catch (err) {
+            console.error(err)
+        }
 
         res.send()
     })

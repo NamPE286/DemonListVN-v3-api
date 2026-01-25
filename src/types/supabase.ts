@@ -193,22 +193,22 @@ export type Database = {
         Row: {
           battlePassMapPackId: number
           claimed: boolean
-          completedLevels: number[]
           created_at: string
+          progress: number
           userID: string
         }
         Insert: {
           battlePassMapPackId: number
           claimed?: boolean
-          completedLevels?: number[]
           created_at?: string
+          progress?: number
           userID: string
         }
         Update: {
           battlePassMapPackId?: number
           claimed?: boolean
-          completedLevels?: number[]
           created_at?: string
+          progress?: number
           userID?: string
         }
         Relationships: [

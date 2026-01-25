@@ -838,7 +838,8 @@ router.route('/mappacks/levels/progress')
  *         description: No active season
  */
 router.route('/mappacks')
-    .get(async (req, res) => {
+    .get(optionalUserAuth, async (req, res) => {
+        const { user, authenticated } = res.locals
         try {
             const season = await getActiveseason()
             if (!season) {
@@ -846,6 +847,23 @@ router.route('/mappacks')
                 return
             }
             const mapPacks = await getSeasonMapPacks(season.id)
+
+            if (authenticated && user) {
+                const mappackIds = mapPacks.map((mp: any) => mp.id)
+                const progressList = await getBatchMapPackProgress(mappackIds, user.uid!)
+                
+                const progressMap = new Map()
+                progressList.forEach((p: any) => progressMap.set(p.battlePassMapPackId, p))
+                
+                const mapPacksWithProgress = mapPacks.map((mp: any) => ({
+                    ...mp,
+                    progress: progressMap.get(mp.id) || null
+                }))
+                
+                res.send(mapPacksWithProgress)
+                return
+            }
+
             res.send(mapPacks)
         } catch (err) {
             console.error(err)
@@ -1004,11 +1022,29 @@ router.route('/season/:id/mappacks')
  *         description: Internal server error
  */
 router.route('/mappack/:mapPackId')
-    .get(async (req, res) => {
+    .get(optionalUserAuth, async (req, res) => {
         const { mapPackId } = req.params
+        const { user, authenticated } = res.locals
+
         try {
             const bpMapPack = await getBattlePassMapPack(Number(mapPackId))
-            res.send(bpMapPack)
+            
+            let progress = null
+            let levelProgressMap: Record<number, number> = {}
+
+            if (authenticated && user) {
+                progress = await getPlayerMapPackProgress(Number(mapPackId), user.uid!)
+                
+                 if (bpMapPack.mapPacks && bpMapPack.mapPacks.mapPackLevels) {
+                    const levelIds = bpMapPack.mapPacks.mapPackLevels.map(mpl => mpl.levelID)
+                    const levelsProgress = await getBatchLevelProgress(levelIds, user.uid!)
+                    
+                    levelsProgress.forEach((p: any) => {
+                         levelProgressMap[p.battlePassLevelId] = p.progress
+                    })
+                }
+            }
+            res.send({ ...bpMapPack, progress, levelProgress: levelProgressMap })
         } catch (err) {
             console.error(err)
             res.status(500).send()

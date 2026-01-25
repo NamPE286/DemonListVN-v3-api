@@ -1,5 +1,6 @@
 import supabase from "@src/client/supabase";
 import { fetchLevelFromGD } from "@src/services/level.service";
+import { getActiveseason, getActiveBattlePassLevelByLevelID, getAllSeasonMapPacks } from "@src/services/battlepass.service";
 
 async function fetchPlayerData(uid: string, levelID: number) {
     let { data, error } = await supabase
@@ -34,6 +35,8 @@ async function fetchLevelData(levelID: number) {
 
 async function isEligible(levelID: number): Promise<boolean> {
     const now = new Date();
+
+    // Check if level is part of an active event
     const a = await supabase
         .from('eventLevels')
         .select('*, events(*)')
@@ -64,6 +67,37 @@ async function isEligible(levelID: number): Promise<boolean> {
         }
     }
 
+
+    try {
+        // Check if level is part of an active season (normal, daily, weekly, or map pack)
+        const activeSeason = await getActiveseason();
+
+        if (activeSeason) {
+            // Check if level is a battle pass level (normal, daily, weekly)
+
+            try {
+                const battlePassLevel = await getActiveBattlePassLevelByLevelID(levelID);
+
+                if (battlePassLevel) {
+                    return true;
+                }
+            } catch { }
+
+            // Check if level is in a map pack for this season
+            const seasonMapPacks = await getAllSeasonMapPacks(activeSeason.id);
+
+            for (const bpMapPack of seasonMapPacks) {
+                if (bpMapPack.mapPacks?.mapPackLevels) {
+                    const hasLevel = bpMapPack.mapPacks.mapPackLevels.some((mpl: any) => mpl.levelID === levelID);
+                    if (hasLevel) {
+                        return true;
+                    }
+                }
+            }
+        }
+    } catch { }
+
+    // Check if level is Extreme Demon or Insane Demon
     const data = await fetchLevelFromGD(levelID)
 
     if (data.difficulty == 'Extreme Demon' || data.difficulty == 'Insane Demon') {
@@ -83,12 +117,12 @@ export async function getLevelDeathCount(id: number) {
 
 export async function updateDeathCount(uid: string, levelID: number, arr: number[], setCompleted?: boolean) {
     if (!(await isEligible(levelID))) {
-        throw new Error();
+        throw new Error("Not eligible");
     }
 
     const player = await fetchPlayerData(uid, levelID)
     const level = await fetchLevelData(levelID)
-    
+
     for (let i = 0; i < 100; i++) {
         player.count[i] += arr[i];
         level.count[i] += arr[i];
@@ -119,7 +153,7 @@ export function getDeathCountProgress(arr: number[]): number {
     let maxProgress = 0;
     for (let i = 0; i < arr.length; i++) {
         if (arr[i] > 0) {
-            maxProgress = i + 1; // +1 because if you died at 99%, you reached 99%
+            maxProgress = i; // +1 because if you died at 99%, you reached 99%
         }
     }
     return Math.min(maxProgress, 99); // Cap at 99% since 100% means completed
