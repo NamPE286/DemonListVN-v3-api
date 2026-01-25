@@ -315,6 +315,7 @@ export async function getSeasonLevels(seasonId: number) {
         .from('battlePassLevels')
         .select('*, levels(*)')
         .eq('seasonId', seasonId)
+        .eq('type', 'normal')
         .order('id', { ascending: true });
 
     if (error) {
