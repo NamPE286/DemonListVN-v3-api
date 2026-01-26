@@ -6,8 +6,7 @@ async function fetchPlayerData(uid: string, levelID: number, tag: string) {
     let { data, error } = await supabase
         .from('deathCount')
         .select('*')
-        .eq('uid', uid)
-        .eq('levelID', levelID)
+        .match({ uid, levelID, tag })
         .limit(1)
         .single()
 
@@ -127,7 +126,9 @@ export async function getLevelDeathCount(id: number) {
 export async function updateDeathCount(uid: string, levelID: number, tag: string, arr: number[], setCompleted?: boolean) {
     // TODO: event tag
 
-    if (!(await isEligible(levelID, !tag.startsWith('battlepass'), tag.startsWith('battlepass')))) {
+    const isBattlepass = tag.startsWith('battlepass');
+
+    if (!(await isEligible(levelID, !isBattlepass, isBattlepass))) {
         throw new Error("Not eligible");
     }
 
@@ -143,13 +144,23 @@ export async function updateDeathCount(uid: string, levelID: number, tag: string
         player.completedTime = new Date().toISOString();
     }
 
-    await supabase
+    const { error: deathCountError } = await supabase
         .from('deathCount')
         .upsert(player)
 
-    await supabase
-        .from('levelDeathCount')
-        .upsert(level)
+    if (deathCountError) {
+        throw new Error(deathCountError.message)
+    }
+
+    if (!isBattlepass) {
+        const { error: levelDeathCountError } = await supabase
+            .from('levelDeathCount')
+            .upsert(level)
+
+        if (levelDeathCountError) {
+            throw new Error(levelDeathCountError.message)
+        }
+    }
 
     return player;
 }

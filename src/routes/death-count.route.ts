@@ -37,7 +37,7 @@ router.route('/:uid/:levelID')
         try {
             const { uid, levelID } = req.params
             const tag = String(req.query.tag ?? 'default')
-            
+
             res.send(await getDeathCount(uid, parseInt(levelID), tag));
         } catch {
             res.status(500).send();
@@ -94,12 +94,20 @@ router.route('/:levelID/:count')
             const uid = res.locals.user.uid!
             const levelIDNum = parseInt(levelID)
 
-            await updateDeathCount(uid, levelIDNum, tag, arr, setCompleted);
+            try {
+                await updateDeathCount(uid, levelIDNum, tag, arr, setCompleted);
+            } catch (err) {
+                console.error('Check A', err)
+            }
 
-            const season = await getActiveseason()
-            const player = await updateDeathCount(uid, levelIDNum, `battlepass:${season.id}`, arr, setCompleted);
+            try {
+                const season = await getActiveseason()
+                const player = await updateDeathCount(uid, levelIDNum, `battlepass:${season.id}`, arr, setCompleted);
 
-            await trackProgressAfterDeathCount(uid, levelIDNum, arr, setCompleted, player);
+                await trackProgressAfterDeathCount(uid, levelIDNum, arr, setCompleted, player);
+            } catch (err) {
+                console.error('Check B', err)
+            }
         } catch (err) {
             console.error(err)
         }
