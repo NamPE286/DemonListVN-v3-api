@@ -1830,12 +1830,35 @@ export async function batchUpdateMapPackLevelProgress(
 ) {
     if (mapPackIds.length === 0) return;
 
-    const records = mapPackIds.map(mapPackId => ({
-        battlePassMapPackId: mapPackId,
-        levelID,
-        userID: userId,
-        progress
-    }));
+    const { data: existingRows, error: existingError } = await (supabase as any)
+        .from('battlePassMapPackLevelProgress')
+        .select('battlePassMapPackId, progress')
+        .eq('userID', userId)
+        .eq('levelID', levelID)
+        .in('battlePassMapPackId', mapPackIds);
+
+    if (existingError) {
+        throw new Error(existingError.message);
+    }
+
+    const existingMap = new Map<number, number>();
+    (existingRows as any[] | null | undefined)?.forEach(row => {
+        existingMap.set(row.battlePassMapPackId, row.progress ?? 0);
+    });
+
+    const records = mapPackIds
+        .filter(mapPackId => {
+            const current = existingMap.get(mapPackId) ?? 0;
+            return progress > current;
+        })
+        .map(mapPackId => ({
+            battlePassMapPackId: mapPackId,
+            levelID,
+            userID: userId,
+            progress
+        }));
+
+    if (records.length === 0) return;
 
     const { error } = await (supabase as any)
         .from('battlePassMapPackLevelProgress')
@@ -1849,11 +1872,12 @@ export async function batchUpdateMapPackLevelProgress(
 export async function batchUpdatePlayerMapPackProgress(mapPackIds: number[], userId: string) {
     if (mapPackIds.length === 0) return;
 
-    // 1. Fetch Map Pack details
+    // 1. Fetch Map Pack details + existing progress via join
     const { data: bpMapPacks, error: fetchError } = await supabase
         .from('battlePassMapPacks')
-        .select('id, seasonId, mapPacks(*, mapPackLevels(*))')
-        .in('id', mapPackIds);
+        .select('id, seasonId, mapPacks(*, mapPackLevels(*)), battlePassMapPackProgress!left(userID, claimed)')
+        .in('id', mapPackIds)
+        .or(`userID.eq.${userId},userID.is.null`, { foreignTable: 'battlePassMapPackProgress' });
 
     if (fetchError) {
         throw new Error(fetchError.message);
@@ -1872,20 +1896,13 @@ export async function batchUpdatePlayerMapPackProgress(mapPackIds: number[], use
         throw new Error(levelsError.message);
     }
 
-    // 3. Fetch existing progress to check claimed status
-    const { data: existingProgress, error: existingError } = await supabase
-        .from('battlePassMapPackProgress')
-        .select('battlePassMapPackId, claimed')
-        .in('battlePassMapPackId', mapPackIds)
-        .eq('userID', userId);
-
-    if (existingError) {
-        throw new Error(existingError.message);
-    }
-
-    // Map existing progress by ID for easy lookup
-    const existingProgressMap = new Map();
-    existingProgress?.forEach(p => existingProgressMap.set(p.battlePassMapPackId, p.claimed));
+    // Map existing progress by ID for easy lookup (from join)
+    const existingProgressMap = new Map<number, boolean>();
+    bpMapPacks?.forEach((p: any) => {
+        const rows = p.battlePassMapPackProgress as { userID: string; claimed: boolean }[] | null | undefined;
+        const claimed = rows?.find(r => r.userID === userId)?.claimed ?? false;
+        existingProgressMap.set(p.id, claimed);
+    });
 
     // Map levels progress by battlePassMapPackId
     const levelsProgressMap = new Map<number, number>(); // ID -> total sum
@@ -1977,7 +1994,7 @@ export async function trackProgressAfterDeathCount(
     setCompleted: boolean,
     player: any
 ) {
-    const progressPercent = getDeathCountProgress(arr);
+    const progressPercent = setCompleted ? 100 : getDeathCountProgress(arr);
     const season = await getActiveseason();
 
     if (!season) {
@@ -1990,12 +2007,13 @@ export async function trackProgressAfterDeathCount(
 
         if (bpLevel) {
             const finalProgress = setCompleted && player.completedTime ? 100 : progressPercent;
+            
             await updateLevelProgressWithMissionCheck(bpLevel.id, uid, finalProgress);
 
             // Check and award XP if milestones are reached
             const bpProgress = await getPlayerLevelProgress(bpLevel.id, uid);
 
-            if (bpProgress) {
+            if (bpProgress && progressPercent > bpProgress.progress) {
                 // Min progress reward
                 if (bpLevel.minProgress > 0 && finalProgress >= bpLevel.minProgress && !bpProgress.minProgressClaimed) {
                     await addXp(
