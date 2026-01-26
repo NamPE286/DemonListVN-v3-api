@@ -1,6 +1,6 @@
 import express from 'express'
 import { getDeathCount, updateDeathCount } from '@src/services/death-count.service'
-import { trackProgressAfterDeathCount } from '@src/services/battlepass.service'
+import { getActiveseason, trackProgressAfterDeathCount } from '@src/services/battlepass.service'
 import userAuth from '@src/middleware/user-auth.middleware'
 
 const router = express.Router()
@@ -36,7 +36,9 @@ router.route('/:uid/:levelID')
     .get(async (req, res) => {
         try {
             const { uid, levelID } = req.params
-            res.send(await getDeathCount(uid, parseInt(levelID)));
+            const tag = String(req.query.tag ?? 'default')
+            
+            res.send(await getDeathCount(uid, parseInt(levelID), tag));
         } catch {
             res.status(500).send();
         }
@@ -85,13 +87,18 @@ router.route('/:levelID/:count')
         }
 
         const setCompleted = req.query.completed !== undefined
+        const tag = String(req.query.tag ?? 'default')
 
         try {
             const { levelID } = req.params
             const uid = res.locals.user.uid!
             const levelIDNum = parseInt(levelID)
 
-            const player = await updateDeathCount(uid, levelIDNum, arr, setCompleted);
+            await updateDeathCount(uid, levelIDNum, tag, arr, setCompleted);
+
+            const season = await getActiveseason()
+            const player = await updateDeathCount(uid, levelIDNum, `battlepass:${season.id}`, arr, setCompleted);
+
             await trackProgressAfterDeathCount(uid, levelIDNum, arr, setCompleted, player);
         } catch (err) {
             console.error(err)

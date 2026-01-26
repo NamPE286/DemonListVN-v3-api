@@ -977,18 +977,21 @@ export type Database = {
           completedTime: string | null
           count: number[]
           levelID: number
+          tag: string
           uid: string
         }
         Insert: {
           completedTime?: string | null
           count: number[]
           levelID?: number
+          tag?: string
           uid: string
         }
         Update: {
           completedTime?: string | null
           count?: number[]
           levelID?: number
+          tag?: string
           uid?: string
         }
         Relationships: [

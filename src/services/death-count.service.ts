@@ -2,7 +2,7 @@ import supabase from "@src/client/supabase";
 import { fetchLevelFromGD } from "@src/services/level.service";
 import { getActiveseason, getActiveBattlePassLevelByLevelID, getAllSeasonMapPacks } from "@src/services/battlepass.service";
 
-async function fetchPlayerData(uid: string, levelID: number) {
+async function fetchPlayerData(uid: string, levelID: number, tag: string) {
     let { data, error } = await supabase
         .from('deathCount')
         .select('*')
@@ -12,7 +12,13 @@ async function fetchPlayerData(uid: string, levelID: number) {
         .single()
 
     if (data == null) {
-        return { uid: uid, levelID: levelID, count: Array(100).fill(0), completedTime: null }
+        return {
+            uid: uid,
+            levelID: levelID,
+            tag,
+            count: Array(100).fill(0) as number[],
+            completedTime: null as string | null
+        }
     }
 
     return data
@@ -33,69 +39,72 @@ async function fetchLevelData(levelID: number) {
     return data
 }
 
-async function isEligible(levelID: number): Promise<boolean> {
+async function isEligible(levelID: number, eventCheck = true, battlepassCheck = false): Promise<boolean> {
     const now = new Date();
 
-    // Check if level is part of an active event
-    const a = await supabase
-        .from('eventLevels')
-        .select('*, events(*)')
-        .eq('levelID', levelID)
+    if (eventCheck) {
+        // Check if level is part of an active event
+        const a = await supabase
+            .from('eventLevels')
+            .select('*, events(*)')
+            .eq('levelID', levelID)
 
-    if (!a.error) {
-        for (const lv of a.data) {
-            if (!lv.events) {
-                continue
-            }
-
-            const { start, end } = lv.events
-
-            if (!end) {
-                const startDate = new Date(start);
-
-                if (now >= startDate) {
-                    return true;
+        if (!a.error) {
+            for (const lv of a.data) {
+                if (!lv.events) {
+                    continue
                 }
-            } else {
-                const startDate = new Date(start);
-                const endDate = new Date(end);
 
-                if (now >= startDate && now <= endDate) {
-                    return true;
-                }
-            }
-        }
-    }
+                const { start, end } = lv.events
 
+                if (!end) {
+                    const startDate = new Date(start);
 
-    try {
-        // Check if level is part of an active season (normal, daily, weekly, or map pack)
-        const activeSeason = await getActiveseason();
+                    if (now >= startDate) {
+                        return true;
+                    }
+                } else {
+                    const startDate = new Date(start);
+                    const endDate = new Date(end);
 
-        if (activeSeason) {
-            // Check if level is a battle pass level (normal, daily, weekly)
-
-            try {
-                const battlePassLevel = await getActiveBattlePassLevelByLevelID(levelID);
-
-                if (battlePassLevel) {
-                    return true;
-                }
-            } catch { }
-
-            // Check if level is in a map pack for this season
-            const seasonMapPacks = await getAllSeasonMapPacks(activeSeason.id);
-
-            for (const bpMapPack of seasonMapPacks) {
-                if (bpMapPack.mapPacks?.mapPackLevels) {
-                    const hasLevel = bpMapPack.mapPacks.mapPackLevels.some((mpl: any) => mpl.levelID === levelID);
-                    if (hasLevel) {
+                    if (now >= startDate && now <= endDate) {
                         return true;
                     }
                 }
             }
         }
-    } catch { }
+    }
+
+    if (battlepassCheck) {
+        try {
+            // Check if level is part of an active season (normal, daily, weekly, or map pack)
+            const activeSeason = await getActiveseason();
+
+            if (activeSeason) {
+                // Check if level is a battle pass level (normal, daily, weekly)
+
+                try {
+                    const battlePassLevel = await getActiveBattlePassLevelByLevelID(levelID);
+
+                    if (battlePassLevel) {
+                        return true;
+                    }
+                } catch { }
+
+                // Check if level is in a map pack for this season
+                const seasonMapPacks = await getAllSeasonMapPacks(activeSeason.id);
+
+                for (const bpMapPack of seasonMapPacks) {
+                    if (bpMapPack.mapPacks?.mapPackLevels) {
+                        const hasLevel = bpMapPack.mapPacks.mapPackLevels.some((mpl: any) => mpl.levelID === levelID);
+                        if (hasLevel) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        } catch { }
+    }
 
     // Check if level is Extreme Demon or Insane Demon
     const data = await fetchLevelFromGD(levelID)
@@ -107,20 +116,22 @@ async function isEligible(levelID: number): Promise<boolean> {
     return false;
 }
 
-export async function getDeathCount(uid: string, levelID: number) {
-    return await fetchPlayerData(uid, levelID)
+export async function getDeathCount(uid: string, levelID: number, tag: string) {
+    return await fetchPlayerData(uid, levelID, tag)
 }
 
 export async function getLevelDeathCount(id: number) {
     return await fetchLevelData(id);
 }
 
-export async function updateDeathCount(uid: string, levelID: number, arr: number[], setCompleted?: boolean) {
-    if (!(await isEligible(levelID))) {
+export async function updateDeathCount(uid: string, levelID: number, tag: string, arr: number[], setCompleted?: boolean) {
+    // TODO: event tag
+
+    if (!(await isEligible(levelID, !tag.startsWith('battlepass'), tag.startsWith('battlepass')))) {
         throw new Error("Not eligible");
     }
 
-    const player = await fetchPlayerData(uid, levelID)
+    const player = await fetchPlayerData(uid, levelID, tag)
     const level = await fetchLevelData(levelID)
 
     for (let i = 0; i < 100; i++) {
