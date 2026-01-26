@@ -748,73 +748,7 @@ export async function updateLevelProgressWithMissionCheck(
         }
     }
 
-    // Check and update mission progress
-    await checkAndUpdateMissionProgress(bpLevel.seasonId, userId);
-
     return { battlePassLevelId, progress };
-}
-
-// Check all missions for the season and mark as completed if conditions are met
-export async function checkAndUpdateMissionProgress(seasonId: number, userId: string) {
-    const missions = await getSeasonMissions(seasonId);
-
-    if (!missions || missions.length === 0) {
-        return;
-    }
-
-    const missionIds = missions.map(m => m.id);
-
-    // Batch fetch all claims for these missions
-    const { data: claims } = await supabase
-        .from('battlePassMissionClaims')
-        .select('missionId')
-        .eq('userID', userId)
-        .in('missionId', missionIds);
-
-    const claimedSet = new Set(claims?.map(c => c.missionId) || []);
-
-    // Batch fetch all progress for these missions
-    const { data: progressList } = await supabase
-        .from('battlePassMissionProgress')
-        .select('missionId, completed')
-        .eq('userID', userId)
-        .in('missionId', missionIds);
-
-    const progressMap = new Map<number, boolean>();
-    progressList?.forEach(p => progressMap.set(p.missionId, p.completed));
-
-    // Check which missions need to be marked as completed
-    const missionsToComplete: number[] = [];
-
-    for (const mission of missions) {
-        // Skip if already claimed or completed
-        if (claimedSet.has(mission.id) || progressMap.get(mission.id)) {
-            continue;
-        }
-
-        // Check if mission conditions are met
-        const isCompleted = await isMissionCompleted(userId, mission.id);
-        if (isCompleted) {
-            missionsToComplete.push(mission.id);
-        }
-    }
-
-    // Batch upsert all completed missions
-    if (missionsToComplete.length > 0) {
-        const { error } = await supabase
-            .from('battlePassMissionProgress')
-            .upsert(
-                missionsToComplete.map(missionId => ({
-                    missionId,
-                    userID: userId,
-                    completed: true
-                }))
-            );
-
-        if (error) {
-            console.error('Failed to update mission progress:', error.message);
-        }
-    }
 }
 
 // ==================== Map Pack Functions ====================
@@ -2008,7 +1942,7 @@ export async function trackProgressAfterDeathCount(
         if (bpLevel) {
             const finalProgress = setCompleted && player.completedTime ? 100 : progressPercent;
             
-            await updateLevelProgressWithMissionCheck(bpLevel.id, uid, finalProgress);
+            await updatePlayerLevelProgress(bpLevel.id, uid, finalProgress);
 
             // Check and award XP if milestones are reached
             const bpProgress = await getPlayerLevelProgress(bpLevel.id, uid);
