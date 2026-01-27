@@ -2,7 +2,7 @@ import supabase from "@src/client/supabase";
 import { fetchLevelFromGD } from "@src/services/level.service";
 import { getActiveseason, getActiveBattlePassLevelByLevelID, getAllSeasonMapPacks } from "@src/services/battlepass.service";
 
-async function fetchPlayerData(uid: string, levelID: number, tag: string) {
+export async function fetchPlayerDeathCount(uid: string, levelID: number, tag: string) {
     let { data, error } = await supabase
         .from('deathCount')
         .select('*')
@@ -116,7 +116,7 @@ async function isEligible(levelID: number, eventCheck = true, battlepassCheck = 
 }
 
 export async function getDeathCount(uid: string, levelID: number, tag: string) {
-    return await fetchPlayerData(uid, levelID, tag)
+    return await fetchPlayerDeathCount(uid, levelID, tag)
 }
 
 export async function getLevelDeathCount(id: number) {
@@ -132,7 +132,7 @@ export async function updateDeathCount(uid: string, levelID: number, tag: string
         throw new Error("Not eligible");
     }
 
-    const player = await fetchPlayerData(uid, levelID, tag)
+    const player = await fetchPlayerDeathCount(uid, levelID, tag)
     const level = await fetchLevelData(levelID)
 
     for (let i = 0; i < 100; i++) {

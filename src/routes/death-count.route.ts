@@ -104,7 +104,7 @@ router.route('/:levelID/:count')
                 const season = await getActiveseason()
                 const player = await updateDeathCount(uid, levelIDNum, `battlepass:${season.id}`, arr, setCompleted);
 
-                await trackProgressAfterDeathCount(uid, levelIDNum, arr, setCompleted, player);
+                await trackProgressAfterDeathCount(uid, levelIDNum, setCompleted, player);
             } catch (err) {
                 console.error('Check B', err)
             }

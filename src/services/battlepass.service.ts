@@ -2,7 +2,7 @@ import supabase from "@src/client/supabase";
 import type { TablesInsert } from "@src/types/supabase";
 import { addInventoryItem } from "@src/services/inventory.service";
 import { SubscriptionType } from "@src/const/subscriptionTypeConst";
-import { getDeathCountProgress } from "@src/services/death-count.service";
+import { fetchPlayerDeathCount, getDeathCountProgress } from "@src/services/death-count.service";
 
 const XP_PER_TIER = 100;
 const MAX_TIER = 100;
@@ -1924,11 +1924,11 @@ export async function getMapPackIdsForLevel(seasonId: number, levelID: number) {
 export async function trackProgressAfterDeathCount(
     uid: string,
     levelIDNum: number,
-    arr: number[],
     setCompleted: boolean,
-    player: any
+    player: Awaited<ReturnType<typeof fetchPlayerDeathCount>>
 ) {
-    const progressPercent = setCompleted ? 100 : getDeathCountProgress(arr);
+    
+    const progressPercent = setCompleted ? 100 : getDeathCountProgress(player.count);
     const season = await getActiveseason();
 
     if (!season) {
