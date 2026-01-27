@@ -165,7 +165,7 @@ handleProduct.set(ProductId.BATTLE_PASS, {
                 content: `You have been gifted Battle Pass Premium!`,
                 to: order.giftTo
             })
-            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), `${buyerStr} gifted ${msg}`)
+            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), `${msg}`)
         } else {
             msg += ` purchased Battle Pass Premium!`
             await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
