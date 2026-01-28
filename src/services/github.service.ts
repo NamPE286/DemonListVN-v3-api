@@ -6,8 +6,8 @@ export async function getCommit(repo: string, commitId: string): Promise<GitHubC
         {
             method: "GET",
             headers: {
-                "User-Agent": "server",
-                "Accept": "*/*",
+                "User-Agent": "nampe286",
+                Accept: "application/vnd.github+json"
             },
         }
     );
@@ -24,14 +24,14 @@ export async function getRawFileByRawUrl(url: string) {
         {
             method: "GET",
             headers: {
-                "User-Agent": "server",
-                "Accept": "*/*",
+                "User-Agent": "nampe286",
+                Accept: "application/vnd.github+json"
             },
         }
     );
 
     if (!res.ok) {
-        throw new Error(`GitHub API error: ${res.status}`);
+        throw new Error(`Cannot get raw file: ${res.status}`);
     }
 
     return await res.text();
