@@ -36,6 +36,7 @@ import inventoryRoute from './routes/inventory.route'
 import buyersRoute from './routes/buyers.route'
 import battlepassRoute from './routes/battlepass.route'
 import mappacksRoute from './routes/mappacks.route'
+import syncRoute from './routes/sync.route'
 
 const app = express()
 const port = 8787
@@ -82,6 +83,7 @@ app.use('/inventory', inventoryRoute)
 app.use('/buyers', buyersRoute)
 app.use('/battlepass', battlepassRoute)
 app.use('/mappacks', mappacksRoute)
+app.use('/sync', syncRoute)
 
 app.listen(port, async () => {
     console.log(`Server started on port ${port}`)

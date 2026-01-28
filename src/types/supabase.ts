@@ -2402,6 +2402,27 @@ export type Database = {
           },
         ]
       }
+      wiki: {
+        Row: {
+          created_at: string
+          description: string | null
+          path: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          path: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          path?: string
+          title?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
