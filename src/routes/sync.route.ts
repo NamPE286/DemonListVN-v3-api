@@ -7,7 +7,7 @@ router.route('/wiki')
     .post(async (req, res) => {
         const { commit_id: commitId } = req.body
 
-        await syncWiki(Number(commitId))
+        await syncWiki(commitId)
         
         res.send()
     })
