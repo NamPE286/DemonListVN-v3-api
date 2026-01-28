@@ -1,66 +1,47 @@
 import type { TablesInsert } from "@src/types/supabase"
-import supabase from '@src/client/supabase'
-import { getCommit, getRawFile, getRawFileByRawUrl } from "@src/services/github.service"
+import supabase from "@src/client/supabase"
+import { getCommit, getRawFileByRawUrl } from "@src/services/github.service"
 
 export async function syncWiki(commitId: string) {
-    const res = await getCommit('Demon-List-VN/wiki', commitId)
+    const res = await getCommit("Demon-List-VN/wiki", commitId)
+    if (!res?.files?.length) return
 
-    const wikiToDelete: string[] = []
-    const wikiToUpsert: TablesInsert<"wiki">[] = []
+    const toDelete: string[] = []
+    const toUpsert: TablesInsert<"wiki">[] = []
 
-    if (!res || !Array.isArray(res.files)) {
-        return
-    }
+    for (const { filename, status, raw_url } of res.files) {
+        if (!filename.startsWith("src/")) continue
 
-    for (const f of res.files) {
-        const filename: string = f.filename
-
-        if (!filename.startsWith('src/')) {
+        if (status === "removed") {
+            toDelete.push(filename)
             continue
         }
 
-        if (f.status === 'removed') {
-            wikiToDelete.push(filename)
-            continue
-        }
+        const content = await getRawFileByRawUrl(raw_url!)
+        const parts = filename.split("/")
+        const lines = (content ?? "").split(/\r?\n/)
 
-        const content = await getRawFileByRawUrl(f.raw_url!)
-        const parts = filename.split('/')
-        const basename = parts[parts.length - 1] || filename
-        const lines = (content || '')
-            .split(/\r?\n/)
-            .map(l => l.trim())
-            .filter(l => l.length > 0)
-        const rawTitleLine = lines[0] ?? null
-        const rawDescLine = lines[1] ?? null
-        const titleFromFile = rawTitleLine ? rawTitleLine.replace(/^# \s*/i, '').trim() : basename.replace(/\.md$/i, '')
-        const descriptionFromFile = rawDescLine || null
-        const locale = parts[1]
+        const title =
+            lines.find(l => l.trim())?.replace(/^#\s*/i, "").trim() ??
+            parts.at(-1)!.replace(/\.md$/i, "")
 
-        wikiToUpsert.push({
-            path: parts.slice(2).join('/'),
-            title: titleFromFile,
-            description: descriptionFromFile,
-            created_at: new Date().toISOString(),
-            locale
+        const descLine = lines[1]
+        const description = descLine == null ? null : descLine.trim()
+
+        toUpsert.push({
+            path: parts.slice(2).join("/"),
+            locale: parts[1],
+            title,
+            description,
+            created_at: new Date().toISOString()
         })
     }
 
-    if (wikiToDelete.length > 0) {
-        const { error } = await supabase
-            .from('wiki')
-            .delete()
-            .in('path', wikiToDelete)
-        if (error) {
-            throw new Error(error.message)
-        }
+    if (toDelete.length) {
+        const { error } = await supabase.from("wiki").delete().in("path", toDelete)
+        if (error) throw error
     }
 
-    const { error } = await supabase
-        .from('wiki')
-        .upsert(wikiToUpsert)
-
-    if (error) {
-        throw new Error(error.message)
-    }
+    const { error } = await supabase.from("wiki").upsert(toUpsert)
+    if (error) throw error
 }
