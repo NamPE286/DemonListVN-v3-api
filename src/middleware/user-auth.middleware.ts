@@ -5,7 +5,7 @@ import { getPlayer } from '@src/services/player.service';
 
 export default async function (req: Request, res: Response, next: NextFunction) {
     res.locals.authenticated = false;
-    
+
     if (!req.headers.authorization ||
         !req.headers.authorization.startsWith('Bearer ')) {
         res.status(401).send()
@@ -14,9 +14,16 @@ export default async function (req: Request, res: Response, next: NextFunction) 
 
     try {
         const token = req.headers.authorization.split(' ')[1]
-        const decoded = jwt.verify(token, process.env.JWT_SECRET!)
-        const uid = String(decoded.sub)
-        const player = await getPlayer(uid)
+        const { data, error } = await supabase.auth.getClaims(token)
+
+        if (error) {
+            console.error(error.message)
+            res.status(401).send()
+            
+            return
+        }
+
+        const player = await getPlayer(data?.claims.sub)
 
         if (player?.isBanned) {
             res.status(401).send();
