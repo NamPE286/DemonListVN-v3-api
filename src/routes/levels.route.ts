@@ -7,6 +7,7 @@ import { updateLevel, getLevel, fetchLevelFromGD, deleteLevel, refreshLevel } fr
 import userAuth from '@src/middleware/user-auth.middleware'
 import supabase from '@src/client/supabase'
 import { getEventLevelsSafe } from '@src/services/event.service'
+import webhookAuth from '@src/middleware/webhook-auth.middleware'
 
 const router = express.Router()
 
@@ -25,7 +26,7 @@ function checkID(req: Request, res: Response, next: NextFunction) {
 }
 
 router.route('/refresh')
-    .put(async (req, res) => {
+    .put(webhookAuth, async (req, res) => {
         try {
             await refreshLevel()
         } catch (err) {
