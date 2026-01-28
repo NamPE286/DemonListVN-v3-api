@@ -2406,18 +2406,21 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          locale: string
           path: string
           title: string
         }
         Insert: {
           created_at?: string
           description?: string | null
+          locale?: string
           path: string
           title: string
         }
         Update: {
           created_at?: string
           description?: string | null
+          locale?: string
           path?: string
           title?: string
         }

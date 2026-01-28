@@ -35,12 +35,14 @@ export async function syncWiki(commitId: string) {
         const rawDescLine = lines[1] ?? null
         const titleFromFile = rawTitleLine ? rawTitleLine.replace(/^# \s*/i, '').trim() : basename.replace(/\.md$/i, '')
         const descriptionFromFile = rawDescLine || null
+        const locale = parts[1]
 
         wikiToUpsert.push({
-            path: filename,
+            path: parts.slice(2).join('/'),
             title: titleFromFile,
             description: descriptionFromFile,
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            locale
         })
     }
 
@@ -57,7 +59,7 @@ export async function syncWiki(commitId: string) {
     const { error } = await supabase
         .from('wiki')
         .upsert(wikiToUpsert)
-        
+
     if (error) {
         throw new Error(error.message)
     }
