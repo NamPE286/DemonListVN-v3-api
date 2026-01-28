@@ -4,13 +4,18 @@ import { getCommit, getRawFileByRawUrl } from "@src/services/github.service"
 
 export async function syncWiki(commitId: string) {
     const res = await getCommit("Demon-List-VN/wiki", commitId)
-    if (!res?.files?.length) return
+
+    if (!res?.files?.length) {
+        return
+    }
 
     const toDelete: string[] = []
     const toUpsert: TablesInsert<"wiki">[] = []
 
     for (const { filename, status, raw_url } of res.files) {
-        if (!filename.startsWith("src/")) continue
+        if (!filename.startsWith("src/")) {
+            continue
+        }
 
         if (status === "removed") {
             toDelete.push(filename)
@@ -39,9 +44,15 @@ export async function syncWiki(commitId: string) {
 
     if (toDelete.length) {
         const { error } = await supabase.from("wiki").delete().in("path", toDelete)
-        if (error) throw error
+        
+        if (error) {
+            throw error
+        }
     }
 
     const { error } = await supabase.from("wiki").upsert(toUpsert)
-    if (error) throw error
+    
+    if (error) {
+        throw error
+    }
 }
