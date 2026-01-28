@@ -14,8 +14,16 @@ export default async function (req: Request, res: Response, next: NextFunction) 
 
     try {
         const token = req.headers.authorization.split(' ')[1]
-        const decoded = jwt.verify(token, process.env.JWT_SECRET!)
-        const uid = String(decoded.sub)
+        const { data, error } = await supabase.auth.getClaims(token)
+
+        if (error) {
+            console.error(error.message)
+            res.status(401).send()
+            
+            return
+        }
+
+        const uid = String(data?.claims.sub)
         let player;
 
         try {
