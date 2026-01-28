@@ -26,7 +26,7 @@ function checkID(req: Request, res: Response, next: NextFunction) {
 }
 
 router.route('/refresh')
-    .put(webhookAuth, async (req, res) => {
+    .post(webhookAuth, async (req, res) => {
         try {
             await refreshLevel()
         } catch (err) {
