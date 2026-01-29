@@ -1,24 +1,11 @@
-import type { GitHubCommitPayload } from "@src/models/github";
 import { getOctokitClient } from "@src/client/octokit"
 
-export async function getCommit(repo: string, commitId: string): Promise<GitHubCommitPayload> {
-    const res = await fetch(
-        `https://api.github.com/repos/${repo}/commits/${commitId}`,
-        {
-            method: "GET",
-            headers: {
-                "User-Agent": "nampe286",
-                Accept: "application/vnd.github+json",
-                Authorization: "Bearer " + process.env.GITHUB_PAT
-            },
-        }
-    );
+export async function getCommit(repo: string, commitId: string) {
+    const octokit = getOctokitClient();
+    const [owner, repoName] = repo.split('/');
+    const response = await octokit.rest.repos.getCommit({ owner, repo: repoName, ref: commitId });
 
-    if (!res.ok) {
-        throw new Error(`Failed to get commit: ${res.status}`);
-    }
-
-    return await res.json();
+    return response.data;
 }
 
 export async function getRawFileByRawUrl(url: string) {
