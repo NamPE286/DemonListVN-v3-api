@@ -4,7 +4,12 @@ export async function getWikis(path: string, locales: string[] | undefined = und
     let query = supabase
         .from('wiki')
         .select('*')
-        .eq('path', path)
+
+    if (path.endsWith(".md")) {
+        query = query.eq('path', path)
+    } else {
+        query = query.eq('path', path + "/index.md")
+    }
 
     if (locales && locales.length) {
         query = query.in('locale', locales)
