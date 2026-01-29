@@ -8,7 +8,9 @@ export async function getWikis(path: string, locales: string[] | undefined = und
     if (path.endsWith(".md")) {
         query = query.eq('path', path)
     } else {
-        query = query.eq('path', path + "/index.md")
+        query = query
+            .like('path', `${path}/%`)
+            .not('path', 'like', `${path}/%/%`)
     }
 
     if (locales && locales.length) {
