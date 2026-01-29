@@ -2406,6 +2406,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          image: string | null
           locale: string
           modifiedAt: string
           path: string
@@ -2414,6 +2415,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          image?: string | null
           locale?: string
           modifiedAt?: string
           path: string
@@ -2422,6 +2424,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          image?: string | null
           locale?: string
           modifiedAt?: string
           path?: string

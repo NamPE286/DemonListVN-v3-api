@@ -39,15 +39,44 @@ export async function syncWiki(commitId: string) {
         const content = await getRawFileByRawUrl(raw_url!)
         const lines = (content ?? "").split(/\r?\n/)
         const title = lines.find(l => l.trim())?.replace(/^#\s*/i, "").trim()!
-        const descLine = lines[1]
-        const description = descLine == null ? null : descLine.trim()
+
+        let description: string | null = null
+        let foundTitle = false
+        const imageRegex = /!\[.*?\]\((.*?)\)/
+
+        for (const line of lines) {
+            const trimmedLine = line.trim()
+            if (trimmedLine) {
+                if (!foundTitle) {
+                    foundTitle = true
+                    continue
+                }
+                
+                // Skip image lines
+                if (!imageRegex.test(trimmedLine)) {
+                    description = trimmedLine
+                    break
+                }
+            }
+        }
+
+        let image: string | null = null
+
+        for (const line of lines) {
+            const match = line.match(imageRegex)
+            if (match) {
+                image = match[1]
+                break
+            }
+        }
 
         toUpsert.push({
             path,
             locale,
             title,
             description,
-            modifiedAt: new Date().toISOString()
+            modifiedAt: new Date().toISOString(),
+            image: image ?? null
         })
     }
 
