@@ -7,7 +7,8 @@ export async function getCommit(repo: string, commitId: string): Promise<GitHubC
             method: "GET",
             headers: {
                 "User-Agent": "nampe286",
-                Accept: "application/vnd.github+json"
+                Accept: "application/vnd.github+json",
+                Authorization: "Bearer " + process.env.GITHUB_PAT
             },
         }
     );
@@ -25,7 +26,8 @@ export async function getRawFileByRawUrl(url: string) {
             method: "GET",
             headers: {
                 "User-Agent": "nampe286",
-                Accept: "application/vnd.github+json"
+                Accept: "application/vnd.github+json",
+                Authorization: "Bearer " + process.env.GITHUB_PAT
             },
         }
     );
