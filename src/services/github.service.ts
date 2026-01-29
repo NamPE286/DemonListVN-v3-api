@@ -15,7 +15,7 @@ export async function getCommit(repo: string, commitId: string): Promise<GitHubC
     );
 
     if (!res.ok) {
-        throw new Error(`GitHub API error: ${res.status}`);
+        throw new Error(`Failed to get commit: ${res.status}`);
     }
 
     return await res.json();
@@ -34,7 +34,7 @@ export async function getRawFileByRawUrl(url: string) {
     );
 
     if (!res.ok) {
-        throw new Error(`Cannot get raw file: ${res.status}`);
+        throw new Error(`Failed to get raw file: ${res.status}`);
     }
 
     return await res.text();
