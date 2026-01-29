@@ -3,7 +3,7 @@ import express from 'express'
 
 const router = express.Router()
 
-router.route('/*path')
+router.route('/files/*path')
     .get(async (req, res) => {
         // @ts-ignore
         const locales = req.query.locale?.split(',')

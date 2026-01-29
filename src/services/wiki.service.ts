@@ -1,10 +1,10 @@
 import supabase from "@src/client/supabase";
 
-export async function getWikis(prefix: string, locales: string[] | undefined = undefined) {
+export async function getWikis(path: string, locales: string[] | undefined = undefined) {
     let query = supabase
         .from('wiki')
         .select('*')
-        .like('path', prefix)
+        .eq('path', path)
 
     if (locales && locales.length) {
         query = query.in('locale', locales)
