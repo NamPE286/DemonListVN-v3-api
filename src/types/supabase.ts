@@ -2407,6 +2407,7 @@ export type Database = {
           created_at: string
           description: string | null
           locale: string
+          modifiedAt: string
           path: string
           title: string
         }
@@ -2414,6 +2415,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           locale?: string
+          modifiedAt?: string
           path: string
           title: string
         }
@@ -2421,6 +2423,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           locale?: string
+          modifiedAt?: string
           path?: string
           title?: string
         }

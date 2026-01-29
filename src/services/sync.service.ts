@@ -38,20 +38,25 @@ export async function syncWiki(commitId: string) {
             locale: parts[1],
             title,
             description,
-            created_at: new Date().toISOString()
+            modifiedAt: new Date().toISOString()
         })
     }
 
     if (toDelete.length) {
-        const { error } = await supabase.from("wiki").delete().in("path", toDelete)
-        
+        const { error } = await supabase
+            .from("wiki")
+            .delete()
+            .in("path", toDelete)
+
         if (error) {
             throw error
         }
     }
 
-    const { error } = await supabase.from("wiki").upsert(toUpsert)
-    
+    const { error } = await supabase
+        .from("wiki")
+        .upsert(toUpsert)
+
     if (error) {
         throw error
     }
