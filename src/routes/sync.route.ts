@@ -11,9 +11,12 @@ router.route('/wiki')
             await syncWiki(commitId)
 
             res.send()
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            res.status(500).send()
+            
+            res.status(500).send({
+                error: err.message
+            })
         }
 
     })

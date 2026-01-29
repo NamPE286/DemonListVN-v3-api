@@ -1,4 +1,5 @@
 import type { GitHubCommitPayload } from "@src/models/github";
+import { getOctokitClient } from "@src/client/octokit"
 
 export async function getCommit(repo: string, commitId: string): Promise<GitHubCommitPayload> {
     const res = await fetch(
@@ -37,8 +38,4 @@ export async function getRawFileByRawUrl(url: string) {
     }
 
     return await res.text();
-}
-
-export async function getRawFile(repo: string, path: string) {
-    // TODO
 }
