@@ -36,7 +36,10 @@ export async function getWikis(path: string, locales: string[] | undefined = und
     }
 
     if (treeItem.type == 'file') {
-        return getWikiMetadatas([treeItem.path!], locales)
+        return {
+            type: 'file',
+            metadatas: getWikiMetadatas([treeItem.path!], locales)
+        }
     }
 
     if (treeItem.type == 'folder') {
@@ -62,13 +65,16 @@ export async function getWikis(path: string, locales: string[] | undefined = und
             metadatas.get(i.path)?.push(i)
         }
 
-        return data.map((x) => {
-            if (x.type == 'file') {
-                return { ...x, metadata: metadatas.get(x.path!) };
-            }
+        return {
+            type: 'folder',
+            items: data.map((x) => {
+                if (x.type == 'file') {
+                    return { ...x, metadatas: metadatas.get(x.path!) };
+                }
 
-            return x;
-        });
+                return x;
+            })
+        }
     }
 
     throw new Error("Not supported file type")
