@@ -2434,7 +2434,15 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      wikiTree: {
+        Row: {
+          level: number | null
+          parent: string | null
+          path: string | null
+          type: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_event_levels_progress: { Args: { updates: Json }; Returns: undefined }

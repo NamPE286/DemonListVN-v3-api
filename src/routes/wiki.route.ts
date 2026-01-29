@@ -8,7 +8,7 @@ router.route('/files/*path')
         // @ts-ignore
         const locales = req.query.locale?.split(',')
         // @ts-ignore
-        const path: string = req.params.path.join('/')
+        const path: string = req.params.path.join('/').replace(/\/+$/, '')
 
         res.send(await getWikis(path, locales))
     })

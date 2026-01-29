@@ -1,17 +1,10 @@
 import supabase from "@src/client/supabase";
 
-export async function getWikis(path: string, locales: string[] | undefined = undefined) {
+async function getWikiMetadatas(paths: string[], locales: string[] | undefined = undefined) {
     let query = supabase
         .from('wiki')
         .select('*')
-
-    if (path.endsWith(".md")) {
-        query = query.eq('path', path)
-    } else {
-        query = query
-            .like('path', `${path}/%`)
-            .not('path', 'like', `${path}/%/%`)
-    }
+        .in('path', paths)
 
     if (locales && locales.length) {
         query = query.in('locale', locales)
@@ -29,4 +22,54 @@ export async function getWikis(path: string, locales: string[] | undefined = und
             rawUrl: `https://raw.githubusercontent.com/Demon-List-VN/wiki/refs/heads/main/src/${i.locale}/${i.path}`
         };
     });
+}
+
+export async function getWikis(path: string, locales: string[] | undefined = undefined) {
+    const { data: treeItem, error } = await supabase
+        .from('wikiTree')
+        .select('*')
+        .eq('path', path)
+        .single()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    if (treeItem.type == 'file') {
+        return getWikiMetadatas([treeItem.path!], locales)
+    }
+
+    if (treeItem.type == 'folder') {
+        const { data, error } = await supabase
+            .from('wikiTree')
+            .select('*')
+            .like('path', `${path}/%`)
+            .eq('level', treeItem.level! + 1)
+
+        if (error) {
+            throw new Error(error.message)
+        }
+
+        const filePaths = data.filter((x) => x.type == 'file').map((x) => x.path!)
+        const metadatasArray = await getWikiMetadatas(filePaths, locales)
+        const metadatas = new Map<string, typeof metadatasArray>()
+
+        for (const i of metadatasArray) {
+            if (!metadatas.has(i.path)) {
+                metadatas.set(i.path, [])
+            }
+
+            metadatas.get(i.path)?.push(i)
+        }
+
+        return data.map((x) => {
+            if (x.type == 'file') {
+                return { ...x, metadata: metadatas.get(x.path!) };
+            }
+
+            return x;
+        });
+    }
+
+    throw new Error("Not supported file type")
 }
