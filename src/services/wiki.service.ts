@@ -70,6 +70,7 @@ export async function getWikis(
             .select('*')
             .like('path', `${path}/%`)
             .eq('parent', treeItem.path!)
+            .order('type', { ascending: false })
             .order(filter.sortBy, { ascending: filter.ascending })
             .range(filter.offset, filter.offset + filter.limit)
 
