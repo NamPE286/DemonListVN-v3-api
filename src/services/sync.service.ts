@@ -51,7 +51,7 @@ export async function syncWiki(commitId: string) {
                     foundTitle = true
                     continue
                 }
-                
+
                 // Skip image lines
                 if (!imageRegex.test(trimmedLine)) {
                     description = trimmedLine
@@ -70,11 +70,19 @@ export async function syncWiki(commitId: string) {
             }
         }
 
+        let finalDescription = description
+
+        if (finalDescription && finalDescription.length > 150) {
+            const truncated = finalDescription.slice(0, 150)
+            const lastSpace = truncated.lastIndexOf(" ")
+            finalDescription = (lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated) + "..."
+        }
+
         toUpsert.push({
             path,
             locale,
             title,
-            description,
+            description: finalDescription,
             modifiedAt: new Date().toISOString(),
             image: image ?? null
         })

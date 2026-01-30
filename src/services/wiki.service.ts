@@ -90,5 +90,5 @@ export async function getWikis(path: string, locales: string[] | undefined = und
         }
     }
 
-    throw new Error("Not supported file type")
+    throw new Error("File type is not supported")
 }
