@@ -1,4 +1,5 @@
 import supabase from "@src/client/supabase";
+import type { Tables } from "@src/types/supabase";
 
 async function getWikiMetadatas(paths: string[], locales: string[] | undefined = undefined) {
     let query = supabase
@@ -16,21 +17,17 @@ async function getWikiMetadatas(paths: string[], locales: string[] | undefined =
         throw new Error(error.message)
     }
 
-    const result: Record<string, any[]> = {};
-    
+    const result: Record<string, Tables<'wiki'> & { rawUrl: string }> = {};
+
     for (const item of data) {
         const metadata = {
             ...item,
             rawUrl: `https://raw.githubusercontent.com/Demon-List-VN/wiki/refs/heads/main/src/${item.locale}/${item.path}`
         };
-        
-        if (!result[item.locale]) {
-            result[item.locale] = [];
-        }
-        
-        result[item.locale].push(metadata);
+
+        result[item.locale] = metadata;
     }
-    
+
     return result;
 }
 
@@ -65,20 +62,16 @@ export async function getWikis(path: string, locales: string[] | undefined = und
 
         const filePaths = data.filter((x) => x.type == 'file').map((x) => x.path!)
         const metadatasGroupedByLocale = await getWikiMetadatas(filePaths, locales)
-        const metadatas = new Map<string, Record<string, any[]>>()
+        const metadatas = new Map<string, Record<string, Tables<'wiki'> & { rawUrl: string }>>()
 
-        for (const [locale, items] of Object.entries(metadatasGroupedByLocale)) {
-            for (const item of items) {
-                if (!metadatas.has(item.path)) {
-                    metadatas.set(item.path, {})
-                }
-
-                const pathMetadatas = metadatas.get(item.path)!
-                if (!pathMetadatas[locale]) {
-                    pathMetadatas[locale] = []
-                }
-                pathMetadatas[locale].push(item)
+        for (const [locale, item] of Object.entries(metadatasGroupedByLocale)) {
+            if (!metadatas.has(item.path)) {
+                metadatas.set(item.path, {})
             }
+
+            const pathMetadatas = metadatas.get(item.path)!
+
+            pathMetadatas[locale] = item
         }
 
         return {
