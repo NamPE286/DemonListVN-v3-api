@@ -32,7 +32,10 @@ async function getWikiMetadatas(paths: string[], locales: string[] | undefined =
             rawUrl: `https://raw.githubusercontent.com/Demon-List-VN/wiki/refs/heads/main/src/${item.locale}/${item.path}`
         };
 
-        result[item.path] = {}
+        if (result[item.path] === undefined) {
+            result[item.path] = {}
+        }
+
         result[item.path][item.locale] = metadata;
     }
 
