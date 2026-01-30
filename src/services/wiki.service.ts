@@ -69,11 +69,15 @@ export async function getWikis(path: string, locales: string[] | undefined = und
             ...treeItem,
             items: data.map((x) => {
                 if (x.type == 'file') {
+                    if (!metadatas.has(x.path!)) {
+                        return null;
+                    }
+
                     return { ...x, metadatas: metadatas.get(x.path!) };
                 }
 
                 return x;
-            })
+            }).filter(x => x !== null)
         }
     }
 
