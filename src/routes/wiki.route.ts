@@ -12,8 +12,8 @@ router.route('/files/*path')
         const filter: any = {
             sortBy: req.query.sortBy || 'created_at',
             ascending: req.query.ascending || false,
-            offset: req.query.offset || 0,
-            limit: req.query.limit || 10
+            offset: req.query.offset ? Number(req.query.offset) : 0,
+            limit: req.query.limit ? Number(req.query.limit) : 10
         }
 
         res.send(await getWikis(path, locales, filter))
