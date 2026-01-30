@@ -16,12 +16,22 @@ async function getWikiMetadatas(paths: string[], locales: string[] | undefined =
         throw new Error(error.message)
     }
 
-    return data.map(i => {
-        return {
-            ...i,
-            rawUrl: `https://raw.githubusercontent.com/Demon-List-VN/wiki/refs/heads/main/src/${i.locale}/${i.path}`
+    const result: Record<string, any[]> = {};
+    
+    for (const item of data) {
+        const metadata = {
+            ...item,
+            rawUrl: `https://raw.githubusercontent.com/Demon-List-VN/wiki/refs/heads/main/src/${item.locale}/${item.path}`
         };
-    });
+        
+        if (!result[item.locale]) {
+            result[item.locale] = [];
+        }
+        
+        result[item.locale].push(metadata);
+    }
+    
+    return result;
 }
 
 export async function getWikis(path: string, locales: string[] | undefined = undefined) {
@@ -54,15 +64,21 @@ export async function getWikis(path: string, locales: string[] | undefined = und
         }
 
         const filePaths = data.filter((x) => x.type == 'file').map((x) => x.path!)
-        const metadatasArray = await getWikiMetadatas(filePaths, locales)
-        const metadatas = new Map<string, typeof metadatasArray>()
+        const metadatasGroupedByLocale = await getWikiMetadatas(filePaths, locales)
+        const metadatas = new Map<string, Record<string, any[]>>()
 
-        for (const i of metadatasArray) {
-            if (!metadatas.has(i.path)) {
-                metadatas.set(i.path, [])
+        for (const [locale, items] of Object.entries(metadatasGroupedByLocale)) {
+            for (const item of items) {
+                if (!metadatas.has(item.path)) {
+                    metadatas.set(item.path, {})
+                }
+
+                const pathMetadatas = metadatas.get(item.path)!
+                if (!pathMetadatas[locale]) {
+                    pathMetadatas[locale] = []
+                }
+                pathMetadatas[locale].push(item)
             }
-
-            metadatas.get(i.path)?.push(i)
         }
 
         return {
