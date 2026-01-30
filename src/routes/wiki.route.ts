@@ -9,8 +9,14 @@ router.route('/files/*path')
         const locales = req.query.locale?.split(',')
         // @ts-ignore
         const path: string = req.params.path.join('/').replace(/\/+$/, '')
+        const filter: any = {
+            sortBy: req.query.sortBy || 'created_at',
+            ascending: req.query.ascending || false,
+            offset: req.query.offset || 0,
+            limit: req.query.limit || 10
+        }
 
-        res.send(await getWikis(path, locales))
+        res.send(await getWikis(path, locales, filter))
     })
 
 export default router;

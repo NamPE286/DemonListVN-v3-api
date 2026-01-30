@@ -1,6 +1,13 @@
 import supabase from "@src/client/supabase";
 import type { Tables } from "@src/types/supabase";
 
+interface Filter {
+    sortBy: string
+    ascending: boolean
+    offset: number
+    limit: number
+}
+
 async function getWikiMetadatas(paths: string[], locales: string[] | undefined = undefined) {
     let query = supabase
         .from('wiki')
@@ -31,7 +38,15 @@ async function getWikiMetadatas(paths: string[], locales: string[] | undefined =
     return result;
 }
 
-export async function getWikis(path: string, locales: string[] | undefined = undefined) {
+export async function getWikis(
+    path: string,
+    locales: string[] | undefined = undefined,
+    filter: Filter = {
+        sortBy: 'created_at',
+        ascending: false,
+        offset: 0,
+        limit: 10
+    }) {
     const { data: treeItem, error } = await supabase
         .from('wikiTree')
         .select('*')
@@ -54,7 +69,9 @@ export async function getWikis(path: string, locales: string[] | undefined = und
             .from('wikiTree')
             .select('*')
             .like('path', `${path}/%`)
-            .eq('level', treeItem.level! + 1)
+            .eq('parent', treeItem.path!)
+            .order(filter.sortBy, { ascending: filter.ascending })
+            .range(filter.offset, filter.offset + filter.limit)
 
         if (error) {
             throw new Error(error.message)
