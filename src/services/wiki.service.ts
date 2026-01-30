@@ -82,7 +82,7 @@ export async function getWikis(
         }
 
         const filePaths = data.filter((x) => x.type == 'file').map((x) => x.path!)
-        const metadatas = await getWikiMetadatas(filePaths, locales)
+        const metadatas = await getWikiMetadatas(filePaths)
 
         return {
             ...treeItem,
