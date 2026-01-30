@@ -16,8 +16,6 @@ router.route('/files/*path')
             limit: req.query.limit || 10
         }
 
-        console.log(filter)
-
         res.send(await getWikis(path, locales, filter))
     })
 
