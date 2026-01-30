@@ -48,7 +48,7 @@ export async function getWikis(path: string, locales: string[] | undefined = und
     if (treeItem.type == 'file') {
         return {
             ...treeItem,
-            metadatas: await getWikiMetadatas([treeItem.path!], locales)
+            metadata: await getWikiMetadatas([treeItem.path!], locales)
         }
     }
 
@@ -89,7 +89,7 @@ export async function getWikis(path: string, locales: string[] | undefined = und
                         return null;
                     }
 
-                    return { ...x, metadatas: metadatas.get(x.path!) };
+                    return { ...x, metadata: metadatas.get(x.path!) };
                 }
 
                 return x;
