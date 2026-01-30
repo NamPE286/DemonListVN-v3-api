@@ -24,7 +24,7 @@ async function getWikiMetadatas(paths: string[], locales: string[] | undefined =
         throw new Error(error.message)
     }
 
-    const result: Record<string, Tables<'wiki'> & { rawUrl: string }> = {};
+    const result: Record<string, Record<string, Tables<'wiki'> & { rawUrl: string }>> = {};
 
     for (const item of data) {
         const metadata = {
@@ -32,7 +32,8 @@ async function getWikiMetadatas(paths: string[], locales: string[] | undefined =
             rawUrl: `https://raw.githubusercontent.com/Demon-List-VN/wiki/refs/heads/main/src/${item.locale}/${item.path}`
         };
 
-        result[item.locale] = metadata;
+        result[item.path] = {}
+        result[item.path][item.locale] = metadata;
     }
 
     return result;
@@ -68,39 +69,27 @@ export async function getWikis(
         const { data, error } = await supabase
             .from('wikiTree')
             .select('*')
-            .like('path', `${path}/%`)
             .eq('parent', treeItem.path!)
             .order('type', { ascending: false })
             .order(filter.sortBy, { ascending: filter.ascending })
-            .range(filter.offset, filter.offset + filter.limit)
+            .range(filter.offset, filter.offset + filter.limit - 1)
 
         if (error) {
             throw new Error(error.message)
         }
 
         const filePaths = data.filter((x) => x.type == 'file').map((x) => x.path!)
-        const metadatasGroupedByLocale = await getWikiMetadatas(filePaths, locales)
-        const metadatas = new Map<string, Record<string, Tables<'wiki'> & { rawUrl: string }>>()
-
-        for (const [locale, item] of Object.entries(metadatasGroupedByLocale)) {
-            if (!metadatas.has(item.path)) {
-                metadatas.set(item.path, {})
-            }
-
-            const pathMetadatas = metadatas.get(item.path)!
-
-            pathMetadatas[locale] = item
-        }
+        const metadatas = await getWikiMetadatas(filePaths, locales)
 
         return {
             ...treeItem,
             items: data.map((x) => {
                 if (x.type == 'file') {
-                    if (!metadatas.has(x.path!)) {
+                    if (!metadatas[x.path!]) {
                         return null;
                     }
 
-                    return { ...x, metadata: metadatas.get(x.path!) };
+                    return { ...x, metadata: metadatas[x.path!] };
                 }
 
                 return x;
