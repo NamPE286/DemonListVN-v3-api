@@ -659,6 +659,151 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
+    "/battlepass/daily-weekly": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get daily and weekly levels for active season with user progress",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success - Returns daily and weekly level info with progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "daily": {
+                      "type": "object",
+                      "nullable": true
+                    },
+                    "weekly": {
+                      "type": "object",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active season"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/season/{id}/daily-weekly": {
+      "get": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Get daily and weekly levels for a specific season with user progress",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Season ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/level/{levelId}/claim/{claimType}": {
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Claim XP reward for daily/weekly level progress",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "levelId",
+            "in": "path",
+            "description": "Battle Pass Level ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "claimType",
+            "in": "path",
+            "description": "Type of reward to claim",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "minProgress",
+                "completion"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "XP claimed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "xp": {
+                      "type": "integer"
+                    },
+                    "previousXp": {
+                      "type": "integer"
+                    },
+                    "newXp": {
+                      "type": "integer"
+                    },
+                    "previousTier": {
+                      "type": "integer"
+                    },
+                    "newTier": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid claim type or conditions not met"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/battlepass/mappacks/progress": {
       "get": {
         "tags": [
@@ -1687,6 +1832,98 @@ export const swaggerHtml = `<!DOCTYPE html>
           },
           "400": {
             "description": "Invalid refresh type"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/webhook/refresh-levels/daily": {
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Webhook to refresh daily level progress (Cron only)",
+        "description": "Called by cron service to reset all daily level progress. Removes all progress and claims for levels with type='daily'. Should be called daily at 0:00 AM UTC+7.",
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daily level progress refreshed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "refreshed": {
+                      "type": "integer"
+                    },
+                    "levelIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      }
+                    },
+                    "seasonId": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/webhook/refresh-levels/weekly": {
+      "post": {
+        "tags": [
+          "Battle Pass"
+        ],
+        "summary": "Webhook to refresh weekly level progress (Cron only)",
+        "description": "Called by cron service to reset all weekly level progress. Removes all progress and claims for levels with type='weekly'. Should be called on Mondays at 0:00 AM UTC+7.",
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Weekly level progress refreshed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "refreshed": {
+                      "type": "integer"
+                    },
+                    "levelIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      }
+                    },
+                    "seasonId": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized"
@@ -4000,13 +4237,13 @@ export const swaggerHtml = `<!DOCTYPE html>
     },
     "/levels/new": {
       "get": {
-        "summary": "Get new unrated levels",
+        "summary": "Retrieve new levels with null ratings, flTop, and insaneTier.",
         "tags": [
-          "Level"
+          "Levels"
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Successfully retrieved levels.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4016,7 +4253,7 @@ export const swaggerHtml = `<!DOCTYPE html>
             }
           },
           "500": {
-            "description": "Internal server error"
+            "description": "Internal server error."
           }
         }
       }
