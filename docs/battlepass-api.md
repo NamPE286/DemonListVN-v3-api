@@ -271,6 +271,86 @@ Update level progress. This endpoint also:
 }
 ```
 
+### POST `/battlepass/level/:levelId/claim/:claimType` 🔐
+
+Claim XP reward for daily/weekly level progress.
+
+**Path Parameters:**
+- `levelId` (required): Battle Pass Level ID
+- `claimType` (required): Type of reward to claim - either `minProgress` or `completion`
+
+**Response:**
+```json
+{
+  "xp": 500,
+  "previousXp": 2000,
+  "newXp": 2500,
+  "previousTier": 20,
+  "newTier": 25
+}
+```
+
+**Error Responses:**
+- `400`: "Invalid claim type", "Already claimed", or "Conditions not met"
+- `500`: Internal server error
+
+---
+
+## Daily/Weekly Level Endpoints
+
+### GET `/battlepass/daily-weekly` 🔐
+
+Get daily and weekly levels for the active season with user progress.
+
+**Response:**
+```json
+{
+  "daily": {
+    "id": 1,
+    "levelID": 12345678,
+    "xp": 25,
+    "minProgressXp": 10,
+    "minProgress": 50,
+    "type": "daily",
+    "levels": {
+      "id": 12345678,
+      "name": "Daily Level"
+    },
+    "progress": 75,
+    "minProgressClaimed": true,
+    "completionClaimed": false
+  },
+  "weekly": {
+    "id": 2,
+    "levelID": 87654321,
+    "xp": 100,
+    "minProgressXp": 50,
+    "minProgress": 50,
+    "type": "weekly",
+    "levels": {
+      "id": 87654321,
+      "name": "Weekly Demon"
+    },
+    "progress": 30,
+    "minProgressClaimed": false,
+    "completionClaimed": false
+  }
+}
+```
+
+**Notes:**
+- Either `daily` or `weekly` (or both) can be `null` if not configured for the active season
+- `progress`, `minProgressClaimed`, and `completionClaimed` are only included for authenticated users
+
+### GET `/battlepass/season/:id/daily-weekly` 🔐
+
+Get daily and weekly levels for a specific season with user progress.
+
+**Path Parameters:**
+- `id` (required): Season ID
+
+**Response:** Same as above
+
 ---
 
 ## Map Pack Endpoints
@@ -726,6 +806,46 @@ The `getPlayerProgress` endpoint automatically computes `isPremium` from subscri
 
 ---
 
+## Webhook Endpoints (Internal/Cron Only)
+
+These endpoints are called by automated cron services and require special webhook authentication.
+
+### POST `/battlepass/webhook/refresh-levels/daily` 🔑
+
+Webhook to refresh daily level progress (Cron only). This endpoint:
+- Removes all progress and claims for levels with `type='daily'`
+- Should be called daily at 0:00 AM UTC+7
+
+**Response:**
+```json
+{
+  "type": "daily",
+  "refreshed": 42,
+  "levelIds": [1, 2, 3],
+  "seasonId": 1,
+  "timestamp": "2026-01-15T00:00:00.000Z"
+}
+```
+
+### POST `/battlepass/webhook/refresh-levels/weekly` 🔑
+
+Webhook to refresh weekly level progress (Cron only). This endpoint:
+- Removes all progress and claims for levels with `type='weekly'`
+- Should be called on Mondays at 0:00 AM UTC+7
+
+**Response:**
+```json
+{
+  "type": "weekly",
+  "refreshed": 15,
+  "levelIds": [4, 5],
+  "seasonId": 1,
+  "timestamp": "2026-01-15T00:00:00.000Z"
+}
+```
+
+---
+
 ## Workflow Examples
 
 ### User Progressing Through Battle Pass
@@ -770,6 +890,10 @@ The `getPlayerProgress` endpoint automatically computes `isPremium` from subscri
 |--------|-----------|
 | Battle Pass Level (complete) | 1000 XP |
 | Battle Pass Level (min progress) | 500 XP |
+| Daily Level (complete) | 25 XP |
+| Daily Level (min progress) | 10 XP |
+| Weekly Level (complete) | 100 XP |
+| Weekly Level (min progress) | 50 XP |
 | Map Pack (Harder or easier) | 200 XP |
 | Map Pack (Medium Demon) | 500 XP |
 | Map Pack (Insane Demon) | 1000 XP |
