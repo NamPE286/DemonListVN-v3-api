@@ -424,7 +424,6 @@ router.route('/cl')
      *         required: false
      *         schema:
      *           type: string
-     *           default: false
      *       - name: topStart
      *         in: query
      *         description: Minimum dlTop position to filter
