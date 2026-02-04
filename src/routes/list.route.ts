@@ -1,6 +1,6 @@
 import express from "express";
-import { getDemonListLevels, getFeaturedListLevels, getPlatformerListLevels } from '@src/services/level.service'
-import { getDemonListRecords, getFeaturedListRecords } from "@src/services/record.service";
+import { getDemonListLevels, getFeaturedListLevels, getPlatformerListLevels, getChallengeListLevels } from '@src/services/level.service'
+import { getDemonListRecords, getFeaturedListRecords, getChallengeListRecords } from "@src/services/record.service";
 import supabase from "@src/client/supabase";
 
 const router = express.Router()
@@ -381,15 +381,165 @@ router.route('/fl/records')
         }
     })
 
+router.route('/cl')
+    /**
+     * @openapi
+     * "/list/cl":
+     *   get:
+     *     tags:
+     *       - List
+     *     summary: Get all levels of the Challenge List
+     *     parameters:
+     *       - name: start
+     *         in: query
+     *         description: Range start index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 0
+     *       - name: end
+     *         in: query
+     *         description: Range end index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 50
+     *       - name: sortBy
+     *         in: query
+     *         description: Property of level to sort by
+     *         required: false
+     *         schema:
+     *           type: string
+     *           default: dlTop
+     *       - name: ascending
+     *         in: query
+     *         description: Sort ascending
+     *         required: false
+     *         schema:
+     *           type: boolean
+     *           default: false
+     *       - name: uid
+     *         in: query
+     *         description: Progress of player
+     *         required: false
+     *         schema:
+     *           type: string
+     *           default: false
+     *       - name: topStart
+     *         in: query
+     *         description: Minimum dlTop position to filter
+     *         required: false
+     *         schema:
+     *           type: number
+     *       - name: topEnd
+     *         in: query
+     *         description: Maximum dlTop position to filter
+     *         required: false
+     *         schema:
+     *           type: number
+     *       - name: ratingMin
+     *         in: query
+     *         description: Minimum rating to filter
+     *         required: false
+     *         schema:
+     *           type: number
+     *       - name: ratingMax
+     *         in: query
+     *         description: Maximum rating to filter
+     *         required: false
+     *         schema:
+     *           type: number
+     *       - name: nameSearch
+     *         in: query
+     *         description: Search levels by name (case insensitive)
+     *         required: false
+     *         schema:
+     *           type: string
+     *       - name: creatorSearch
+     *         in: query
+     *         description: Search levels by creator name (case insensitive)
+     *         required: false
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
+    .get(async (req, res) => {
+        try {
+            res.send(await getChallengeListLevels(req.query))
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+router.route('/cl/records')
+    /**
+     * @openapi
+     * "/list/cl/records":
+     *   get:
+     *     tags:
+     *       - List
+     *     summary: Get all records of the Challenge List
+     *     parameters:
+     *       - name: start
+     *         in: query
+     *         description: Range start index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 0
+     *       - name: end
+     *         in: query
+     *         description: Range end index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 50
+     *       - name: isChecked
+     *         in: query
+     *         description: Record acception status
+     *         required: false
+     *         schema:
+     *           type: boolean
+     *           default: true
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
+    .get(async (req, res) => {
+        try {
+            res.send(await getChallengeListRecords(req.query))
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
 async function getIDBound(list: string, min: boolean) {
-    const { data, error } = await supabase
+    let query = supabase
         .from('levels')
         .select('id')
         .order('id', { ascending: min })
         .not(list == 'fl' ? 'flTop' : 'dlTop', 'is', null)
-        .eq('isPlatformer', list == 'pl')
         .limit(1)
-        .single()
+
+    if (list == 'cl') {
+        query = query.eq('isChallenge', true)
+    } else if (list == 'pl') {
+        query = query.eq('isPlatformer', true).eq('isChallenge', false)
+    } else if (list == 'dl') {
+        query = query.eq('isPlatformer', false).eq('isChallenge', false)
+    }
+
+    const { data, error } = await query.single()
 
     if (error) {
         throw new Error(error.message)
@@ -408,11 +558,11 @@ async function getIDBound(list: string, min: boolean) {
  *     parameters:
  *       - name: list
  *         in: path
- *         description: List type (dl, pl, or fl)
+ *         description: List type (dl, pl, fl, or cl)
  *         required: true
  *         schema:
  *           type: string
- *           enum: [dl, pl, fl]
+ *           enum: [dl, pl, fl, cl]
  *       - name: exclude
  *         in: query
  *         description: Level IDs to exclude
@@ -435,16 +585,24 @@ router.route('/:list/random')
         const minID = await getIDBound(String(list), true) - 1000000
         const random = Math.floor(Math.random() * (maxID - minID + 1)) + minID
 
-        var { data, error } = await supabase
+        let query = supabase
             .from('levels')
             .select('*')
             .not(list == 'fl' ? 'flTop' : 'dlTop', 'is', null)
-            .eq('isPlatformer', list == 'pl')
             .not('id', 'in', exclude ? exclude : '()')
             .order('id', { ascending: true })
             .gte('id', random)
             .limit(1)
-            .single()
+
+        if (list == 'cl') {
+            query = query.eq('isChallenge', true)
+        } else if (list == 'pl') {
+            query = query.eq('isPlatformer', true).eq('isChallenge', false)
+        } else if (list == 'dl') {
+            query = query.eq('isPlatformer', false).eq('isChallenge', false)
+        }
+
+        var { data, error } = await query.single()
 
         res.send(data)
     })
