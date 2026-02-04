@@ -1571,6 +1571,7 @@ export type Database = {
           flTop: number | null
           id: number
           insaneTier: number | null
+          isChallenge: boolean
           isNonList: boolean
           isPlatformer: boolean
           minProgress: number | null
@@ -1588,6 +1589,7 @@ export type Database = {
           flTop?: number | null
           id: number
           insaneTier?: number | null
+          isChallenge?: boolean
           isNonList?: boolean
           isPlatformer?: boolean
           minProgress?: number | null
@@ -1605,6 +1607,7 @@ export type Database = {
           flTop?: number | null
           id?: number
           insaneTier?: number | null
+          isChallenge?: boolean
           isNonList?: boolean
           isPlatformer?: boolean
           minProgress?: number | null
@@ -1613,6 +1616,45 @@ export type Database = {
           videoID?: string | null
         }
         Relationships: []
+      }
+      levelSubmissions: {
+        Row: {
+          accepted: boolean
+          comment: string | null
+          created_at: string
+          levelId: number
+          userId: string
+        }
+        Insert: {
+          accepted?: boolean
+          comment?: string | null
+          created_at?: string
+          levelId: number
+          userId: string
+        }
+        Update: {
+          accepted?: boolean
+          comment?: string | null
+          created_at?: string
+          levelId?: number
+          userId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "levelSubmissions_levelId_fkey"
+            columns: ["levelId"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "levelSubmissions_userId_fkey"
+            columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
       }
       mapPackLevels: {
         Row: {
@@ -1899,6 +1941,8 @@ export type Database = {
           borderColor: string | null
           city: string | null
           clan: number | null
+          clrank: number | null
+          clRating: number | null
           discord: string | null
           DiscordDMChannelID: string | null
           dlMaxPt: number | null
@@ -1943,6 +1987,8 @@ export type Database = {
           borderColor?: string | null
           city?: string | null
           clan?: number | null
+          clrank?: number | null
+          clRating?: number | null
           discord?: string | null
           DiscordDMChannelID?: string | null
           dlMaxPt?: number | null
@@ -1987,6 +2033,8 @@ export type Database = {
           borderColor?: string | null
           city?: string | null
           clan?: number | null
+          clrank?: number | null
+          clRating?: number | null
           discord?: string | null
           DiscordDMChannelID?: string | null
           dlMaxPt?: number | null
@@ -2230,6 +2278,7 @@ export type Database = {
       }
       records: {
         Row: {
+          clPt: number | null
           comment: string | null
           dlPt: number | null
           flPt: number | null
@@ -2252,6 +2301,7 @@ export type Database = {
           videoLink: string | null
         }
         Insert: {
+          clPt?: number | null
           comment?: string | null
           dlPt?: number | null
           flPt?: number | null
@@ -2274,6 +2324,7 @@ export type Database = {
           videoLink?: string | null
         }
         Update: {
+          clPt?: number | null
           comment?: string | null
           dlPt?: number | null
           flPt?: number | null
@@ -2436,6 +2487,8 @@ export type Database = {
     Views: {
       wikiTree: {
         Row: {
+          count: number | null
+          created_at: string | null
           level: number | null
           parent: string | null
           path: string | null
@@ -2472,6 +2525,7 @@ export type Database = {
           flTop: number | null
           id: number
           insaneTier: number | null
+          isChallenge: boolean
           isNonList: boolean
           isPlatformer: boolean
           minProgress: number | null
