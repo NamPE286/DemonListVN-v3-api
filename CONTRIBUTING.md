@@ -1,5 +1,5 @@
 # Resources
-- [Geometry Dash VN Discord server](https://discord.gg/MnGVdtjq49)
+- [Geometry Dash VN Discord server](https://discord.gg/gdvn)
 
 # Contribution Terms and Conditions
 
