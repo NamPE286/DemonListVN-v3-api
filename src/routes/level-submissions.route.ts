@@ -117,15 +117,6 @@ router.route('/')
             // Fetch level from GD if not exists
             const apiLevel = await fetchLevelFromGD(levelId)
 
-            // Check if it's a challenge level (length == 5 means platformer, we want short levels)
-            if (apiLevel.length != 5 && apiLevel.difficulty != 'Extreme Demon' && apiLevel.difficulty != 'Insane Demon') {
-                res.status(400).send({
-                    en: 'Level must be an Extreme or Insane Demon challenge',
-                    vi: 'Level phải là Extreme hoặc Insane Demon challenge'
-                })
-                return
-            }
-
             // Create or update the level with isNonList = true
             if (!existingLevel) {
                 await updateLevel({
