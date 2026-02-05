@@ -265,6 +265,7 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
         .select('*, creatorData:players!creatorId(*)')
         .not('dlTop', 'is', null)
         .eq('isChallenge', true)
+        .eq('isNonList', false)
 
     // Apply filters
     if (topStart !== null && topStart !== '') {
