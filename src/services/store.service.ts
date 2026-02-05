@@ -360,8 +360,12 @@ export async function renewStock(order: Awaited<ReturnType<typeof getOrder>>) {
 
 
 
-export async function handlePayment(id: number , sepayOrderData: SepayWebhookOrder) {
+export async function handlePayment(id: number, sepayOrderData: SepayWebhookOrder) {
     const order = await getOrder(id);
+
+    if (order.delivered) {
+        return;
+    }
 
     if (order.state == 'CANCELLED') {
         await sepay.order.cancel(String(id))
