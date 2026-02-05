@@ -22,7 +22,7 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
 
     let query = supabase
         .from('levels')
-        .select('*')
+        .select('*, creatorData:players!creatorId(*)')
         .not('dlTop', 'is', null)
         .eq('isPlatformer', false)
         .eq('isChallenge', false)
@@ -102,7 +102,7 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
 
     let query = supabase
         .from('levels')
-        .select('*')
+        .select('*, creatorData:players!creatorId(*)')
         .not('dlTop', 'is', null)
         .eq('isPlatformer', true)
         .eq('isChallenge', false)
@@ -182,7 +182,7 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
 
     let query = supabase
         .from('levels')
-        .select('*')
+        .select('*, creatorData:players!creatorId(*)')
         .not('flTop', 'is', null)
 
     // Apply filters
@@ -262,7 +262,7 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
 
     let query = supabase
         .from('levels')
-        .select('*')
+        .select('*, creatorData:players!creatorId(*)')
         .not('dlTop', 'is', null)
         .eq('isChallenge', true)
 
