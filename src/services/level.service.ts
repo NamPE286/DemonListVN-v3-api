@@ -265,7 +265,7 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*)')
+        .select('*, creatorData:players!creatorId(*, clans!id(*))')
         .not('dlTop', 'is', null)
         .eq('isChallenge', true)
         .eq('isNonList', false)
