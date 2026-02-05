@@ -69,13 +69,16 @@ router.route('/')
      *                 type: number
      *               comment:
      *                 type: string
+     *               videoID:
+     *                 type: string
+     *                 description: YouTube video ID extracted from the video link
      *     responses:
      *       200:
      *         description: Success
      */
     .post(userAuth, async (req, res) => {
         const { user } = res.locals
-        const { levelId, comment } = req.body
+        const { levelId, comment, videoID } = req.body
 
         if (!levelId) {
             res.status(400).send({ message: 'Missing levelId' })
@@ -126,8 +129,15 @@ router.route('/')
                     isPlatformer: apiLevel.length == 5,
                     isChallenge: true,
                     isNonList: true,
-                    creatorId: user.uid
+                    creatorId: user.uid,
+                    videoID: videoID || null
                 })
+            } else if (videoID) {
+                // Update videoID if level exists but videoID is provided
+                await supabase
+                    .from('levels')
+                    .update({ videoID: videoID })
+                    .eq('id', levelId)
             }
 
             // Insert level submission
