@@ -1565,6 +1565,7 @@ export type Database = {
           accepted: boolean
           created_at: string
           creator: string | null
+          creatorId: string | null
           difficulty: string | null
           dlTop: number | null
           flPt: number | null
@@ -1583,6 +1584,7 @@ export type Database = {
           accepted?: boolean
           created_at?: string
           creator?: string | null
+          creatorId?: string | null
           difficulty?: string | null
           dlTop?: number | null
           flPt?: number | null
@@ -1601,6 +1603,7 @@ export type Database = {
           accepted?: boolean
           created_at?: string
           creator?: string | null
+          creatorId?: string | null
           difficulty?: string | null
           dlTop?: number | null
           flPt?: number | null
@@ -1615,7 +1618,15 @@ export type Database = {
           rating?: number | null
           videoID?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "levels_creatorId_fkey"
+            columns: ["creatorId"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
       }
       levelSubmissions: {
         Row: {
@@ -2519,6 +2530,7 @@ export type Database = {
           accepted: boolean
           created_at: string
           creator: string | null
+          creatorId: string | null
           difficulty: string | null
           dlTop: number | null
           flPt: number | null
