@@ -27,7 +27,7 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
         .eq('isPlatformer', false)
         .eq('isChallenge', false)
         .eq('isNonList', false)
-        
+
     // Apply filters
     if (topStart !== null && topStart !== '') {
         query = query.gte('dlTop', topStart)
@@ -424,6 +424,11 @@ export async function refreshLevel() {
         { gd: dailyLevel, isDaily: true, isWeekly: false },
         { gd: weeklyLevel, isDaily: false, isWeekly: true }
     ]
+
+    await supabase
+        .from('levelGDStates')
+        .update({ isDaily: false, isWeekly: false })
+        .gte('levelId', 0)
 
     for (const p of pairs) {
         const id = p.gd.id
