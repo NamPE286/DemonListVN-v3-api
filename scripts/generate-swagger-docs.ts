@@ -10,7 +10,7 @@ const options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Demon List VN v3 REST API Docs",
+      title: "Geometry Dash VN v3 REST API Docs",
       version: version
     },
     components: {
@@ -41,7 +41,7 @@ const html = `<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demon List VN v3 REST API Docs</title>
+    <title>Geometry Dash VN v3 REST API Docs</title>
     <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui.css">
     <style>
         body {
