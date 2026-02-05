@@ -22,7 +22,7 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*)')
+        .select('*, creatorData:players!creatorId(*, clans!id(*))')
         .not('dlTop', 'is', null)
         .eq('isPlatformer', false)
         .eq('isChallenge', false)
@@ -103,7 +103,7 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*)')
+        .select('*, creatorData:players!creatorId(*, clans!id(*))')
         .not('dlTop', 'is', null)
         .eq('isPlatformer', true)
         .eq('isChallenge', false)
@@ -184,7 +184,7 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*)')
+        .select('*, creatorData:players!creatorId(*, clans!id(*))')
         .not('flTop', 'is', null)
         .eq('isNonList', false)
 
@@ -341,7 +341,7 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
 export async function getLevel(levelId: number): Promise<TLevel> {
     const { data, error } = await supabase
         .from('levels')
-        .select('*')
+        .select('*, creatorData:players!creatorId(*, clans!id(*))')
         .eq('id', levelId)
         .single()
 
@@ -392,7 +392,7 @@ export async function deleteLevel(levelId: number): Promise<void> {
 export async function retrieveOrCreateLevel(payload: TablesInsert<'levels'>): Promise<TLevel> {
     const sel = await supabase
         .from('levels')
-        .select('*')
+        .select('*, creatorData:players!creatorId(*, clans!id(*))')
         .eq('id', payload.id)
         .maybeSingle()
 
