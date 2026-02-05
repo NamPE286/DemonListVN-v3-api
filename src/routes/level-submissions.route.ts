@@ -189,6 +189,7 @@ router.route('/user/:userId')
                 .from('levelSubmissions')
                 .select('*, levels(*)')
                 .eq('userId', userId)
+                .eq('accepted', false)
                 .order('created_at', { ascending: false })
 
             if (error) {
