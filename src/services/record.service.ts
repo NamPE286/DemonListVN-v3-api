@@ -60,6 +60,26 @@ export async function getFeaturedListRecords({ start = 0, end = 0, isChecked = f
     return data
 }
 
+export async function getChallengeListRecords({ start = 0, end = 0, isChecked = false } = {}) {
+    if (typeof isChecked == 'string') {
+        isChecked = (isChecked == 'true')
+    }
+
+    const { data, error } = await supabase
+        .from('records')
+        .select('*')
+        .match({ isChecked: isChecked })
+        .not('clPt', 'is', null)
+        .order('timestamp', { ascending: true })
+        .range(start, end)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}
+
 export async function getPlayerRecordRating(uid: string) {
     const { data, error } = await supabase
         .from('records')
@@ -88,6 +108,7 @@ export async function getPlayerRecords(uid: string, { start = '0', end = '50', s
         .eq('userid', uid)
         .eq('isChecked', isChecked == 'true')
         .eq('levels.isPlatformer', false)
+        .eq('levels.isChallenge', false)
     let query1 = supabase
         .from('records')
         .select('*, levels!inner(*)')
@@ -99,6 +120,13 @@ export async function getPlayerRecords(uid: string, { start = '0', end = '50', s
         .eq('userid', uid)
         .eq('isChecked', isChecked == 'true')
         .eq('levels.isPlatformer', true)
+        .eq('levels.isChallenge', false)
+    let query3 = supabase
+        .from('records')
+        .select('*, levels!inner(*)')
+        .eq('userid', uid)
+        .eq('isChecked', isChecked == 'true')
+        .eq('levels.isChallenge', true)
 
     if (sortBy == 'pt') {
         query = query
@@ -116,11 +144,17 @@ export async function getPlayerRecords(uid: string, { start = '0', end = '50', s
             .order('timestamp', { ascending: false })
             .not('levels.rating', 'is', null)
             .range(parseInt(start), parseInt(end))
+        query3 = query3
+            .order('clPt', { ascending: ascending == 'true' })
+            .order('timestamp', { ascending: false })
+            .not('levels.rating', 'is', null)
+            .range(parseInt(start), parseInt(end))
 
         return {
             dl: (await query).data,
             fl: (await query1).data,
-            pl: (await query2).data
+            pl: (await query2).data,
+            cl: (await query3).data
         }
     }
 
@@ -136,11 +170,16 @@ export async function getPlayerRecords(uid: string, { start = '0', end = '50', s
         .order(sortBy, { ascending: ascending == 'true' })
         .not('levels.plRating', 'is', null)
         .range(parseInt(start), parseInt(end))
+    query3 = query3
+        .order(sortBy, { ascending: ascending == 'true' })
+        .not('levels.rating', 'is', null)
+        .range(parseInt(start), parseInt(end))
 
     return {
         dl: (await query).data,
         fl: (await query1).data,
-        pl: (await query2).data
+        pl: (await query2).data,
+        cl: (await query3).data
     }
 }
 

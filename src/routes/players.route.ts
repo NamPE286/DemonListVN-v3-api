@@ -63,7 +63,7 @@ router.route('/')
     })
     /**
      * @openapi
-     * "/player":
+     * "/players":
      *   put:
      *     tags:
      *       - Player
@@ -173,7 +173,7 @@ router.route('/batch')
 router.route('/:uid')
     /**
      * @openapi
-     * "/player/{uid}":
+     * "/players/{uid}":
      *   get:
      *     tags:
      *       - Player
@@ -211,7 +211,7 @@ router.route('/:uid')
 router.route('/:uid/records')
     /**
      * @openapi
-     * "/player/{uid}/records":
+     * "/players/{uid}/records":
      *   get:
      *     tags:
      *       - Player
@@ -267,7 +267,7 @@ router.route('/:uid/records')
 router.route('/:uid/heatmap/:year')
     /**
      * @openapi
-     * "/player/{uid}/heatmap":
+     * "/players/{uid}/heatmap/{year}":
      *   get:
      *     tags:
      *       - Player
@@ -300,7 +300,7 @@ router.route('/:uid/heatmap/:year')
 router.route('/heatmap/:count')
     /**
      * @openapi
-     * "/player/heatmap/{count}":
+     * "/players/heatmap/{count}":
      *   post:
      *     tags:
      *       - Player
@@ -329,7 +329,7 @@ router.route('/heatmap/:count')
 router.route('/:uid/submissions')
     /**
      * @openapi
-     * "/{uid}/submissions":
+     * "/players/{uid}/submissions":
      *   get:
      *     tags:
      *       - Player
@@ -358,7 +358,7 @@ router.route('/:uid/submissions')
 router.route('/syncRole')
     /**
      * @openapi
-     * "/player/syncRole":
+     * "/players/syncRole":
      *   patch:
      *     tags:
      *       - Player
@@ -386,7 +386,7 @@ router.route('/syncRole')
 router.route('/:id/medals')
     /**
      * @openapi
-     * "/{uid}/medals":
+     * "/players/{uid}/medals":
      *   get:
      *     tags:
      *       - Player

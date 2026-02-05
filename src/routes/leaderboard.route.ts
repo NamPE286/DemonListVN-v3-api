@@ -1,5 +1,5 @@
 import express from 'express'
-import { getDemonListLeaderboard, getFeaturedListLeaderboard, getPlatformerListLeaderboard } from '@src/services/player.service'
+import { getDemonListLeaderboard, getFeaturedListLeaderboard, getPlatformerListLeaderboard, getChallengeListLeaderboard } from '@src/services/player.service'
 
 const router = express.Router()
 
@@ -115,7 +115,7 @@ router.route('/fl')
 router.route('/pl')
     /**
      * @openapi
-     * "/leaderboard/fl":
+     * "/leaderboard/pl":
      *   get:
      *     tags:
      *       - Leaderboard
@@ -137,11 +137,11 @@ router.route('/pl')
      *           default: 50
      *       - name: sortBy
      *         in: query
-     *         description: Property of level to sort by
+     *         description: Property of player to sort by
      *         required: false
      *         schema:
      *           type: string
-     *           default: flrank
+     *           default: plrank
      *       - name: ascending
      *         in: query
      *         description: Sort ascending
@@ -159,6 +159,58 @@ router.route('/pl')
     .get(async (req, res) => {
         try {
             res.send(await getPlatformerListLeaderboard(req.query))
+        } catch (err) {
+            res.status(500).send()
+        }
+    })
+
+router.route('/cl')
+    /**
+     * @openapi
+     * "/leaderboard/cl":
+     *   get:
+     *     tags:
+     *       - Leaderboard
+     *     summary: Get leaderboard of Challenge List
+     *     parameters:
+     *       - name: start
+     *         in: query
+     *         description: Range start index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 0
+     *       - name: end
+     *         in: query
+     *         description: Range end index
+     *         required: false
+     *         schema:
+     *           type: number
+     *           default: 50
+     *       - name: sortBy
+     *         in: query
+     *         description: Property of player to sort by
+     *         required: false
+     *         schema:
+     *           type: string
+     *           default: clrank
+     *       - name: ascending
+     *         in: query
+     *         description: Sort ascending
+     *         required: false
+     *         schema:
+     *           type: boolean
+     *           default: false
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     */
+    .get(async (req, res) => {
+        try {
+            res.send(await getChallengeListLeaderboard(req.query))
         } catch (err) {
             res.status(500).send()
         }
