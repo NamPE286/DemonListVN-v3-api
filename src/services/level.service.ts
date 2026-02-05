@@ -26,7 +26,8 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
         .not('dlTop', 'is', null)
         .eq('isPlatformer', false)
         .eq('isChallenge', false)
-
+        .eq('isNonList', false)
+        
     // Apply filters
     if (topStart !== null && topStart !== '') {
         query = query.gte('dlTop', topStart)
@@ -106,6 +107,7 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
         .not('dlTop', 'is', null)
         .eq('isPlatformer', true)
         .eq('isChallenge', false)
+        .eq('isNonList', false)
 
     // Apply filters
     if (topStart !== null && topStart !== '') {
@@ -184,6 +186,7 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
         .from('levels')
         .select('*, creatorData:players!creatorId(*)')
         .not('flTop', 'is', null)
+        .eq('isNonList', false)
 
     // Apply filters
     if (topStart !== null && topStart !== '') {
