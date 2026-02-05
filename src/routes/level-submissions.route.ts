@@ -164,6 +164,47 @@ router.route('/')
 
 /**
  * @openapi
+ * /level-submissions/user/{userId}:
+ *   get:
+ *     tags:
+ *       - Level Submissions
+ *     summary: Get level submissions by user
+ *     parameters:
+ *       - name: userId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ */
+router.route('/user/:userId')
+    .get(async (req, res) => {
+        const { userId } = req.params
+
+        try {
+            const { data, error } = await supabase
+                .from('levelSubmissions')
+                .select('*, levels(*)')
+                .eq('userId', userId)
+                .order('created_at', { ascending: false })
+
+            if (error) {
+                console.error(error)
+                res.status(500).send({ message: error.message })
+                return
+            }
+
+            res.send(data)
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message || 'An error occurred' })
+        }
+    })
+
+/**
+ * @openapi
  * /level-submissions/{userId}/{levelId}:
  *   delete:
  *     tags:
