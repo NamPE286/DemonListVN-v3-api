@@ -494,4 +494,46 @@ router.route('/:uid/cards')
         res.send(data)
     })
 
+/**
+ * @openapi
+ * "/players/{uid}/created-challenges":
+ *   get:
+ *     tags:
+ *       - Player
+ *     summary: Get challenges created by a player
+ *     parameters:
+ *       - name: uid
+ *         in: path
+ *         description: The UID of the player
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/:uid/created-challenges')
+    .get(async (req, res) => {
+        const { uid } = req.params
+        const { data, error } = await supabase
+            .from('levels')
+            .select('*')
+            .eq('creatorId', uid)
+            .eq('isChallenge', true)
+            .order('dlTop', { ascending: true })
+
+        if (error) {
+            console.error(error);
+            res.status(500).send()
+            return;
+        }
+
+        res.send(data)
+    })
+
 export default router
