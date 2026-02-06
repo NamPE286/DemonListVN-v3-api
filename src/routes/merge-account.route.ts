@@ -37,7 +37,27 @@ router.route('/:a/:b')
             .update({ userid: b })
             .eq('userid', a)
 
-        if(error) {
+        if (error) {
+            res.status(500).send(error)
+            return
+        }
+
+        var { error } = await supabase
+            .from('levels')
+            .update({ creatorId: b })
+            .match({ creatorId: a })
+
+        if (error) {
+            res.status(500).send(error)
+            return
+        }
+
+        var { error } = await supabase
+            .from('levelSubmissions')
+            .update({ userId: b })
+            .match({ userId: a })
+
+        if (error) {
             res.status(500).send(error)
             return
         }
@@ -47,7 +67,7 @@ router.route('/:a/:b')
             .delete()
             .match({ uid: a })
 
-        if(error) {
+        if (error) {
             res.status(500).send(error)
             return
         }
