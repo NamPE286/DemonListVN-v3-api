@@ -129,20 +129,39 @@ router.route('/posts')
      *         description: Unauthorized
      */
     .post(userAuth, async (req, res) => {
-        const { title, content, type, image_url, video_url, attached_record, attached_level } = req.body
+        const { title, content, type, image_url, video_url, attached_record, attached_level, is_recommended } = req.body
 
         if (!title || !content) {
             res.status(400).json({ error: 'Title and content are required' })
             return
         }
 
-        const validTypes = ['discussion', 'media', 'guide', 'announcement']
+        const validTypes = ['discussion', 'media', 'guide', 'announcement', 'review']
         const postType = validTypes.includes(type) ? type : 'discussion'
 
         // Only admins can create announcements
         if (postType === 'announcement' && !res.locals.user.isAdmin) {
             res.status(403).json({ error: 'Only admins can create announcements' })
             return
+        }
+
+        // Review posts must have an attached level and user must have an accepted record for it
+        if (postType === 'review') {
+            if (!attached_level || !attached_level.id) {
+                res.status(400).json({ error: 'Review posts must have an attached level' })
+                return
+            }
+            if (typeof is_recommended !== 'boolean') {
+                res.status(400).json({ error: 'Review posts must specify recommendation' })
+                return
+            }
+            // Verify user has an accepted record for this level
+            const userRecords = await getUserRecordsForPicker(res.locals.user.uid)
+            const hasRecord = userRecords.some((r: any) => r.levelid === attached_level.id)
+            if (!hasRecord) {
+                res.status(403).json({ error: 'You must have an accepted record for this level to write a review' })
+                return
+            }
         }
 
         const post = await createCommunityPost({
@@ -153,7 +172,8 @@ router.route('/posts')
             image_url,
             video_url,
             attached_record: attached_record || undefined,
-            attached_level: attached_level || undefined
+            attached_level: attached_level || undefined,
+            is_recommended: postType === 'review' ? is_recommended : undefined
         })
 
         // Send Discord notification for new posts
@@ -162,7 +182,8 @@ router.route('/posts')
                 discussion: '💬',
                 media: '📸',
                 guide: '📖',
-                announcement: '📢'
+                announcement: '📢',
+                review: '⭐'
             }
             const emoji = typeEmoji[postType] || '💬'
             const playerName = post.players?.name || 'Someone'

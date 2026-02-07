@@ -93,7 +93,8 @@ export async function createCommunityPost(post: {
     image_url?: string,
     video_url?: string,
     attached_record?: any,
-    attached_level?: any
+    attached_level?: any,
+    is_recommended?: boolean
 }) {
     const playerSelect = 'uid, name, isAvatarGif, supporterUntil, avatarVersion, isTrusted, exp, extraExp, clan, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
@@ -118,7 +119,8 @@ export async function updateCommunityPost(id: number, updates: {
     video_url?: string,
     pinned?: boolean,
     attached_record?: any,
-    attached_level?: any
+    attached_level?: any,
+    is_recommended?: boolean
 }) {
     const playerSelect = 'uid, name, isAvatarGif, supporterUntil, avatarVersion, isTrusted, exp, extraExp, clan, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
