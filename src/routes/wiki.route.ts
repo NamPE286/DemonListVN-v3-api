@@ -1,7 +1,16 @@
-import { getWikis } from '@src/services/wiki.service'
+import { getWikis, getLatestWikiFiles } from '@src/services/wiki.service'
 import express from 'express'
 
 const router = express.Router()
+
+router.route('/latest')
+    .get(async (req, res) => {
+        // @ts-ignore
+        const locales = req.query.locale?.split(',')
+        const limit = req.query.limit ? Number(req.query.limit) : 8
+
+        res.send(await getLatestWikiFiles(locales, limit))
+    })
 
 router.route('/files/*path')
     .get(async (req, res) => {

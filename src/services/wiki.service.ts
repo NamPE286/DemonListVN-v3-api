@@ -102,3 +102,29 @@ export async function getWikis(
 
     throw new Error("File type is not supported")
 }
+
+export async function getLatestWikiFiles(
+    locales: string[] | undefined = undefined,
+    limit: number = 8
+) {
+    const { data, error } = await supabase
+        .from('wikiTree')
+        .select('*')
+        .eq('type', 'file')
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    const filePaths = data.map((x) => x.path!)
+    const metadatas = filePaths.length ? await getWikiMetadatas(filePaths, locales) : {}
+
+    return data
+        .map((x) => {
+            if (!metadatas[x.path!]) return null
+            return { ...x, metadata: metadatas[x.path!] }
+        })
+        .filter((x) => x !== null)
+}
