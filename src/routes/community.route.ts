@@ -2,38 +2,53 @@ import express from 'express'
 import userAuth from '@src/middleware/user-auth.middleware'
 import optionalAuth from '@src/middleware/optional-user-auth.middleware'
 import adminAuth from '@src/middleware/admin-auth.middleware'
-import logger from '@src/utils/logger'
-import { FRONTEND_URL } from '@src/config/url'
-import { fetchLevelFromGD, retrieveOrCreateLevel } from '@src/services/level.service'
 import {
-    getCommunityPosts,
-    getCommunityPostsCount,
-    getCommunityPost,
-    createCommunityPost,
-    updateCommunityPost,
-    deleteCommunityPost,
-    getPostComments,
-    createComment,
-    deleteComment,
-    getComment,
+    getPostsWithLikeStatus,
+    getPostWithLikeStatus,
+    createPostFull,
+    updatePostAsUser,
+    deletePostAsUser,
+    togglePostPin,
     togglePostLike,
+    getCommentsWithLikeStatus,
+    createCommentFull,
+    deleteCommentAsUser,
     toggleCommentLike,
-    getUserLikes,
-    getUserCommentLikes,
-    createReport,
-    getReports,
-    getReportsCount,
-    resolveReport,
+    reportContent,
     getUserRecordsForPicker,
     getLevelsForPicker,
     searchPlayers,
-    getPostsByLevel,
-    toggleHidden
+    getPostsByLevelWithLikeStatus,
+    getCommunityPosts,
+    getCommunityPostsCount,
+    deleteCommunityPost,
+    adminUpdatePost,
+    getReports,
+    getReportsCount,
+    resolveReport,
+    toggleHidden,
+    ValidationError,
+    ForbiddenError,
+    NotFoundError,
+    ConflictError,
 } from '@src/services/community.service'
-import { sendNotification } from '@src/services/notification.service'
-import { sendMessageToChannel } from '@src/services/discord.service'
 
 const router = express.Router()
+
+/** Map service errors to HTTP status codes */
+function handleServiceError(res: express.Response, e: unknown) {
+    if (e instanceof ValidationError) {
+        res.status(400).json({ error: e.message })
+    } else if (e instanceof ForbiddenError) {
+        res.status(403).json({ error: e.message })
+    } else if (e instanceof NotFoundError) {
+        res.status(404).json({ error: e.message })
+    } else if (e instanceof ConflictError) {
+        res.status(409).json({ error: e.message })
+    } else {
+        throw e
+    }
+}
 
 router.route('/posts')
     /**
@@ -80,24 +95,14 @@ router.route('/posts')
         const sortBy = (req.query.sortBy as string) || 'created_at'
         const ascending = req.query.ascending === 'true'
         const search = req.query.search as string | undefined
+        const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
 
-        const [posts, total] = await Promise.all([
-            getCommunityPosts({ type, limit, offset, sortBy, ascending, search }),
-            getCommunityPostsCount(type, search)
-        ])
+        const result = await getPostsWithLikeStatus(
+            { type, limit, offset, sortBy, ascending, search },
+            userId
+        )
 
-        let userLikedPostIds: number[] = []
-        if (res.locals.authenticated && res.locals.user) {
-            const postIds = posts.map((p: any) => p.id)
-            userLikedPostIds = await getUserLikes(res.locals.user.uid, postIds)
-        }
-
-        const postsWithLikeStatus = posts.map((p: any) => ({
-            ...p,
-            liked: userLikedPostIds.includes(p.id)
-        }))
-
-        res.json({ data: postsWithLikeStatus, total })
+        res.json(result)
     })
 
 router.route('/posts')
@@ -135,90 +140,16 @@ router.route('/posts')
      *         description: Unauthorized
      */
     .post(userAuth, async (req, res) => {
-        const { title, content, type, image_url, video_url, attached_record, attached_level, is_recommended } = req.body
-
-        if (!title) {
-            res.status(400).json({ error: 'Title is required' })
-            return
-        }
-
-        const validTypes = ['discussion', 'media', 'guide', 'announcement', 'review']
-        const postType = validTypes.includes(type) ? type : 'discussion'
-
-        // Only admins can create announcements
-        if (postType === 'announcement' && !res.locals.user.isAdmin) {
-            res.status(403).json({ error: 'Only admins can create announcements' })
-            return
-        }
-
-        // Review posts must have an attached level and user must have an accepted record for it
-        if (postType === 'review') {
-            if (!attached_level || !attached_level.id) {
-                res.status(400).json({ error: 'Review posts must have an attached level' })
-                return
-            }
-            if (typeof is_recommended !== 'boolean') {
-                res.status(400).json({ error: 'Review posts must specify recommendation' })
-                return
-            }
-            // Verify user has an accepted record for this level
-            const userRecords = await getUserRecordsForPicker(res.locals.user.uid)
-            const hasRecord = userRecords.some((r: any) => r.levelid === attached_level.id)
-            if (!hasRecord) {
-                res.status(403).json({ error: 'You must have an accepted record for this level to write a review' })
-                return
-            }
-        }
-
-        // If a level is attached, fetch from GD and insert into levels table if not exists
-        if (attached_level && attached_level.id) {
-            try {
-                const gdLevel = await fetchLevelFromGD(attached_level.id)
-                await retrieveOrCreateLevel({
-                    id: gdLevel.id,
-                    name: gdLevel.name,
-                    creator: gdLevel.author,
-                    difficulty: gdLevel.difficulty,
-                    isPlatformer: gdLevel.length === 5
-                } as any)
-            } catch (err) {
-                // Level fetch/insert failed — continue with post creation anyway
-                console.warn('Failed to insert GD level into levels table', err)
-            }
-        }
-
-        const post = await createCommunityPost({
-            uid: res.locals.user.uid,
-            title,
-            content: content || '',
-            type: postType,
-            image_url,
-            video_url,
-            attached_record: attached_record || undefined,
-            attached_level: attached_level || undefined,
-            is_recommended: postType === 'review' ? is_recommended : undefined
-        })
-
-        // Send Discord notification for new posts
         try {
-            const typeEmoji: Record<string, string> = {
-                discussion: '💬',
-                media: '📸',
-                guide: '📖',
-                announcement: '📢',
-                review: '⭐'
-            }
-            const emoji = typeEmoji[postType] || '💬'
-            const playerName = post.players?.name || 'Someone'
-            const postUrl = `${FRONTEND_URL}/community/${post.id}`
-
-
-            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), `${emoji} **${playerName}** posted in Community Hub: **${title}**\n${postUrl}`)
-        } catch (err) {
-            console.error(err)
+            const post = await createPostFull({
+                uid: res.locals.user.uid,
+                isAdmin: res.locals.user.isAdmin,
+                ...req.body
+            })
+            res.status(201).json(post)
+        } catch (e) {
+            handleServiceError(res, e)
         }
-
-        res.status(201).json(post)
     })
 
 router.route('/posts/:id')
@@ -243,17 +174,11 @@ router.route('/posts/:id')
      */
     .get(optionalAuth, async (req, res) => {
         try {
-            const post = await getCommunityPost(parseInt(req.params.id))
-
-            let liked = false
-            if (res.locals.authenticated && res.locals.user) {
-                const likes = await getUserLikes(res.locals.user.uid, [post.id])
-                liked = likes.includes(post.id)
-            }
-
-            res.json({ ...post, liked })
-        } catch {
-            res.status(404).json({ error: 'Post not found' })
+            const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
+            const post = await getPostWithLikeStatus(parseInt(req.params.id), userId)
+            res.json(post)
+        } catch (e) {
+            handleServiceError(res, e)
         }
     })
 
@@ -296,31 +221,17 @@ router.route('/posts/:id')
      *         description: Forbidden
      */
     .put(userAuth, async (req, res) => {
-        const postId = parseInt(req.params.id)
-        let existingPost
-
         try {
-            existingPost = await getCommunityPost(postId)
-        } catch {
-            res.status(404).json({ error: 'Post not found' })
-            return
+            const post = await updatePostAsUser(
+                parseInt(req.params.id),
+                res.locals.user.uid,
+                res.locals.user.isAdmin,
+                req.body
+            )
+            res.json(post)
+        } catch (e) {
+            handleServiceError(res, e)
         }
-
-        if (existingPost.uid !== res.locals.user.uid && !res.locals.user.isAdmin) {
-            res.status(403).json({ error: 'Forbidden' })
-            return
-        }
-
-        const { title, content, type, image_url, video_url, attached_record, attached_level } = req.body
-        const updates: any = {}
-        if (title !== undefined) updates.title = title
-        if (content !== undefined) updates.content = content
-        if (type !== undefined) updates.type = type
-        if (image_url !== undefined) updates.image_url = image_url
-        if (video_url !== undefined) updates.video_url = video_url
-
-        const post = await updateCommunityPost(postId, updates)
-        res.json(post)
     })
 
 router.route('/posts/:id')
@@ -346,23 +257,12 @@ router.route('/posts/:id')
      *         description: Forbidden
      */
     .delete(userAuth, async (req, res) => {
-        const postId = parseInt(req.params.id)
-        let existingPost
-
         try {
-            existingPost = await getCommunityPost(postId)
-        } catch {
-            res.status(404).json({ error: 'Post not found' })
-            return
+            await deletePostAsUser(parseInt(req.params.id), res.locals.user.uid, res.locals.user.isAdmin)
+            res.json({ success: true })
+        } catch (e) {
+            handleServiceError(res, e)
         }
-
-        if (existingPost.uid !== res.locals.user.uid && !res.locals.user.isAdmin) {
-            res.status(403).json({ error: 'Forbidden' })
-            return
-        }
-
-        await deleteCommunityPost(postId)
-        res.json({ success: true })
     })
 
 router.route('/posts/:id/pin')
@@ -388,18 +288,12 @@ router.route('/posts/:id/pin')
      *         description: Forbidden
      */
     .post(adminAuth, async (req, res) => {
-        const postId = parseInt(req.params.id)
-        let existingPost
-
         try {
-            existingPost = await getCommunityPost(postId)
-        } catch {
-            res.status(404).json({ error: 'Post not found' })
-            return
+            const post = await togglePostPin(parseInt(req.params.id))
+            res.json(post)
+        } catch (e) {
+            handleServiceError(res, e)
         }
-
-        const post = await updateCommunityPost(postId, { pinned: !existingPost.pinned })
-        res.json(post)
     })
 
 router.route('/posts/:id/like')
@@ -460,21 +354,10 @@ router.route('/posts/:id/comments')
         const postId = parseInt(req.params.id)
         const limit = parseInt(req.query.limit as string) || 50
         const offset = parseInt(req.query.offset as string) || 0
+        const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
 
-        const comments = await getPostComments(postId, limit, offset)
-
-        let userLikedCommentIds: number[] = []
-        if (res.locals.authenticated && res.locals.user) {
-            const commentIds = comments.map((c: any) => c.id)
-            userLikedCommentIds = await getUserCommentLikes(res.locals.user.uid, commentIds)
-        }
-
-        const commentsWithLikeStatus = comments.map((c: any) => ({
-            ...c,
-            liked: userLikedCommentIds.includes(c.id)
-        }))
-
-        res.json(commentsWithLikeStatus)
+        const comments = await getCommentsWithLikeStatus(postId, limit, offset, userId)
+        res.json(comments)
     })
 
 router.route('/posts/:id/comments')
@@ -509,46 +392,18 @@ router.route('/posts/:id/comments')
      *         description: Comment created
      */
     .post(userAuth, async (req, res) => {
-        const postId = parseInt(req.params.id)
-        const { content, attached_level } = req.body
-
-        if (!content) {
-            res.status(400).json({ error: 'Content is required' })
-            return
+        try {
+            const comment = await createCommentFull({
+                postId: parseInt(req.params.id),
+                uid: res.locals.user.uid,
+                userName: res.locals.user.name || undefined,
+                content: req.body.content,
+                attached_level: req.body.attached_level
+            })
+            res.status(201).json(comment)
+        } catch (e) {
+            handleServiceError(res, e)
         }
-
-        const commentData: any = {
-            post_id: postId,
-            uid: res.locals.user.uid,
-            content
-        }
-
-        if (attached_level) {
-            commentData.attached_level = attached_level
-        }
-
-        const comment = await createComment(commentData)
-
-        // Parse @mentions and send notifications
-        const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g
-        let match
-        while ((match = mentionRegex.exec(content)) !== null) {
-            const mentionedUid = match[2]
-            if (mentionedUid !== res.locals.user.uid) {
-                try {
-                    await sendNotification({
-                        to: mentionedUid,
-                        content: `**${res.locals.user.name || 'Someone'}** mentioned you in a comment`,
-                        redirect: `${FRONTEND_URL}/community/${postId}`
-                    })
-                } catch (e) {
-                    // Don't fail the comment if notification fails
-                    console.error('Failed to send mention notification', e)
-                }
-            }
-        }
-
-        res.status(201).json(comment)
     })
 
 router.route('/comments/:id')
@@ -574,23 +429,12 @@ router.route('/comments/:id')
      *         description: Forbidden
      */
     .delete(userAuth, async (req, res) => {
-        const commentId = parseInt(req.params.id)
-        let existingComment
-
         try {
-            existingComment = await getComment(commentId)
-        } catch {
-            res.status(404).json({ error: 'Comment not found' })
-            return
+            await deleteCommentAsUser(parseInt(req.params.id), res.locals.user.uid, res.locals.user.isAdmin)
+            res.json({ success: true })
+        } catch (e) {
+            handleServiceError(res, e)
         }
-
-        if (existingComment.uid !== res.locals.user.uid && !res.locals.user.isAdmin) {
-            res.status(403).json({ error: 'Forbidden' })
-            return
-        }
-
-        await deleteComment(commentId)
-        res.json({ success: true })
     })
 
 router.route('/comments/:id/like')
@@ -730,77 +574,39 @@ router.route('/admin/posts/:id')
      *         description: Post updated
      */
     .put(adminAuth, async (req, res) => {
-        const postId = parseInt(req.params.id)
-        const { title, content, type, pinned, image_url, video_url } = req.body
-        const updates: any = {}
-        if (title !== undefined) updates.title = title
-        if (content !== undefined) updates.content = content
-        if (type !== undefined) updates.type = type
-        if (pinned !== undefined) updates.pinned = pinned
-        if (image_url !== undefined) updates.image_url = image_url
-        if (video_url !== undefined) updates.video_url = video_url
-
-        const post = await updateCommunityPost(postId, updates)
+        const post = await adminUpdatePost(parseInt(req.params.id), req.body)
         res.json(post)
     })
 
 // Report a post
 router.route('/posts/:id/report')
     .post(userAuth, async (req, res) => {
-        const postId = parseInt(req.params.id)
-        const { reason, description } = req.body
-
-        if (!reason) {
-            res.status(400).json({ error: 'Reason is required' })
-            return
-        }
-
-        const validReasons = ['inappropriate', 'spam', 'harassment', 'misinformation', 'other']
-        if (!validReasons.includes(reason)) {
-            res.status(400).json({ error: 'Invalid reason' })
-            return
-        }
-
         try {
-            const report = await createReport({
+            const report = await reportContent({
                 uid: res.locals.user.uid,
-                post_id: postId,
-                reason,
-                description
+                post_id: parseInt(req.params.id),
+                reason: req.body.reason,
+                description: req.body.description
             })
             res.status(201).json(report)
-        } catch (e: any) {
-            res.status(409).json({ error: e.message })
+        } catch (e) {
+            handleServiceError(res, e)
         }
     })
 
 // Report a comment
 router.route('/comments/:id/report')
     .post(userAuth, async (req, res) => {
-        const commentId = parseInt(req.params.id)
-        const { reason, description } = req.body
-
-        if (!reason) {
-            res.status(400).json({ error: 'Reason is required' })
-            return
-        }
-
-        const validReasons = ['inappropriate', 'spam', 'harassment', 'misinformation', 'other']
-        if (!validReasons.includes(reason)) {
-            res.status(400).json({ error: 'Invalid reason' })
-            return
-        }
-
         try {
-            const report = await createReport({
+            const report = await reportContent({
                 uid: res.locals.user.uid,
-                comment_id: commentId,
-                reason,
-                description
+                comment_id: parseInt(req.params.id),
+                reason: req.body.reason,
+                description: req.body.description
             })
             res.status(201).json(report)
-        } catch (e: any) {
-            res.status(409).json({ error: e.message })
+        } catch (e) {
+            handleServiceError(res, e)
         }
     })
 
@@ -888,20 +694,10 @@ router.route('/levels/:id/posts')
     .get(optionalAuth, async (req, res) => {
         const levelId = parseInt(req.params.id)
         const limit = parseInt(req.query.limit as string) || 5
-        const posts = await getPostsByLevel(levelId, limit)
+        const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
 
-        let userLikedPostIds: number[] = []
-        if (res.locals.authenticated && res.locals.user) {
-            const postIds = posts.map((p: any) => p.id)
-            userLikedPostIds = await getUserLikes(res.locals.user.uid, postIds)
-        }
-
-        const postsWithLikeStatus = posts.map((p: any) => ({
-            ...p,
-            liked: userLikedPostIds.includes(p.id)
-        }))
-
-        res.json(postsWithLikeStatus)
+        const posts = await getPostsByLevelWithLikeStatus(levelId, limit, userId)
+        res.json(posts)
     })
 
 export default router

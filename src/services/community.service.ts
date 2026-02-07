@@ -1,10 +1,44 @@
 import supabase from "@src/client/supabase"
+import { FRONTEND_URL } from '@src/config/url'
+import { fetchLevelFromGD, retrieveOrCreateLevel } from '@src/services/level.service'
+import { sendNotification } from '@src/services/notification.service'
+import { sendMessageToChannel } from '@src/services/discord.service'
 
 // Note: The community tables (community_posts, community_comments, community_likes)
 // are not yet in the auto-generated Supabase types. After running the migration,
 // regenerate types with: supabase gen types typescript --local > src/types/supabase.ts
 // Until then, we use type assertions to bypass TypeScript checks.
 const db: any = supabase
+
+// ---- Custom error classes for business logic errors ----
+
+export class ValidationError extends Error {
+    constructor(message: string) {
+        super(message)
+        this.name = 'ValidationError'
+    }
+}
+
+export class ForbiddenError extends Error {
+    constructor(message: string = 'Forbidden') {
+        super(message)
+        this.name = 'ForbiddenError'
+    }
+}
+
+export class NotFoundError extends Error {
+    constructor(message: string = 'Not found') {
+        super(message)
+        this.name = 'NotFoundError'
+    }
+}
+
+export class ConflictError extends Error {
+    constructor(message: string) {
+        super(message)
+        this.name = 'ConflictError'
+    }
+}
 
 export async function getCommunityPosts(options: {
     type?: string,
@@ -462,4 +496,349 @@ export async function toggleHidden(table: 'community_posts' | 'community_comment
 
     if (error) throw new Error(error.message)
     return data
+}
+
+// ---- High-level orchestration functions ----
+
+/** Enrich a list of posts with user like status + return total count */
+export async function getPostsWithLikeStatus(
+    options: {
+        type?: string,
+        limit?: number,
+        offset?: number,
+        sortBy?: string,
+        ascending?: boolean,
+        search?: string,
+        pinFirst?: boolean,
+        hidden?: boolean
+    },
+    userId?: string
+) {
+    const [posts, total] = await Promise.all([
+        getCommunityPosts(options),
+        getCommunityPostsCount(options.type, options.search, options.hidden)
+    ])
+
+    let userLikedPostIds: number[] = []
+    if (userId) {
+        const postIds = posts.map((p: any) => p.id)
+        userLikedPostIds = await getUserLikes(userId, postIds)
+    }
+
+    const data = posts.map((p: any) => ({
+        ...p,
+        liked: userLikedPostIds.includes(p.id)
+    }))
+
+    return { data, total }
+}
+
+/** Get a single post enriched with user like status */
+export async function getPostWithLikeStatus(postId: number, userId?: string) {
+    let post
+    try {
+        post = await getCommunityPost(postId)
+    } catch {
+        throw new NotFoundError('Post not found')
+    }
+
+    let liked = false
+    if (userId) {
+        const likes = await getUserLikes(userId, [post.id])
+        liked = likes.includes(post.id)
+    }
+
+    return { ...post, liked }
+}
+
+/** Full post creation orchestration: validation, GD level fetch, create, Discord notification */
+export async function createPostFull(params: {
+    uid: string,
+    isAdmin: boolean,
+    title: string,
+    content?: string,
+    type?: string,
+    image_url?: string,
+    video_url?: string,
+    attached_record?: any,
+    attached_level?: any,
+    is_recommended?: boolean
+}) {
+    const { uid, isAdmin, title, content, type, image_url, video_url, attached_record, attached_level, is_recommended } = params
+
+    if (!title) {
+        throw new ValidationError('Title is required')
+    }
+
+    const validTypes = ['discussion', 'media', 'guide', 'announcement', 'review']
+    const postType = validTypes.includes(type || '') ? type! : 'discussion'
+
+    // Only admins can create announcements
+    if (postType === 'announcement' && !isAdmin) {
+        throw new ForbiddenError('Only admins can create announcements')
+    }
+
+    // Review posts must have an attached level and user must have an accepted record for it
+    if (postType === 'review') {
+        if (!attached_level || !attached_level.id) {
+            throw new ValidationError('Review posts must have an attached level')
+        }
+        if (typeof is_recommended !== 'boolean') {
+            throw new ValidationError('Review posts must specify recommendation')
+        }
+        const userRecords = await getUserRecordsForPicker(uid)
+        const hasRecord = userRecords.some((r: any) => r.levelid === attached_level.id)
+        if (!hasRecord) {
+            throw new ForbiddenError('You must have an accepted record for this level to write a review')
+        }
+    }
+
+    // If a level is attached, fetch from GD and insert into levels table if not exists
+    if (attached_level && attached_level.id) {
+        try {
+            const gdLevel = await fetchLevelFromGD(attached_level.id)
+            await retrieveOrCreateLevel({
+                id: gdLevel.id,
+                name: gdLevel.name,
+                creator: gdLevel.author,
+                difficulty: gdLevel.difficulty,
+                isPlatformer: gdLevel.length === 5
+            } as any)
+        } catch (err) {
+            console.warn('Failed to insert GD level into levels table', err)
+        }
+    }
+
+    const post = await createCommunityPost({
+        uid,
+        title,
+        content: content || '',
+        type: postType,
+        image_url,
+        video_url,
+        attached_record: attached_record || undefined,
+        attached_level: attached_level || undefined,
+        is_recommended: postType === 'review' ? is_recommended : undefined
+    })
+
+    // Send Discord notification
+    try {
+        const typeEmoji: Record<string, string> = {
+            discussion: '💬',
+            media: '📸',
+            guide: '📖',
+            announcement: '📢',
+            review: '⭐'
+        }
+        const emoji = typeEmoji[postType] || '💬'
+        const playerName = post.players?.name || 'Someone'
+        const postUrl = `${FRONTEND_URL}/community/${post.id}`
+
+        await sendMessageToChannel(
+            String(process.env.DISCORD_GENERAL_CHANNEL_ID),
+            `${emoji} **${playerName}** posted in Community Hub: **${title}**\n${postUrl}`
+        )
+    } catch (err) {
+        console.error(err)
+    }
+
+    return post
+}
+
+/** Update a post with ownership check */
+export async function updatePostAsUser(
+    postId: number,
+    uid: string,
+    isAdmin: boolean,
+    updates: { title?: string, content?: string, type?: string, image_url?: string, video_url?: string }
+) {
+    let existingPost
+    try {
+        existingPost = await getCommunityPost(postId)
+    } catch {
+        throw new NotFoundError('Post not found')
+    }
+
+    if (existingPost.uid !== uid && !isAdmin) {
+        throw new ForbiddenError()
+    }
+
+    const cleanUpdates: any = {}
+    if (updates.title !== undefined) cleanUpdates.title = updates.title
+    if (updates.content !== undefined) cleanUpdates.content = updates.content
+    if (updates.type !== undefined) cleanUpdates.type = updates.type
+    if (updates.image_url !== undefined) cleanUpdates.image_url = updates.image_url
+    if (updates.video_url !== undefined) cleanUpdates.video_url = updates.video_url
+
+    return await updateCommunityPost(postId, cleanUpdates)
+}
+
+/** Delete a post with ownership check */
+export async function deletePostAsUser(postId: number, uid: string, isAdmin: boolean) {
+    let existingPost
+    try {
+        existingPost = await getCommunityPost(postId)
+    } catch {
+        throw new NotFoundError('Post not found')
+    }
+
+    if (existingPost.uid !== uid && !isAdmin) {
+        throw new ForbiddenError()
+    }
+
+    await deleteCommunityPost(postId)
+}
+
+/** Toggle pin on a post */
+export async function togglePostPin(postId: number) {
+    let existingPost
+    try {
+        existingPost = await getCommunityPost(postId)
+    } catch {
+        throw new NotFoundError('Post not found')
+    }
+
+    return await updateCommunityPost(postId, { pinned: !existingPost.pinned })
+}
+
+/** Get comments enriched with user like status */
+export async function getCommentsWithLikeStatus(
+    postId: number,
+    limit: number,
+    offset: number,
+    userId?: string
+) {
+    const comments = await getPostComments(postId, limit, offset)
+
+    let userLikedCommentIds: number[] = []
+    if (userId) {
+        const commentIds = comments.map((c: any) => c.id)
+        userLikedCommentIds = await getUserCommentLikes(userId, commentIds)
+    }
+
+    return comments.map((c: any) => ({
+        ...c,
+        liked: userLikedCommentIds.includes(c.id)
+    }))
+}
+
+/** Create a comment and send @mention notifications */
+export async function createCommentFull(params: {
+    postId: number,
+    uid: string,
+    userName?: string,
+    content: string,
+    attached_level?: any
+}) {
+    const { postId, uid, userName, content, attached_level } = params
+
+    if (!content) {
+        throw new ValidationError('Content is required')
+    }
+
+    const commentData: any = {
+        post_id: postId,
+        uid,
+        content
+    }
+
+    if (attached_level) {
+        commentData.attached_level = attached_level
+    }
+
+    const comment = await createComment(commentData)
+
+    // Parse @mentions and send notifications
+    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g
+    let match
+    while ((match = mentionRegex.exec(content)) !== null) {
+        const mentionedUid = match[2]
+        if (mentionedUid !== uid) {
+            try {
+                await sendNotification({
+                    to: mentionedUid,
+                    content: `**${userName || 'Someone'}** mentioned you in a comment`,
+                    redirect: `${FRONTEND_URL}/community/${postId}`
+                })
+            } catch (e) {
+                console.error('Failed to send mention notification', e)
+            }
+        }
+    }
+
+    return comment
+}
+
+/** Delete a comment with ownership check */
+export async function deleteCommentAsUser(commentId: number, uid: string, isAdmin: boolean) {
+    let existingComment
+    try {
+        existingComment = await getComment(commentId)
+    } catch {
+        throw new NotFoundError('Comment not found')
+    }
+
+    if (existingComment.uid !== uid && !isAdmin) {
+        throw new ForbiddenError()
+    }
+
+    await deleteComment(commentId)
+}
+
+/** Report a post or comment with validation */
+export async function reportContent(params: {
+    uid: string,
+    post_id?: number,
+    comment_id?: number,
+    reason: string,
+    description?: string
+}) {
+    const { reason } = params
+
+    if (!reason) {
+        throw new ValidationError('Reason is required')
+    }
+
+    const validReasons = ['inappropriate', 'spam', 'harassment', 'misinformation', 'other']
+    if (!validReasons.includes(reason)) {
+        throw new ValidationError('Invalid reason')
+    }
+
+    try {
+        return await createReport(params)
+    } catch (e: any) {
+        throw new ConflictError(e.message)
+    }
+}
+
+/** Admin: update any post (supports all fields including pinned) */
+export async function adminUpdatePost(
+    postId: number,
+    updates: { title?: string, content?: string, type?: string, pinned?: boolean, image_url?: string, video_url?: string }
+) {
+    const cleanUpdates: any = {}
+    if (updates.title !== undefined) cleanUpdates.title = updates.title
+    if (updates.content !== undefined) cleanUpdates.content = updates.content
+    if (updates.type !== undefined) cleanUpdates.type = updates.type
+    if (updates.pinned !== undefined) cleanUpdates.pinned = updates.pinned
+    if (updates.image_url !== undefined) cleanUpdates.image_url = updates.image_url
+    if (updates.video_url !== undefined) cleanUpdates.video_url = updates.video_url
+
+    return await updateCommunityPost(postId, cleanUpdates)
+}
+
+/** Get posts by level enriched with user like status */
+export async function getPostsByLevelWithLikeStatus(levelId: number, limit: number, userId?: string) {
+    const posts = await getPostsByLevel(levelId, limit)
+
+    let userLikedPostIds: number[] = []
+    if (userId) {
+        const postIds = posts.map((p: any) => p.id)
+        userLikedPostIds = await getUserLikes(userId, postIds)
+    }
+
+    return posts.map((p: any) => ({
+        ...p,
+        liked: userLikedPostIds.includes(p.id)
+    }))
 }
