@@ -55,9 +55,9 @@ router.route('/')
             return
         }
 
-        res.send()
 
-        logger.log(`${user.name} (${user.uid}) ${req.body.needMod ? 'forwarded' : ''}${req.body.isChecked ? 'accepted' : ''} ${req.body.levelid} record of ${req.body.userid}\nReviewer's comment: ${req.body.reviewerComment}`)
+        await logger.log(`${user.name} (${user.uid}) ${req.body.needMod ? 'forwarded' : ''}${req.body.isChecked ? 'accepted' : ''} ${req.body.levelid} record of ${req.body.userid}\nReviewer's comment: ${req.body.reviewerComment}`)
+        
         if (req.body.isChecked) {
             const level = await getLevel(parseInt(req.body.levelid));
 
@@ -67,6 +67,9 @@ router.route('/')
 
             await sendNotification({ to: req.body.userid, content: `Your ${level.name} (${level.id}) record has been forwarded to moderator team for further inspection by ${user.name}.`, status: 0 })
         }
+
+        res.send()
+
     })
 
 export default router

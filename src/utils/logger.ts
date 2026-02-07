@@ -1,6 +1,6 @@
 export default {
-    notice(message: string) {
-        fetch(process.env.DISCORD_WEBHOOK_NOTICE!, {
+    async notice(message: string) {
+        await fetch(process.env.DISCORD_WEBHOOK_NOTICE!, {
             method: "POST",
             body: JSON.stringify({
                 "content": message
@@ -9,11 +9,11 @@ export default {
                 "Accept": "*/*",
                 "Content-Type": "application/json"
             }
-        });
+        })
     },
 
-    log(message: string) {
-        fetch(process.env.DISCORD_WEBHOOK_LOG!, {
+    async log(message: string) {
+        await fetch(process.env.DISCORD_WEBHOOK_LOG!, {
             method: "POST",
             body: JSON.stringify({
                 "content": message
@@ -22,11 +22,11 @@ export default {
                 "Accept": "*/*",
                 "Content-Type": "application/json"
             }
-        });
+        })
     },
 
-    changelog(message: string) {
-        fetch(process.env.DISCORD_WEBHOOK_CHANGELOG!, {
+    async changelog(message: string) {
+        await fetch(process.env.DISCORD_WEBHOOK_CHANGELOG!, {
             method: "POST",
             body: JSON.stringify({
                 "content": message
@@ -34,6 +34,10 @@ export default {
             headers: {
                 "Accept": "*/*",
                 "Content-Type": "application/json"
+            }
+        }).then(res => {
+            if (!res.ok) {
+                console.log(res.status)
             }
         });
     },

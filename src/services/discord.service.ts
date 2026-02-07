@@ -85,7 +85,7 @@ export async function sendDirectMessage(uid: string, content: string, bypass: bo
         await updatePlayer({ ...player, DiscordDMChannelID });
     }
 
-    await fetch(`https://discord.com/api/v10/channels/${DiscordDMChannelID}/messages`, {
+    const res = await fetch(`https://discord.com/api/v10/channels/${DiscordDMChannelID}/messages`, {
         method: "POST",
         body: JSON.stringify({
             "content": content
@@ -95,10 +95,14 @@ export async function sendDirectMessage(uid: string, content: string, bypass: bo
             "Content-Type": "application/json"
         }
     });
+
+    if (!res.ok) {
+        console.log('Failed to send DM: ', res.status)
+    }
 }
 
 export async function sendMessageToChannel(id: string, content: string) {
-    await fetch(`https://discord.com/api/v10/channels/${id}/messages`, {
+    const res = await fetch(`https://discord.com/api/v10/channels/${id}/messages`, {
         method: "POST",
         body: JSON.stringify({
             "content": content
@@ -108,6 +112,12 @@ export async function sendMessageToChannel(id: string, content: string) {
             "Content-Type": "application/json"
         }
     });
+
+    console.log(res.ok)
+
+    if (!res.ok) {
+        console.log('Failed to send message to channel: ', res.status)
+    }
 }
 
 export async function fetchMember(guildID: string, userID: string): Promise<any> {
@@ -141,18 +151,18 @@ export async function updateRole(guildID: string, userID: string, roles: string[
 
 export async function syncRoleGDVN(player: Tables<"players">) {
     const roles = {
-        trusted: "1246843095593517066",
+        trusted: "1469593519445377064",
         supporter: "1387306487168106568",
-        AGM: "1400238211321823354",
-        LGM: "1058866853038010390",
-        GM: "1058866865222463548",
-        M: "1058866902627262564",
-        CM: "1058924959122075698",
-        EX: "1058867472595439763",
-        SP: "1058867025528750130",
-        A: "1387277818823577741",
-        B: "1387278083907915866",
-        C: "1387278263940026419"
+        AGM: "1469657496476979290",
+        LGM: "1387311470257111051",
+        GM: "1387352354604584970",
+        M: "1387352402939744368",
+        CM: "1469640440276844545",
+        EX: "1387352624483012768",
+        SP: "1387347034960564298",
+        A: "1469608329088073728",
+        B: "1469608391470223493",
+        C: "1469608439071248574"
     }
     const guildID = "1387099091028152392";
 

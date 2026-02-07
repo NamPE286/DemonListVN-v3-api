@@ -116,8 +116,9 @@ router.route('/:userID/:levelID')
         try {
             await deleteRecord(userID, parseInt(levelID))
 
+            await logger.log(`${user.name} (${user.uid}) performed DELETE /record/${userID}/${levelID}`)
+
             res.send()
-            logger.log(`${user.name} (${user.uid}) performed DELETE /record/${userID}/${levelID}`)
         } catch (err) {
             res.status(500).send()
         }

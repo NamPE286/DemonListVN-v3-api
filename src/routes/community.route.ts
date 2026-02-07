@@ -31,6 +31,7 @@ import {
     toggleHidden
 } from '@src/services/community.service'
 import { sendNotification } from '@src/services/notification.service'
+import { sendMessageToChannel } from '@src/services/discord.service'
 
 const router = express.Router()
 
@@ -210,8 +211,12 @@ router.route('/posts')
             const emoji = typeEmoji[postType] || '💬'
             const playerName = post.players?.name || 'Someone'
             const postUrl = `${FRONTEND_URL}/community/${post.id}`
-            logger.notice(`${emoji} **${playerName}** posted in Community Hub: **${title}**\n${postUrl}`)
-        } catch {}
+
+
+            sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), `${emoji} **${playerName}** posted in Community Hub: **${title}**\n${postUrl}`)
+        } catch (err) {
+            console.error(err)
+        }
 
         res.status(201).json(post)
     })
@@ -538,7 +543,7 @@ router.route('/posts/:id/comments')
                     })
                 } catch (e) {
                     // Don't fail the comment if notification fails
-                    logger.error('Failed to send mention notification', e)
+                    console.error('Failed to send mention notification', e)
                 }
             }
         }
