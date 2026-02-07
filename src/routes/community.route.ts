@@ -25,8 +25,12 @@ import {
     getReportsCount,
     resolveReport,
     getUserRecordsForPicker,
-    getLevelsForPicker
+    getLevelsForPicker,
+    searchPlayers,
+    getPostsByLevel,
+    toggleHidden
 } from '@src/services/community.service'
+import { sendNotification } from '@src/services/notification.service'
 
 const router = express.Router()
 
@@ -74,10 +78,11 @@ router.route('/posts')
         const offset = parseInt(req.query.offset as string) || 0
         const sortBy = (req.query.sortBy as string) || 'created_at'
         const ascending = req.query.ascending === 'true'
+        const search = req.query.search as string | undefined
 
         const [posts, total] = await Promise.all([
-            getCommunityPosts({ type, limit, offset, sortBy, ascending }),
-            getCommunityPostsCount(type)
+            getCommunityPosts({ type, limit, offset, sortBy, ascending, search }),
+            getCommunityPostsCount(type, search)
         ])
 
         let userLikedPostIds: number[] = []
@@ -500,18 +505,43 @@ router.route('/posts/:id/comments')
      */
     .post(userAuth, async (req, res) => {
         const postId = parseInt(req.params.id)
-        const { content } = req.body
+        const { content, attached_level } = req.body
 
         if (!content) {
             res.status(400).json({ error: 'Content is required' })
             return
         }
 
-        const comment = await createComment({
+        const commentData: any = {
             post_id: postId,
             uid: res.locals.user.uid,
             content
-        })
+        }
+
+        if (attached_level) {
+            commentData.attached_level = attached_level
+        }
+
+        const comment = await createComment(commentData)
+
+        // Parse @mentions and send notifications
+        const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g
+        let match
+        while ((match = mentionRegex.exec(content)) !== null) {
+            const mentionedUid = match[2]
+            if (mentionedUid !== res.locals.user.uid) {
+                try {
+                    await sendNotification({
+                        to: mentionedUid,
+                        content: `**${res.locals.user.name || 'Someone'}** mentioned you in a comment`,
+                        redirect: `${FRONTEND_URL}/community/${postId}`
+                    })
+                } catch (e) {
+                    // Don't fail the comment if notification fails
+                    logger.error('Failed to send mention notification', e)
+                }
+            }
+        }
 
         res.status(201).json(comment)
     })
@@ -622,10 +652,11 @@ router.route('/admin/posts')
         const type = req.query.type as string | undefined
         const limit = parseInt(req.query.limit as string) || 50
         const offset = parseInt(req.query.offset as string) || 0
+        const hidden = req.query.hidden === 'true' ? true : req.query.hidden === 'false' ? false : undefined
 
         const [posts, total] = await Promise.all([
-            getCommunityPosts({ type, limit, offset, sortBy: 'created_at', ascending: false, pinFirst: false }),
-            getCommunityPostsCount(type)
+            getCommunityPosts({ type, limit, offset, sortBy: 'created_at', ascending: false, pinFirst: false, hidden }),
+            getCommunityPostsCount(type, undefined, hidden)
         ])
 
         res.json({ data: posts, total })
@@ -805,6 +836,67 @@ router.route('/admin/reports/:id/resolve')
         const reportId = parseInt(req.params.id)
         const report = await resolveReport(reportId)
         res.json(report)
+    })
+
+// Admin: toggle hide/unhide a post
+router.route('/admin/posts/:id/hidden')
+    .put(adminAuth, async (req, res) => {
+        const postId = parseInt(req.params.id)
+        const { hidden } = req.body
+
+        try {
+            const post = await toggleHidden('community_posts', postId, hidden)
+            res.json(post)
+        } catch (e: any) {
+            res.status(400).json({ error: e.message })
+        }
+    })
+
+// Admin: toggle hide/unhide a comment
+router.route('/admin/comments/:id/hidden')
+    .put(adminAuth, async (req, res) => {
+        const commentId = parseInt(req.params.id)
+        const { hidden } = req.body
+
+        try {
+            const comment = await toggleHidden('community_comments', commentId, hidden)
+            res.json(comment)
+        } catch (e: any) {
+            res.status(400).json({ error: e.message })
+        }
+    })
+
+// Search players for @ mention
+router.route('/players/search')
+    .get(optionalAuth, async (req, res) => {
+        const q = req.query.q as string
+        if (!q || q.length < 1) {
+            res.json([])
+            return
+        }
+        const players = await searchPlayers(q, 8)
+        res.json(players)
+    })
+
+// Get community posts related to a level
+router.route('/levels/:id/posts')
+    .get(optionalAuth, async (req, res) => {
+        const levelId = parseInt(req.params.id)
+        const limit = parseInt(req.query.limit as string) || 5
+        const posts = await getPostsByLevel(levelId, limit)
+
+        let userLikedPostIds: number[] = []
+        if (res.locals.authenticated && res.locals.user) {
+            const postIds = posts.map((p: any) => p.id)
+            userLikedPostIds = await getUserLikes(res.locals.user.uid, postIds)
+        }
+
+        const postsWithLikeStatus = posts.map((p: any) => ({
+            ...p,
+            liked: userLikedPostIds.includes(p.id)
+        }))
+
+        res.json(postsWithLikeStatus)
     })
 
 export default router

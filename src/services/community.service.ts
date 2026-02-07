@@ -12,7 +12,9 @@ export async function getCommunityPosts(options: {
     offset?: number,
     sortBy?: string,
     ascending?: boolean,
-    pinFirst?: boolean
+    pinFirst?: boolean,
+    search?: string,
+    hidden?: boolean
 }) {
     const {
         type,
@@ -20,7 +22,9 @@ export async function getCommunityPosts(options: {
         offset = 0,
         sortBy = 'created_at',
         ascending = false,
-        pinFirst = true
+        pinFirst = true,
+        search,
+        hidden
     } = options
 
     const playerSelect = 'uid, name, isAvatarGif, supporterUntil, avatarVersion, isTrusted, exp, extraExp, clan, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
@@ -31,6 +35,18 @@ export async function getCommunityPosts(options: {
 
     if (type) {
         query = query.eq('type', type)
+    }
+
+    // Filter hidden posts (default: show only non-hidden)
+    if (hidden === true) {
+        query = query.eq('hidden', true)
+    } else if (hidden === false || hidden === undefined) {
+        query = query.eq('hidden', false)
+    }
+
+    // Full-text search using the fts column
+    if (search) {
+        query = query.textSearch('fts', search, { type: 'websearch' })
     }
 
     if (pinFirst) {
@@ -50,13 +66,23 @@ export async function getCommunityPosts(options: {
     return data
 }
 
-export async function getCommunityPostsCount(type?: string) {
+export async function getCommunityPostsCount(type?: string, search?: string, hidden?: boolean) {
     let query = db
         .from('community_posts')
         .select('*', { count: 'exact', head: true })
 
     if (type) {
         query = query.eq('type', type)
+    }
+
+    if (hidden === true) {
+        query = query.eq('hidden', true)
+    } else if (hidden === false || hidden === undefined) {
+        query = query.eq('hidden', false)
+    }
+
+    if (search) {
+        query = query.textSearch('fts', search, { type: 'websearch' })
     }
 
     const { count, error } = await query
@@ -169,7 +195,8 @@ export async function getPostComments(postId: number, limit = 50, offset = 0) {
 export async function createComment(comment: {
     post_id: number,
     uid: string,
-    content: string
+    content: string,
+    attached_level?: any
 }) {
     const playerSelect = 'uid, name, isAvatarGif, supporterUntil, avatarVersion, isTrusted, exp, extraExp, clan, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
@@ -397,4 +424,42 @@ export async function getLevelsForPicker(search?: string, limit = 20) {
     const { data, error } = await query
     if (error) throw new Error(error.message)
     return data || []
+}
+
+export async function searchPlayers(query: string, limit = 10) {
+    const { data, error } = await db
+        .from('players')
+        .select('uid, name, isAvatarGif, supporterUntil, avatarVersion, isTrusted, exp, extraExp, clan, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)')
+        .ilike('name', `%${query}%`)
+        .limit(limit)
+
+    if (error) throw new Error(error.message)
+    return data || []
+}
+
+export async function getPostsByLevel(levelId: number, limit = 5) {
+    const playerSelect = 'uid, name, isAvatarGif, supporterUntil, avatarVersion, isTrusted, exp, extraExp, clan, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+
+    const { data, error } = await db
+        .from('community_posts')
+        .select(`*, players!uid(${playerSelect})`)
+        .eq('hidden', false)
+        .or(`attached_level->>id.eq.${levelId},attached_record->>levelID.eq.${levelId}`)
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+    if (error) throw new Error(error.message)
+    return data || []
+}
+
+export async function toggleHidden(table: 'community_posts' | 'community_comments', id: number, hidden: boolean) {
+    const { data, error } = await db
+        .from(table)
+        .update({ hidden })
+        .eq('id', id)
+        .select('*')
+        .single()
+
+    if (error) throw new Error(error.message)
+    return data
 }
