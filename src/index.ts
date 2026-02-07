@@ -39,6 +39,7 @@ import mappacksRoute from './routes/mappacks.route'
 import syncRoute from './routes/sync.route'
 import wikiRoute from './routes/wiki.route'
 import levelSubmissionsRoute from './routes/level-submissions.route'
+import communityRoute from './routes/community.route'
 
 const app = express()
 const port = 8787
@@ -88,6 +89,7 @@ app.use('/mappacks', mappacksRoute)
 app.use('/sync', syncRoute)
 app.use('/wiki', wikiRoute)
 app.use('/level-submissions', levelSubmissionsRoute)
+app.use('/community', communityRoute)
 
 app.listen(port, async () => {
     console.log(`Server started on port ${port}`)

@@ -1,0 +1,523 @@
+import express from 'express'
+import userAuth from '@src/middleware/user-auth.middleware'
+import optionalAuth from '@src/middleware/optional-user-auth.middleware'
+import adminAuth from '@src/middleware/admin-auth.middleware'
+import {
+    getCommunityPosts,
+    getCommunityPostsCount,
+    getCommunityPost,
+    createCommunityPost,
+    updateCommunityPost,
+    deleteCommunityPost,
+    getPostComments,
+    createComment,
+    deleteComment,
+    getComment,
+    togglePostLike,
+    toggleCommentLike,
+    getUserLikes,
+    getUserCommentLikes
+} from '@src/services/community.service'
+
+const router = express.Router()
+
+router.route('/posts')
+    /**
+     * @openapi
+     * "/community/posts":
+     *   get:
+     *     tags:
+     *       - Community
+     *     summary: Get community posts
+     *     parameters:
+     *       - in: query
+     *         name: type
+     *         schema:
+     *           type: string
+     *           enum: [discussion, screenshot, guide, announcement]
+     *       - in: query
+     *         name: limit
+     *         schema:
+     *           type: integer
+     *           default: 20
+     *       - in: query
+     *         name: offset
+     *         schema:
+     *           type: integer
+     *           default: 0
+     *       - in: query
+     *         name: sortBy
+     *         schema:
+     *           type: string
+     *           default: created_at
+     *       - in: query
+     *         name: ascending
+     *         schema:
+     *           type: boolean
+     *           default: false
+     *     responses:
+     *       200:
+     *         description: List of community posts
+     */
+    .get(optionalAuth, async (req, res) => {
+        const type = req.query.type as string | undefined
+        const limit = parseInt(req.query.limit as string) || 20
+        const offset = parseInt(req.query.offset as string) || 0
+        const sortBy = (req.query.sortBy as string) || 'created_at'
+        const ascending = req.query.ascending === 'true'
+
+        const [posts, total] = await Promise.all([
+            getCommunityPosts({ type, limit, offset, sortBy, ascending }),
+            getCommunityPostsCount(type)
+        ])
+
+        let userLikedPostIds: number[] = []
+        if (res.locals.authenticated && res.locals.user) {
+            const postIds = posts.map((p: any) => p.id)
+            userLikedPostIds = await getUserLikes(res.locals.user.uid, postIds)
+        }
+
+        const postsWithLikeStatus = posts.map((p: any) => ({
+            ...p,
+            liked: userLikedPostIds.includes(p.id)
+        }))
+
+        res.json({ data: postsWithLikeStatus, total })
+    })
+
+router.route('/posts')
+    /**
+     * @openapi
+     * "/community/posts":
+     *   post:
+     *     tags:
+     *       - Community
+     *     summary: Create a community post
+     *     security:
+     *       - bearerAuth: []
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+     *               - title
+     *               - content
+     *             properties:
+     *               title:
+     *                 type: string
+     *               content:
+     *                 type: string
+     *               type:
+     *                 type: string
+     *                 enum: [discussion, screenshot, guide, announcement]
+     *               image_url:
+     *                 type: string
+     *     responses:
+     *       201:
+     *         description: Post created
+     *       401:
+     *         description: Unauthorized
+     */
+    .post(userAuth, async (req, res) => {
+        const { title, content, type, image_url } = req.body
+
+        if (!title || !content) {
+            res.status(400).json({ error: 'Title and content are required' })
+            return
+        }
+
+        const validTypes = ['discussion', 'screenshot', 'guide', 'announcement']
+        const postType = validTypes.includes(type) ? type : 'discussion'
+
+        // Only admins can create announcements
+        if (postType === 'announcement' && !res.locals.user.isAdmin) {
+            res.status(403).json({ error: 'Only admins can create announcements' })
+            return
+        }
+
+        const post = await createCommunityPost({
+            uid: res.locals.user.uid,
+            title,
+            content,
+            type: postType,
+            image_url
+        })
+
+        res.status(201).json(post)
+    })
+
+router.route('/posts/:id')
+    /**
+     * @openapi
+     * "/community/posts/{id}":
+     *   get:
+     *     tags:
+     *       - Community
+     *     summary: Get a single community post
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: Post details
+     *       404:
+     *         description: Post not found
+     */
+    .get(optionalAuth, async (req, res) => {
+        try {
+            const post = await getCommunityPost(parseInt(req.params.id))
+
+            let liked = false
+            if (res.locals.authenticated && res.locals.user) {
+                const likes = await getUserLikes(res.locals.user.uid, [post.id])
+                liked = likes.includes(post.id)
+            }
+
+            res.json({ ...post, liked })
+        } catch {
+            res.status(404).json({ error: 'Post not found' })
+        }
+    })
+
+router.route('/posts/:id')
+    /**
+     * @openapi
+     * "/community/posts/{id}":
+     *   put:
+     *     tags:
+     *       - Community
+     *     summary: Update a community post
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     requestBody:
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               title:
+     *                 type: string
+     *               content:
+     *                 type: string
+     *               type:
+     *                 type: string
+     *               image_url:
+     *                 type: string
+     *     responses:
+     *       200:
+     *         description: Post updated
+     *       401:
+     *         description: Unauthorized
+     *       403:
+     *         description: Forbidden
+     */
+    .put(userAuth, async (req, res) => {
+        const postId = parseInt(req.params.id)
+        let existingPost
+
+        try {
+            existingPost = await getCommunityPost(postId)
+        } catch {
+            res.status(404).json({ error: 'Post not found' })
+            return
+        }
+
+        if (existingPost.uid !== res.locals.user.uid && !res.locals.user.isAdmin) {
+            res.status(403).json({ error: 'Forbidden' })
+            return
+        }
+
+        const { title, content, type, image_url } = req.body
+        const updates: any = {}
+        if (title !== undefined) updates.title = title
+        if (content !== undefined) updates.content = content
+        if (type !== undefined) updates.type = type
+        if (image_url !== undefined) updates.image_url = image_url
+
+        const post = await updateCommunityPost(postId, updates)
+        res.json(post)
+    })
+
+router.route('/posts/:id')
+    /**
+     * @openapi
+     * "/community/posts/{id}":
+     *   delete:
+     *     tags:
+     *       - Community
+     *     summary: Delete a community post
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: Post deleted
+     *       403:
+     *         description: Forbidden
+     */
+    .delete(userAuth, async (req, res) => {
+        const postId = parseInt(req.params.id)
+        let existingPost
+
+        try {
+            existingPost = await getCommunityPost(postId)
+        } catch {
+            res.status(404).json({ error: 'Post not found' })
+            return
+        }
+
+        if (existingPost.uid !== res.locals.user.uid && !res.locals.user.isAdmin) {
+            res.status(403).json({ error: 'Forbidden' })
+            return
+        }
+
+        await deleteCommunityPost(postId)
+        res.json({ success: true })
+    })
+
+router.route('/posts/:id/pin')
+    /**
+     * @openapi
+     * "/community/posts/{id}/pin":
+     *   post:
+     *     tags:
+     *       - Community
+     *     summary: Toggle pin on a community post (admin only)
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: Pin toggled
+     *       403:
+     *         description: Forbidden
+     */
+    .post(adminAuth, async (req, res) => {
+        const postId = parseInt(req.params.id)
+        let existingPost
+
+        try {
+            existingPost = await getCommunityPost(postId)
+        } catch {
+            res.status(404).json({ error: 'Post not found' })
+            return
+        }
+
+        const post = await updateCommunityPost(postId, { pinned: !existingPost.pinned })
+        res.json(post)
+    })
+
+router.route('/posts/:id/like')
+    /**
+     * @openapi
+     * "/community/posts/{id}/like":
+     *   post:
+     *     tags:
+     *       - Community
+     *     summary: Toggle like on a community post
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: Like toggled
+     */
+    .post(userAuth, async (req, res) => {
+        const postId = parseInt(req.params.id)
+        const result = await togglePostLike(res.locals.user.uid, postId)
+        res.json(result)
+    })
+
+router.route('/posts/:id/comments')
+    /**
+     * @openapi
+     * "/community/posts/{id}/comments":
+     *   get:
+     *     tags:
+     *       - Community
+     *     summary: Get comments for a post
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *       - in: query
+     *         name: limit
+     *         schema:
+     *           type: integer
+     *           default: 50
+     *       - in: query
+     *         name: offset
+     *         schema:
+     *           type: integer
+     *           default: 0
+     *     responses:
+     *       200:
+     *         description: List of comments
+     */
+    .get(optionalAuth, async (req, res) => {
+        const postId = parseInt(req.params.id)
+        const limit = parseInt(req.query.limit as string) || 50
+        const offset = parseInt(req.query.offset as string) || 0
+
+        const comments = await getPostComments(postId, limit, offset)
+
+        let userLikedCommentIds: number[] = []
+        if (res.locals.authenticated && res.locals.user) {
+            const commentIds = comments.map((c: any) => c.id)
+            userLikedCommentIds = await getUserCommentLikes(res.locals.user.uid, commentIds)
+        }
+
+        const commentsWithLikeStatus = comments.map((c: any) => ({
+            ...c,
+            liked: userLikedCommentIds.includes(c.id)
+        }))
+
+        res.json(commentsWithLikeStatus)
+    })
+
+router.route('/posts/:id/comments')
+    /**
+     * @openapi
+     * "/community/posts/{id}/comments":
+     *   post:
+     *     tags:
+     *       - Community
+     *     summary: Add a comment to a post
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+     *               - content
+     *             properties:
+     *               content:
+     *                 type: string
+     *     responses:
+     *       201:
+     *         description: Comment created
+     */
+    .post(userAuth, async (req, res) => {
+        const postId = parseInt(req.params.id)
+        const { content } = req.body
+
+        if (!content) {
+            res.status(400).json({ error: 'Content is required' })
+            return
+        }
+
+        const comment = await createComment({
+            post_id: postId,
+            uid: res.locals.user.uid,
+            content
+        })
+
+        res.status(201).json(comment)
+    })
+
+router.route('/comments/:id')
+    /**
+     * @openapi
+     * "/community/comments/{id}":
+     *   delete:
+     *     tags:
+     *       - Community
+     *     summary: Delete a comment
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: Comment deleted
+     *       403:
+     *         description: Forbidden
+     */
+    .delete(userAuth, async (req, res) => {
+        const commentId = parseInt(req.params.id)
+        let existingComment
+
+        try {
+            existingComment = await getComment(commentId)
+        } catch {
+            res.status(404).json({ error: 'Comment not found' })
+            return
+        }
+
+        if (existingComment.uid !== res.locals.user.uid && !res.locals.user.isAdmin) {
+            res.status(403).json({ error: 'Forbidden' })
+            return
+        }
+
+        await deleteComment(commentId)
+        res.json({ success: true })
+    })
+
+router.route('/comments/:id/like')
+    /**
+     * @openapi
+     * "/community/comments/{id}/like":
+     *   post:
+     *     tags:
+     *       - Community
+     *     summary: Toggle like on a comment
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: Like toggled
+     */
+    .post(userAuth, async (req, res) => {
+        const commentId = parseInt(req.params.id)
+        const result = await toggleCommentLike(res.locals.user.uid, commentId)
+        res.json(result)
+    })
+
+export default router
