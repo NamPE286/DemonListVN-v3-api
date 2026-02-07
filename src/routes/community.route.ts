@@ -42,7 +42,7 @@ router.route('/posts')
      *         name: type
      *         schema:
      *           type: string
-     *           enum: [discussion, screenshot, guide, announcement]
+     *           enum: [discussion, media, guide, announcement]
      *       - in: query
      *         name: limit
      *         schema:
@@ -119,7 +119,7 @@ router.route('/posts')
      *                 type: string
      *               type:
      *                 type: string
-     *                 enum: [discussion, screenshot, guide, announcement]
+     *                 enum: [discussion, media, guide, announcement]
      *               image_url:
      *                 type: string
      *     responses:
@@ -136,7 +136,7 @@ router.route('/posts')
             return
         }
 
-        const validTypes = ['discussion', 'screenshot', 'guide', 'announcement']
+        const validTypes = ['discussion', 'media', 'guide', 'announcement']
         const postType = validTypes.includes(type) ? type : 'discussion'
 
         // Only admins can create announcements
@@ -160,7 +160,7 @@ router.route('/posts')
         try {
             const typeEmoji: Record<string, string> = {
                 discussion: '💬',
-                screenshot: '📸',
+                media: '📸',
                 guide: '📖',
                 announcement: '📢'
             }

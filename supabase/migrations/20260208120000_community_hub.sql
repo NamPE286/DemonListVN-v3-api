@@ -6,7 +6,7 @@ create table if not exists public.community_posts (
     uid uuid not null references public.players(uid) on delete cascade,
     title text not null,
     content text not null default '',
-    type text not null default 'discussion' check (type in ('discussion', 'screenshot', 'guide', 'announcement')),
+    type text not null default 'discussion' check (type in ('discussion', 'media', 'guide', 'announcement')),
     image_url text,
     video_url text,
     attached_record jsonb,
