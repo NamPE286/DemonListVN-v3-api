@@ -35,13 +35,6 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             return;
         }
 
-        if (player.recordCount === 0 && !player.isAdmin) {
-            if (req.originalUrl.startsWith('/clan') && req.method != 'GET') {
-                res.status(401).send();
-                return;
-            }
-        }
-
         res.locals.user = player
         res.locals.authType = 'token'
     } catch {

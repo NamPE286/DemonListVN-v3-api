@@ -177,7 +177,7 @@ router.route('/posts')
                 } as any)
             } catch (err) {
                 // Level fetch/insert failed — continue with post creation anyway
-                logger.warn('Failed to insert GD level into levels table', err)
+                console.warn('Failed to insert GD level into levels table', err)
             }
         }
 
