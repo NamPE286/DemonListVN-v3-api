@@ -61,7 +61,7 @@ export async function getCommunityPosts(options: {
         hidden
     } = options
 
-    const playerSelect = 'uid, name, isAvatarGif, supporterUntil, avatarVersion, isTrusted, exp, extraExp, clan, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+    const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
     let query = db
         .from('community_posts')
@@ -129,7 +129,7 @@ export async function getCommunityPostsCount(type?: string, search?: string, hid
 }
 
 export async function getCommunityPost(id: number) {
-    const playerSelect = 'uid, name, isAvatarGif, supporterUntil, avatarVersion, isTrusted, exp, extraExp, clan, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+    const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
     const { data, error } = await db
         .from('community_posts')
@@ -156,7 +156,7 @@ export async function createCommunityPost(post: {
     attached_level?: any,
     is_recommended?: boolean
 }) {
-    const playerSelect = 'uid, name, isAvatarGif, supporterUntil, avatarVersion, isTrusted, exp, extraExp, clan, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+    const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
     const { data, error } = await db
         .from('community_posts')
@@ -182,7 +182,7 @@ export async function updateCommunityPost(id: number, updates: {
     attached_level?: any,
     is_recommended?: boolean
 }) {
-    const playerSelect = 'uid, name, isAvatarGif, supporterUntil, avatarVersion, isTrusted, exp, extraExp, clan, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+    const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
     const { data, error } = await db
         .from('community_posts')
@@ -210,7 +210,7 @@ export async function deleteCommunityPost(id: number) {
 }
 
 export async function getPostComments(postId: number, limit = 50, offset = 0) {
-    const playerSelect = 'uid, name, isAvatarGif, supporterUntil, avatarVersion, isTrusted, exp, extraExp, clan, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+    const playerSelect = '*, clans!id(*)'
 
     const { data, error } = await db
         .from('community_comments')
@@ -232,7 +232,7 @@ export async function createComment(comment: {
     content: string,
     attached_level?: any
 }) {
-    const playerSelect = 'uid, name, isAvatarGif, supporterUntil, avatarVersion, isTrusted, exp, extraExp, clan, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+    const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
     const { data, error } = await db
         .from('community_comments')
@@ -385,7 +385,7 @@ export async function getReports(options: {
 }) {
     const { resolved, limit = 50, offset = 0 } = options
 
-    const playerSelect = 'uid, name, isAvatarGif, supporterUntil, avatarVersion, isTrusted, exp, extraExp, clan, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+    const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
     let query = db
         .from('community_reports')
@@ -463,7 +463,7 @@ export async function getLevelsForPicker(search?: string, limit = 20) {
 export async function searchPlayers(query: string, limit = 10) {
     const { data, error } = await db
         .from('players')
-        .select('uid, name, isAvatarGif, supporterUntil, avatarVersion, isTrusted, exp, extraExp, clan, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)')
+        .select('*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)')
         .ilike('name', `%${query}%`)
         .limit(limit)
 
@@ -472,7 +472,7 @@ export async function searchPlayers(query: string, limit = 10) {
 }
 
 export async function getPostsByLevel(levelId: number, limit = 5) {
-    const playerSelect = 'uid, name, isAvatarGif, supporterUntil, avatarVersion, isTrusted, exp, extraExp, clan, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+    const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
     const { data, error } = await db
         .from('community_posts')
@@ -621,6 +621,27 @@ export async function createPostFull(params: {
         is_recommended: postType === 'review' ? is_recommended : undefined
     })
 
+    // Send @mention notifications from post content
+    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g
+    let mentionMatch
+    const notifiedUids = new Set<string>()
+    while ((mentionMatch = mentionRegex.exec(content || '')) !== null) {
+        const mentionedUid = mentionMatch[2]
+        if (mentionedUid !== uid && !notifiedUids.has(mentionedUid)) {
+            notifiedUids.add(mentionedUid)
+            try {
+                const playerName = post.players?.name || 'Someone'
+                await sendNotification({
+                    to: mentionedUid,
+                    content: `**${playerName}** mentioned you in a post: **${title}**`,
+                    redirect: `${FRONTEND_URL}/community/${post.id}`
+                })
+            } catch (e) {
+                console.error('Failed to send mention notification', e)
+            }
+        }
+    }
+
     // Send Discord notification
     try {
         const typeEmoji: Record<string, string> = {
@@ -748,12 +769,28 @@ export async function createCommentFull(params: {
 
     const comment = await createComment(commentData)
 
+    // Notify post author about the new comment (if commenter is not the author)
+    try {
+        const post = await getCommunityPost(postId)
+        if (post && post.uid !== uid) {
+            await sendNotification({
+                to: post.uid,
+                content: `**${userName || 'Someone'}** commented on your post: **${post.title}**`,
+                redirect: `${FRONTEND_URL}/community/${postId}`
+            })
+        }
+    } catch (e) {
+        console.error('Failed to send comment notification to post author', e)
+    }
+
     // Parse @mentions and send notifications
     const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g
     let match
+    const notifiedUids = new Set<string>()
     while ((match = mentionRegex.exec(content)) !== null) {
         const mentionedUid = match[2]
-        if (mentionedUid !== uid) {
+        if (mentionedUid !== uid && !notifiedUids.has(mentionedUid)) {
+            notifiedUids.add(mentionedUid)
             try {
                 await sendNotification({
                     to: mentionedUid,
