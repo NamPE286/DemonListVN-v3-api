@@ -4,6 +4,7 @@ import optionalAuth from '@src/middleware/optional-user-auth.middleware'
 import adminAuth from '@src/middleware/admin-auth.middleware'
 import logger from '@src/utils/logger'
 import { FRONTEND_URL } from '@src/config/url'
+import { fetchLevelFromGD, retrieveOrCreateLevel } from '@src/services/level.service'
 import {
     getCommunityPosts,
     getCommunityPostsCount,
@@ -111,7 +112,6 @@ router.route('/posts')
      *             type: object
      *             required:
      *               - title
-     *               - content
      *             properties:
      *               title:
      *                 type: string
@@ -131,8 +131,8 @@ router.route('/posts')
     .post(userAuth, async (req, res) => {
         const { title, content, type, image_url, video_url, attached_record, attached_level, is_recommended } = req.body
 
-        if (!title || !content) {
-            res.status(400).json({ error: 'Title and content are required' })
+        if (!title) {
+            res.status(400).json({ error: 'Title is required' })
             return
         }
 
@@ -164,10 +164,27 @@ router.route('/posts')
             }
         }
 
+        // If a level is attached, fetch from GD and insert into levels table if not exists
+        if (attached_level && attached_level.id) {
+            try {
+                const gdLevel = await fetchLevelFromGD(attached_level.id)
+                await retrieveOrCreateLevel({
+                    id: gdLevel.id,
+                    name: gdLevel.name,
+                    creator: gdLevel.author,
+                    difficulty: gdLevel.difficulty,
+                    isPlatformer: gdLevel.length === 5
+                } as any)
+            } catch (err) {
+                // Level fetch/insert failed — continue with post creation anyway
+                logger.warn('Failed to insert GD level into levels table', err)
+            }
+        }
+
         const post = await createCommunityPost({
             uid: res.locals.user.uid,
             title,
-            content,
+            content: content || '',
             type: postType,
             image_url,
             video_url,
