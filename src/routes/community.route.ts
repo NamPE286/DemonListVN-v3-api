@@ -213,7 +213,7 @@ router.route('/posts')
             const postUrl = `${FRONTEND_URL}/community/${post.id}`
 
 
-            sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), `${emoji} **${playerName}** posted in Community Hub: **${title}**\n${postUrl}`)
+            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), `${emoji} **${playerName}** posted in Community Hub: **${title}**\n${postUrl}`)
         } catch (err) {
             console.error(err)
         }
