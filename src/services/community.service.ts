@@ -654,10 +654,11 @@ export async function createPostFull(params: {
         const emoji = typeEmoji[postType] || '💬'
         const playerName = post.players?.name || 'Someone'
         const postUrl = `${FRONTEND_URL}/community/${post.id}`
+        const playerProfileUrl = `${FRONTEND_URL}/player/${post.uid}`
 
         await sendMessageToChannel(
             String(process.env.DISCORD_GENERAL_CHANNEL_ID),
-            `${emoji} **${playerName}** posted in Community Hub: **${title}**\n${postUrl}`
+            `${emoji} **[${playerName}](${playerProfileUrl})** posted in Community Hub: **${title}**\n${postUrl}`
         )
     } catch (err) {
         console.error(err)
