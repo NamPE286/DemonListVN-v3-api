@@ -139,10 +139,10 @@ export async function updateRole(guildID: string, userID: string, roles: string[
     }
 }
 
-export async function syncRoleDLVN(player: Tables<"players">) {
+export async function syncRoleGDVN(player: Tables<"players">) {
     const roles = {
         trusted: "1246843095593517066",
-        supporter: "1004356961309032549",
+        supporter: "1387306487168106568",
         AGM: "1400238211321823354",
         LGM: "1058866853038010390",
         GM: "1058866865222463548",
@@ -154,7 +154,7 @@ export async function syncRoleDLVN(player: Tables<"players">) {
         B: "1387278083907915866",
         C: "1387278263940026419"
     }
-    const guildID = "877546680801697813";
+    const guildID = "1387099091028152392";
 
     if (!player.discord) {
         return;
@@ -180,54 +180,6 @@ export async function syncRoleDLVN(player: Tables<"players">) {
 
     if (player.isTrusted) {
         s.add(roles.trusted)
-    }
-
-    const s1 = new Set(playerRoles)
-
-    if (s1.isSubsetOf(s) && s1.isSupersetOf(s)) {
-        return;
-    }
-
-    await updateRole(guildID, player.discord!, Array.from(s));
-}
-
-export async function syncRoleGDVN(player: Tables<"players">) {
-    const roles = {
-        supporter: "1387306487168106568",
-        LGM: "1387311470257111051",
-        GM: "1387352354604584970",
-        M: "1387352402939744368",
-        EX: "1387352624483012768",
-        SP: "1387347034960564298",
-    }
-    const guildID = "1387099091028152392";
-
-    if (!player.discord) {
-        return;
-    }
-
-    const playerRoles: string[] = (await fetchMember(guildID, player.discord!)).roles;
-    const s = new Set(playerRoles)
-
-    for (const [key, value] of Object.entries(roles)) {
-        s.delete(value);
-    }
-
-    if (isPlayerSupporterActive(player)) {
-        s.add(roles.supporter)
-    }
-
-    const title = getPlayerTitle(player, 'dl')
-
-    if (title != null) {
-        if (title.title == "SP" || title.title == "C" || title.title == "B" || title.title == "A") {
-            s.add(roles['SP'])
-        } else if (title.title == 'EX' || title.title == 'CM') {
-            s.add(roles['EX'])
-        } else {
-            // @ts-ignore
-            s.add(roles[title.title])
-        }
     }
 
     const s1 = new Set(playerRoles)

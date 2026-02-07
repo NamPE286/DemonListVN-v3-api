@@ -4,7 +4,7 @@ import { getHeatmap } from '@src/services/heatmap.service'
 import { getPlayerRecordRating, getPlayerRecords } from '@src/services/record.service'
 import { updateHeatmap } from '@src/services/heatmap.service'
 import { getPlayerSubmissions } from '@src/services/record.service'
-import { syncRoleDLVN, syncRoleGDVN } from '@src/services/discord.service'
+import { syncRoleGDVN } from '@src/services/discord.service'
 import supabase from '@src/client/supabase'
 import { EVENT_SELECT_STR } from '@src/services/event.service'
 import { getPlayers, getPlayersBatch, getPlayer, updatePlayer, getPlayerInventoryItems } from '@src/services/player.service'
@@ -373,7 +373,6 @@ router.route('/syncRole')
         const { user } = res.locals
 
         try {
-            await syncRoleDLVN(user);
             await syncRoleGDVN(user);
 
             res.send();
