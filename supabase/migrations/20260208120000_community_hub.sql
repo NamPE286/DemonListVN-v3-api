@@ -8,6 +8,9 @@ create table if not exists public.community_posts (
     content text not null default '',
     type text not null default 'discussion' check (type in ('discussion', 'screenshot', 'guide', 'announcement')),
     image_url text,
+    video_url text,
+    attached_record jsonb,
+    attached_level jsonb,
     pinned boolean not null default false,
     likes_count integer not null default 0,
     comments_count integer not null default 0,
@@ -135,3 +138,28 @@ create trigger community_likes_count_trigger
     after insert or delete on public.community_likes
     for each row
     execute function public.update_community_likes_count();
+
+-- Reports table
+create table if not exists public.community_reports (
+    id serial primary key,
+    uid uuid not null references public.players(uid) on delete cascade,
+    post_id integer references public.community_posts(id) on delete cascade,
+    comment_id integer references public.community_comments(id) on delete cascade,
+    reason text not null default 'inappropriate' check (reason in ('inappropriate', 'spam', 'harassment', 'misinformation', 'other')),
+    description text,
+    resolved boolean not null default false,
+    created_at timestamptz not null default now(),
+    constraint community_reports_target_check check (
+        (post_id is not null and comment_id is null) or
+        (post_id is null and comment_id is not null)
+    ),
+    constraint community_reports_unique unique (uid, post_id, comment_id)
+);
+
+create index if not exists idx_community_reports_post_id on public.community_reports(post_id);
+create index if not exists idx_community_reports_resolved on public.community_reports(resolved);
+
+alter table public.community_reports enable row level security;
+create policy "community_reports_read" on public.community_reports for select using (true);
+create policy "community_reports_insert" on public.community_reports for insert with check (auth.uid() = uid);
+create policy "community_reports_delete" on public.community_reports for delete using (auth.uid() = uid);

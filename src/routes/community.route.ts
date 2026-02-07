@@ -2,6 +2,8 @@ import express from 'express'
 import userAuth from '@src/middleware/user-auth.middleware'
 import optionalAuth from '@src/middleware/optional-user-auth.middleware'
 import adminAuth from '@src/middleware/admin-auth.middleware'
+import logger from '@src/utils/logger'
+import { FRONTEND_URL } from '@src/config/url'
 import {
     getCommunityPosts,
     getCommunityPostsCount,
@@ -16,7 +18,13 @@ import {
     togglePostLike,
     toggleCommentLike,
     getUserLikes,
-    getUserCommentLikes
+    getUserCommentLikes,
+    createReport,
+    getReports,
+    getReportsCount,
+    resolveReport,
+    getUserRecordsForPicker,
+    getLevelsForPicker
 } from '@src/services/community.service'
 
 const router = express.Router()
@@ -121,7 +129,7 @@ router.route('/posts')
      *         description: Unauthorized
      */
     .post(userAuth, async (req, res) => {
-        const { title, content, type, image_url } = req.body
+        const { title, content, type, image_url, video_url, attached_record, attached_level } = req.body
 
         if (!title || !content) {
             res.status(400).json({ error: 'Title and content are required' })
@@ -142,8 +150,25 @@ router.route('/posts')
             title,
             content,
             type: postType,
-            image_url
+            image_url,
+            video_url,
+            attached_record: attached_record || undefined,
+            attached_level: attached_level || undefined
         })
+
+        // Send Discord notification for new posts
+        try {
+            const typeEmoji: Record<string, string> = {
+                discussion: '💬',
+                screenshot: '📸',
+                guide: '📖',
+                announcement: '📢'
+            }
+            const emoji = typeEmoji[postType] || '💬'
+            const playerName = post.players?.name || 'Someone'
+            const postUrl = `${FRONTEND_URL}/community/${post.id}`
+            logger.notice(`${emoji} **${playerName}** posted in Community Hub: **${title}**\n${postUrl}`)
+        } catch {}
 
         res.status(201).json(post)
     })
@@ -238,12 +263,13 @@ router.route('/posts/:id')
             return
         }
 
-        const { title, content, type, image_url } = req.body
+        const { title, content, type, image_url, video_url, attached_record, attached_level } = req.body
         const updates: any = {}
         if (title !== undefined) updates.title = title
         if (content !== undefined) updates.content = content
         if (type !== undefined) updates.type = type
         if (image_url !== undefined) updates.image_url = image_url
+        if (video_url !== undefined) updates.video_url = video_url
 
         const post = await updateCommunityPost(postId, updates)
         res.json(post)
@@ -518,6 +544,229 @@ router.route('/comments/:id/like')
         const commentId = parseInt(req.params.id)
         const result = await toggleCommentLike(res.locals.user.uid, commentId)
         res.json(result)
+    })
+
+// Admin: list all posts with search/filter
+router.route('/admin/posts')
+    /**
+     * @openapi
+     * "/community/admin/posts":
+     *   get:
+     *     tags:
+     *       - Community
+     *     summary: Admin - List all community posts with search
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: query
+     *         name: type
+     *         schema:
+     *           type: string
+     *       - in: query
+     *         name: search
+     *         schema:
+     *           type: string
+     *       - in: query
+     *         name: limit
+     *         schema:
+     *           type: integer
+     *           default: 50
+     *       - in: query
+     *         name: offset
+     *         schema:
+     *           type: integer
+     *           default: 0
+     *     responses:
+     *       200:
+     *         description: List of all community posts
+     */
+    .get(adminAuth, async (req, res) => {
+        const type = req.query.type as string | undefined
+        const limit = parseInt(req.query.limit as string) || 50
+        const offset = parseInt(req.query.offset as string) || 0
+
+        const [posts, total] = await Promise.all([
+            getCommunityPosts({ type, limit, offset, sortBy: 'created_at', ascending: false, pinFirst: false }),
+            getCommunityPostsCount(type)
+        ])
+
+        res.json({ data: posts, total })
+    })
+
+// Admin: force delete any post
+router.route('/admin/posts/:id')
+    /**
+     * @openapi
+     * "/community/admin/posts/{id}":
+     *   delete:
+     *     tags:
+     *       - Community
+     *     summary: Admin - Force delete a community post
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: Post deleted
+     */
+    .delete(adminAuth, async (req, res) => {
+        const postId = parseInt(req.params.id)
+        await deleteCommunityPost(postId)
+        res.json({ success: true })
+    })
+
+// Admin: update any post (edit type, pin, etc.)
+router.route('/admin/posts/:id')
+    /**
+     * @openapi
+     * "/community/admin/posts/{id}":
+     *   put:
+     *     tags:
+     *       - Community
+     *     summary: Admin - Update any community post
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     requestBody:
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               title:
+     *                 type: string
+     *               content:
+     *                 type: string
+     *               type:
+     *                 type: string
+     *               pinned:
+     *                 type: boolean
+     *     responses:
+     *       200:
+     *         description: Post updated
+     */
+    .put(adminAuth, async (req, res) => {
+        const postId = parseInt(req.params.id)
+        const { title, content, type, pinned, image_url, video_url } = req.body
+        const updates: any = {}
+        if (title !== undefined) updates.title = title
+        if (content !== undefined) updates.content = content
+        if (type !== undefined) updates.type = type
+        if (pinned !== undefined) updates.pinned = pinned
+        if (image_url !== undefined) updates.image_url = image_url
+        if (video_url !== undefined) updates.video_url = video_url
+
+        const post = await updateCommunityPost(postId, updates)
+        res.json(post)
+    })
+
+// Report a post
+router.route('/posts/:id/report')
+    .post(userAuth, async (req, res) => {
+        const postId = parseInt(req.params.id)
+        const { reason, description } = req.body
+
+        if (!reason) {
+            res.status(400).json({ error: 'Reason is required' })
+            return
+        }
+
+        const validReasons = ['inappropriate', 'spam', 'harassment', 'misinformation', 'other']
+        if (!validReasons.includes(reason)) {
+            res.status(400).json({ error: 'Invalid reason' })
+            return
+        }
+
+        try {
+            const report = await createReport({
+                uid: res.locals.user.uid,
+                post_id: postId,
+                reason,
+                description
+            })
+            res.status(201).json(report)
+        } catch (e: any) {
+            res.status(409).json({ error: e.message })
+        }
+    })
+
+// Report a comment
+router.route('/comments/:id/report')
+    .post(userAuth, async (req, res) => {
+        const commentId = parseInt(req.params.id)
+        const { reason, description } = req.body
+
+        if (!reason) {
+            res.status(400).json({ error: 'Reason is required' })
+            return
+        }
+
+        const validReasons = ['inappropriate', 'spam', 'harassment', 'misinformation', 'other']
+        if (!validReasons.includes(reason)) {
+            res.status(400).json({ error: 'Invalid reason' })
+            return
+        }
+
+        try {
+            const report = await createReport({
+                uid: res.locals.user.uid,
+                comment_id: commentId,
+                reason,
+                description
+            })
+            res.status(201).json(report)
+        } catch (e: any) {
+            res.status(409).json({ error: e.message })
+        }
+    })
+
+// Get user's verified records for attachment picker
+router.route('/my/records')
+    .get(userAuth, async (req, res) => {
+        const records = await getUserRecordsForPicker(res.locals.user.uid)
+        res.json(records)
+    })
+
+// Search levels for attachment picker
+router.route('/levels/search')
+    .get(optionalAuth, async (req, res) => {
+        const search = req.query.q as string | undefined
+        const limit = parseInt(req.query.limit as string) || 20
+        const levels = await getLevelsForPicker(search, limit)
+        res.json(levels)
+    })
+
+// Admin: list reports
+router.route('/admin/reports')
+    .get(adminAuth, async (req, res) => {
+        const resolved = req.query.resolved === 'true' ? true : req.query.resolved === 'false' ? false : undefined
+        const limit = parseInt(req.query.limit as string) || 50
+        const offset = parseInt(req.query.offset as string) || 0
+
+        const [reports, total] = await Promise.all([
+            getReports({ resolved, limit, offset }),
+            getReportsCount(resolved)
+        ])
+
+        res.json({ data: reports, total })
+    })
+
+// Admin: resolve a report
+router.route('/admin/reports/:id/resolve')
+    .put(adminAuth, async (req, res) => {
+        const reportId = parseInt(req.params.id)
+        const report = await resolveReport(reportId)
+        res.json(report)
     })
 
 export default router

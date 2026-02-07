@@ -24,6 +24,10 @@ function validate(path: string, user: Player) {
         return;
     }
 
+    if (path.startsWith('community') && user.uid == extractID(path)) {
+        return;
+    }
+
     throw new Error('Forbidden')
 }
 
