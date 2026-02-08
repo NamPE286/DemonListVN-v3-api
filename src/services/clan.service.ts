@@ -181,7 +181,7 @@ export async function inviteToClan(clanId: number, clanName: string, uid: string
     }
 
     await upsertClanInvitation({ to: player.uid, clan: clanId })
-    await sendNotification({ to: uid, content: `You've been invited to ${clanName} clan!`, redirect: `/clan/${clanId}` })
+    await sendNotification({ to: uid, content: `Bạn đã được mời vào clan ${clanName}!`, redirect: `/clan/${clanId}` })
 }
 
 export async function fetchClanRecords(clanId: number, { start = 0, end = 50, sortBy = 'dlPt', ascending = 'false' } = {}) {

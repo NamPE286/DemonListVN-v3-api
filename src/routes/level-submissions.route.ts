@@ -322,7 +322,7 @@ router.route('/:userId/:levelId/verdict')
                 await sendNotification({
                     to: userId,
                     status: 1,
-                    content: `Your level submission "${level.name}" (${levelId}) has been accepted and added to the Challenge List!`
+                    content: `Level "${level.name}" (${levelId}) bạn gửi đã được chấp nhận và thêm vào Challenge List!`
                 })
 
                 res.send({ message: 'Level submission accepted' })
@@ -342,7 +342,7 @@ router.route('/:userId/:levelId/verdict')
                 await sendNotification({
                     to: userId,
                     status: 2,
-                    content: `Your level submission "${level.name}" (${levelId}) has been rejected. ${reason ? `Reason: ${reason}` : ''}`
+                    content: `Level "${level.name}" (${levelId}) bạn gửi đã bị từ chối. ${reason ? `Lý do: ${reason}` : ''}`
                 })
 
                 res.send({ message: 'Level submission rejected' })

@@ -43,7 +43,7 @@ handleProduct.set(ProductId.SUPPORTER, {
         }
 
         if (order.giftTo) {
-            msg += ` gifted ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Geometry Dash VN Supporter Role to `
+            msg += ` đã tặng ${order.quantity} tháng Geometry Dash VN Supporter Role cho `
 
             if (recipient.discord) {
                 msg = `<@${recipient.discord}>`
@@ -52,12 +52,12 @@ handleProduct.set(ProductId.SUPPORTER, {
             }
 
             await sendNotification({
-                content: `You have been gifted ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Geometry Dash VN Supporter Role!`,
+                content: `Bạn đã được tặng ${order.quantity} tháng Geometry Dash VN Supporter Role!`,
                 to: order.giftTo
             })
-            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), `${buyerStr} gifted ${msg} ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Geometry Dash VN Supporter Role!`)
+            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), `${buyerStr} đã tặng ${msg} ${order.quantity} tháng Geometry Dash VN Supporter Role!`)
         } else {
-            msg += ` purchased ${order.quantity} month${order.quantity! > 1 ? "s" : ""} of Geometry Dash VN Supporter Role!`
+            msg += ` đã mua ${order.quantity} tháng Geometry Dash VN Supporter Role!`
             await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
         }
     }
@@ -87,7 +87,7 @@ handleProduct.set(ProductId.CLAN_BOOST, {
             msg = `[${buyer.name}](${FRONTEND_URL}/player/${buyer.uid})`
         }
 
-        msg += ` boosted [${clan.name}](${FRONTEND_URL}/clan/${clan.id}) for ${order.quantity} day${order.quantity! > 1 ? "s" : ""}!`
+        msg += ` đã boost [${clan.name}](${FRONTEND_URL}/clan/${clan.id}) trong ${order.quantity} ngày!`
         await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
     }
 })
@@ -117,7 +117,7 @@ handleProduct.set(ProductId.QUEUE_BOOST, {
             msg = `[${buyer.name}](${FRONTEND_URL}/player/${buyer.uid})`
         }
 
-        msg += ` boosted their record by ${order.quantity} day${order.quantity! > 1 ? 's' : 's'}`
+        msg += ` đã boost record của họ thêm ${order.quantity} ngày`
         await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
     }
 })
@@ -153,7 +153,7 @@ handleProduct.set(ProductId.BATTLE_PASS, {
         }
 
         if (order.giftTo) {
-            msg += ` gifted Battle Pass Premium to `
+            msg += ` đã tặng Battle Pass Premium cho `
 
             if (recipient.discord) {
                 msg += `<@${recipient.discord}>`
@@ -162,12 +162,12 @@ handleProduct.set(ProductId.BATTLE_PASS, {
             }
 
             await sendNotification({
-                content: `You have been gifted Battle Pass Premium!`,
+                content: `Bạn đã được tặng Battle Pass Premium!`,
                 to: order.giftTo
             })
             await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), `${msg}`)
         } else {
-            msg += ` purchased Battle Pass Premium!`
+            msg += ` đã mua Battle Pass Premium!`
             await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
         }
     }

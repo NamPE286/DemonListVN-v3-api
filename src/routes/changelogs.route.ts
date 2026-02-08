@@ -80,7 +80,7 @@ router.route('/publish')
         let result = ''
 
         if (!(!changelog.newLevels.dl.length && !changelog.newLevels.fl.length)) {
-            result += `\n## __New Levels__`
+            result += `\n## __Level Mới__`
         }
 
         if (changelog.newLevels.dl.length) {
@@ -104,7 +104,7 @@ router.route('/publish')
         }
 
         if (!(!changelog.changes.dl.length && !changelog.changes.fl.length)) {
-            result += `\n## __Changes__`
+            result += `\n## __Thay Đổi__`
         }
 
         if (changelog.changes.dl.length) {

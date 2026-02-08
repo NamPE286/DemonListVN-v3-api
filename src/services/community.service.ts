@@ -636,7 +636,7 @@ export async function createPostFull(params: {
                 const playerName = post.players?.name || 'Someone'
                 await sendNotification({
                     to: mentionedUid,
-                    content: `**${playerName}** mentioned you in a post: **${title}**`,
+                    content: `**${playerName}** đã nhắc đến bạn trong bài viết: **${title}**`,
                     redirect: `${FRONTEND_URL}/community/${post.id}`
                 })
             } catch (e) {
@@ -661,7 +661,7 @@ export async function createPostFull(params: {
 
         await sendMessageToChannel(
             String(process.env.DISCORD_GENERAL_CHANNEL_ID),
-            `${emoji} **[${playerName}](${playerProfileUrl})** posted in Community Hub: **${title}**\n${postUrl}`
+            `${emoji} **[${playerName}](${playerProfileUrl})** đã đăng bài trong Community Hub: **${title}**\n${postUrl}`
         )
     } catch (err) {
         console.error(err)
@@ -813,7 +813,7 @@ export async function createCommentFull(params: {
         if (post && post.uid !== uid) {
             await sendNotification({
                 to: post.uid,
-                content: `**${userName || 'Someone'}** commented on your post: **${post.title}**`,
+                content: `**${userName || 'Ai đó'}** đã bình luận bài viết của bạn: **${post.title}**`,
                 redirect: `${FRONTEND_URL}/community/${postId}`
             })
         }
@@ -832,7 +832,7 @@ export async function createCommentFull(params: {
             try {
                 await sendNotification({
                     to: mentionedUid,
-                    content: `**${userName || 'Someone'}** mentioned you in a comment`,
+                    content: `**${userName || 'Ai đó'}** đã nhắc đến bạn trong bình luận`,
                     redirect: `${FRONTEND_URL}/community/${postId}`
                 })
             } catch (e) {

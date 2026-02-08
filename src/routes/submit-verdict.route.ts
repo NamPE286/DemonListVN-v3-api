@@ -56,16 +56,16 @@ router.route('/')
         }
 
 
-        await logger.log(`${user.name} (${user.uid}) ${req.body.needMod ? 'forwarded' : ''}${req.body.isChecked ? 'accepted' : ''} ${req.body.levelid} record of ${req.body.userid}\nReviewer's comment: ${req.body.reviewerComment}`)
+        await logger.log(`${user.name} (${user.uid}) ${req.body.needMod ? 'đã chuyển tiếp' : ''}${req.body.isChecked ? 'đã chấp nhận' : ''} record ${req.body.levelid} của ${req.body.userid}\nNhận xét của reviewer: ${req.body.reviewerComment}`)
         
         if (req.body.isChecked) {
             const level = await getLevel(parseInt(req.body.levelid));
 
-            await sendNotification({ to: req.body.userid, content: `Your ${level.name} (${level.id}) record has been accepted by ${user.name}.`, status: 0 })
+            await sendNotification({ to: req.body.userid, content: `Record ${level.name} (${level.id}) của bạn đã được chấp nhận bởi ${user.name}.`, status: 0 })
         } else if (req.body.needMod) {
             const level = await getLevel(parseInt(req.body.levelid));
 
-            await sendNotification({ to: req.body.userid, content: `Your ${level.name} (${level.id}) record has been forwarded to moderator team for further inspection by ${user.name}.`, status: 0 })
+            await sendNotification({ to: req.body.userid, content: `Record ${level.name} (${level.id}) của bạn đã được chuyển tiếp đến đội ngũ moderator để kiểm tra thêm bởi ${user.name}.`, status: 0 })
         }
 
         res.send()

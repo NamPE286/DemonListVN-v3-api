@@ -318,7 +318,7 @@ export async function updatePlayerDiscord(uid: string, discordId: string): Promi
     }
 
     const player = await getPlayer(uid)
-    await sendDirectMessage(uid, `Your Discord account is linked to [${player.name}](${FRONTEND_URL}/player/${uid}) DLVN account.`, true)
+    await sendDirectMessage(uid, `Tài khoản Discord của bạn đã được liên kết với tài khoản DLVN [${player.name}](${FRONTEND_URL}/player/${uid}).`, true)
 }
 
 export async function getPlayerInventoryItems(uid: string, filters?: { itemType?: string; itemId?: number }): Promise<TInventoryItem[]> {
