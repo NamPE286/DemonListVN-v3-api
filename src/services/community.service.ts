@@ -865,6 +865,55 @@ export async function adminUpdatePost(
     return await updateCommunityPost(postId, cleanUpdates)
 }
 
+/** Get posts by a specific user */
+export async function getPostsByUser(uid: string, limit = 20, offset = 0) {
+    const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+
+    const { data, error } = await db
+        .from('community_posts')
+        .select(`*, players!uid(${playerSelect})`)
+        .eq('uid', uid)
+        .eq('hidden', false)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+
+    if (error) throw new Error(error.message)
+    return data || []
+}
+
+/** Get count of posts by a specific user */
+export async function getPostsByUserCount(uid: string) {
+    const { count, error } = await db
+        .from('community_posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('uid', uid)
+        .eq('hidden', false)
+
+    if (error) throw new Error(error.message)
+    return count || 0
+}
+
+/** Get posts by user enriched with user like status */
+export async function getPostsByUserWithLikeStatus(uid: string, limit: number, offset: number, viewerId?: string) {
+    const [posts, total] = await Promise.all([
+        getPostsByUser(uid, limit, offset),
+        getPostsByUserCount(uid)
+    ])
+
+    let userLikedPostIds: number[] = []
+    if (viewerId) {
+        const postIds = posts.map((p: any) => p.id)
+        userLikedPostIds = await getUserLikes(viewerId, postIds)
+    }
+
+    const data = posts.map((p: any) => ({
+        ...p,
+        liked: userLikedPostIds.includes(p.id)
+    }))
+
+    return { data, total }
+}
+
 /** Get posts by level enriched with user like status */
 export async function getPostsByLevelWithLikeStatus(levelId: number, limit: number, userId?: string) {
     const posts = await getPostsByLevel(levelId, limit)

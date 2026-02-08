@@ -1,5 +1,6 @@
 import express from 'express'
 import userAuth from '@src/middleware/user-auth.middleware'
+import optionalAuth from '@src/middleware/optional-user-auth.middleware'
 import { getHeatmap } from '@src/services/heatmap.service'
 import { getPlayerRecordRating, getPlayerRecords } from '@src/services/record.service'
 import { updateHeatmap } from '@src/services/heatmap.service'
@@ -8,6 +9,7 @@ import { syncRoleGDVN } from '@src/services/discord.service'
 import supabase from '@src/client/supabase'
 import { EVENT_SELECT_STR } from '@src/services/event.service'
 import { getPlayers, getPlayersBatch, getPlayer, updatePlayer, getPlayerInventoryItems } from '@src/services/player.service'
+import { getPostsByUserWithLikeStatus } from '@src/services/community.service'
 import getAuthUid from '@src/middleware/get-auth-uid'
 
 const router = express.Router()
@@ -533,6 +535,50 @@ router.route('/:uid/created-challenges')
         }
 
         res.send(data)
+    })
+
+/**
+ * @openapi
+ * "/players/{uid}/community-posts":
+ *   get:
+ *     tags:
+ *       - Player
+ *     summary: Get community posts by a player
+ *     parameters:
+ *       - name: uid
+ *         in: path
+ *         description: The UID of the player
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: limit
+ *         in: query
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - name: offset
+ *         in: query
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Success
+ */
+router.route('/:uid/community-posts')
+    .get(optionalAuth, async (req, res) => {
+        const { uid } = req.params
+        const limit = parseInt(req.query.limit as string) || 20
+        const offset = parseInt(req.query.offset as string) || 0
+        const viewerId = res.locals.authenticated ? res.locals.user?.uid : undefined
+
+        try {
+            const result = await getPostsByUserWithLikeStatus(uid, limit, offset, viewerId)
+            res.json(result)
+        } catch (e: any) {
+            console.error(e)
+            res.status(500).json({ error: e.message })
+        }
     })
 
 export default router
