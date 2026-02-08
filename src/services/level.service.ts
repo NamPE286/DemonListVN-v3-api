@@ -15,14 +15,14 @@ function convertToIDArray(levels: TLevel[]) {
     return res
 }
 
-export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '' } = {}) {
+export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '' } = {}) {
     if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*))')
+        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
         .not('dlTop', 'is', null)
         .eq('isPlatformer', false)
         .eq('isChallenge', false)
@@ -48,6 +48,14 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
         query = query.ilike('creator', `%${creatorSearch}%`)
     }
 
+    // Filter by tag IDs (comma-separated string)
+    if (tagIds && tagIds.trim() !== '') {
+        const ids = tagIds.split(',').map(Number).filter(Boolean)
+        if (ids.length > 0) {
+            query = query.in('levels_tags.tag_id' as any, ids)
+        }
+    }
+
     const a = await query
         .order(sortBy, { ascending: ascending })
         .range(start, end)
@@ -96,14 +104,14 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
     return res
 }
 
-export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '' } = {}) {
+export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '' } = {}) {
     if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*))')
+        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
         .not('dlTop', 'is', null)
         .eq('isPlatformer', true)
         .eq('isChallenge', false)
@@ -129,6 +137,14 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
         query = query.ilike('creator', `%${creatorSearch}%`)
     }
 
+    // Filter by tag IDs
+    if (tagIds && tagIds.trim() !== '') {
+        const ids = tagIds.split(',').map(Number).filter(Boolean)
+        if (ids.length > 0) {
+            query = query.in('levels_tags.tag_id' as any, ids)
+        }
+    }
+
     const a = await query
         .order(sortBy, { ascending: ascending })
         .range(start, end)
@@ -177,14 +193,14 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
     return res
 }
 
-export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '' } = {}) {
+export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '' } = {}) {
     if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*))')
+        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
         .not('flTop', 'is', null)
         .eq('isNonList', false)
 
@@ -196,7 +212,6 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
         query = query.lte('flTop', topEnd)
     }
     if (ratingMin !== null && ratingMin !== '') {
-        // For featured list, we can still filter by rating even though sorting is by flTop
         query = query.gte('flPt', ratingMin)
     }
     if (ratingMax !== null && ratingMax !== '') {
@@ -207,6 +222,14 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
     }
     if (creatorSearch && creatorSearch.trim() !== '') {
         query = query.ilike('creator', `%${creatorSearch}%`)
+    }
+
+    // Filter by tag IDs
+    if (tagIds && tagIds.trim() !== '') {
+        const ids = tagIds.split(',').map(Number).filter(Boolean)
+        if (ids.length > 0) {
+            query = query.in('levels_tags.tag_id' as any, ids)
+        }
     }
 
     const a = await query
@@ -258,14 +281,14 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
     return res
 }
 
-export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '' } = {}) {
+export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '' } = {}) {
     if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*))')
+        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
         .not('dlTop', 'is', null)
         .eq('isChallenge', true)
         .eq('isNonList', false)
@@ -288,6 +311,14 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
     }
     if (creatorSearch && creatorSearch.trim() !== '') {
         query = query.ilike('creator', `%${creatorSearch}%`)
+    }
+
+    // Filter by tag IDs
+    if (tagIds && tagIds.trim() !== '') {
+        const ids = tagIds.split(',').map(Number).filter(Boolean)
+        if (ids.length > 0) {
+            query = query.in('levels_tags.tag_id' as any, ids)
+        }
     }
 
     const a = await query
@@ -486,4 +517,128 @@ export async function refreshLevel() {
     await refreshWeeklyLevelProgress()
 
     return { daily: dailyLevel.id, weekly: weeklyLevel.id }
+}
+
+// ---- Level Tags ----
+
+/** Get all level tags */
+export async function getLevelTags() {
+    const { data, error } = await supabase
+        .from('level_tags')
+        .select('*')
+        .order('name', { ascending: true })
+
+    if (error) throw new Error(error.message)
+    return data || []
+}
+
+/** Create a new level tag (admin only) */
+export async function createLevelTag(tag: { name: string, color?: string }) {
+    const { data, error } = await (supabase as any)
+        .from('level_tags')
+        .insert(tag)
+        .select('*')
+        .single()
+
+    if (error) {
+        if (error.code === '23505') throw new Error('Tag already exists')
+        throw new Error(error.message)
+    }
+    return data
+}
+
+/** Delete a level tag and all its associations (admin only) */
+export async function deleteLevelTag(tagId: number) {
+    // CASCADE will remove from levels_tags automatically
+    const { error } = await (supabase as any)
+        .from('level_tags')
+        .delete()
+        .eq('id', tagId)
+
+    if (error) throw new Error(error.message)
+}
+
+/** Set tags on a level (admin only) */
+export async function setLevelTags(levelId: number, tagIds: number[]) {
+    const db: any = supabase
+
+    // Remove existing tags
+    await db
+        .from('levels_tags')
+        .delete()
+        .eq('level_id', levelId)
+
+    // Insert new tags
+    if (tagIds.length > 0) {
+        const rows = tagIds.map((tag_id: number) => ({ level_id: levelId, tag_id }))
+        const { error } = await db
+            .from('levels_tags')
+            .insert(rows)
+
+        if (error) throw new Error(error.message)
+    }
+
+    // Return updated tags
+    const { data, error } = await db
+        .from('levels_tags')
+        .select('tag_id, level_tags(id, name, color)')
+        .eq('level_id', levelId)
+
+    if (error) throw new Error(error.message)
+    return data || []
+}
+
+/** Get tags for a level */
+export async function getLevelTagsForLevel(levelId: number) {
+    const { data, error } = await (supabase as any)
+        .from('levels_tags')
+        .select('tag_id, level_tags(id, name, color)')
+        .eq('level_id', levelId)
+
+    if (error) throw new Error(error.message)
+    return data || []
+}
+
+// ---- Level Variants ----
+
+/** Add a variant (low detail version) to a level */
+export async function addLevelVariant(mainLevelId: number, variantLevelId: number) {
+    // Verify main level exists
+    const mainLevel = await getLevel(mainLevelId)
+    if (!mainLevel) throw new Error('Main level not found')
+
+    // Set the main_level_id on the variant level
+    const { data, error } = await supabase
+        .from('levels')
+        .update({ main_level_id: mainLevelId } as any)
+        .eq('id', variantLevelId)
+        .select('*')
+        .single()
+
+    if (error) throw new Error(error.message)
+    return data
+}
+
+/** Remove a variant association from a level */
+export async function removeLevelVariant(variantLevelId: number) {
+    const { data, error } = await supabase
+        .from('levels')
+        .update({ main_level_id: null } as any)
+        .eq('id', variantLevelId)
+        .select('*')
+        .single()
+
+    if (error) throw new Error(error.message)
+    return data
+}
+
+/** Get all variants for a main level */
+export async function getLevelVariants(mainLevelId: number) {
+    const { data, error } = await supabase
+        .from('levels')
+        .select('*')
+        .eq('main_level_id' as any, mainLevelId)
+
+    if (error) throw new Error(error.message)
+    return data || []
 }

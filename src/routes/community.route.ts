@@ -34,6 +34,10 @@ import {
     getPendingModerationPostsCount,
     approvePost,
     rejectPost,
+    getPostTags,
+    createPostTag,
+    deletePostTag,
+    setPostTags,
     ValidationError,
     ForbiddenError,
     NotFoundError,
@@ -102,10 +106,11 @@ router.route('/posts')
         const sortBy = (req.query.sortBy as string) || 'created_at'
         const ascending = req.query.ascending === 'true'
         const search = req.query.search as string | undefined
+        const tagId = req.query.tagId ? parseInt(req.query.tagId as string) : undefined
         const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
 
         const result = await getPostsWithLikeStatus(
-            { type, limit, offset, sortBy, ascending, search },
+            { type, limit, offset, sortBy, ascending, search, tagId },
             userId
         )
 
@@ -918,6 +923,50 @@ router.route('/levels/:id/posts')
 
         const posts = await getPostsByLevelWithLikeStatus(levelId, limit, userId)
         res.json(posts)
+    })
+
+// ---- Post Tags ----
+
+// Get all post tags
+router.route('/tags')
+    .get(async (_req, res) => {
+        const tags = await getPostTags()
+        res.json(tags)
+    })
+
+// Admin: create a post tag
+router.route('/tags')
+    .post(adminAuth, async (req, res) => {
+        try {
+            const tag = await createPostTag(req.body)
+            res.status(201).json(tag)
+        } catch (e) {
+            handleServiceError(res, e)
+        }
+    })
+
+// Admin: delete a post tag (removes from all posts)
+router.route('/tags/:id')
+    .delete(adminAuth, async (req, res) => {
+        await deletePostTag(parseInt(req.params.id))
+        res.json({ success: true })
+    })
+
+// Set tags on a post
+router.route('/posts/:id/tags')
+    .put(userAuth, async (req, res) => {
+        try {
+            const { tag_ids } = req.body
+            if (!Array.isArray(tag_ids)) {
+                res.status(400).json({ error: 'tag_ids must be an array' })
+                return
+            }
+            const isAdmin = res.locals.user.isAdmin
+            const tags = await setPostTags(parseInt(req.params.id), tag_ids, isAdmin)
+            res.json(tags)
+        } catch (e) {
+            handleServiceError(res, e)
+        }
     })
 
 export default router

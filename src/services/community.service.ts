@@ -53,7 +53,8 @@ export async function getCommunityPosts(options: {
     pinFirst?: boolean,
     search?: string,
     hidden?: boolean,
-    moderationStatus?: string
+    moderationStatus?: string,
+    tagId?: number
 }) {
     const {
         type,
@@ -71,24 +72,29 @@ export async function getCommunityPosts(options: {
 
     let query = db
         .from('community_posts')
-        .select(`*, players!uid(${playerSelect})`)
+        .select(`*, players!uid(${playerSelect}), community_posts_admin!inner(moderation_status, moderation_result, hidden), community_posts_tags(tag_id, post_tags(id, name, color, admin_only))`)
 
     if (type) {
         query = query.eq('type', type)
     }
 
-    // Filter hidden posts (default: show only non-hidden)
+    // Filter hidden posts via admin table (default: show only non-hidden)
     if (hidden === true) {
-        query = query.eq('hidden', true)
+        query = query.eq('community_posts_admin.hidden', true)
     } else if (hidden === false || hidden === undefined) {
-        query = query.eq('hidden', false)
+        query = query.eq('community_posts_admin.hidden', false)
     }
 
     // Only show approved posts to public (unless admin explicitly requests all)
     if (options.moderationStatus) {
-        query = query.eq('moderation_status', options.moderationStatus)
+        query = query.eq('community_posts_admin.moderation_status', options.moderationStatus)
     } else {
-        query = query.eq('moderation_status', 'approved')
+        query = query.eq('community_posts_admin.moderation_status', 'approved')
+    }
+
+    // Filter by tag
+    if (options.tagId) {
+        query = query.eq('community_posts_tags.tag_id', options.tagId)
     }
 
     // Full-text search using the fts column
@@ -113,26 +119,30 @@ export async function getCommunityPosts(options: {
     return data
 }
 
-export async function getCommunityPostsCount(type?: string, search?: string, hidden?: boolean, moderationStatus?: string) {
+export async function getCommunityPostsCount(type?: string, search?: string, hidden?: boolean, moderationStatus?: string, tagId?: number) {
     let query = db
         .from('community_posts')
-        .select('*', { count: 'exact', head: true })
+        .select('*, community_posts_admin!inner(moderation_status, hidden), community_posts_tags(tag_id)', { count: 'exact', head: true })
 
     if (type) {
         query = query.eq('type', type)
     }
 
     if (hidden === true) {
-        query = query.eq('hidden', true)
+        query = query.eq('community_posts_admin.hidden', true)
     } else if (hidden === false || hidden === undefined) {
-        query = query.eq('hidden', false)
+        query = query.eq('community_posts_admin.hidden', false)
     }
 
     // Filter by moderation status (default: approved only)
     if (moderationStatus) {
-        query = query.eq('moderation_status', moderationStatus)
+        query = query.eq('community_posts_admin.moderation_status', moderationStatus)
     } else {
-        query = query.eq('moderation_status', 'approved')
+        query = query.eq('community_posts_admin.moderation_status', 'approved')
+    }
+
+    if (tagId) {
+        query = query.eq('community_posts_tags.tag_id', tagId)
     }
 
     if (search) {
@@ -153,7 +163,7 @@ export async function getCommunityPost(id: number) {
 
     const { data, error } = await db
         .from('community_posts')
-        .select(`*, players!uid(${playerSelect})`)
+        .select(`*, players!uid(${playerSelect}), community_posts_admin(moderation_status, moderation_result, hidden), community_posts_tags(tag_id, post_tags(id, name, color, admin_only))`)
         .eq('id', id)
         .limit(1)
         .single()
@@ -175,6 +185,7 @@ export async function createCommunityPost(post: {
     attached_record?: any,
     attached_level?: any,
     is_recommended?: boolean,
+}, adminData?: {
     moderation_status?: string,
     moderation_result?: any
 }) {
@@ -190,7 +201,23 @@ export async function createCommunityPost(post: {
         throw new Error(error.message)
     }
 
-    return data
+    // Insert admin data into separate table
+    const { error: adminError } = await db
+        .from('community_posts_admin')
+        .insert({
+            post_id: data.id,
+            moderation_status: adminData?.moderation_status || 'approved',
+            moderation_result: adminData?.moderation_result || null,
+            hidden: false
+        })
+
+    if (adminError) {
+        // Rollback: delete the post if admin insert fails
+        await db.from('community_posts').delete().eq('id', data.id)
+        throw new Error(adminError.message)
+    }
+
+    return { ...data, community_posts_admin: { moderation_status: adminData?.moderation_status || 'approved', hidden: false } }
 }
 
 export async function updateCommunityPost(id: number, updates: {
@@ -499,9 +526,9 @@ export async function getPostsByLevel(levelId: number, limit = 5) {
 
     const { data, error } = await db
         .from('community_posts')
-        .select(`*, players!uid(${playerSelect})`)
-        .eq('hidden', false)
-        .eq('moderation_status', 'approved')
+        .select(`*, players!uid(${playerSelect}), community_posts_admin!inner(moderation_status, hidden)`)
+        .eq('community_posts_admin.hidden', false)
+        .eq('community_posts_admin.moderation_status', 'approved')
         .or(`attached_level->>id.eq.${levelId},attached_record->>levelID.eq.${levelId}`)
         .order('created_at', { ascending: false })
         .limit(limit)
@@ -511,8 +538,20 @@ export async function getPostsByLevel(levelId: number, limit = 5) {
 }
 
 export async function toggleHidden(table: 'community_posts' | 'community_comments', id: number, hidden: boolean) {
+    if (table === 'community_posts') {
+        const { data, error } = await db
+            .from('community_posts_admin')
+            .update({ hidden })
+            .eq('post_id', id)
+            .select('*')
+            .single()
+
+        if (error) throw new Error(error.message)
+        return data
+    }
+
     const { data, error } = await db
-        .from(table)
+        .from('community_comments')
         .update({ hidden })
         .eq('id', id)
         .select('*')
@@ -534,13 +573,14 @@ export async function getPostsWithLikeStatus(
         ascending?: boolean,
         search?: string,
         pinFirst?: boolean,
-        hidden?: boolean
+        hidden?: boolean,
+        tagId?: number
     },
     userId?: string
 ) {
     const [posts, total] = await Promise.all([
         getCommunityPosts(options),
-        getCommunityPostsCount(options.type, options.search, options.hidden)
+        getCommunityPostsCount(options.type, options.search, options.hidden, undefined, options.tagId)
     ])
 
     let userLikedPostIds: number[] = []
@@ -586,7 +626,8 @@ export async function createPostFull(params: {
     video_url?: string,
     attached_record?: any,
     attached_level?: any,
-    is_recommended?: boolean
+    is_recommended?: boolean,
+    tag_ids?: number[]
 }) {
     const { uid, isAdmin, title, content, type, image_url, video_url, attached_record, attached_level, is_recommended } = params
 
@@ -633,16 +674,24 @@ export async function createPostFull(params: {
         }
     }
 
-    // Run OpenAI moderation check on title + content
+    // Run OpenAI moderation check on title + content + image (single API call)
     let moderationStatus = 'approved'
     let moderationResult = null
     try {
-        const modResult = await moderatePost(title, content || '')
+        const modResult = await moderatePost(title, content || '', image_url || undefined)
         moderationResult = modResult.raw
         if (modResult.flagged) {
-            moderationStatus = 'pending'
+            // Notify user about the violation
+            const violatedCategories = modResult.flaggedCategories.join(', ')
+            throw new ValidationError(
+                `Your post was flagged for violating content policy: ${violatedCategories}. Please revise your content and try again.`
+            )
         }
     } catch (err) {
+        // Re-throw ValidationErrors (moderation violations) directly to user
+        if (err instanceof ValidationError) {
+            throw err
+        }
         console.error('OpenAI moderation check failed, defaulting to pending:', err)
         // If moderation API fails, default to pending for safety
         moderationStatus = 'pending'
@@ -658,6 +707,7 @@ export async function createPostFull(params: {
         attached_record: attached_record || undefined,
         attached_level: attached_level || undefined,
         is_recommended: postType === 'review' ? is_recommended : undefined,
+    }, {
         moderation_status: moderationStatus,
         moderation_result: moderationResult
     })
@@ -665,6 +715,11 @@ export async function createPostFull(params: {
     // If post is pending moderation, return early (don't send notifications/Discord)
     if (moderationStatus === 'pending') {
         return { ...post, moderation_status: moderationStatus }
+    }
+
+    // Apply user tags if provided
+    if (params.tag_ids && params.tag_ids.length > 0) {
+        await setPostTags(post.id, params.tag_ids, false)
     }
 
     // Send @mention notifications from post content
@@ -976,10 +1031,10 @@ export async function getPostsByUser(uid: string, limit = 20, offset = 0) {
 
     const { data, error } = await db
         .from('community_posts')
-        .select(`*, players!uid(${playerSelect})`)
+        .select(`*, players!uid(${playerSelect}), community_posts_admin!inner(moderation_status, hidden)`)
         .eq('uid', uid)
-        .eq('hidden', false)
-        .eq('moderation_status', 'approved')
+        .eq('community_posts_admin.hidden', false)
+        .eq('community_posts_admin.moderation_status', 'approved')
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1)
 
@@ -991,10 +1046,10 @@ export async function getPostsByUser(uid: string, limit = 20, offset = 0) {
 export async function getPostsByUserCount(uid: string) {
     const { count, error } = await db
         .from('community_posts')
-        .select('*', { count: 'exact', head: true })
+        .select('*, community_posts_admin!inner(moderation_status, hidden)', { count: 'exact', head: true })
         .eq('uid', uid)
-        .eq('hidden', false)
-        .eq('moderation_status', 'approved')
+        .eq('community_posts_admin.hidden', false)
+        .eq('community_posts_admin.moderation_status', 'approved')
 
     if (error) throw new Error(error.message)
     return count || 0
@@ -1091,10 +1146,10 @@ export async function getRecommendedPostsWithLikeStatus(
 
     const { data: posts, error } = await db
         .from('community_posts')
-        .select(`*, players!uid(${playerSelect})`)
+        .select(`*, players!uid(${playerSelect}), community_posts_admin!inner(moderation_status, hidden)`)
         .in('id', postIds)
-        .eq('hidden', false)
-        .eq('moderation_status', 'approved')
+        .eq('community_posts_admin.hidden', false)
+        .eq('community_posts_admin.moderation_status', 'approved')
 
     if (error) {
         throw new Error(error.message)
@@ -1161,8 +1216,8 @@ export async function getPendingModerationPosts(options: {
 
     const { data, error } = await db
         .from('community_posts')
-        .select(`*, players!uid(${playerSelect})`)
-        .eq('moderation_status', 'pending')
+        .select(`*, players!uid(${playerSelect}), community_posts_admin!inner(moderation_status, moderation_result, hidden)`)
+        .eq('community_posts_admin.moderation_status', 'pending')
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1)
 
@@ -1174,8 +1229,8 @@ export async function getPendingModerationPosts(options: {
 export async function getPendingModerationPostsCount() {
     const { count, error } = await db
         .from('community_posts')
-        .select('*', { count: 'exact', head: true })
-        .eq('moderation_status', 'pending')
+        .select('*, community_posts_admin!inner(moderation_status)', { count: 'exact', head: true })
+        .eq('community_posts_admin.moderation_status', 'pending')
 
     if (error) throw new Error(error.message)
     return count || 0
@@ -1187,9 +1242,9 @@ export async function approvePost(postId: number) {
     if (!post) throw new NotFoundError('Post not found')
 
     const { data, error } = await db
-        .from('community_posts')
+        .from('community_posts_admin')
         .update({ moderation_status: 'approved' })
-        .eq('id', postId)
+        .eq('post_id', postId)
         .select('*')
         .single()
 
@@ -1226,12 +1281,96 @@ export async function rejectPost(postId: number) {
     if (!post) throw new NotFoundError('Post not found')
 
     const { data, error } = await db
-        .from('community_posts')
+        .from('community_posts_admin')
         .update({ moderation_status: 'rejected' })
-        .eq('id', postId)
+        .eq('post_id', postId)
         .select('*')
         .single()
 
     if (error) throw new Error(error.message)
     return data
+}
+
+// ---- Post Tags ----
+
+/** Get all post tags */
+export async function getPostTags() {
+    const { data, error } = await db
+        .from('post_tags')
+        .select('*')
+        .order('name', { ascending: true })
+
+    if (error) throw new Error(error.message)
+    return data || []
+}
+
+/** Create a new post tag (admin only) */
+export async function createPostTag(tag: { name: string, color?: string, admin_only?: boolean }) {
+    const { data, error } = await db
+        .from('post_tags')
+        .insert(tag)
+        .select('*')
+        .single()
+
+    if (error) {
+        if (error.code === '23505') throw new ConflictError('Tag already exists')
+        throw new Error(error.message)
+    }
+    return data
+}
+
+/** Delete a post tag and all its associations (admin only) */
+export async function deletePostTag(tagId: number) {
+    // Cascade will handle removing from community_posts_tags
+    const { error } = await db
+        .from('post_tags')
+        .delete()
+        .eq('id', tagId)
+
+    if (error) throw new Error(error.message)
+}
+
+/** Set tags on a post. isAdmin controls whether admin_only tags can be applied */
+export async function setPostTags(postId: number, tagIds: number[], isAdmin: boolean) {
+    // Validate tags exist and check admin_only constraint
+    if (tagIds.length > 0) {
+        const { data: tags, error: tagError } = await db
+            .from('post_tags')
+            .select('id, admin_only')
+            .in('id', tagIds)
+
+        if (tagError) throw new Error(tagError.message)
+
+        if (!isAdmin) {
+            const adminOnlyTags = tags?.filter((t: any) => t.admin_only) || []
+            if (adminOnlyTags.length > 0) {
+                throw new ForbiddenError('Some tags can only be applied by admins')
+            }
+        }
+    }
+
+    // Remove existing tags
+    await db
+        .from('community_posts_tags')
+        .delete()
+        .eq('post_id', postId)
+
+    // Insert new tags
+    if (tagIds.length > 0) {
+        const rows = tagIds.map(tag_id => ({ post_id: postId, tag_id }))
+        const { error } = await db
+            .from('community_posts_tags')
+            .insert(rows)
+
+        if (error) throw new Error(error.message)
+    }
+
+    // Return updated tags
+    const { data, error } = await db
+        .from('community_posts_tags')
+        .select('tag_id, post_tags(id, name, color, admin_only)')
+        .eq('post_id', postId)
+
+    if (error) throw new Error(error.message)
+    return data || []
 }

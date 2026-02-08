@@ -393,6 +393,18 @@ export async function submitRecord(recordData: TRecord) {
             logs.push('Level updated successfully');
         }
 
+        // Check if the submitted level is a variant of another level
+        logs.push(`Checking if level ${recordData.levelid} is a variant`);
+        const submittedLevel = await getLevel(recordData.levelid!);
+        if (submittedLevel && (submittedLevel as any).main_level_id) {
+            const mainLevelId = (submittedLevel as any).main_level_id;
+            logs.push(`Level ${recordData.levelid} is a variant of main level ${mainLevelId}`);
+            // Save variant_id for reference and redirect record to main level
+            ;(recordData as any).variant_id = recordData.levelid;
+            recordData.levelid = mainLevelId;
+            logs.push(`Record redirected to main level ${mainLevelId}, variant_id saved as ${(recordData as any).variant_id}`);
+        }
+
         logs.push(`Getting level data for levelID: ${recordData.levelid}`);
         const level = await getLevel(recordData.levelid!)
         logs.push(`Level data: ${JSON.stringify(level, null, 2)}`);

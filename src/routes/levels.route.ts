@@ -3,7 +3,7 @@ import type { NextFunction, Response, Request } from 'express'
 import adminAuth from '@src/middleware/admin-auth.middleware'
 import { getLevelDeathCount } from '@src/services/death-count.service'
 import { getLevelRecords } from '@src/services/record.service'
-import { updateLevel, getLevel, fetchLevelFromGD, deleteLevel, refreshLevel } from '@src/services/level.service'
+import { updateLevel, getLevel, fetchLevelFromGD, deleteLevel, refreshLevel, getLevelTags, createLevelTag, deleteLevelTag, setLevelTags, getLevelTagsForLevel, addLevelVariant, removeLevelVariant, getLevelVariants, retrieveOrCreateLevel } from '@src/services/level.service'
 import userAuth from '@src/middleware/user-auth.middleware'
 import supabase from '@src/client/supabase'
 import { getEventLevelsSafe } from '@src/services/event.service'
@@ -380,6 +380,138 @@ router.route('/:id/inEvent')
         }
 
         res.status(404).send();
+    })
+
+// ---- Level Tags ----
+
+// Get all level tags
+router.route('/tags')
+    .get(async (_req, res) => {
+        try {
+            const tags = await getLevelTags()
+            res.json(tags)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+// Admin: create a level tag
+router.route('/tags')
+    .post(adminAuth, async (req, res) => {
+        try {
+            const tag = await createLevelTag(req.body)
+            res.status(201).json(tag)
+        } catch (err: any) {
+            if (err.message === 'Tag already exists') {
+                res.status(409).json({ error: err.message })
+            } else {
+                console.error(err)
+                res.status(500).send()
+            }
+        }
+    })
+
+// Admin: delete a level tag (removes from all levels)
+router.route('/tags/:tagId')
+    .delete(adminAuth, async (req, res) => {
+        try {
+            await deleteLevelTag(parseInt(req.params.tagId))
+            res.json({ success: true })
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+// Get tags for a level
+router.route('/:id/tags')
+    .get(checkID, async (req, res) => {
+        try {
+            const tags = await getLevelTagsForLevel(parseInt(req.params.id))
+            res.json(tags)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+// Admin: set tags on a level
+router.route('/:id/tags')
+    .put([adminAuth, checkID], async (req, res) => {
+        try {
+            const { tag_ids } = req.body
+            if (!Array.isArray(tag_ids)) {
+                res.status(400).json({ error: 'tag_ids must be an array' })
+                return
+            }
+            const tags = await setLevelTags(parseInt(req.params.id), tag_ids)
+            res.json(tags)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+// ---- Level Variants ----
+
+// Get variants for a level
+router.route('/:id/variants')
+    .get(checkID, async (req, res) => {
+        try {
+            const variants = await getLevelVariants(parseInt(req.params.id))
+            res.json(variants)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+// Admin: add a variant to a level
+router.route('/:id/variants')
+    .post([adminAuth, checkID], async (req, res) => {
+        const mainLevelId = parseInt(req.params.id)
+        const { variantLevelId } = req.body
+
+        if (!variantLevelId) {
+            res.status(400).json({ error: 'variantLevelId is required' })
+            return
+        }
+
+        try {
+            // Fetch variant level from GD if not in DB
+            try {
+                await getLevel(variantLevelId)
+            } catch {
+                const gdLevel = await fetchLevelFromGD(variantLevelId)
+                await retrieveOrCreateLevel({
+                    id: gdLevel.id,
+                    name: gdLevel.name,
+                    creator: gdLevel.author,
+                    difficulty: gdLevel.difficulty,
+                    isPlatformer: gdLevel.length === 5,
+                    isNonList: true
+                } as any)
+            }
+
+            const variant = await addLevelVariant(mainLevelId, variantLevelId)
+            res.status(201).json(variant)
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).json({ error: err.message })
+        }
+    })
+
+// Admin: remove a variant from a level
+router.route('/:id/variants/:variantId')
+    .delete([adminAuth, checkID], async (req, res) => {
+        try {
+            await removeLevelVariant(parseInt(req.params.variantId))
+            res.json({ success: true })
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
     })
 
 export default router
