@@ -182,7 +182,8 @@ export async function updateCommunityPost(id: number, updates: {
     pinned?: boolean,
     attached_record?: any,
     attached_level?: any,
-    is_recommended?: boolean
+    is_recommended?: boolean,
+    updated_at?: string
 }) {
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
@@ -694,6 +695,9 @@ export async function updatePostAsUser(
     if (updates.image_url !== undefined) cleanUpdates.image_url = updates.image_url
     if (updates.video_url !== undefined) cleanUpdates.video_url = updates.video_url
 
+    // Set updated_at to mark the post as edited
+    cleanUpdates.updated_at = new Date().toISOString()
+
     return await updateCommunityPost(postId, cleanUpdates)
 }
 
@@ -888,12 +892,37 @@ export async function adminUpdatePost(
     updates: { title?: string, content?: string, type?: string, pinned?: boolean, image_url?: string, video_url?: string }
 ) {
     const cleanUpdates: any = {}
-    if (updates.title !== undefined) cleanUpdates.title = updates.title
-    if (updates.content !== undefined) cleanUpdates.content = updates.content
-    if (updates.type !== undefined) cleanUpdates.type = updates.type
-    if (updates.pinned !== undefined) cleanUpdates.pinned = updates.pinned
-    if (updates.image_url !== undefined) cleanUpdates.image_url = updates.image_url
-    if (updates.video_url !== undefined) cleanUpdates.video_url = updates.video_url
+    let hasContentChange = false
+
+    if (updates.title !== undefined) {
+        cleanUpdates.title = updates.title
+        hasContentChange = true
+    }
+    if (updates.content !== undefined) {
+        cleanUpdates.content = updates.content
+        hasContentChange = true
+    }
+    if (updates.type !== undefined) {
+        cleanUpdates.type = updates.type
+        hasContentChange = true
+    }
+    if (updates.image_url !== undefined) {
+        cleanUpdates.image_url = updates.image_url
+        hasContentChange = true
+    }
+    if (updates.video_url !== undefined) {
+        cleanUpdates.video_url = updates.video_url
+        hasContentChange = true
+    }
+    if (updates.pinned !== undefined) {
+        cleanUpdates.pinned = updates.pinned
+        // Pinning doesn't count as editing content
+    }
+
+    // Only set updated_at if actual content changed (not just pinned)
+    if (hasContentChange) {
+        cleanUpdates.updated_at = new Date().toISOString()
+    }
 
     return await updateCommunityPost(postId, cleanUpdates)
 }
