@@ -962,3 +962,114 @@ export async function getPostsByLevelWithLikeStatus(levelId: number, limit: numb
         liked: userLikedPostIds.includes(p.id)
     }))
 }
+
+// ---- Recommendation System ----
+
+/** Get recommended posts using the scoring function */
+export async function getRecommendedPosts(options: {
+    userId?: string,
+    limit?: number,
+    offset?: number,
+    type?: string
+}) {
+    const { userId = null, limit = 25, offset = 0, type = null } = options
+
+    const { data, error } = await db.rpc('get_recommended_community_posts', {
+        p_user_id: userId,
+        p_limit: limit,
+        p_offset: offset,
+        p_type: type
+    })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data || []
+}
+
+/** Get recommended posts enriched with player info and like status */
+export async function getRecommendedPostsWithLikeStatus(
+    options: {
+        type?: string,
+        limit?: number,
+        offset?: number,
+    },
+    userId?: string
+) {
+    const { type, limit = 25, offset = 0 } = options
+
+    // Get recommended post IDs with scores
+    const recommended = await getRecommendedPosts({
+        userId,
+        limit,
+        offset,
+        type
+    })
+
+    if (recommended.length === 0) {
+        return { data: [], total: 0 }
+    }
+
+    // Get full post data with player info for these IDs
+    const postIds = recommended.map((r: any) => r.id)
+    const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+
+    const { data: posts, error } = await db
+        .from('community_posts')
+        .select(`*, players!uid(${playerSelect})`)
+        .in('id', postIds)
+        .eq('hidden', false)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    // Create a map of scores for ordering
+    const scoreMap = new Map(recommended.map((r: any) => [r.id, r.recommendation_score]))
+
+    // Merge and sort by recommendation score
+    const enrichedPosts = (posts || [])
+        .map((p: any) => ({
+            ...p,
+            recommendation_score: scoreMap.get(p.id) || 0
+        }))
+        .sort((a: any, b: any) => b.recommendation_score - a.recommendation_score)
+
+    // Add like status
+    let userLikedPostIds: number[] = []
+    if (userId) {
+        userLikedPostIds = await getUserLikes(userId, postIds)
+    }
+
+    const data = enrichedPosts.map((p: any) => ({
+        ...p,
+        liked: userLikedPostIds.includes(p.id)
+    }))
+
+    // Get total count for pagination
+    const total = await getCommunityPostsCount(type, undefined, false)
+
+    return { data, total }
+}
+
+/** Record that a user viewed a post */
+export async function recordPostView(userId: string, postId: number) {
+    const { error } = await db.rpc('record_community_post_view', {
+        p_user_id: userId,
+        p_post_id: postId
+    })
+
+    if (error) {
+        // Non-critical, don't throw
+        console.error('Failed to record post view:', error.message)
+    }
+}
+
+/** Record views for multiple posts (batch) */
+export async function recordPostViews(userId: string, postIds: number[]) {
+    // Record views in parallel (fire-and-forget style, non-blocking)
+    await Promise.allSettled(
+        postIds.map(postId => recordPostView(userId, postId))
+    )
+}

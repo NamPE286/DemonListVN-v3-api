@@ -27,6 +27,9 @@ import {
     getReportsCount,
     resolveReport,
     toggleHidden,
+    getRecommendedPostsWithLikeStatus,
+    recordPostView,
+    recordPostViews,
     ValidationError,
     ForbiddenError,
     NotFoundError,
@@ -103,6 +106,121 @@ router.route('/posts')
         )
 
         res.json(result)
+    })
+
+router.route('/posts/recommended')
+    /**
+     * @openapi
+     * "/community/posts/recommended":
+     *   get:
+     *     tags:
+     *       - Community
+     *     summary: Get recommended community posts
+     *     parameters:
+     *       - in: query
+     *         name: type
+     *         schema:
+     *           type: string
+     *           enum: [discussion, media, guide, announcement, review]
+     *       - in: query
+     *         name: limit
+     *         schema:
+     *           type: integer
+     *           default: 25
+     *       - in: query
+     *         name: offset
+     *         schema:
+     *           type: integer
+     *           default: 0
+     *     responses:
+     *       200:
+     *         description: List of recommended community posts
+     */
+    .get(optionalAuth, async (req, res) => {
+        const type = req.query.type as string | undefined
+        const limit = parseInt(req.query.limit as string) || 25
+        const offset = parseInt(req.query.offset as string) || 0
+        const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
+
+        const result = await getRecommendedPostsWithLikeStatus(
+            { type, limit, offset },
+            userId
+        )
+
+        res.json(result)
+    })
+
+router.route('/posts/views')
+    /**
+     * @openapi
+     * "/community/posts/views":
+     *   post:
+     *     tags:
+     *       - Community
+     *     summary: Record post views for the current user
+     *     security:
+     *       - bearerAuth: []
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+     *               - postIds
+     *             properties:
+     *               postIds:
+     *                 type: array
+     *                 items:
+     *                   type: integer
+     *     responses:
+     *       204:
+     *         description: Views recorded
+     *       401:
+     *         description: Unauthorized
+     */
+    .post(userAuth, async (req, res) => {
+        const { postIds } = req.body
+        if (!Array.isArray(postIds) || postIds.length === 0) {
+            res.status(400).json({ error: 'postIds must be a non-empty array' })
+            return
+        }
+        // Cap to 50 to prevent abuse
+        const capped = postIds.slice(0, 50).map(Number).filter(Boolean)
+        await recordPostViews(res.locals.user.uid, capped)
+        res.status(204).end()
+    })
+
+router.route('/posts/:id/view')
+    /**
+     * @openapi
+     * "/community/posts/{id}/view":
+     *   post:
+     *     tags:
+     *       - Community
+     *     summary: Record a single post view
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       204:
+     *         description: View recorded
+     *       401:
+     *         description: Unauthorized
+     */
+    .post(userAuth, async (req, res) => {
+        const postId = parseInt(req.params.id)
+        if (!postId) {
+            res.status(400).json({ error: 'Invalid post ID' })
+            return
+        }
+        await recordPostView(res.locals.user.uid, postId)
+        res.status(204).end()
     })
 
 router.route('/posts')
