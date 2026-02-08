@@ -3,6 +3,8 @@ import { FRONTEND_URL } from '@src/config/url'
 import { fetchLevelFromGD, retrieveOrCreateLevel } from '@src/services/level.service'
 import { sendNotification } from '@src/services/notification.service'
 import { sendMessageToChannel } from '@src/services/discord.service'
+import { DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { s3 } from '@src/client/s3'
 
 // Note: The community tables (community_posts, community_comments, community_likes)
 // are not yet in the auto-generated Supabase types. After running the migration,
@@ -695,6 +697,32 @@ export async function updatePostAsUser(
     return await updateCommunityPost(postId, cleanUpdates)
 }
 
+/** Extract S3 key from a CDN URL (e.g. https://cdn.gdvn.net/community/uid/123.jpg -> community/uid/123.jpg) */
+function getS3KeyFromUrl(url: string): string | null {
+    try {
+        const parsed = new URL(url)
+        // Remove leading slash
+        return parsed.pathname.replace(/^\//, '')
+    } catch {
+        return null
+    }
+}
+
+/** Delete an image from S3 by its CDN URL */
+async function deleteImageFromS3(imageUrl: string) {
+    const key = getS3KeyFromUrl(imageUrl)
+    if (!key) return
+
+    try {
+        await s3.send(new DeleteObjectCommand({
+            Bucket: process.env.S3_CDN_BUCKET,
+            Key: key
+        }))
+    } catch (err) {
+        console.error('Failed to delete image from S3:', key, err)
+    }
+}
+
 /** Delete a post with ownership check */
 export async function deletePostAsUser(postId: number, uid: string, isAdmin: boolean) {
     let existingPost
@@ -706,6 +734,11 @@ export async function deletePostAsUser(postId: number, uid: string, isAdmin: boo
 
     if (existingPost.uid !== uid && !isAdmin) {
         throw new ForbiddenError()
+    }
+
+    // Delete the post's image from S3 if it exists
+    if (existingPost.image_url) {
+        await deleteImageFromS3(existingPost.image_url)
     }
 
     await deleteCommunityPost(postId)
