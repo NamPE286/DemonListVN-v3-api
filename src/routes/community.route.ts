@@ -33,7 +33,6 @@ import {
     getPendingModerationPosts,
     getPendingModerationPostsCount,
     approvePost,
-    rejectPost,
     getPostTags,
     createPostTag,
     deletePostTag,
@@ -895,7 +894,7 @@ router.route('/admin/moderation/:id/reject')
      */
     .put(adminAuth, async (req, res) => {
         try {
-            const post = await rejectPost(parseInt(req.params.id))
+            const post = await deleteCommunityPost(parseInt(req.params.id))
             res.json(post)
         } catch (e) {
             handleServiceError(res, e)

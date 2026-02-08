@@ -249,6 +249,16 @@ export async function updateCommunityPost(id: number, updates: {
 }
 
 export async function deleteCommunityPost(id: number) {
+    const { data } = await db   
+        .from('community_posts')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+    if (data.image_url) {
+        await deleteImageFromS3(data.image_url)
+    }
+
     const { error } = await db
         .from('community_posts')
         .delete()
@@ -677,21 +687,15 @@ export async function createPostFull(params: {
     // Run OpenAI moderation check on title + content + image (single API call)
     let moderationStatus = 'approved'
     let moderationResult = null
+
     try {
         const modResult = await moderatePost(title, content || '', image_url || undefined)
         moderationResult = modResult.raw
+
         if (modResult.flagged) {
-            // Notify user about the violation
-            const violatedCategories = modResult.flaggedCategories.join(', ')
-            throw new ValidationError(
-                `Your post was flagged for violating content policy: ${violatedCategories}. Please revise your content and try again.`
-            )
+            moderationStatus = 'pending'
         }
     } catch (err) {
-        // Re-throw ValidationErrors (moderation violations) directly to user
-        if (err instanceof ValidationError) {
-            throw err
-        }
         console.error('OpenAI moderation check failed, defaulting to pending:', err)
         // If moderation API fails, default to pending for safety
         moderationStatus = 'pending'
@@ -712,14 +716,20 @@ export async function createPostFull(params: {
         moderation_result: moderationResult
     })
 
-    // If post is pending moderation, return early (don't send notifications/Discord)
     if (moderationStatus === 'pending') {
-        return { ...post, moderation_status: moderationStatus }
+        throw new ValidationError(
+            `Bài viết của sẽ được chuyển sang đội ngũ kiểm duyệt vì có dấu hiệu vi phạm`
+        )
     }
 
     // Apply user tags if provided
     if (params.tag_ids && params.tag_ids.length > 0) {
         await setPostTags(post.id, params.tag_ids, false)
+    }
+
+    // If post is pending moderation, return early (don't send notifications/Discord)
+    if (moderationStatus === 'pending') {
+        return { ...post, moderation_status: moderationStatus }
     }
 
     // Send @mention notifications from post content
@@ -825,7 +835,6 @@ async function deleteImageFromS3(imageUrl: string) {
     }
 }
 
-/** Delete a post with ownership check */
 export async function deletePostAsUser(postId: number, uid: string, isAdmin: boolean) {
     let existingPost
     try {
@@ -836,11 +845,6 @@ export async function deletePostAsUser(postId: number, uid: string, isAdmin: boo
 
     if (existingPost.uid !== uid && !isAdmin) {
         throw new ForbiddenError()
-    }
-
-    // Delete the post's image from S3 if it exists
-    if (existingPost.image_url) {
-        await deleteImageFromS3(existingPost.image_url)
     }
 
     await deleteCommunityPost(postId)
@@ -1272,22 +1276,6 @@ export async function approvePost(postId: number) {
         console.error('Failed to send Discord notification after approval:', err)
     }
 
-    return data
-}
-
-/** Reject a pending post */
-export async function rejectPost(postId: number) {
-    const post = await getCommunityPost(postId)
-    if (!post) throw new NotFoundError('Post not found')
-
-    const { data, error } = await db
-        .from('community_posts_admin')
-        .update({ moderation_status: 'rejected' })
-        .eq('post_id', postId)
-        .select('*')
-        .single()
-
-    if (error) throw new Error(error.message)
     return data
 }
 
