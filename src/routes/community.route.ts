@@ -2,6 +2,8 @@ import express from 'express'
 import userAuth from '@src/middleware/user-auth.middleware'
 import optionalAuth from '@src/middleware/optional-user-auth.middleware'
 import adminAuth from '@src/middleware/admin-auth.middleware'
+import _supabase from '@src/client/supabase'
+const db: any = _supabase
 import {
     getPostsWithLikeStatus,
     getPostWithLikeStatus,
@@ -44,6 +46,29 @@ import {
 } from '@src/services/community.service'
 
 const router = express.Router()
+
+/** Check moderation status for post IDs, returns set of approved post IDs */
+async function getApprovedPostIds(postIds: number[]): Promise<Set<number>> {
+    if (postIds.length === 0) return new Set()
+    const { data, error } = await db
+        .from('community_posts_admin')
+        .select('post_id')
+        .in('post_id', postIds)
+        .eq('moderation_status', 'approved')
+    if (error) throw new Error(error.message)
+    return new Set((data || []).map((r: any) => r.post_id))
+}
+
+/** Check if a single post is approved */
+async function isPostApproved(postId: number): Promise<boolean> {
+    const { data, error } = await db
+        .from('community_posts_admin')
+        .select('moderation_status')
+        .eq('post_id', postId)
+        .single()
+    if (error) return false
+    return data?.moderation_status === 'approved'
+}
 
 /** Map service errors to HTTP status codes */
 function handleServiceError(res: express.Response, e: unknown) {
@@ -113,6 +138,15 @@ router.route('/posts')
             userId
         )
 
+        const isAdmin = res.locals.authenticated && res.locals.user?.isAdmin
+        if (!isAdmin && result.data.length > 0) {
+            const postIds = result.data.map((p: any) => p.id)
+            const approvedIds = await getApprovedPostIds(postIds)
+            const filtered = result.data.filter((p: any) => approvedIds.has(p.id))
+            result.total -= (result.data.length - filtered.length)
+            result.data = filtered
+        }
+
         res.json(result)
     })
 
@@ -154,6 +188,15 @@ router.route('/posts/recommended')
             { type, limit, offset },
             userId
         )
+
+        const isAdmin = res.locals.authenticated && res.locals.user?.isAdmin
+        if (!isAdmin && result.data.length > 0) {
+            const postIds = result.data.map((p: any) => p.id)
+            const approvedIds = await getApprovedPostIds(postIds)
+            const filtered = result.data.filter((p: any) => approvedIds.has(p.id))
+            result.total -= (result.data.length - filtered.length)
+            result.data = filtered
+        }
 
         res.json(result)
     })
@@ -301,7 +344,15 @@ router.route('/posts/:id')
     .get(optionalAuth, async (req, res) => {
         try {
             const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
-            const post = await getPostWithLikeStatus(parseInt(req.params.id), userId)
+            const isAdmin = res.locals.authenticated && res.locals.user?.isAdmin
+            const postId = parseInt(req.params.id)
+
+            if (!isAdmin && !(await isPostApproved(postId))) {
+                res.status(404).json({ error: 'Post not found' })
+                return
+            }
+
+            const post = await getPostWithLikeStatus(postId, userId)
             res.json(post)
         } catch (e) {
             handleServiceError(res, e)
@@ -478,6 +529,13 @@ router.route('/posts/:id/comments')
      */
     .get(optionalAuth, async (req, res) => {
         const postId = parseInt(req.params.id)
+        const isAdmin = res.locals.authenticated && res.locals.user?.isAdmin
+
+        if (!isAdmin && !(await isPostApproved(postId))) {
+            res.status(404).json({ error: 'Post not found' })
+            return
+        }
+
         const limit = parseInt(req.query.limit as string) || 50
         const offset = parseInt(req.query.offset as string) || 0
         const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
@@ -920,7 +978,15 @@ router.route('/levels/:id/posts')
         const limit = parseInt(req.query.limit as string) || 5
         const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
 
-        const posts = await getPostsByLevelWithLikeStatus(levelId, limit, userId)
+        let posts = await getPostsByLevelWithLikeStatus(levelId, limit, userId)
+
+        const isAdmin = res.locals.authenticated && res.locals.user?.isAdmin
+        if (!isAdmin && posts.length > 0) {
+            const postIds = posts.map((p: any) => p.id)
+            const approvedIds = await getApprovedPostIds(postIds)
+            posts = posts.filter((p: any) => approvedIds.has(p.id))
+        }
+
         res.json(posts)
     })
 
@@ -928,7 +994,7 @@ router.route('/levels/:id/posts')
 
 // Get all post tags
 router.route('/tags')
-    .get(async (_req, res) => {
+    .get(optionalAuth, async (_req, res) => {
         const tags = await getPostTags()
         res.json(tags)
     })
