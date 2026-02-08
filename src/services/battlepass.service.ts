@@ -1,7 +1,7 @@
 import supabase from "@src/client/supabase";
 import type { TablesInsert } from "@src/types/supabase";
 import { addInventoryItem } from "@src/services/inventory.service";
-import { SubscriptionType } from "@src/const/subscriptionTypeConst";
+import { SubscriptionType } from "@src/const/subscription-type-const";
 import { fetchPlayerDeathCount, getDeathCountProgress } from "@src/services/death-count.service";
 
 const XP_PER_TIER = 100;

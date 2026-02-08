@@ -5,6 +5,7 @@ import { sendNotification } from '@src/services/notification.service'
 import { sendMessageToChannel } from '@src/services/discord.service'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { s3 } from '@src/client/s3'
+import { DiscordChannel } from "@src/const/discord-channel-const"
 
 // Note: The community tables (community_posts, community_comments, community_likes)
 // are not yet in the auto-generated Supabase types. After running the migration,
@@ -660,7 +661,7 @@ export async function createPostFull(params: {
         const playerProfileUrl = `${FRONTEND_URL}/player/${post.uid}`
 
         await sendMessageToChannel(
-            String(process.env.DISCORD_GENERAL_CHANNEL_ID),
+            String(DiscordChannel.GENERAL),
             `${emoji} **[${playerName}](${playerProfileUrl})** đã đăng bài trong Community Hub: **${title}**\n${postUrl}`
         )
     } catch (err) {

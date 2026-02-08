@@ -1,5 +1,5 @@
 import supabase from "@src/client/supabase";
-import { ItemId } from "@src/const/itemIdConst";
+import { ItemId } from "@src/const/item-id-const";
 import { addCaseResult, addInventoryCaseItem, consumeItem } from "@src/services/inventory.service";
 import { getCase as getCaseItems, getItem } from "@src/services/item.service";
 import { getPlayer } from "@src/services/player.service";

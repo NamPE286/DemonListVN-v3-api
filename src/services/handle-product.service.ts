@@ -7,8 +7,9 @@ import { getClan, extendClanBoost } from "@src/services/clan.service";
 import { extendPlayerSupporter } from "@src/services/player.service";
 import type { Tables } from "@src/types/supabase";
 import { getRecord, prioritizeRecord } from "@src/services/record.service";
-import { ProductId } from "@src/const/productIdConst";
+import { ProductId } from "@src/const/product-id-const";
 import { getActiveseason, upgradeToPremium } from "@src/services/battlepass.service";
+import { DiscordChannel } from "@src/const/discord-channel-const";
 
 interface HandleProduct {
     pre: (buyer: Tables<"players">, recipient: Tables<"players">, order: Awaited<ReturnType<typeof getOrder>>) => Promise<void>;
@@ -55,10 +56,10 @@ handleProduct.set(ProductId.SUPPORTER, {
                 content: `Bạn đã được tặng ${order.quantity} tháng Geometry Dash VN Supporter Role!`,
                 to: order.giftTo
             })
-            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), `${buyerStr} đã tặng ${msg} ${order.quantity} tháng Geometry Dash VN Supporter Role!`)
+            await sendMessageToChannel(DiscordChannel.GENERAL, `${buyerStr} đã tặng ${msg} ${order.quantity} tháng Geometry Dash VN Supporter Role!`)
         } else {
             msg += ` đã mua ${order.quantity} tháng Geometry Dash VN Supporter Role!`
-            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
+            await sendMessageToChannel(DiscordChannel.GENERAL, msg)
         }
     }
 })
@@ -88,7 +89,7 @@ handleProduct.set(ProductId.CLAN_BOOST, {
         }
 
         msg += ` đã boost [${clan.name}](${FRONTEND_URL}/clan/${clan.id}) trong ${order.quantity} ngày!`
-        await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
+        await sendMessageToChannel(DiscordChannel.GENERAL, msg)
     }
 })
 
@@ -118,7 +119,7 @@ handleProduct.set(ProductId.QUEUE_BOOST, {
         }
 
         msg += ` đã boost record của họ thêm ${order.quantity} ngày`
-        await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
+        await sendMessageToChannel(DiscordChannel.GENERAL, msg)
     }
 })
 
@@ -165,10 +166,10 @@ handleProduct.set(ProductId.BATTLE_PASS, {
                 content: `Bạn đã được tặng Battle Pass Premium!`,
                 to: order.giftTo
             })
-            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), `${msg}`)
+            await sendMessageToChannel(DiscordChannel.GENERAL, `${msg}`)
         } else {
             msg += ` đã mua Battle Pass Premium!`
-            await sendMessageToChannel(String(process.env.DISCORD_GENERAL_CHANNEL_ID), msg)
+            await sendMessageToChannel(DiscordChannel.GENERAL, msg)
         }
     }
 })

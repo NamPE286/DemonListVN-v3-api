@@ -5,7 +5,7 @@ import { consumeItem } from '@src/services/inventory.service'
 import supabase from '@src/client/supabase'
 import { getPlayerInventoryItems } from '@src/services/player.service'
 import { consumeCase, consumeQueueBoost } from '@src/services/item-consumer.service'
-import { ItemId } from '@src/const/itemIdConst'
+import { ItemId } from '@src/const/item-id-const'
 
 const router = express.Router()
 
