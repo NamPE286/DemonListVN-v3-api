@@ -30,6 +30,10 @@ import {
     getRecommendedPostsWithLikeStatus,
     recordPostView,
     recordPostViews,
+    getPendingModerationPosts,
+    getPendingModerationPostsCount,
+    approvePost,
+    rejectPost,
     ValidationError,
     ForbiddenError,
     NotFoundError,
@@ -792,6 +796,104 @@ router.route('/admin/comments/:id/hidden')
             res.json(comment)
         } catch (e: any) {
             res.status(400).json({ error: e.message })
+        }
+    })
+
+// Admin: list posts pending moderation
+router.route('/admin/moderation/pending')
+    /**
+     * @openapi
+     * "/community/admin/moderation/pending":
+     *   get:
+     *     tags:
+     *       - Community
+     *     summary: Admin - List posts pending moderation approval
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: query
+     *         name: limit
+     *         schema:
+     *           type: integer
+     *           default: 50
+     *       - in: query
+     *         name: offset
+     *         schema:
+     *           type: integer
+     *           default: 0
+     *     responses:
+     *       200:
+     *         description: List of posts pending moderation
+     */
+    .get(adminAuth, async (req, res) => {
+        const limit = parseInt(req.query.limit as string) || 50
+        const offset = parseInt(req.query.offset as string) || 0
+
+        const [posts, total] = await Promise.all([
+            getPendingModerationPosts({ limit, offset }),
+            getPendingModerationPostsCount()
+        ])
+
+        res.json({ data: posts, total })
+    })
+
+// Admin: approve a pending post
+router.route('/admin/moderation/:id/approve')
+    /**
+     * @openapi
+     * "/community/admin/moderation/{id}/approve":
+     *   put:
+     *     tags:
+     *       - Community
+     *     summary: Admin - Approve a pending post
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: Post approved
+     */
+    .put(adminAuth, async (req, res) => {
+        try {
+            const post = await approvePost(parseInt(req.params.id))
+            res.json(post)
+        } catch (e) {
+            handleServiceError(res, e)
+        }
+    })
+
+// Admin: reject a pending post
+router.route('/admin/moderation/:id/reject')
+    /**
+     * @openapi
+     * "/community/admin/moderation/{id}/reject":
+     *   put:
+     *     tags:
+     *       - Community
+     *     summary: Admin - Reject a pending post
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: Post rejected
+     */
+    .put(adminAuth, async (req, res) => {
+        try {
+            const post = await rejectPost(parseInt(req.params.id))
+            res.json(post)
+        } catch (e) {
+            handleServiceError(res, e)
         }
     })
 

@@ -6,6 +6,7 @@ import { sendMessageToChannel } from '@src/services/discord.service'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { s3 } from '@src/client/s3'
 import { DiscordChannel } from "@src/const/discord-channel-const"
+import { moderatePost } from '@src/services/moderation.service'
 
 // Note: The community tables (community_posts, community_comments, community_likes)
 // are not yet in the auto-generated Supabase types. After running the migration,
@@ -51,7 +52,8 @@ export async function getCommunityPosts(options: {
     ascending?: boolean,
     pinFirst?: boolean,
     search?: string,
-    hidden?: boolean
+    hidden?: boolean,
+    moderationStatus?: string
 }) {
     const {
         type,
@@ -61,7 +63,8 @@ export async function getCommunityPosts(options: {
         ascending = false,
         pinFirst = true,
         search,
-        hidden
+        hidden,
+        moderationStatus
     } = options
 
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
@@ -79,6 +82,13 @@ export async function getCommunityPosts(options: {
         query = query.eq('hidden', true)
     } else if (hidden === false || hidden === undefined) {
         query = query.eq('hidden', false)
+    }
+
+    // Only show approved posts to public (unless admin explicitly requests all)
+    if (options.moderationStatus) {
+        query = query.eq('moderation_status', options.moderationStatus)
+    } else {
+        query = query.eq('moderation_status', 'approved')
     }
 
     // Full-text search using the fts column
@@ -103,7 +113,7 @@ export async function getCommunityPosts(options: {
     return data
 }
 
-export async function getCommunityPostsCount(type?: string, search?: string, hidden?: boolean) {
+export async function getCommunityPostsCount(type?: string, search?: string, hidden?: boolean, moderationStatus?: string) {
     let query = db
         .from('community_posts')
         .select('*', { count: 'exact', head: true })
@@ -116,6 +126,13 @@ export async function getCommunityPostsCount(type?: string, search?: string, hid
         query = query.eq('hidden', true)
     } else if (hidden === false || hidden === undefined) {
         query = query.eq('hidden', false)
+    }
+
+    // Filter by moderation status (default: approved only)
+    if (moderationStatus) {
+        query = query.eq('moderation_status', moderationStatus)
+    } else {
+        query = query.eq('moderation_status', 'approved')
     }
 
     if (search) {
@@ -157,7 +174,9 @@ export async function createCommunityPost(post: {
     video_url?: string,
     attached_record?: any,
     attached_level?: any,
-    is_recommended?: boolean
+    is_recommended?: boolean,
+    moderation_status?: string,
+    moderation_result?: any
 }) {
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
@@ -482,6 +501,7 @@ export async function getPostsByLevel(levelId: number, limit = 5) {
         .from('community_posts')
         .select(`*, players!uid(${playerSelect})`)
         .eq('hidden', false)
+        .eq('moderation_status', 'approved')
         .or(`attached_level->>id.eq.${levelId},attached_record->>levelID.eq.${levelId}`)
         .order('created_at', { ascending: false })
         .limit(limit)
@@ -613,6 +633,21 @@ export async function createPostFull(params: {
         }
     }
 
+    // Run OpenAI moderation check on title + content
+    let moderationStatus = 'approved'
+    let moderationResult = null
+    try {
+        const modResult = await moderatePost(title, content || '')
+        moderationResult = modResult.raw
+        if (modResult.flagged) {
+            moderationStatus = 'pending'
+        }
+    } catch (err) {
+        console.error('OpenAI moderation check failed, defaulting to pending:', err)
+        // If moderation API fails, default to pending for safety
+        moderationStatus = 'pending'
+    }
+
     const post = await createCommunityPost({
         uid,
         title,
@@ -622,8 +657,15 @@ export async function createPostFull(params: {
         video_url,
         attached_record: attached_record || undefined,
         attached_level: attached_level || undefined,
-        is_recommended: postType === 'review' ? is_recommended : undefined
+        is_recommended: postType === 'review' ? is_recommended : undefined,
+        moderation_status: moderationStatus,
+        moderation_result: moderationResult
     })
+
+    // If post is pending moderation, return early (don't send notifications/Discord)
+    if (moderationStatus === 'pending') {
+        return { ...post, moderation_status: moderationStatus }
+    }
 
     // Send @mention notifications from post content
     const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g
@@ -937,6 +979,7 @@ export async function getPostsByUser(uid: string, limit = 20, offset = 0) {
         .select(`*, players!uid(${playerSelect})`)
         .eq('uid', uid)
         .eq('hidden', false)
+        .eq('moderation_status', 'approved')
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1)
 
@@ -951,6 +994,7 @@ export async function getPostsByUserCount(uid: string) {
         .select('*', { count: 'exact', head: true })
         .eq('uid', uid)
         .eq('hidden', false)
+        .eq('moderation_status', 'approved')
 
     if (error) throw new Error(error.message)
     return count || 0
@@ -1050,6 +1094,7 @@ export async function getRecommendedPostsWithLikeStatus(
         .select(`*, players!uid(${playerSelect})`)
         .in('id', postIds)
         .eq('hidden', false)
+        .eq('moderation_status', 'approved')
 
     if (error) {
         throw new Error(error.message)
@@ -1102,4 +1147,91 @@ export async function recordPostViews(userId: string, postIds: number[]) {
     await Promise.allSettled(
         postIds.map(postId => recordPostView(userId, postId))
     )
+}
+
+// ---- Moderation (Admin) ----
+
+/** Get posts pending moderation review */
+export async function getPendingModerationPosts(options: {
+    limit?: number,
+    offset?: number
+}) {
+    const { limit = 50, offset = 0 } = options
+    const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+
+    const { data, error } = await db
+        .from('community_posts')
+        .select(`*, players!uid(${playerSelect})`)
+        .eq('moderation_status', 'pending')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+
+    if (error) throw new Error(error.message)
+    return data || []
+}
+
+/** Get count of posts pending moderation */
+export async function getPendingModerationPostsCount() {
+    const { count, error } = await db
+        .from('community_posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('moderation_status', 'pending')
+
+    if (error) throw new Error(error.message)
+    return count || 0
+}
+
+/** Approve a pending post (makes it visible to all users) */
+export async function approvePost(postId: number) {
+    const post = await getCommunityPost(postId)
+    if (!post) throw new NotFoundError('Post not found')
+
+    const { data, error } = await db
+        .from('community_posts')
+        .update({ moderation_status: 'approved' })
+        .eq('id', postId)
+        .select('*')
+        .single()
+
+    if (error) throw new Error(error.message)
+
+    // Now send notifications & Discord message that were deferred
+    try {
+        const typeEmoji: Record<string, string> = {
+            discussion: '💬',
+            media: '📸',
+            guide: '📖',
+            announcement: '📢',
+            review: '⭐'
+        }
+        const emoji = typeEmoji[post.type] || '💬'
+        const playerName = post.players?.name || 'Someone'
+        const postUrl = `${FRONTEND_URL}/community/${post.id}`
+        const playerProfileUrl = `${FRONTEND_URL}/player/${post.uid}`
+
+        await sendMessageToChannel(
+            String(DiscordChannel.GENERAL),
+            `${emoji} **[${playerName}](${playerProfileUrl})** đã đăng bài trong Community Hub: **${post.title}**\n${postUrl}`
+        )
+    } catch (err) {
+        console.error('Failed to send Discord notification after approval:', err)
+    }
+
+    return data
+}
+
+/** Reject a pending post */
+export async function rejectPost(postId: number) {
+    const post = await getCommunityPost(postId)
+    if (!post) throw new NotFoundError('Post not found')
+
+    const { data, error } = await db
+        .from('community_posts')
+        .update({ moderation_status: 'rejected' })
+        .eq('id', postId)
+        .select('*')
+        .single()
+
+    if (error) throw new Error(error.message)
+    return data
 }
