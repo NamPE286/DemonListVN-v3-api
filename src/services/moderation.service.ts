@@ -1,6 +1,4 @@
-import OpenAI from 'openai'
-
-const openai = new OpenAI()
+import { openai } from "@src/client/openai"
 
 export interface ModerationResult {
     flagged: boolean
