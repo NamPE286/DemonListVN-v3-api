@@ -35,6 +35,11 @@ import {
     getPendingModerationPosts,
     getPendingModerationPostsCount,
     approvePost,
+    getPendingModerationComments,
+    getPendingModerationCommentsCount,
+    approveComment,
+    rejectComment,
+    toggleCommentHidden,
     getPostTags,
     createPostTag,
     deletePostTag,
@@ -848,20 +853,6 @@ router.route('/admin/posts/:id/hidden')
         }
     })
 
-// Admin: toggle hide/unhide a comment
-router.route('/admin/comments/:id/hidden')
-    .put(adminAuth, async (req, res) => {
-        const commentId = parseInt(req.params.id)
-        const { hidden } = req.body
-
-        try {
-            const comment = await toggleHidden('community_comments', commentId, hidden)
-            res.json(comment)
-        } catch (e: any) {
-            res.status(400).json({ error: e.message })
-        }
-    })
-
 // Admin: list posts pending moderation
 router.route('/admin/moderation/pending')
     /**
@@ -957,6 +948,56 @@ router.route('/admin/moderation/:id/reject')
             res.json(post)
         } catch (e) {
             handleServiceError(res, e)
+        }
+    })
+
+// Admin: list comments pending moderation
+router.route('/admin/moderation/comments/pending')
+    .get(adminAuth, async (req, res) => {
+        const limit = parseInt(req.query.limit as string) || 50
+        const offset = parseInt(req.query.offset as string) || 0
+
+        const [comments, total] = await Promise.all([
+            getPendingModerationComments({ limit, offset }),
+            getPendingModerationCommentsCount()
+        ])
+
+        res.json({ data: comments, total })
+    })
+
+// Admin: approve a pending comment
+router.route('/admin/moderation/comments/:id/approve')
+    .put(adminAuth, async (req, res) => {
+        try {
+            const comment = await approveComment(parseInt(req.params.id))
+            res.json(comment)
+        } catch (e) {
+            handleServiceError(res, e)
+        }
+    })
+
+// Admin: reject a pending comment
+router.route('/admin/moderation/comments/:id/reject')
+    .put(adminAuth, async (req, res) => {
+        try {
+            await rejectComment(parseInt(req.params.id))
+            res.json({ success: true })
+        } catch (e) {
+            handleServiceError(res, e)
+        }
+    })
+
+// Admin: toggle hide/unhide a comment (via admin table)
+router.route('/admin/comments/:id/hidden')
+    .put(adminAuth, async (req, res) => {
+        const commentId = parseInt(req.params.id)
+        const { hidden } = req.body
+
+        try {
+            const comment = await toggleCommentHidden(commentId, hidden)
+            res.json(comment)
+        } catch (e: any) {
+            res.status(400).json({ error: e.message })
         }
     })
 

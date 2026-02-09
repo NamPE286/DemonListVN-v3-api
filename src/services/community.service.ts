@@ -329,15 +329,24 @@ export async function deleteCommunityPost(id: number) {
     }
 }
 
-export async function getPostComments(postId: number, limit = 50, offset = 0) {
+export async function getPostComments(postId: number, limit = 50, offset = 0, includeAll = false) {
     const playerSelect = '*, clans!id(*)'
 
-    const { data, error } = await db
+    let query = db
         .from('community_comments')
-        .select(`*, players!uid(${playerSelect})`)
+        .select(`*, players!uid(${playerSelect}), community_comments_admin!inner(moderation_status, moderation_result, hidden)`)
         .eq('post_id', postId)
+
+    if (!includeAll) {
+        query = query.eq('community_comments_admin.moderation_status', 'approved')
+        query = query.eq('community_comments_admin.hidden', false)
+    }
+
+    query = query
         .order('created_at', { ascending: true })
         .range(offset, offset + limit - 1)
+
+    const { data, error } = await query
 
     if (error) {
         throw new Error(error.message)
@@ -351,6 +360,9 @@ export async function createComment(comment: {
     uid: string,
     content: string,
     attached_level?: any
+}, adminData?: {
+    moderation_status?: string,
+    moderation_result?: any
 }) {
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
@@ -364,7 +376,21 @@ export async function createComment(comment: {
         throw new Error(error.message)
     }
 
-    return data
+    // Insert admin data into separate table
+    const { error: adminError } = await db
+        .from('community_comments_admin')
+        .insert({
+            comment_id: data.id,
+            moderation_status: adminData?.moderation_status || 'approved',
+            moderation_result: adminData?.moderation_result || null,
+            hidden: false
+        })
+
+    if (adminError) {
+        console.error('Failed to insert comment admin data:', adminError.message)
+    }
+
+    return { ...data, community_comments_admin: { moderation_status: adminData?.moderation_status || 'approved', hidden: false } }
 }
 
 export async function deleteComment(id: number) {
@@ -958,6 +984,22 @@ export async function createCommentFull(params: {
         throw new ValidationError('Content is required')
     }
 
+    // Run OpenAI moderation check on comment content
+    let moderationStatus = 'approved'
+    let moderationResult = null
+
+    try {
+        const modResult = await moderateContent('', content)
+        moderationResult = modResult.raw
+
+        if (modResult.flagged) {
+            moderationStatus = 'pending'
+        }
+    } catch (err) {
+        console.error('OpenAI moderation check failed for comment, defaulting to pending:', err)
+        moderationStatus = 'pending'
+    }
+
     const commentData: any = {
         post_id: postId,
         uid,
@@ -968,7 +1010,17 @@ export async function createCommentFull(params: {
         commentData.attached_level = attached_level
     }
 
-    const comment = await createComment(commentData)
+    const comment = await createComment(commentData, {
+        moderation_status: moderationStatus,
+        moderation_result: moderationResult
+    })
+
+    if (moderationStatus === 'pending') {
+        logger.notice(`Comment flagged by AI: comment #${comment.id} on post #${postId}`)
+        throw new ValidationError(
+            `Bình luận của bạn sẽ được chuyển sang đội ngũ kiểm duyệt vì có dấu hiệu vi phạm`
+        )
+    }
 
     // Notify post author about the new comment (if commenter is not the author)
     try {
@@ -1337,6 +1389,107 @@ export async function approvePost(postId: number) {
         console.error('Failed to send Discord notification after approval:', err)
     }
 
+    return data
+}
+
+/** Get comments pending moderation review */
+export async function getPendingModerationComments(options: {
+    limit?: number,
+    offset?: number
+}) {
+    const { limit = 50, offset = 0 } = options
+    const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+
+    const { data, error } = await db
+        .from('community_comments')
+        .select(`*, players!uid(${playerSelect}), community_comments_admin!inner(moderation_status, moderation_result, hidden), community_posts!post_id(id, title)`)
+        .eq('community_comments_admin.moderation_status', 'pending')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+
+    if (error) throw new Error(error.message)
+    return data || []
+}
+
+/** Get count of comments pending moderation */
+export async function getPendingModerationCommentsCount() {
+    const { count, error } = await db
+        .from('community_comments')
+        .select('*, community_comments_admin!inner(moderation_status)', { count: 'exact', head: true })
+        .eq('community_comments_admin.moderation_status', 'pending')
+
+    if (error) throw new Error(error.message)
+    return count || 0
+}
+
+/** Approve a pending comment (makes it visible to all users) */
+export async function approveComment(commentId: number) {
+    const comment = await getComment(commentId)
+    if (!comment) throw new NotFoundError('Comment not found')
+
+    const { data, error } = await db
+        .from('community_comments_admin')
+        .update({ moderation_status: 'approved' })
+        .eq('comment_id', commentId)
+        .select('*')
+        .single()
+
+    if (error) throw new Error(error.message)
+    return data
+}
+
+/** Reject a pending comment (deletes it) */
+export async function rejectComment(commentId: number) {
+    await deleteComment(commentId)
+}
+
+/** Update comment moderation status after edit */
+export async function updateCommentModeration(commentId: number, content: string) {
+    let moderationStatus = 'approved'
+    let moderationResult = null
+
+    try {
+        const modResult = await moderateContent('', content)
+        moderationResult = modResult.raw
+
+        if (modResult.flagged) {
+            moderationStatus = 'pending'
+        }
+    } catch (err) {
+        console.error('OpenAI moderation check failed for comment edit, defaulting to pending:', err)
+        moderationStatus = 'pending'
+    }
+
+    const { error: adminError } = await db
+        .from('community_comments_admin')
+        .upsert({
+            comment_id: commentId,
+            moderation_status: moderationStatus || 'approved',
+            moderation_result: moderationResult || null,
+            hidden: false
+        })
+
+    if (adminError) {
+        throw new Error(adminError.message)
+    }
+
+    if (moderationStatus === 'pending') {
+        throw new ValidationError(
+            `Bình luận của bạn sẽ được chuyển sang đội ngũ kiểm duyệt vì có dấu hiệu vi phạm`
+        )
+    }
+}
+
+/** Toggle hidden status for a comment via admin table */
+export async function toggleCommentHidden(commentId: number, hidden: boolean) {
+    const { data, error } = await db
+        .from('community_comments_admin')
+        .update({ hidden })
+        .eq('comment_id', commentId)
+        .select('*')
+        .single()
+
+    if (error) throw new Error(error.message)
     return data
 }
 
