@@ -6,7 +6,7 @@ import { sendMessageToChannel } from '@src/services/discord.service'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { s3 } from '@src/client/s3'
 import { DiscordChannel } from "@src/const/discord-channel-const"
-import { moderatePost } from '@src/services/moderation.service'
+import { moderateContent } from '@src/services/moderation.service'
 import logger from "@src/utils/logger"
 
 // Note: The community tables (community_posts, community_comments, community_likes)
@@ -275,7 +275,7 @@ export async function updateCommunityPost(id: number, updates: {
     let moderationResult = null
 
     try {
-        const modResult = await moderatePost(updates.title!, updates.content!)
+        const modResult = await moderateContent(updates.title!, updates.content!)
         moderationResult = modResult.raw
 
         if (modResult.flagged) {
@@ -749,7 +749,7 @@ export async function createPostFull(params: {
     let moderationResult = null
 
     try {
-        const modResult = await moderatePost(title, content || '', image_url || undefined)
+        const modResult = await moderateContent(title, content || '', image_url || undefined)
         moderationResult = modResult.raw
 
         if (modResult.flagged) {

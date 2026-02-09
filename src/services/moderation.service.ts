@@ -2,7 +2,7 @@ import OpenAI from 'openai'
 
 const openai = new OpenAI()
 
-export async function moderatePost(title: string, content: string, imageUrl?: string) {
+export async function moderateContent(title: string, content: string, imageUrl?: string) {
     const textToCheck = `${title}\n\n${content}`.trim()
 
     // Build input array: always include text, optionally include image
