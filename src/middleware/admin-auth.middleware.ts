@@ -20,7 +20,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
         if (error) {
             console.error(error.message)
             res.status(401).send()
-            
+
             return
         }
 
@@ -51,10 +51,12 @@ export default async function (req: Request, res: Response, next: NextFunction) 
         res.locals.user = player
         res.locals.authType = 'token'
 
-        const body = "```" + JSON.stringify(req.body) + "```"
-        const msg = `${player.name} performed ${req.method} ${req.url}`
+        if (req.method != 'GET') {
+            const body = req.body ? "```" + JSON.stringify(req.body) + "```" : ''
+            const msg = `${player.name} performed ${req.method} ${req.url}`
 
-        await logger.log((body + msg).length <= 2000 ? (msg + body) : msg)
+            await logger.log((body + msg).length <= 2000 ? (msg + body) : msg)
+        }
     } catch {
         try {
             const key = req.headers.authorization.split(' ')[1]
