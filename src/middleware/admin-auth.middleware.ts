@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import jwt from 'jsonwebtoken'
 import supabase from "@src/client/supabase";
 import { getPlayer } from '@src/services/player.service';
+import logger from "@src/utils/logger";
 
 export default async function (req: Request, res: Response, next: NextFunction) {
     res.locals.authenticated = false;
@@ -49,6 +50,11 @@ export default async function (req: Request, res: Response, next: NextFunction) 
 
         res.locals.user = player
         res.locals.authType = 'token'
+
+        const body = "```" + JSON.stringify(req.body) + "```"
+        const msg = `${player.name} performed ${req.method} ${req.url}`
+
+        await logger.log((body + msg).length <= 2000 ? (msg + body) : msg)
     } catch {
         try {
             const key = req.headers.authorization.split(' ')[1]
@@ -88,5 +94,6 @@ export default async function (req: Request, res: Response, next: NextFunction) 
     }
 
     res.locals.authenticated = true;
+
     next()
 }
