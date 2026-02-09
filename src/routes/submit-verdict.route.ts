@@ -56,7 +56,7 @@ router.route('/')
         }
 
 
-        await logger.log(`${user.name} (${user.uid}) ${req.body.needMod ? 'đã chuyển tiếp' : ''}${req.body.isChecked ? 'đã chấp nhận' : ''} record ${req.body.levelid} của ${req.body.userid}\nNhận xét của reviewer: ${req.body.reviewerComment}`)
+        await logger.log(`${user.name} (${user.uid}) ${req.body.needMod ? 'forwarded' : ''}${req.body.isChecked ? 'accepted' : ''} record ${req.body.levelid} của ${req.body.userid}\nNhận xét của reviewer: ${req.body.reviewerComment}`)
         
         if (req.body.isChecked) {
             const level = await getLevel(parseInt(req.body.levelid));
