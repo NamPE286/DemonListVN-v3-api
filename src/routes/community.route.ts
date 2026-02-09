@@ -40,6 +40,9 @@ import {
     approveComment,
     rejectComment,
     toggleCommentHidden,
+    getAdminComments,
+    getAdminCommentsCount,
+    deleteComment,
     getPostTags,
     createPostTag,
     deletePostTag,
@@ -851,6 +854,32 @@ router.route('/admin/posts/:id/hidden')
         } catch (e: any) {
             res.status(400).json({ error: e.message })
         }
+    })
+
+// Admin: list all comments with search/filter
+router.route('/admin/comments')
+    .get(adminAuth, async (req, res) => {
+        const limit = parseInt(req.query.limit as string) || 50
+        const offset = parseInt(req.query.offset as string) || 0
+        const search = req.query.search as string | undefined
+        const hidden = req.query.hidden === 'true' ? true : req.query.hidden === 'false' ? false : undefined
+        const moderationStatus = req.query.moderationStatus as string | undefined
+        const postId = req.query.postId ? parseInt(req.query.postId as string) : undefined
+
+        const [comments, total] = await Promise.all([
+            getAdminComments({ limit, offset, search, hidden, moderationStatus, postId }),
+            getAdminCommentsCount({ search, hidden, moderationStatus, postId })
+        ])
+
+        res.json({ data: comments, total })
+    })
+
+// Admin: force delete any comment
+router.route('/admin/comments/:id')
+    .delete(adminAuth, async (req, res) => {
+        const commentId = parseInt(req.params.id)
+        await deleteComment(commentId)
+        res.json({ success: true })
     })
 
 // Admin: list posts pending moderation

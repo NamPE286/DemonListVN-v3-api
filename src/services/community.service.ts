@@ -633,6 +633,98 @@ export async function getPostsByLevel(levelId: number, limit = 5) {
     return data || []
 }
 
+/** Admin: get all comments with filtering (like getCommunityPosts but for comments) */
+export async function getAdminComments(options: {
+    limit?: number,
+    offset?: number,
+    search?: string,
+    hidden?: boolean,
+    moderationStatus?: string,
+    postId?: number
+}) {
+    const {
+        limit = 50,
+        offset = 0,
+        search,
+        hidden,
+        moderationStatus
+    } = options
+
+    const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+
+    let query = db
+        .from('community_comments')
+        .select(`*, players!uid(${playerSelect}), community_comments_admin!inner(moderation_status, moderation_result, hidden), community_posts!post_id(id, title)`)
+
+    // Filter hidden comments via admin table (default: show only non-hidden)
+    if (hidden === true) {
+        query = query.eq('community_comments_admin.hidden', true)
+    } else if (hidden === false || hidden === undefined) {
+        query = query.eq('community_comments_admin.hidden', false)
+    }
+
+    // Filter by moderation status
+    if (moderationStatus) {
+        query = query.eq('community_comments_admin.moderation_status', moderationStatus)
+    }
+
+    // Filter by post
+    if (options.postId) {
+        query = query.eq('post_id', options.postId)
+    }
+
+    // Search in comment content
+    if (search) {
+        query = query.ilike('content', `%${search}%`)
+    }
+
+    query = query
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+
+    const { data, error } = await query
+
+    if (error) throw new Error(error.message)
+    return data || []
+}
+
+/** Admin: get count of all comments with filtering */
+export async function getAdminCommentsCount(options: {
+    search?: string,
+    hidden?: boolean,
+    moderationStatus?: string,
+    postId?: number
+}) {
+    const { search, hidden, moderationStatus } = options
+
+    let query = db
+        .from('community_comments')
+        .select('*, community_comments_admin!inner(moderation_status, hidden)', { count: 'exact', head: true })
+
+    if (hidden === true) {
+        query = query.eq('community_comments_admin.hidden', true)
+    } else if (hidden === false || hidden === undefined) {
+        query = query.eq('community_comments_admin.hidden', false)
+    }
+
+    if (moderationStatus) {
+        query = query.eq('community_comments_admin.moderation_status', moderationStatus)
+    }
+
+    if (options.postId) {
+        query = query.eq('post_id', options.postId)
+    }
+
+    if (search) {
+        query = query.ilike('content', `%${search}%`)
+    }
+
+    const { count, error } = await query
+
+    if (error) throw new Error(error.message)
+    return count || 0
+}
+
 export async function toggleHidden(table: 'community_posts' | 'community_comments', id: number, hidden: boolean) {
     if (table === 'community_posts') {
         const { data, error } = await db
