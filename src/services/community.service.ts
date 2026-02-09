@@ -284,6 +284,7 @@ export async function updateCommunityPost(id: number, updates: {
     } catch (err) {
         console.error('OpenAI moderation check failed, defaulting to pending:', err)
         moderationStatus = 'pending'
+        moderationResult = err ?? null
     }
 
     const { error: adminError } = await db
