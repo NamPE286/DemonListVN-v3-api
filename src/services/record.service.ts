@@ -83,7 +83,7 @@ export async function getChallengeListRecords({ start = 0, end = 0, isChecked = 
 export async function getPlayerRecordRating(uid: string) {
     const { data, error } = await supabase
         .from('records')
-        .select('userid, progress, no, levels!inner(id, rating), dlPt')
+        .select('userid, progress, no, levels!public_records_levelid_fkey!inner(id, rating), dlPt')
         .eq('userid', uid)
         .not('dlPt', 'is', null)
         .order('no')
@@ -104,26 +104,26 @@ export async function getPlayerRecordRating(uid: string) {
 export async function getPlayerRecords(uid: string, { start = '0', end = '50', sortBy = 'pt', ascending = 'false', isChecked = 'true' } = {}) {
     let query = supabase
         .from('records')
-        .select('*, levels!inner(*)')
+        .select('*, levels!public_records_levelid_fkey!inner(*)')
         .eq('userid', uid)
         .eq('isChecked', isChecked == 'true')
         .eq('levels.isPlatformer', false)
         .eq('levels.isChallenge', false)
     let query1 = supabase
         .from('records')
-        .select('*, levels!inner(*)')
+        .select('*, levels!public_records_levelid_fkey!inner(*)')
         .eq('userid', uid)
         .eq('isChecked', isChecked == 'true')
     let query2 = supabase
         .from('records')
-        .select('*, levels!inner(*)')
+        .select('*, levels!public_records_levelid_fkey!inner(*)')
         .eq('userid', uid)
         .eq('isChecked', isChecked == 'true')
         .eq('levels.isPlatformer', true)
         .eq('levels.isChallenge', false)
     let query3 = supabase
         .from('records')
-        .select('*, levels!inner(*)')
+        .select('*, levels!public_records_levelid_fkey!inner(*)')
         .eq('userid', uid)
         .eq('isChecked', isChecked == 'true')
         .eq('levels.isChallenge', true)
@@ -210,7 +210,7 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, isCheck
 export async function getRecord(uid: string, levelID: number) {
     const { data, error } = await supabase
         .from('records')
-        .select('*, players!userid(*, clans!id(*)), reviewer:players!reviewer(*, clans!id(*)), levels(*)')
+        .select('*, players!userid(*, clans!id(*)), reviewer:players!reviewer(*, clans!id(*)), levels!public_records_levelid_fkey(*)')
         .eq('levelid', levelID)
         .eq('userid', uid)
         .limit(1)
@@ -229,7 +229,7 @@ export async function getRecord(uid: string, levelID: number) {
 export async function retrieveRecord(user: TPlayer) {
     var { data, error } = await supabase
         .from('records')
-        .select('*, levels!inner(*)')
+        .select('*, levels!public_records_levelid_fkey!inner(*)')
         .neq('userid', user.uid!)
         .eq('needMod', false)
         .eq('isChecked', false)
@@ -243,7 +243,7 @@ export async function retrieveRecord(user: TPlayer) {
 
     var { data, error } = await supabase
         .from('records')
-        .select('*, levels!inner(*)')
+        .select('*, levels!public_records_levelid_fkey!inner(*)')
         .lte('levels.rating', user.rating! + 500)
         .neq('userid', user.uid!)
         .eq('needMod', false)
@@ -258,7 +258,7 @@ export async function retrieveRecord(user: TPlayer) {
 
     var { data, error } = await supabase
         .from('records')
-        .select('*, levels!inner(*)')
+        .select('*, levels!public_records_levelid_fkey!inner(*)')
         .neq('userid', user.uid!)
         .eq('needMod', false)
         .eq('isChecked', false)
@@ -298,7 +298,7 @@ export async function getRecords({ start = 0, end = 50, isChecked = false } = {}
 
     const { data, error } = await supabase
         .from('records')
-        .select('*, players!userid!inner(*, clans!id(*)), reviewer:players!reviewer(*), levels(*)')
+        .select('*, players!userid!inner(*, clans!id(*)), reviewer:players!reviewer(*), levels!public_records_levelid_fkey(*)')
         .match({ isChecked: isChecked })
         .eq('players.isHidden', false)
         .order('needMod', { ascending: false })
@@ -316,7 +316,7 @@ export async function getRecords({ start = 0, end = 50, isChecked = false } = {}
 export async function getPlayerSubmissions(uid: string, { start = '0', end = '50', ascending = 'true' } = {}) {
     const { data, error } = await supabase
         .from('records')
-        .select('*, levels(*)')
+        .select('*, levels!public_records_levelid_fkey(*)')
         .eq('userid', uid)
         .eq('isChecked', false)
         .order('timestamp', { ascending: ascending == 'true' })

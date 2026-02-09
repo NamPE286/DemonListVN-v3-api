@@ -39,6 +39,7 @@ router.route('/')
             await logger.notice(`Có record mới được gửi! Hãy kiểm tra ngay.`)
             res.send(result)
         } catch (err: any) {
+            console.error(err)
             res.status(500).send(err)
         }
     })

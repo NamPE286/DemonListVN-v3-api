@@ -493,7 +493,7 @@ export async function resolveReport(id: number) {
 export async function getUserRecordsForPicker(uid: string) {
     const { data, error } = await db
         .from('records')
-        .select('levelid, progress, videoLink, mobile, dlPt, flPt, plPt, clPt, levels!inner(id, name, creator, difficulty, isPlatformer)')
+        .select('levelid, progress, videoLink, mobile, dlPt, flPt, plPt, clPt, levels!public_records_levelid_fkey!inner(id, name, creator, difficulty, isPlatformer)')
         .eq('userid', uid)
         .eq('isChecked', true)
         .order('timestamp', { ascending: false })

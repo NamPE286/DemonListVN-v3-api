@@ -187,7 +187,7 @@ export async function inviteToClan(clanId: number, clanName: string, uid: string
 export async function fetchClanRecords(clanId: number, { start = 0, end = 50, sortBy = 'dlPt', ascending = 'false' } = {}) {
     const { data, error } = await supabase
         .from('records')
-        .select('*, players!userid!inner(*, clans!id(*)), levels(*)')
+        .select('*, players!userid!inner(*, clans!id(*)), levels!public_records_levelid_fkey(*)')
         .eq('players.clan', clanId)
         .eq('players.isHidden', false)
         .eq('isChecked', true)

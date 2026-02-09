@@ -351,7 +351,8 @@ router.route('/:uid/submissions')
         const { uid } = req.params
         try {
             res.send(await getPlayerSubmissions(uid))
-        } catch {
+        } catch (err) {
+            console.error(err)
             res.status(500).send()
         }
     })
