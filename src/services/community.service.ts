@@ -303,7 +303,7 @@ export async function updateCommunityPost(id: number, updates: {
     if (moderationStatus === 'pending') {
         logger.communityAlert(`Post flagged by AI: ${FRONTEND_URL}/community/${data.id}`)
         throw new ValidationError(
-            `Bài viết của sẽ được chuyển sang đội ngũ kiểm duyệt vì có dấu hiệu vi phạm`
+            `Bài viết của bạn cần được kiểm duyệt trước khi hiện thị công khai`
         )
     }
 
@@ -899,7 +899,7 @@ export async function createPostFull(params: {
     if (moderationStatus === 'pending') {
         logger.communityAlert(`Post flagged by AI: ${FRONTEND_URL}/community/${post.id}`)
         throw new ValidationError(
-            `Bài viết của sẽ được chuyển sang đội ngũ kiểm duyệt vì có dấu hiệu vi phạm`
+            `Bài viết của bạn cần được kiểm duyệt trước khi hiện thị công khai`
         )
     }
 
@@ -1112,7 +1112,7 @@ export async function createCommentFull(params: {
     if (moderationStatus === 'pending') {
         logger.communityAlert(`Comment flagged by AI: comment #${comment.id} on post #${postId}`)
         throw new ValidationError(
-            `Bình luận của bạn sẽ được chuyển sang đội ngũ kiểm duyệt vì có dấu hiệu vi phạm`
+            `Bình luận của bạn cần được kiểm duyệt trước khi hiện thị công khai`
         )
     }
 
@@ -1570,7 +1570,7 @@ export async function updateCommentModeration(commentId: number, content: string
     if (moderationStatus === 'pending') {
             logger.communityAlert(`Comment flagged by AI: ${FRONTEND_URL}/community/${commentId}`)
         throw new ValidationError(
-            `Bình luận của bạn sẽ được chuyển sang đội ngũ kiểm duyệt vì có dấu hiệu vi phạm`
+            `Bình luận của bạn cần được kiểm duyệt trước khi hiện thị công khai`
         )
     }
 }
