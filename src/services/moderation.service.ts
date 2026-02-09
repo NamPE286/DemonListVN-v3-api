@@ -2,6 +2,12 @@ import OpenAI from 'openai'
 
 const openai = new OpenAI()
 
+export interface ModerationResult {
+    flagged: boolean
+    categories: string[]
+    scores: number[]
+}
+
 export async function moderateContent(title: string, content: string, imageUrl?: string) {
     const textToCheck = `${title}\n\n${content}`.trim()
 
@@ -17,22 +23,15 @@ export async function moderateContent(title: string, content: string, imageUrl?:
         })
     }
 
-    const response: any = await openai.moderations.create({
-        model: 'omni-moderation-latest',
-        input
-    })
-
-    let flagged = false;
-
-    for (const result of response.results) {
-        if (result.flagged) {
-            flagged = true;
-            break
+    const response = await openai.responses.create({
+        prompt: {
+            "id": "pmpt_698a02385f6881949c289d7ef095c5ad0ce420d8cac42af4"
         }
-    }
+    });
+    
+    console.log("OpenAI response: ", response)
 
-    return {
-        flagged,
-        raw: response
-    }
+    const result: ModerationResult = JSON.parse(response.output_text)
+
+    return result
 }
