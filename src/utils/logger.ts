@@ -1,4 +1,16 @@
 export default {
+    async communityAlert(message: string) {
+        await fetch(process.env.DISCORD_WEBHOOK_COMMUNITY_ALERT!, {
+            method: "POST",
+            body: JSON.stringify({
+                "content": message
+            }),
+            headers: {
+                "Accept": "*/*",
+                "Content-Type": "application/json"
+            }
+        })
+    },
     async notice(message: string) {
         await fetch(process.env.DISCORD_WEBHOOK_NOTICE!, {
             method: "POST",
