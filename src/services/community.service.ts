@@ -276,7 +276,7 @@ export async function updateCommunityPost(id: number, updates: {
 
     try {
         const modResult = await moderateContent(updates.title!, updates.content!)
-        moderationResult = modResult.raw
+        moderationResult = modResult
 
         if (modResult.flagged) {
             moderationStatus = 'pending'
@@ -870,7 +870,7 @@ export async function createPostFull(params: {
 
     try {
         const modResult = await moderateContent(title, content || '', image_url || undefined)
-        moderationResult = modResult.raw
+        moderationResult = modResult
 
         if (modResult.flagged) {
             moderationStatus = 'pending'
@@ -1084,7 +1084,7 @@ export async function createCommentFull(params: {
 
     try {
         const modResult = await moderateContent('', content)
-        moderationResult = modResult.raw
+        moderationResult = modResult
 
         if (modResult.flagged) {
             moderationStatus = 'pending'
@@ -1544,7 +1544,7 @@ export async function updateCommentModeration(commentId: number, content: string
 
     try {
         const modResult = await moderateContent('', content)
-        moderationResult = modResult.raw
+        moderationResult = modResult
 
         if (modResult.flagged) {
             moderationStatus = 'pending'
