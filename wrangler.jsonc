@@ -6,5 +6,11 @@
 		"nodejs_compat",
 		"nodejs_als",
 		"nodejs_compat_populate_process_env"
-	]
+	],
+	"observability": {
+		"logs": {
+			"enabled": true,
+			"invocation_logs": true
+		}
+	}
 }
