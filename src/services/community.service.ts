@@ -245,11 +245,45 @@ export async function updateCommunityPost(id: number, updates: {
         throw new Error(error.message)
     }
 
+    let moderationStatus = 'approved'
+    let moderationResult = null
+
+    try {
+        const modResult = await moderatePost(updates.title!, updates.content!)
+        moderationResult = modResult.raw
+
+        if (modResult.flagged) {
+            moderationStatus = 'pending'
+        }
+    } catch (err) {
+        console.error('OpenAI moderation check failed, defaulting to pending:', err)
+        moderationStatus = 'pending'
+    }
+
+    const { error: adminError } = await db
+        .from('community_posts_admin')
+        .upsert({
+            post_id: data.id,
+            moderation_status: moderationStatus || 'approved',
+            moderation_result: moderationResult || null,
+            hidden: false
+        })
+
+    if (adminError) {
+        throw new Error(adminError.message)
+    }
+
+    if (moderationStatus === 'pending') {
+        throw new ValidationError(
+            `Bài viết của sẽ được chuyển sang đội ngũ kiểm duyệt vì có dấu hiệu vi phạm`
+        )
+    }
+
     return data
 }
 
 export async function deleteCommunityPost(id: number) {
-    const { data } = await db   
+    const { data } = await db
         .from('community_posts')
         .select('*')
         .eq('id', id)
