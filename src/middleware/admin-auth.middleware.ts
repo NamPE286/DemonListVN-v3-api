@@ -53,7 +53,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
 
         if (req.method != 'GET') {
             const body = req.body ? "```" + JSON.stringify(req.body) + "```" : ''
-            const msg = `${player.name} performed ${req.method} ${req.url}`
+            const msg = `${player.name} performed ${req.method} ${req.originalUrl}`
 
             await logger.log((body + msg).length <= 2000 ? (msg + body) : msg)
         }
