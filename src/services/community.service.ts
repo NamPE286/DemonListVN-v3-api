@@ -7,6 +7,7 @@ import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { s3 } from '@src/client/s3'
 import { DiscordChannel } from "@src/const/discord-channel-const"
 import { moderatePost } from '@src/services/moderation.service'
+import logger from "@src/utils/logger"
 
 // Note: The community tables (community_posts, community_comments, community_likes)
 // are not yet in the auto-generated Supabase types. After running the migration,
@@ -776,6 +777,7 @@ export async function createPostFull(params: {
     })
 
     if (moderationStatus === 'pending') {
+        logger.notice(`Post flagged by AI: ${FRONTEND_URL}/community/${post.id}`)
         throw new ValidationError(
             `Bài viết của sẽ được chuyển sang đội ngũ kiểm duyệt vì có dấu hiệu vi phạm`
         )
