@@ -923,24 +923,30 @@ export type Database = {
       }
       community_comments: {
         Row: {
+          attached_level: Json | null
           content: string
           created_at: string
+          hidden: boolean
           id: number
           likes_count: number
           post_id: number
           uid: string
         }
         Insert: {
+          attached_level?: Json | null
           content: string
           created_at?: string
+          hidden?: boolean
           id?: number
           likes_count?: number
           post_id: number
           uid: string
         }
         Update: {
+          attached_level?: Json | null
           content?: string
           created_at?: string
+          hidden?: boolean
           id?: number
           likes_count?: number
           post_id?: number
@@ -1009,6 +1015,48 @@ export type Database = {
           },
         ]
       }
+      community_post_views: {
+        Row: {
+          created_at: string
+          id: number
+          last_viewed_at: string
+          post_id: number
+          uid: string
+          view_count: number
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          last_viewed_at?: string
+          post_id: number
+          uid: string
+          view_count?: number
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          last_viewed_at?: string
+          post_id?: number
+          uid?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_post_views_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_post_views_uid_fkey"
+            columns: ["uid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       community_posts: {
         Row: {
           attached_level: Json | null
@@ -1016,6 +1064,7 @@ export type Database = {
           comments_count: number
           content: string
           created_at: string
+          fts: unknown
           id: number
           image_url: string | null
           is_recommended: boolean | null
@@ -1024,8 +1073,9 @@ export type Database = {
           title: string
           type: string
           uid: string
-          updated_at: string
+          updated_at: string | null
           video_url: string | null
+          views_count: number
         }
         Insert: {
           attached_level?: Json | null
@@ -1033,6 +1083,7 @@ export type Database = {
           comments_count?: number
           content?: string
           created_at?: string
+          fts?: unknown
           id?: number
           image_url?: string | null
           is_recommended?: boolean | null
@@ -1041,8 +1092,9 @@ export type Database = {
           title: string
           type?: string
           uid: string
-          updated_at?: string
+          updated_at?: string | null
           video_url?: string | null
+          views_count?: number
         }
         Update: {
           attached_level?: Json | null
@@ -1050,6 +1102,7 @@ export type Database = {
           comments_count?: number
           content?: string
           created_at?: string
+          fts?: unknown
           id?: number
           image_url?: string | null
           is_recommended?: boolean | null
@@ -1058,8 +1111,9 @@ export type Database = {
           title?: string
           type?: string
           uid?: string
-          updated_at?: string
+          updated_at?: string | null
           video_url?: string | null
+          views_count?: number
         }
         Relationships: [
           {
@@ -1068,6 +1122,65 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["uid"]
+          },
+        ]
+      }
+      community_posts_admin: {
+        Row: {
+          hidden: boolean
+          moderation_result: Json | null
+          moderation_status: string
+          post_id: number
+        }
+        Insert: {
+          hidden?: boolean
+          moderation_result?: Json | null
+          moderation_status?: string
+          post_id: number
+        }
+        Update: {
+          hidden?: boolean
+          moderation_result?: Json | null
+          moderation_status?: string
+          post_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_posts_admin_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: true
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_posts_tags: {
+        Row: {
+          post_id: number
+          tag_id: number
+        }
+        Insert: {
+          post_id: number
+          tag_id: number
+        }
+        Update: {
+          post_id?: number
+          tag_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_posts_tags_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_posts_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "post_tags"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1724,6 +1837,27 @@ export type Database = {
           },
         ]
       }
+      level_tags: {
+        Row: {
+          color: string
+          created_at: string
+          id: number
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: number
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
       levelDeathCount: {
         Row: {
           count: number[]
@@ -1780,6 +1914,7 @@ export type Database = {
           isChallenge: boolean
           isNonList: boolean
           isPlatformer: boolean
+          main_level_id: number | null
           minProgress: number | null
           name: string | null
           rating: number | null
@@ -1799,6 +1934,7 @@ export type Database = {
           isChallenge?: boolean
           isNonList?: boolean
           isPlatformer?: boolean
+          main_level_id?: number | null
           minProgress?: number | null
           name?: string | null
           rating?: number | null
@@ -1818,6 +1954,7 @@ export type Database = {
           isChallenge?: boolean
           isNonList?: boolean
           isPlatformer?: boolean
+          main_level_id?: number | null
           minProgress?: number | null
           name?: string | null
           rating?: number | null
@@ -1830,6 +1967,43 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "levels_main_level_id_fkey"
+            columns: ["main_level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      levels_tags: {
+        Row: {
+          level_id: number
+          tag_id: number
+        }
+        Insert: {
+          level_id: number
+          tag_id: number
+        }
+        Update: {
+          level_id?: number
+          tag_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "levels_tags_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "levels_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "level_tags"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2376,6 +2550,30 @@ export type Database = {
           },
         ]
       }
+      post_tags: {
+        Row: {
+          admin_only: boolean
+          color: string
+          created_at: string
+          id: number
+          name: string
+        }
+        Insert: {
+          admin_only?: boolean
+          color?: string
+          created_at?: string
+          id?: number
+          name: string
+        }
+        Update: {
+          admin_only?: boolean
+          color?: string
+          created_at?: string
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           bannerTextColor: string
@@ -2514,6 +2712,7 @@ export type Database = {
           suggestedRating: number | null
           timestamp: number | null
           userid: string
+          variant_id: number | null
           videoLink: string | null
         }
         Insert: {
@@ -2537,6 +2736,7 @@ export type Database = {
           suggestedRating?: number | null
           timestamp?: number | null
           userid: string
+          variant_id?: number | null
           videoLink?: string | null
         }
         Update: {
@@ -2560,6 +2760,7 @@ export type Database = {
           suggestedRating?: number | null
           timestamp?: number | null
           userid?: string
+          variant_id?: number | null
           videoLink?: string | null
         }
         Relationships: [
@@ -2583,6 +2784,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "records_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2745,6 +2953,7 @@ export type Database = {
           isChallenge: boolean
           isNonList: boolean
           isPlatformer: boolean
+          main_level_id: number | null
           minProgress: number | null
           name: string | null
           rating: number | null
@@ -2757,12 +2966,44 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_recommended_community_posts: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_type?: string
+          p_user_id?: string
+        }
+        Returns: {
+          attached_level: Json
+          attached_record: Json
+          comments_count: number
+          content: string
+          created_at: string
+          hidden: boolean
+          id: number
+          image_url: string
+          is_recommended: boolean
+          likes_count: number
+          pinned: boolean
+          recommendation_score: number
+          title: string
+          type: string
+          uid: string
+          updated_at: string
+          video_url: string
+          views_count: number
+        }[]
+      }
       get_top_buyers: {
         Args: { interval_ms: number; limit_count: number; offset_count: number }
         Returns: {
           totalAmount: number
           uid: string
         }[]
+      }
+      record_community_post_view: {
+        Args: { p_post_id: number; p_user_id: string }
+        Returns: undefined
       }
       update_list: { Args: never; Returns: undefined }
       update_rank: { Args: never; Returns: undefined }

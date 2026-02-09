@@ -20,6 +20,21 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
         ascending = (ascending == 'true')
     }
 
+    // Pre-filter: get level IDs that have matching tags
+    let tagFilteredIds: number[] | null = null
+    if (tagIds && tagIds.trim() !== '') {
+        const ids = tagIds.split(',').map(Number).filter(Boolean)
+        if (ids.length > 0) {
+            const { data: tagRows, error: tagError } = await (supabase as any)
+                .from('levels_tags')
+                .select('level_id')
+                .in('tag_id', ids)
+            if (tagError) throw tagError
+            tagFilteredIds = [...new Set((tagRows || []).map((r: any) => r.level_id))] as number[]
+            if (tagFilteredIds.length === 0) return []
+        }
+    }
+
     let query = supabase
         .from('levels')
         .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
@@ -48,12 +63,9 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
         query = query.ilike('creator', `%${creatorSearch}%`)
     }
 
-    // Filter by tag IDs (comma-separated string)
-    if (tagIds && tagIds.trim() !== '') {
-        const ids = tagIds.split(',').map(Number).filter(Boolean)
-        if (ids.length > 0) {
-            query = query.in('levels_tags.tag_id' as any, ids)
-        }
+    // Filter by tag IDs: only include levels that have at least one matching tag
+    if (tagFilteredIds !== null) {
+        query = query.in('id', tagFilteredIds)
     }
 
     const a = await query
@@ -109,6 +121,21 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
         ascending = (ascending == 'true')
     }
 
+    // Pre-filter: get level IDs that have matching tags
+    let tagFilteredIds: number[] | null = null
+    if (tagIds && tagIds.trim() !== '') {
+        const ids = tagIds.split(',').map(Number).filter(Boolean)
+        if (ids.length > 0) {
+            const { data: tagRows, error: tagError } = await (supabase as any)
+                .from('levels_tags')
+                .select('level_id')
+                .in('tag_id', ids)
+            if (tagError) throw tagError
+            tagFilteredIds = [...new Set((tagRows || []).map((r: any) => r.level_id))] as number[]
+            if (tagFilteredIds.length === 0) return []
+        }
+    }
+
     let query = supabase
         .from('levels')
         .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
@@ -137,12 +164,9 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
         query = query.ilike('creator', `%${creatorSearch}%`)
     }
 
-    // Filter by tag IDs
-    if (tagIds && tagIds.trim() !== '') {
-        const ids = tagIds.split(',').map(Number).filter(Boolean)
-        if (ids.length > 0) {
-            query = query.in('levels_tags.tag_id' as any, ids)
-        }
+    // Filter by tag IDs: only include levels that have at least one matching tag
+    if (tagFilteredIds !== null) {
+        query = query.in('id', tagFilteredIds)
     }
 
     const a = await query
@@ -198,6 +222,21 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
         ascending = (ascending == 'true')
     }
 
+    // Pre-filter: get level IDs that have matching tags
+    let tagFilteredIds: number[] | null = null
+    if (tagIds && tagIds.trim() !== '') {
+        const ids = tagIds.split(',').map(Number).filter(Boolean)
+        if (ids.length > 0) {
+            const { data: tagRows, error: tagError } = await (supabase as any)
+                .from('levels_tags')
+                .select('level_id')
+                .in('tag_id', ids)
+            if (tagError) throw tagError
+            tagFilteredIds = [...new Set((tagRows || []).map((r: any) => r.level_id))] as number[]
+            if (tagFilteredIds.length === 0) return []
+        }
+    }
+
     let query = supabase
         .from('levels')
         .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
@@ -224,12 +263,9 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
         query = query.ilike('creator', `%${creatorSearch}%`)
     }
 
-    // Filter by tag IDs
-    if (tagIds && tagIds.trim() !== '') {
-        const ids = tagIds.split(',').map(Number).filter(Boolean)
-        if (ids.length > 0) {
-            query = query.in('levels_tags.tag_id' as any, ids)
-        }
+    // Filter by tag IDs: only include levels that have at least one matching tag
+    if (tagFilteredIds !== null) {
+        query = query.in('id', tagFilteredIds)
     }
 
     const a = await query
@@ -286,6 +322,21 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
         ascending = (ascending == 'true')
     }
 
+    // Pre-filter: get level IDs that have matching tags
+    let tagFilteredIds: number[] | null = null
+    if (tagIds && tagIds.trim() !== '') {
+        const ids = tagIds.split(',').map(Number).filter(Boolean)
+        if (ids.length > 0) {
+            const { data: tagRows, error: tagError } = await (supabase as any)
+                .from('levels_tags')
+                .select('level_id')
+                .in('tag_id', ids)
+            if (tagError) throw tagError
+            tagFilteredIds = [...new Set((tagRows || []).map((r: any) => r.level_id))] as number[]
+            if (tagFilteredIds.length === 0) return []
+        }
+    }
+
     let query = supabase
         .from('levels')
         .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
@@ -313,12 +364,9 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
         query = query.ilike('creator', `%${creatorSearch}%`)
     }
 
-    // Filter by tag IDs
-    if (tagIds && tagIds.trim() !== '') {
-        const ids = tagIds.split(',').map(Number).filter(Boolean)
-        if (ids.length > 0) {
-            query = query.in('levels_tags.tag_id' as any, ids)
-        }
+    // Filter by tag IDs: only include levels that have at least one matching tag
+    if (tagFilteredIds !== null) {
+        query = query.in('id', tagFilteredIds)
     }
 
     const a = await query
@@ -369,7 +417,7 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
     return res
 }
 
-export async function getLevel(levelId: number): Promise<TLevel> {
+export async function getLevel(levelId: number) {
     const { data, error } = await supabase
         .from('levels')
         .select('*, creatorData:players!creatorId(*, clans!id(*))')
@@ -388,7 +436,7 @@ export async function fetchLevelFromGD(levelId: number) {
     return await getGJLevels21(levelId);
 }
 
-export async function updateLevel(levelData: TLevel): Promise<void> {
+export async function updateLevel(levelData: Awaited<ReturnType<typeof getLevel>>): Promise<void> {
     let { data } = await supabase
         .from('levels')
         .select('*')
@@ -396,9 +444,11 @@ export async function updateLevel(levelData: TLevel): Promise<void> {
         .limit(1)
         .single()
 
+    const { creatorData, ...upsertData } = levelData
+
     let { error } = await supabase
         .from('levels')
-        .upsert(levelData as any)
+        .upsert(upsertData as any)
 
     await supabase.rpc('update_list')
 
@@ -556,6 +606,22 @@ export async function deleteLevelTag(tagId: number) {
         .eq('id', tagId)
 
     if (error) throw new Error(error.message)
+}
+
+/** Update a level tag's name and/or color (admin only) */
+export async function updateLevelTag(tagId: number, updates: { name?: string, color?: string }) {
+    const { data, error } = await (supabase as any)
+        .from('level_tags')
+        .update(updates)
+        .eq('id', tagId)
+        .select('*')
+        .single()
+
+    if (error) {
+        if (error.code === '23505') throw new Error('Tag already exists')
+        throw new Error(error.message)
+    }
+    return data
 }
 
 /** Set tags on a level (admin only) */

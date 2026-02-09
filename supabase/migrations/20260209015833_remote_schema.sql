@@ -124,6 +124,21 @@ $$;
 ALTER FUNCTION "public"."auto_hide_reported_content"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."auto_hide_reported_posts"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+    IF (SELECT count(*) FROM public.community_reports WHERE post_id = NEW.post_id AND resolved = false) >= 5 THEN
+        UPDATE public.community_posts_admin SET hidden = true WHERE post_id = NEW.post_id;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."auto_hide_reported_posts"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."get_event_leaderboard"("event_id" integer) RETURNS TABLE("userID" "uuid", "elo" bigint, "matchCount" bigint, "point" numeric, "penalty" numeric)
     LANGUAGE "plpgsql"
     AS $$BEGIN
@@ -208,7 +223,7 @@ SET default_table_access_method = "heap";
 CREATE TABLE IF NOT EXISTS "public"."levels" (
     "id" bigint NOT NULL,
     "name" character varying DEFAULT 'N/a'::character varying,
-    "creator" character varying DEFAULT 'N/a'::character varying,
+    "creator" "text",
     "videoID" character varying DEFAULT 'N/a'::character varying,
     "minProgress" bigint DEFAULT '100'::bigint,
     "flTop" double precision,
@@ -222,7 +237,8 @@ CREATE TABLE IF NOT EXISTS "public"."levels" (
     "isNonList" boolean DEFAULT false NOT NULL,
     "difficulty" "text",
     "isChallenge" boolean DEFAULT false NOT NULL,
-    "creatorId" "uuid"
+    "creatorId" "uuid",
+    "main_level_id" bigint
 );
 
 
@@ -280,8 +296,11 @@ BEGIN
             SELECT cp.type AS preferred_type
             FROM public.community_likes cl
             JOIN public.community_posts cp ON cp.id = cl.post_id
+            JOIN public.community_posts_admin cpa ON cpa.post_id = cp.id
             WHERE cl.uid = p_user_id
               AND cl.post_id IS NOT NULL
+              AND cpa.hidden = false
+              AND cpa.moderation_status = 'approved'
             GROUP BY cp.type
             ORDER BY COUNT(*) DESC
             LIMIT 3
@@ -304,13 +323,13 @@ BEGIN
         p.comments_count,
         p.views_count,
         p.is_recommended,
-        p.hidden,
+        pa.hidden,
         p.created_at,
         p.updated_at,
         (
             -- Engagement score
             (p.likes_count * 2.0 + p.comments_count * 3.0 + COALESCE(p.views_count, 0) * 0.1 + 1.0)
-            -- Recency multiplier (decays over days, not hours, so recent posts get a boost)
+            -- Recency multiplier (decays over days)
             * (1.0 / POWER(EXTRACT(EPOCH FROM (now() - p.created_at)) / 86400.0 + 1.0, 0.8))
             -- Preference boost for user's preferred types
             * CASE
@@ -330,7 +349,9 @@ BEGIN
             * CASE WHEN p.pinned THEN 2.0 ELSE 1.0 END
         )::double precision AS recommendation_score
     FROM public.community_posts p
-    WHERE p.hidden = false
+    JOIN public.community_posts_admin pa ON pa.post_id = p.id
+    WHERE pa.hidden = false
+      AND pa.moderation_status = 'approved'
       AND (p_type IS NULL OR p.type = p_type)
     ORDER BY recommendation_score DESC
     LIMIT p_limit
@@ -395,6 +416,23 @@ $$;
 ALTER FUNCTION "public"."refresh_wiki_tree"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."update_community_comment_count"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+begin
+    if (TG_OP = 'INSERT') then
+        update public.community_posts set comments_count = comments_count + 1 where id = new.post_id;
+    elsif (TG_OP = 'DELETE') then
+        update public.community_posts set comments_count = comments_count - 1 where id = old.post_id;
+    end if;
+    return null;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."update_community_comment_count"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."update_community_comments_count"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -412,6 +450,33 @@ $$;
 
 
 ALTER FUNCTION "public"."update_community_comments_count"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."update_community_like_count"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+begin
+    if (TG_OP = 'INSERT') then
+        if new.post_id is not null then
+            update public.community_posts set likes_count = likes_count + 1 where id = new.post_id;
+        end if;
+        if new.comment_id is not null then
+            update public.community_comments set likes_count = likes_count + 1 where id = new.comment_id;
+        end if;
+    elsif (TG_OP = 'DELETE') then
+        if old.post_id is not null then
+            update public.community_posts set likes_count = likes_count - 1 where id = old.post_id;
+        end if;
+        if old.comment_id is not null then
+            update public.community_comments set likes_count = likes_count - 1 where id = old.comment_id;
+        end if;
+    end if;
+    return null;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."update_community_like_count"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."update_community_likes_count"() RETURNS "trigger"
@@ -441,6 +506,33 @@ $$;
 
 
 ALTER FUNCTION "public"."update_community_likes_count"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."update_community_post_updated_at"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+    -- Only update updated_at when content-related fields change
+    IF (
+        OLD.title IS DISTINCT FROM NEW.title OR
+        OLD.content IS DISTINCT FROM NEW.content OR
+        OLD.type IS DISTINCT FROM NEW.type OR
+        OLD.image_url IS DISTINCT FROM NEW.image_url OR
+        OLD.video_url IS DISTINCT FROM NEW.video_url OR
+        OLD.attached_record IS DISTINCT FROM NEW.attached_record OR
+        OLD.attached_level IS DISTINCT FROM NEW.attached_level OR
+        OLD.is_recommended IS DISTINCT FROM NEW.is_recommended
+    ) THEN
+        NEW.updated_at = now();
+    ELSE
+        NEW.updated_at = OLD.updated_at;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_community_post_updated_at"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."update_community_post_views_count"() RETURNS "trigger"
@@ -485,7 +577,8 @@ set
 from
   v_table_name
 where
-  levels.id = v_table_name.id;
+  levels.id = v_table_name.id
+  and levels."isNonList" = false;
 
 with
   v_table_name as (
@@ -504,6 +597,8 @@ with
       levels
     where
       "isPlatformer" = false
+      and "isChallenge" = false
+      and levels."isNonList" = false
   )
 update levels
 set
@@ -511,7 +606,8 @@ set
 from
   v_table_name
 where
-  levels.id = v_table_name.id;
+  levels.id = v_table_name.id
+  and levels."isNonList" = false;
 
 with
   v_table_name as (
@@ -531,6 +627,7 @@ with
     where
       "isPlatformer" = true
       and "isChallenge" = false
+      and levels."isNonList" = false
   )
 update levels
 set
@@ -538,7 +635,8 @@ set
 from
   v_table_name
 where
-  levels.id = v_table_name.id;
+  levels.id = v_table_name.id
+  and levels."isNonList" = false;
 
 with
   v_table_name as (
@@ -557,6 +655,7 @@ with
       levels
     where
       "isChallenge" = true
+      and levels."isNonList" = false
   )
 update levels
 set
@@ -564,7 +663,8 @@ set
 from
   v_table_name
 where
-  levels.id = v_table_name.id;
+  levels.id = v_table_name.id
+  and levels."isNonList" = false;
 
 update levels
 set
@@ -1324,7 +1424,40 @@ ALTER TABLE "public"."PVPRooms" OWNER TO "postgres";
 
 
 ALTER TABLE "public"."PVPRooms" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME "public"."PVPRooms_id_seq"
+    SEQUENCE NAME "public"."PVPRoom_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."items" (
+    "id" bigint NOT NULL,
+    "name" character varying DEFAULT 'defaultname'::character varying NOT NULL,
+    "redirect" "text",
+    "type" "text" DEFAULT 'medal'::"text" NOT NULL,
+    "description" "text",
+    "productId" bigint,
+    "rarity" bigint DEFAULT '0'::bigint NOT NULL,
+    "quantity" bigint DEFAULT '1'::bigint NOT NULL,
+    "stackable" boolean DEFAULT false NOT NULL,
+    "defaultExpireAfter" bigint,
+    CONSTRAINT "items_rarity_check" CHECK (((0 <= "rarity") AND ("rarity" <= 4)))
+);
+
+
+ALTER TABLE "public"."items" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."items"."rarity" IS '0: common (gray), 1: uncommon (blue), 2: rare (purple), 3: epic (pink), 4: covert (red)';
+
+
+
+ALTER TABLE "public"."items" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."achievement_id_seq"
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -1608,6 +1741,10 @@ CREATE TABLE IF NOT EXISTS "public"."cards" (
 ALTER TABLE "public"."cards" OWNER TO "postgres";
 
 
+COMMENT ON COLUMN "public"."cards"."supporterIncluded" IS 'Day of supporter included';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."caseItems" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "itemId" bigint NOT NULL,
@@ -1619,6 +1756,10 @@ CREATE TABLE IF NOT EXISTS "public"."caseItems" (
 
 
 ALTER TABLE "public"."caseItems" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."caseItems"."expireAfter" IS 'ms';
+
 
 
 ALTER TABLE "public"."caseItems" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
@@ -1845,26 +1986,34 @@ CREATE TABLE IF NOT EXISTS "public"."community_posts" (
     "content" "text" DEFAULT ''::"text" NOT NULL,
     "type" "text" DEFAULT 'discussion'::"text" NOT NULL,
     "image_url" "text",
-    "video_url" "text",
-    "attached_record" "jsonb",
-    "attached_level" "jsonb",
     "pinned" boolean DEFAULT false NOT NULL,
     "likes_count" integer DEFAULT 0 NOT NULL,
     "comments_count" integer DEFAULT 0 NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone,
+    "video_url" "text",
+    "attached_record" "jsonb",
+    "attached_level" "jsonb",
     "is_recommended" boolean,
-    "hidden" boolean DEFAULT false NOT NULL,
     "fts" "tsvector" GENERATED ALWAYS AS (("setweight"("to_tsvector"('"english"'::"regconfig", COALESCE("title", ''::"text")), 'A'::"char") || "setweight"("to_tsvector"('"english"'::"regconfig", COALESCE("content", ''::"text")), 'B'::"char"))) STORED,
     "views_count" integer DEFAULT 0 NOT NULL,
-    "moderation_status" "text" DEFAULT 'approved'::"text" NOT NULL,
-    "moderation_result" "jsonb",
-    CONSTRAINT "community_posts_moderation_status_check" CHECK (("moderation_status" = ANY (ARRAY['approved'::"text", 'pending'::"text", 'rejected'::"text"]))),
     CONSTRAINT "community_posts_type_check" CHECK (("type" = ANY (ARRAY['discussion'::"text", 'media'::"text", 'guide'::"text", 'announcement'::"text", 'review'::"text"])))
 );
 
 
 ALTER TABLE "public"."community_posts" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."community_posts_admin" (
+    "post_id" integer NOT NULL,
+    "moderation_status" "text" DEFAULT 'approved'::"text" NOT NULL,
+    "moderation_result" "jsonb",
+    "hidden" boolean DEFAULT false NOT NULL,
+    CONSTRAINT "community_posts_admin_moderation_status_check" CHECK (("moderation_status" = ANY (ARRAY['approved'::"text", 'pending'::"text", 'rejected'::"text"])))
+);
+
+
+ALTER TABLE "public"."community_posts_admin" OWNER TO "postgres";
 
 
 CREATE SEQUENCE IF NOT EXISTS "public"."community_posts_id_seq"
@@ -1881,6 +2030,15 @@ ALTER SEQUENCE "public"."community_posts_id_seq" OWNER TO "postgres";
 
 ALTER SEQUENCE "public"."community_posts_id_seq" OWNED BY "public"."community_posts"."id";
 
+
+
+CREATE TABLE IF NOT EXISTS "public"."community_posts_tags" (
+    "post_id" integer NOT NULL,
+    "tag_id" integer NOT NULL
+);
+
+
+ALTER TABLE "public"."community_posts_tags" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."community_reports" (
@@ -1993,6 +2151,10 @@ CREATE TABLE IF NOT EXISTS "public"."eventLevels" (
 
 
 ALTER TABLE "public"."eventLevels" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."eventLevels"."requiredLevel" IS 'deprecated';
+
 
 
 ALTER TABLE "public"."eventLevels" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
@@ -2121,17 +2283,6 @@ CREATE TABLE IF NOT EXISTS "public"."events" (
 ALTER TABLE "public"."events" OWNER TO "postgres";
 
 
-ALTER TABLE "public"."events" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME "public"."events_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
-
 CREATE TABLE IF NOT EXISTS "public"."heatmap" (
     "uid" "uuid" NOT NULL,
     "year" bigint NOT NULL,
@@ -2183,46 +2334,6 @@ CREATE TABLE IF NOT EXISTS "public"."itemTransactions" (
 ALTER TABLE "public"."itemTransactions" OWNER TO "postgres";
 
 
-ALTER TABLE "public"."itemTransactions" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME "public"."itemTransactions_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
-
-CREATE TABLE IF NOT EXISTS "public"."items" (
-    "id" bigint NOT NULL,
-    "name" character varying DEFAULT 'defaultname'::character varying NOT NULL,
-    "redirect" "text",
-    "type" "text" DEFAULT 'medal'::"text" NOT NULL,
-    "description" "text",
-    "productId" bigint,
-    "rarity" bigint DEFAULT '0'::bigint NOT NULL,
-    "quantity" bigint DEFAULT '1'::bigint NOT NULL,
-    "stackable" boolean DEFAULT false NOT NULL,
-    "defaultExpireAfter" bigint,
-    CONSTRAINT "items_rarity_check" CHECK (((0 <= "rarity") AND ("rarity" <= 4)))
-);
-
-
-ALTER TABLE "public"."items" OWNER TO "postgres";
-
-
-ALTER TABLE "public"."items" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME "public"."items_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
-
 CREATE TABLE IF NOT EXISTS "public"."levelDeathCount" (
     "levelID" bigint NOT NULL,
     "count" bigint[] NOT NULL,
@@ -2264,6 +2375,42 @@ CREATE TABLE IF NOT EXISTS "public"."levelSubmissions" (
 
 
 ALTER TABLE "public"."levelSubmissions" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."level_tags" (
+    "id" integer NOT NULL,
+    "name" "text" NOT NULL,
+    "color" "text" DEFAULT '#6b7280'::"text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."level_tags" OWNER TO "postgres";
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."level_tags_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."level_tags_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."level_tags_id_seq" OWNED BY "public"."level_tags"."id";
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."levels_tags" (
+    "level_id" bigint NOT NULL,
+    "tag_id" integer NOT NULL
+);
+
+
+ALTER TABLE "public"."levels_tags" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."mapPackLevels" (
@@ -2413,6 +2560,14 @@ CREATE TABLE IF NOT EXISTS "public"."orders" (
 ALTER TABLE "public"."orders" OWNER TO "postgres";
 
 
+COMMENT ON COLUMN "public"."orders"."quantity" IS 'Set NULL for physical product';
+
+
+
+COMMENT ON COLUMN "public"."orders"."productID" IS 'Set NULL for physical product';
+
+
+
 ALTER TABLE "public"."orders" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME "public"."orders_id_seq"
     START WITH 1
@@ -2533,6 +2688,34 @@ ALTER TABLE "public"."players" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDE
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."post_tags" (
+    "id" integer NOT NULL,
+    "name" "text" NOT NULL,
+    "color" "text" DEFAULT '#6b7280'::"text" NOT NULL,
+    "admin_only" boolean DEFAULT false NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."post_tags" OWNER TO "postgres";
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."post_tags_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."post_tags_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."post_tags_id_seq" OWNED BY "public"."post_tags"."id";
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."products" (
     "id" bigint NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -2564,6 +2747,17 @@ ALTER TABLE "public"."products" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS ID
 
 
 
+ALTER TABLE "public"."events" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."promotions_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."records" (
     "videoLink" character varying,
     "refreshRate" bigint DEFAULT '60'::bigint,
@@ -2585,11 +2779,16 @@ CREATE TABLE IF NOT EXISTS "public"."records" (
     "queueNo" bigint,
     "plPt" double precision,
     "prioritizedBy" bigint DEFAULT '0'::bigint NOT NULL,
-    "clPt" double precision
+    "clPt" double precision,
+    "variant_id" bigint
 );
 
 
 ALTER TABLE "public"."records" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."records"."prioritizedBy" IS 'Prioritize record by some ms';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."rules" (
@@ -2602,12 +2801,23 @@ CREATE TABLE IF NOT EXISTS "public"."rules" (
 ALTER TABLE "public"."rules" OWNER TO "postgres";
 
 
+ALTER TABLE "public"."itemTransactions" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."stackableItemTransactions_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."subscriptions" (
-    "type" "text" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "description" "text",
     "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "name" "text" NOT NULL,
+    "description" "text",
+    "type" "text" NOT NULL,
     "price" bigint NOT NULL,
     "refId" bigint
 );
@@ -2719,6 +2929,14 @@ ALTER TABLE ONLY "public"."community_posts" ALTER COLUMN "id" SET DEFAULT "nextv
 
 
 ALTER TABLE ONLY "public"."community_reports" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."community_reports_id_seq"'::"regclass");
+
+
+
+ALTER TABLE ONLY "public"."level_tags" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."level_tags_id_seq"'::"regclass");
+
+
+
+ALTER TABLE ONLY "public"."post_tags" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."post_tags_id_seq"'::"regclass");
 
 
 
@@ -2912,8 +3130,18 @@ ALTER TABLE ONLY "public"."community_post_views"
 
 
 
+ALTER TABLE ONLY "public"."community_posts_admin"
+    ADD CONSTRAINT "community_posts_admin_pkey" PRIMARY KEY ("post_id");
+
+
+
 ALTER TABLE ONLY "public"."community_posts"
     ADD CONSTRAINT "community_posts_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."community_posts_tags"
+    ADD CONSTRAINT "community_posts_tags_pkey" PRIMARY KEY ("post_id", "tag_id");
 
 
 
@@ -3007,8 +3235,23 @@ ALTER TABLE ONLY "public"."levelSubmissions"
 
 
 
+ALTER TABLE ONLY "public"."level_tags"
+    ADD CONSTRAINT "level_tags_name_key" UNIQUE ("name");
+
+
+
+ALTER TABLE ONLY "public"."level_tags"
+    ADD CONSTRAINT "level_tags_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."levels"
     ADD CONSTRAINT "levels_id_key" UNIQUE ("id");
+
+
+
+ALTER TABLE ONLY "public"."levels_tags"
+    ADD CONSTRAINT "levels_tags_pkey" PRIMARY KEY ("level_id", "tag_id");
 
 
 
@@ -3079,6 +3322,16 @@ ALTER TABLE ONLY "public"."players"
 
 ALTER TABLE ONLY "public"."players"
     ADD CONSTRAINT "players_uid_key" UNIQUE ("uid");
+
+
+
+ALTER TABLE ONLY "public"."post_tags"
+    ADD CONSTRAINT "post_tags_name_key" UNIQUE ("name");
+
+
+
+ALTER TABLE ONLY "public"."post_tags"
+    ADD CONSTRAINT "post_tags_pkey" PRIMARY KEY ("id");
 
 
 
@@ -3174,6 +3427,14 @@ CREATE INDEX "idx_community_post_views_uid" ON "public"."community_post_views" U
 
 
 
+CREATE INDEX "idx_community_posts_admin_hidden" ON "public"."community_posts_admin" USING "btree" ("hidden");
+
+
+
+CREATE INDEX "idx_community_posts_admin_status" ON "public"."community_posts_admin" USING "btree" ("moderation_status");
+
+
+
 CREATE INDEX "idx_community_posts_created_at" ON "public"."community_posts" USING "btree" ("created_at" DESC);
 
 
@@ -3182,15 +3443,15 @@ CREATE INDEX "idx_community_posts_fts" ON "public"."community_posts" USING "gin"
 
 
 
-CREATE INDEX "idx_community_posts_hidden" ON "public"."community_posts" USING "btree" ("hidden");
-
-
-
-CREATE INDEX "idx_community_posts_moderation_status" ON "public"."community_posts" USING "btree" ("moderation_status");
-
-
-
 CREATE INDEX "idx_community_posts_pinned" ON "public"."community_posts" USING "btree" ("pinned" DESC, "created_at" DESC);
+
+
+
+CREATE INDEX "idx_community_posts_tags_post_id" ON "public"."community_posts_tags" USING "btree" ("post_id");
+
+
+
+CREATE INDEX "idx_community_posts_tags_tag_id" ON "public"."community_posts_tags" USING "btree" ("tag_id");
 
 
 
@@ -3207,6 +3468,22 @@ CREATE INDEX "idx_community_reports_post_id" ON "public"."community_reports" USI
 
 
 CREATE INDEX "idx_community_reports_resolved" ON "public"."community_reports" USING "btree" ("resolved");
+
+
+
+CREATE INDEX "idx_levels_main_level_id" ON "public"."levels" USING "btree" ("main_level_id");
+
+
+
+CREATE INDEX "idx_levels_tags_level_id" ON "public"."levels_tags" USING "btree" ("level_id");
+
+
+
+CREATE INDEX "idx_levels_tags_tag_id" ON "public"."levels_tags" USING "btree" ("tag_id");
+
+
+
+CREATE INDEX "idx_records_variant_id" ON "public"."records" USING "btree" ("variant_id");
 
 
 
@@ -3469,6 +3746,21 @@ ALTER TABLE ONLY "public"."community_post_views"
 
 
 
+ALTER TABLE ONLY "public"."community_posts_admin"
+    ADD CONSTRAINT "community_posts_admin_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "public"."community_posts"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."community_posts_tags"
+    ADD CONSTRAINT "community_posts_tags_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "public"."community_posts"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."community_posts_tags"
+    ADD CONSTRAINT "community_posts_tags_tag_id_fkey" FOREIGN KEY ("tag_id") REFERENCES "public"."post_tags"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."community_posts"
     ADD CONSTRAINT "community_posts_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
 
@@ -3580,7 +3872,7 @@ ALTER TABLE ONLY "public"."levelGDStates"
 
 
 ALTER TABLE ONLY "public"."levelSubmissions"
-    ADD CONSTRAINT "levelSubmissions_levelId_fkey" FOREIGN KEY ("levelId") REFERENCES "public"."levels"("id");
+    ADD CONSTRAINT "levelSubmissions_levelId_fkey" FOREIGN KEY ("levelId") REFERENCES "public"."levels"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 
@@ -3591,6 +3883,21 @@ ALTER TABLE ONLY "public"."levelSubmissions"
 
 ALTER TABLE ONLY "public"."levels"
     ADD CONSTRAINT "levels_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES "public"."players"("uid");
+
+
+
+ALTER TABLE ONLY "public"."levels"
+    ADD CONSTRAINT "levels_main_level_id_fkey" FOREIGN KEY ("main_level_id") REFERENCES "public"."levels"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."levels_tags"
+    ADD CONSTRAINT "levels_tags_level_id_fkey" FOREIGN KEY ("level_id") REFERENCES "public"."levels"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."levels_tags"
+    ADD CONSTRAINT "levels_tags_tag_id_fkey" FOREIGN KEY ("tag_id") REFERENCES "public"."level_tags"("id") ON DELETE CASCADE;
 
 
 
@@ -3706,6 +4013,11 @@ ALTER TABLE ONLY "public"."eventRecords"
 
 ALTER TABLE ONLY "public"."records"
     ADD CONSTRAINT "records_reviewer_fkey" FOREIGN KEY ("reviewer") REFERENCES "public"."players"("uid") ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."records"
+    ADD CONSTRAINT "records_variant_id_fkey" FOREIGN KEY ("variant_id") REFERENCES "public"."levels"("id") ON DELETE SET NULL;
 
 
 
@@ -3875,6 +4187,9 @@ CREATE POLICY "community_post_views_update" ON "public"."community_post_views" F
 ALTER TABLE "public"."community_posts" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."community_posts_admin" ENABLE ROW LEVEL SECURITY;
+
+
 CREATE POLICY "community_posts_delete" ON "public"."community_posts" FOR DELETE USING (("auth"."uid"() = "uid"));
 
 
@@ -3885,6 +4200,9 @@ CREATE POLICY "community_posts_insert" ON "public"."community_posts" FOR INSERT 
 
 CREATE POLICY "community_posts_read" ON "public"."community_posts" FOR SELECT USING (true);
 
+
+
+ALTER TABLE "public"."community_posts_tags" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "community_posts_update" ON "public"."community_posts" FOR UPDATE USING (("auth"."uid"() = "uid"));
@@ -3957,7 +4275,13 @@ ALTER TABLE "public"."levelGDStates" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."levelSubmissions" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."level_tags" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."levels" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."levels_tags" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."mapPackLevels" ENABLE ROW LEVEL SECURITY;
@@ -3987,6 +4311,9 @@ ALTER TABLE "public"."players" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."playersAchievement" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."post_tags" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."products" ENABLE ROW LEVEL SECURITY;
 
 
@@ -4014,18 +4341,18 @@ ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
 
 
 
+SET SESSION AUTHORIZATION "postgres";
+RESET SESSION AUTHORIZATION;
+
+
+
+
 
 
 GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
-
-
-
-
-
-
 
 
 
@@ -4212,6 +4539,12 @@ GRANT ALL ON FUNCTION "public"."auto_hide_reported_content"() TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."auto_hide_reported_posts"() TO "anon";
+GRANT ALL ON FUNCTION "public"."auto_hide_reported_posts"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."auto_hide_reported_posts"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_event_leaderboard"("event_id" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_event_leaderboard"("event_id" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_event_leaderboard"("event_id" integer) TO "service_role";
@@ -4260,15 +4593,33 @@ GRANT ALL ON FUNCTION "public"."refresh_wiki_tree"() TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."update_community_comment_count"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_community_comment_count"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_community_comment_count"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."update_community_comments_count"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_community_comments_count"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_community_comments_count"() TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."update_community_like_count"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_community_like_count"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_community_like_count"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."update_community_likes_count"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_community_likes_count"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_community_likes_count"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_community_post_updated_at"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_community_post_updated_at"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_community_post_updated_at"() TO "service_role";
 
 
 
@@ -4305,9 +4656,13 @@ GRANT ALL ON FUNCTION "public"."update_supporter_until"() TO "service_role";
 
 
 
+SET SESSION AUTHORIZATION "postgres";
+RESET SESSION AUTHORIZATION;
 
 
 
+SET SESSION AUTHORIZATION "postgres";
+RESET SESSION AUTHORIZATION;
 
 
 
@@ -4335,9 +4690,21 @@ GRANT ALL ON TABLE "public"."PVPRooms" TO "service_role";
 
 
 
-GRANT ALL ON SEQUENCE "public"."PVPRooms_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."PVPRooms_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."PVPRooms_id_seq" TO "service_role";
+GRANT ALL ON SEQUENCE "public"."PVPRoom_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."PVPRoom_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."PVPRoom_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."items" TO "anon";
+GRANT ALL ON TABLE "public"."items" TO "authenticated";
+GRANT ALL ON TABLE "public"."items" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."achievement_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."achievement_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."achievement_id_seq" TO "service_role";
 
 
 
@@ -4581,9 +4948,21 @@ GRANT ALL ON TABLE "public"."community_posts" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."community_posts_admin" TO "anon";
+GRANT ALL ON TABLE "public"."community_posts_admin" TO "authenticated";
+GRANT ALL ON TABLE "public"."community_posts_admin" TO "service_role";
+
+
+
 GRANT ALL ON SEQUENCE "public"."community_posts_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."community_posts_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."community_posts_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."community_posts_tags" TO "anon";
+GRANT ALL ON TABLE "public"."community_posts_tags" TO "authenticated";
+GRANT ALL ON TABLE "public"."community_posts_tags" TO "service_role";
 
 
 
@@ -4689,12 +5068,6 @@ GRANT ALL ON TABLE "public"."events" TO "service_role";
 
 
 
-GRANT ALL ON SEQUENCE "public"."events_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."events_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."events_id_seq" TO "service_role";
-
-
-
 GRANT ALL ON TABLE "public"."heatmap" TO "anon";
 GRANT ALL ON TABLE "public"."heatmap" TO "authenticated";
 GRANT ALL ON TABLE "public"."heatmap" TO "service_role";
@@ -4719,24 +5092,6 @@ GRANT ALL ON TABLE "public"."itemTransactions" TO "service_role";
 
 
 
-GRANT ALL ON SEQUENCE "public"."itemTransactions_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."itemTransactions_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."itemTransactions_id_seq" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."items" TO "anon";
-GRANT ALL ON TABLE "public"."items" TO "authenticated";
-GRANT ALL ON TABLE "public"."items" TO "service_role";
-
-
-
-GRANT ALL ON SEQUENCE "public"."items_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."items_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."items_id_seq" TO "service_role";
-
-
-
 GRANT ALL ON TABLE "public"."levelDeathCount" TO "anon";
 GRANT ALL ON TABLE "public"."levelDeathCount" TO "authenticated";
 GRANT ALL ON TABLE "public"."levelDeathCount" TO "service_role";
@@ -4758,6 +5113,24 @@ GRANT ALL ON TABLE "public"."levelGDStates" TO "service_role";
 GRANT ALL ON TABLE "public"."levelSubmissions" TO "anon";
 GRANT ALL ON TABLE "public"."levelSubmissions" TO "authenticated";
 GRANT ALL ON TABLE "public"."levelSubmissions" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."level_tags" TO "anon";
+GRANT ALL ON TABLE "public"."level_tags" TO "authenticated";
+GRANT ALL ON TABLE "public"."level_tags" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."level_tags_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."level_tags_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."level_tags_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."levels_tags" TO "anon";
+GRANT ALL ON TABLE "public"."levels_tags" TO "authenticated";
+GRANT ALL ON TABLE "public"."levels_tags" TO "service_role";
 
 
 
@@ -4869,6 +5242,18 @@ GRANT ALL ON SEQUENCE "public"."players_id_seq" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."post_tags" TO "anon";
+GRANT ALL ON TABLE "public"."post_tags" TO "authenticated";
+GRANT ALL ON TABLE "public"."post_tags" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."post_tags_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."post_tags_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."post_tags_id_seq" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."products" TO "anon";
 GRANT ALL ON TABLE "public"."products" TO "authenticated";
 GRANT ALL ON TABLE "public"."products" TO "service_role";
@@ -4881,6 +5266,12 @@ GRANT ALL ON SEQUENCE "public"."products_id_seq" TO "service_role";
 
 
 
+GRANT ALL ON SEQUENCE "public"."promotions_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."promotions_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."promotions_id_seq" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."records" TO "anon";
 GRANT ALL ON TABLE "public"."records" TO "authenticated";
 GRANT ALL ON TABLE "public"."records" TO "service_role";
@@ -4890,6 +5281,12 @@ GRANT ALL ON TABLE "public"."records" TO "service_role";
 GRANT ALL ON TABLE "public"."rules" TO "anon";
 GRANT ALL ON TABLE "public"."rules" TO "authenticated";
 GRANT ALL ON TABLE "public"."rules" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."stackableItemTransactions_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."stackableItemTransactions_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."stackableItemTransactions_id_seq" TO "service_role";
 
 
 
@@ -4985,11 +5382,12 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 
 
 
---
--- Dumped schema changes for auth and storage
---
-
-CREATE POLICY "Enable read access for all users" ON "storage"."buckets" FOR INSERT WITH CHECK (true);
+  create policy "Enable read access for all users"
+  on "storage"."buckets"
+  as permissive
+  for insert
+  to public
+with check (true);
 
 
 

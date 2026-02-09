@@ -39,6 +39,7 @@ import {
     createPostTag,
     deletePostTag,
     setPostTags,
+    updatePostTag,
     ValidationError,
     ForbiddenError,
     NotFoundError,
@@ -1015,6 +1016,17 @@ router.route('/tags/:id')
     .delete(adminAuth, async (req, res) => {
         await deletePostTag(parseInt(req.params.id))
         res.json({ success: true })
+    })
+
+// Admin: update a post tag (name, color, admin_only)
+router.route('/tags/:id')
+    .put(adminAuth, async (req, res) => {
+        try {
+            const tag = await updatePostTag(parseInt(req.params.id), req.body)
+            res.json(tag)
+        } catch (e) {
+            handleServiceError(res, e)
+        }
     })
 
 // Set tags on a post

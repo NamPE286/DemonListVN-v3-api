@@ -68,6 +68,18 @@ export async function getCommunityPosts(options: {
         moderationStatus
     } = options
 
+    // Pre-filter: get post IDs that have the matching tag
+    let tagFilteredIds: number[] | null = null
+    if (options.tagId) {
+        const { data: tagRows, error: tagError } = await db
+            .from('community_posts_tags')
+            .select('post_id')
+            .eq('tag_id', options.tagId)
+        if (tagError) throw new Error(tagError.message)
+        tagFilteredIds = [...new Set((tagRows || []).map((r: any) => r.post_id))] as number[]
+        if (tagFilteredIds.length === 0) return []
+    }
+
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
     let query = db
@@ -92,9 +104,9 @@ export async function getCommunityPosts(options: {
         query = query.eq('community_posts_admin.moderation_status', 'approved')
     }
 
-    // Filter by tag
-    if (options.tagId) {
-        query = query.eq('community_posts_tags.tag_id', options.tagId)
+    // Filter by tag: only include posts that have the matching tag
+    if (tagFilteredIds !== null) {
+        query = query.in('id', tagFilteredIds)
     }
 
     // Full-text search using the fts column
@@ -120,9 +132,21 @@ export async function getCommunityPosts(options: {
 }
 
 export async function getCommunityPostsCount(type?: string, search?: string, hidden?: boolean, moderationStatus?: string, tagId?: number) {
+    // Pre-filter: get post IDs that have the matching tag
+    let tagFilteredIds: number[] | null = null
+    if (tagId) {
+        const { data: tagRows, error: tagError } = await db
+            .from('community_posts_tags')
+            .select('post_id')
+            .eq('tag_id', tagId)
+        if (tagError) throw new Error(tagError.message)
+        tagFilteredIds = [...new Set((tagRows || []).map((r: any) => r.post_id))] as number[]
+        if (tagFilteredIds.length === 0) return 0
+    }
+
     let query = db
         .from('community_posts')
-        .select('*, community_posts_admin!inner(moderation_status, hidden), community_posts_tags(tag_id)', { count: 'exact', head: true })
+        .select('*, community_posts_admin!inner(moderation_status, hidden)', { count: 'exact', head: true })
 
     if (type) {
         query = query.eq('type', type)
@@ -141,8 +165,9 @@ export async function getCommunityPostsCount(type?: string, search?: string, hid
         query = query.eq('community_posts_admin.moderation_status', 'approved')
     }
 
-    if (tagId) {
-        query = query.eq('community_posts_tags.tag_id', tagId)
+    // Filter by tag: only count posts that have the matching tag
+    if (tagFilteredIds !== null) {
+        query = query.in('id', tagFilteredIds)
     }
 
     if (search) {
@@ -1350,6 +1375,22 @@ export async function deletePostTag(tagId: number) {
         .eq('id', tagId)
 
     if (error) throw new Error(error.message)
+}
+
+/** Update a post tag's name, color, and/or admin_only flag (admin only) */
+export async function updatePostTag(tagId: number, updates: { name?: string, color?: string, admin_only?: boolean }) {
+    const { data, error } = await db
+        .from('post_tags')
+        .update(updates)
+        .eq('id', tagId)
+        .select('*')
+        .single()
+
+    if (error) {
+        if (error.code === '23505') throw new ConflictError('Tag already exists')
+        throw new Error(error.message)
+    }
+    return data
 }
 
 /** Set tags on a post. isAdmin controls whether admin_only tags can be applied */

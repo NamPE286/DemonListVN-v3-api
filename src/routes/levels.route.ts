@@ -3,7 +3,7 @@ import type { NextFunction, Response, Request } from 'express'
 import adminAuth from '@src/middleware/admin-auth.middleware'
 import { getLevelDeathCount } from '@src/services/death-count.service'
 import { getLevelRecords } from '@src/services/record.service'
-import { updateLevel, getLevel, fetchLevelFromGD, deleteLevel, refreshLevel, getLevelTags, createLevelTag, deleteLevelTag, setLevelTags, getLevelTagsForLevel, addLevelVariant, removeLevelVariant, getLevelVariants, retrieveOrCreateLevel } from '@src/services/level.service'
+import { updateLevel, getLevel, fetchLevelFromGD, deleteLevel, refreshLevel, getLevelTags, createLevelTag, deleteLevelTag, updateLevelTag, setLevelTags, getLevelTagsForLevel, addLevelVariant, removeLevelVariant, getLevelVariants, retrieveOrCreateLevel } from '@src/services/level.service'
 import userAuth from '@src/middleware/user-auth.middleware'
 import supabase from '@src/client/supabase'
 import { getEventLevelsSafe } from '@src/services/event.service'
@@ -65,6 +65,22 @@ router.route('/tags/:tagId')
         }
     })
 
+// Admin: update a level tag (name and/or color)
+router.route('/tags/:tagId')
+    .put(adminAuth, async (req, res) => {
+        try {
+            const tag = await updateLevelTag(parseInt(req.params.tagId), req.body)
+            res.json(tag)
+        } catch (err: any) {
+            if (err.message === 'Tag already exists') {
+                res.status(409).json({ error: err.message })
+            } else {
+                console.error(err)
+                res.status(500).send()
+            }
+        }
+    })
+
 router.route('/refresh')
     .post(webhookAuth, async (req, res) => {
         try {
@@ -109,6 +125,7 @@ router.route('/')
 
             res.send()
         } catch (err) {
+            console.error(err)
             res.status(500).send()
         }
     })
