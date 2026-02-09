@@ -25,6 +25,46 @@ function checkID(req: Request, res: Response, next: NextFunction) {
     next()
 }
 
+// Get all level tags
+router.route('/tags')
+    .get(async (_req, res) => {
+        try {
+            const tags = await getLevelTags()
+            res.json(tags)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+// Admin: create a level tag
+router.route('/tags')
+    .post(adminAuth, async (req, res) => {
+        try {
+            const tag = await createLevelTag(req.body)
+            res.status(201).json(tag)
+        } catch (err: any) {
+            if (err.message === 'Tag already exists') {
+                res.status(409).json({ error: err.message })
+            } else {
+                console.error(err)
+                res.status(500).send()
+            }
+        }
+    })
+
+// Admin: delete a level tag (removes from all levels)
+router.route('/tags/:tagId')
+    .delete(adminAuth, async (req, res) => {
+        try {
+            await deleteLevelTag(parseInt(req.params.tagId))
+            res.json({ success: true })
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
 router.route('/refresh')
     .post(webhookAuth, async (req, res) => {
         try {
@@ -230,6 +270,7 @@ router.route('/:id')
         }
     })
 
+
 router.route('/:id/records')
     /**
      * @openapi
@@ -384,46 +425,6 @@ router.route('/:id/inEvent')
 
 // ---- Level Tags ----
 
-// Get all level tags
-router.route('/tags')
-    .get(async (_req, res) => {
-        try {
-            const tags = await getLevelTags()
-            res.json(tags)
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
-
-// Admin: create a level tag
-router.route('/tags')
-    .post(adminAuth, async (req, res) => {
-        try {
-            const tag = await createLevelTag(req.body)
-            res.status(201).json(tag)
-        } catch (err: any) {
-            if (err.message === 'Tag already exists') {
-                res.status(409).json({ error: err.message })
-            } else {
-                console.error(err)
-                res.status(500).send()
-            }
-        }
-    })
-
-// Admin: delete a level tag (removes from all levels)
-router.route('/tags/:tagId')
-    .delete(adminAuth, async (req, res) => {
-        try {
-            await deleteLevelTag(parseInt(req.params.tagId))
-            res.json({ success: true })
-        } catch (err) {
-            console.error(err)
-            res.status(500).send()
-        }
-    })
-
 // Get tags for a level
 router.route('/:id/tags')
     .get(checkID, async (req, res) => {
@@ -438,7 +439,7 @@ router.route('/:id/tags')
 
 // Admin: set tags on a level
 router.route('/:id/tags')
-    .put([adminAuth, checkID], async (req, res) => {
+    .put([adminAuth, checkID], async (req: any, res: any) => {
         try {
             const { tag_ids } = req.body
             if (!Array.isArray(tag_ids)) {
@@ -469,7 +470,7 @@ router.route('/:id/variants')
 
 // Admin: add a variant to a level
 router.route('/:id/variants')
-    .post([adminAuth, checkID], async (req, res) => {
+    .post([adminAuth, checkID], async (req: any, res: any) => {
         const mainLevelId = parseInt(req.params.id)
         const { variantLevelId } = req.body
 
@@ -504,7 +505,7 @@ router.route('/:id/variants')
 
 // Admin: remove a variant from a level
 router.route('/:id/variants/:variantId')
-    .delete([adminAuth, checkID], async (req, res) => {
+    .delete([adminAuth, checkID], async (req: any, res: any) => {
         try {
             await removeLevelVariant(parseInt(req.params.variantId))
             res.json({ success: true })
