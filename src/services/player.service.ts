@@ -236,27 +236,30 @@ type Strict<T> = {
 
 export function getPlayerTitle(player: Strict<TPlayer>, list: string) {
     if (list == 'dl') {
-        if (player.overallRank <= 1) {
-            return {
-                title: 'AGM',
-                fullTitle: 'Ascended Grandmaster',
-                color: 'white;background: linear-gradient(to right, #ff00cc, #333399);'
-            };
+        if (player.overallRank > 0) {
+            if (player.overallRank <= 1) {
+                return {
+                    title: 'AGM',
+                    fullTitle: 'Ascended Grandmaster',
+                    color: 'white;background: linear-gradient(to right, #ff00cc, #333399);'
+                };
+            }
+            if (player.overallRank <= 5) {
+                return {
+                    title: 'LGM',
+                    fullTitle: 'Legendary Grandmaster',
+                    color: 'darkred'
+                };
+            }
+            if (player.overallRank <= 15) {
+                return {
+                    title: 'GM',
+                    fullTitle: 'Grandmaster',
+                    color: 'red'
+                };
+            }
         }
-        if (player.overallRank <= 5) {
-            return {
-                title: 'LGM',
-                fullTitle: 'Legendary Grandmaster',
-                color: 'darkred'
-            };
-        }
-        if (player.overallRank <= 15) {
-            return {
-                title: 'GM',
-                fullTitle: 'Grandmaster',
-                color: 'red'
-            };
-        }
+
         if (player.rating >= 3500) {
             return {
                 title: 'M',
@@ -310,20 +313,23 @@ export function getPlayerTitle(player: Strict<TPlayer>, list: string) {
     }
 
     if (list == 'cl') {
-        if (player.clrank <= 5) {
-            return {
-                title: 'V',
-                fullTitle: 'Challenger V',
-                color: 'darkred'
-            };
+        if (player.clrank > 0) {
+            if (player.clrank <= 5) {
+                return {
+                    title: 'V',
+                    fullTitle: 'Challenger V',
+                    color: 'darkred'
+                };
+            }
+            if (player.clrank <= 15) {
+                return {
+                    title: 'IV',
+                    fullTitle: 'Challenger IV',
+                    color: 'red'
+                };
+            }
         }
-        if (player.clrank <= 15) {
-            return {
-                title: 'IV',
-                fullTitle: 'Challenger IV',
-                color: 'red'
-            };
-        }
+
         if (player.clRating >= 2500) {
             return {
                 title: 'III',
