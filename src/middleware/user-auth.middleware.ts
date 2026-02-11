@@ -17,8 +17,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
         const { data, error } = await supabase.auth.getClaims(token)
 
         if (error) {
-            console.error(error.message)
-            res.status(401).send()
+            throw new Error(error.message)
             
             return
         }
