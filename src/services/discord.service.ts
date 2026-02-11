@@ -181,6 +181,7 @@ export async function syncRoleGDVN(player: Tables<"players">) {
         s.add(roles.supporter)
     }
 
+    // @ts-ignore
     const title = getPlayerTitle(player, 'dl')
 
     if (title != null) {
