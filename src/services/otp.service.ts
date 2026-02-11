@@ -1,7 +1,12 @@
 import supabase from "@src/client/supabase";
+import { randomInt } from "crypto";
 
 function generateOTPCode(): string {
-    return String(Math.floor(100000 + Math.random() * 900000))
+    return String(randomInt(100000, 1000000))
+}
+
+function isOTPExpired(otp: { is_expired: boolean; expired_at: string }): boolean {
+    return otp.is_expired || new Date(otp.expired_at) < new Date()
 }
 
 export async function createOTP() {
@@ -36,7 +41,7 @@ export async function getOTP(code: string) {
 export async function grantOTP(code: string, uid: string) {
     const otp = await getOTP(code)
 
-    if (otp.is_expired || new Date(otp.expired_at) < new Date()) {
+    if (isOTPExpired(otp)) {
         throw new Error('OTP code is expired')
     }
 
@@ -57,11 +62,7 @@ export async function grantOTP(code: string, uid: string) {
 export async function consumeOTP(code: string) {
     const otp = await getOTP(code)
 
-    if (otp.is_expired) {
-        throw new Error('OTP code is expired')
-    }
-
-    if (new Date(otp.expired_at) < new Date()) {
+    if (isOTPExpired(otp)) {
         throw new Error('OTP code is expired')
     }
 
@@ -69,13 +70,19 @@ export async function consumeOTP(code: string) {
         return { granted: false }
     }
 
-    const { error: expireError } = await supabase
+    const { data: updated, error: expireError } = await supabase
         .from('otp')
         .update({ is_expired: true })
         .eq('code', code)
+        .eq('is_expired', false)
+        .select()
 
     if (expireError) {
         throw new Error(expireError.message)
+    }
+
+    if (!updated || updated.length === 0) {
+        throw new Error('OTP code is expired')
     }
 
     const { data, error } = await supabase
