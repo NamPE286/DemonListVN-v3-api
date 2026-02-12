@@ -2,6 +2,7 @@ import supabase from "@src/client/supabase"
 import { createDirectMessageChannel, getAccessToken, getUserByToken } from "@src/services/discord.service"
 import { getUsernameByToken as getIDByToken } from "@src/services/pointercrate.service"
 import { updatePlayerDiscord } from "@src/services/player.service"
+import { createOTP, grantOTP, consumeOTP } from "@src/services/otp.service"
 import userAuth from "@src/middleware/user-auth.middleware"
 import express from "express"
 import { FRONTEND_URL } from "@src/config/url"
@@ -128,6 +129,94 @@ router.route("/link/pointercrate")
         }
 
         res.send()
+    })
+
+/**
+ * @swagger
+ * /auth/otp:
+ *   post:
+ *     summary: Create a new OTP code
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Returns the newly created 6-digit OTP code
+ *       500:
+ *         description: Internal server error
+ */
+router.route("/otp")
+    .post(async (req, res) => {
+        try {
+            const code = await createOTP()
+            res.send({ code })
+        } catch (err) {
+            res.status(500).send()
+        }
+    })
+
+/**
+ * @swagger
+ * /auth/otp/{code}:
+ *   patch:
+ *     summary: Grant an OTP code
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The 6-digit OTP code
+ *     responses:
+ *       200:
+ *         description: OTP code granted successfully
+ *       400:
+ *         description: OTP code is expired or already granted
+ *       500:
+ *         description: Internal server error
+ *   get:
+ *     summary: Check OTP code grant status
+ *     tags: [Auth]
+ *     parameters:
+ *       - in: path
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The 6-digit OTP code
+ *     responses:
+ *       200:
+ *         description: Returns grant status. If granted, returns APIKey on first check
+ *       400:
+ *         description: OTP code is expired
+ *       500:
+ *         description: Internal server error
+ */
+router.route("/otp/:code")
+    .patch(userAuth, async (req, res) => {
+        const { authType } = res.locals
+
+        if(authType != 'token') {
+            res.status(403).send();
+
+            return;
+        }
+
+        try {
+            await grantOTP(req.params.code, res.locals.user.uid!)
+            res.send()
+        } catch (err: any) {
+            res.status(400).send({ error: err.message })
+        }
+    })
+    .get(async (req, res) => {
+        try {
+            const result = await consumeOTP(req.params.code)
+            res.send(result)
+        } catch (err: any) {
+            res.status(400).send({ error: err.message })
+        }
     })
 
 export default router

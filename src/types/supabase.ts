@@ -2323,6 +2323,38 @@ export type Database = {
           },
         ]
       }
+      otp: {
+        Row: {
+          code: string
+          created_at: string
+          expired_at: string
+          granted_by: string | null
+          is_expired: boolean
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expired_at: string
+          granted_by?: string | null
+          is_expired?: boolean
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expired_at?: string
+          granted_by?: string | null
+          is_expired?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "otp_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       players: {
         Row: {
           avatarVersion: number
