@@ -195,6 +195,14 @@ router.route("/otp")
  */
 router.route("/otp/:code")
     .patch(userAuth, async (req, res) => {
+        const { authType } = res.locals
+
+        if(authType != 'token') {
+            res.status(403).send();
+
+            return;
+        }
+
         try {
             await grantOTP(req.params.code, res.locals.user.uid!)
             res.send()
