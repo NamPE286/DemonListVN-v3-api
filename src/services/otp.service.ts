@@ -95,5 +95,11 @@ export async function consumeOTP(code: string) {
         throw new Error(error.message)
     }
 
-    return { granted: true, key: data.key }
+    const { data: playerData, error: playerError } = await supabase
+        .from('players')
+        .select('uid, name')
+        .eq('uid', otp.granted_by)
+        .single()
+
+    return { granted: true, key: data.key, player: playerData?.name ?? 'N/a' }
 }
