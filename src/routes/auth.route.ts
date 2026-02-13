@@ -16,6 +16,13 @@ import { FRONTEND_URL } from "@src/config/url"
 
 const router = express.Router()
 
+router.route('/me')
+    .get(userAuth, async (req, res) => {
+        const { user } = res.locals
+
+        res.send(user)
+    })
+
 /**
  * @swagger
  * /auth/callback/discord:
