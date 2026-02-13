@@ -36,6 +36,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
 
         res.locals.user = player
         res.locals.authType = 'token'
+        res.locals.token = token
     } catch {
         try {
             const key = req.headers.authorization.split(' ')[1]
@@ -53,6 +54,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
 
             res.locals.user = data.players!
             res.locals.authType = 'key'
+            res.locals.token = key
 
             if (res.locals.user.isBanned) {
                 res.status(401).send();

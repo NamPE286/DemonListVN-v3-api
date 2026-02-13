@@ -7,6 +7,7 @@ declare global {
             user: Awaited<ReturnType<typeof getPlayer>>
             authenticated: boolean
             authType: 'token' | 'key'
+            token: string
             item: TInventoryItem
         }
     }

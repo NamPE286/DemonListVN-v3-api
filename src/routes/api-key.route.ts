@@ -27,11 +27,11 @@ router.route('/')
      *         description: Internal Server Error
      */
     .get(userAuth, async (req, res) => {
-        if(res.locals.authType == 'key') {
+        if (res.locals.authType == 'key') {
             res.status(403).send()
             return
         }
-        
+
         try {
             res.send(await getAllAPIKey(res.locals.user.uid!))
         } catch (err) {
@@ -54,11 +54,11 @@ router.route('/')
      *         description: Internal Server Error
      */
     .post(userAuth, async (req, res) => {
-        if(res.locals.authType == 'key') {
+        if (res.locals.authType == 'key') {
             res.status(403).send()
             return
         }
-        
+
         try {
             await createAPIKey(res.locals.user.uid!)
             res.send()
@@ -66,6 +66,24 @@ router.route('/')
             res.status(500).send()
         }
     })
+    .delete(userAuth, async (req, res) => {
+        if (res.locals.authType != 'key') {
+            res.status(403).send()
+            return
+        }
+
+        const { user, token } = res.locals
+
+
+        try {
+            await deleteAPIKey(user.uid!, token)
+            res.send()
+        } catch (err) {
+            res.status(500).send()
+        }
+
+    })
+
 
 router.route('/:key')
     /**
@@ -91,11 +109,11 @@ router.route('/:key')
      *         description: Internal Server Error
      */
     .delete(userAuth, async (req, res) => {
-        if(res.locals.authType == 'key') {
+        if (res.locals.authType == 'key') {
             res.status(403).send()
             return
         }
-        
+
         try {
             await deleteAPIKey(res.locals.user.uid!, req.params.key)
             res.send()
