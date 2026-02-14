@@ -969,6 +969,35 @@ export type Database = {
           },
         ]
       }
+      community_comments_admin: {
+        Row: {
+          comment_id: number
+          hidden: boolean
+          moderation_result: Json | null
+          moderation_status: string
+        }
+        Insert: {
+          comment_id: number
+          hidden?: boolean
+          moderation_result?: Json | null
+          moderation_status?: string
+        }
+        Update: {
+          comment_id?: number
+          hidden?: boolean
+          moderation_result?: Json | null
+          moderation_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_comments_admin_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: true
+            referencedRelation: "community_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       community_likes: {
         Row: {
           comment_id: number | null
@@ -2349,6 +2378,35 @@ export type Database = {
           {
             foreignKeyName: "otp_granted_by_fkey"
             columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      playerConvictions: {
+        Row: {
+          content: string
+          created_at: string
+          id: number
+          userId: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: number
+          userId?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: number
+          userId?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playerConvictions_userId_fkey"
+            columns: ["userId"]
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["uid"]
