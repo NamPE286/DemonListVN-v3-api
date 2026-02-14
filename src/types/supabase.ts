@@ -2388,18 +2388,21 @@ export type Database = {
         Row: {
           content: string
           created_at: string
+          creditReduce: number
           id: number
           userId: string | null
         }
         Insert: {
           content: string
           created_at?: string
+          creditReduce?: number
           id?: number
           userId?: string | null
         }
         Update: {
           content?: string
           created_at?: string
+          creditReduce?: number
           id?: number
           userId?: string | null
         }
