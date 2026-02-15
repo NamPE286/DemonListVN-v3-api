@@ -7,6 +7,7 @@ export type TLevel = Database['public']['Tables']['levels']['Update']
 export type TPlayer = Database['public']['Tables']['players']['Update']
 export type TRecord = Database['public']['Tables']['records']['Update']
 export type TLevelSubmission = Database['public']['Tables']['levelSubmissions']['Update']
+export type TPlayerConviction = Database['public']['Tables']['playerConvictions']['Update']
 export type TInventoryRow = Database['public']['Tables']['inventory']['Row']
 export type TItemRow = Database['public']['Tables']['items']['Row']
 export type TInventoryWithItem = TInventoryRow & { items?: TItemRow | null }

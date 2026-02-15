@@ -1,6 +1,7 @@
 import express from 'express'
 import userAuth from '@src/middleware/user-auth.middleware'
 import optionalAuth from '@src/middleware/optional-user-auth.middleware'
+import adminAuth from '@src/middleware/admin-auth.middleware'
 import { getHeatmap } from '@src/services/heatmap.service'
 import { getPlayerRecordRating, getPlayerRecords } from '@src/services/record.service'
 import { updateHeatmap } from '@src/services/heatmap.service'
@@ -8,7 +9,15 @@ import { getPlayerSubmissions } from '@src/services/record.service'
 import { syncRoleGDVN } from '@src/services/discord.service'
 import supabase from '@src/client/supabase'
 import { EVENT_SELECT_STR } from '@src/services/event.service'
-import { getPlayers, getPlayersBatch, getPlayer, updatePlayer, getPlayerInventoryItems } from '@src/services/player.service'
+import {
+    getPlayers,
+    getPlayersBatch,
+    getPlayer,
+    updatePlayer,
+    getPlayerInventoryItems,
+    getPlayerConvictions,
+    addPlayerConviction
+} from '@src/services/player.service'
 import { getPostsByUserWithLikeStatus } from '@src/services/community.service'
 import getAuthUid from '@src/middleware/get-auth-uid'
 
@@ -579,6 +588,88 @@ router.route('/:uid/community-posts')
         } catch (e: any) {
             console.error(e)
             res.status(500).json({ error: e.message })
+        }
+    })
+
+/**
+ * @openapi
+ * "/players/{uid}/convictions":
+ *   get:
+ *     tags:
+ *       - Player
+ *     summary: Get player convictions
+ *     parameters:
+ *       - name: uid
+ *         in: path
+ *         description: The UID of the player
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ *       500:
+ *         description: Internal server error
+ *   post:
+ *     tags:
+ *       - Player
+ *     summary: Add a conviction to player (admin only)
+ *     parameters:
+ *       - name: uid
+ *         in: path
+ *         description: The UID of the player
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               content:
+ *                 type: string
+ *               creditReduce:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Success
+ *       400:
+ *         description: Invalid payload
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/:uid/convictions')
+    .get(async (req, res) => {
+        const { uid } = req.params
+
+        try {
+            res.send(await getPlayerConvictions(uid))
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+    .post(adminAuth, async (req, res) => {
+        const { uid } = req.params
+        const { content, creditReduce } = req.body ?? {}
+
+        if (!content || String(content).trim().length === 0) {
+            res.status(400).send({ message: 'content is required' })
+            return
+        }
+
+        try {
+            const conviction = await addPlayerConviction(uid, {
+                content: String(content).trim(),
+                creditReduce: Number.isFinite(Number(creditReduce)) ? Number(creditReduce) : 0
+            })
+
+            res.send(conviction)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
         }
     })
 

@@ -1,6 +1,6 @@
 import supabase from '@src/client/supabase'
 import { sendDirectMessage } from '@src/services/discord.service'
-import type { TInventoryItem, TPlayer } from '@src/types'
+import type { TInventoryItem, TPlayer, TPlayerConviction } from '@src/types'
 import type { Database } from '@src/types/supabase'
 import { FRONTEND_URL } from '@src/config/url'
 
@@ -570,4 +570,38 @@ export async function getTopBuyers(interval: number, limit: number, offset: numb
     }));
 
     return res;
+}
+
+export async function getPlayerConvictions(uid: string) {
+    const { data, error } = await supabase
+        .from('playerConvictions')
+        .select('*')
+        .eq('userId', uid)
+        .order('created_at', { ascending: false })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}
+
+export async function addPlayerConviction(uid: string, conviction: TPlayerConviction) {
+    const payload: TPlayerConviction = {
+        userId: uid,
+        content: conviction.content,
+        creditReduce: conviction.creditReduce ?? 0
+    }
+
+    const { data, error } = await supabase
+        .from('playerConvictions')
+        .insert(payload as any)
+        .select('*')
+        .single()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
 }
