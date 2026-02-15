@@ -1,5 +1,6 @@
 import express from 'express'
 import { search } from '@src/services/search.service'
+import optionalAuth from '@src/middleware/optional-user-auth.middleware'
 
 const router = express.Router()
 
@@ -32,12 +33,16 @@ router.route('/:query')
      *           application/json:
      *             schema:
      */
-    .get(async (req, res) => {
+    .get(optionalAuth, async (req, res) => {
         const { query } = req.params
+        const isAdmin = !!res.locals.authenticated && !!res.locals.user?.isAdmin
 
         res.send({
             levels: await search.levels(query, req.query),
-            players: await search.players(query, req.query)
+            players: await search.players(query, {
+                ...req.query,
+                includeHidden: isAdmin
+            })
         })
     })
 
