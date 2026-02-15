@@ -573,10 +573,14 @@ export async function getTopBuyers(interval: number, limit: number, offset: numb
 }
 
 export async function getPlayerConvictions(uid: string) {
+    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString()
+
     const { data, error } = await supabase
         .from('playerConvictions')
         .select('*')
         .eq('userId', uid)
+        .eq('isHidden', false)
+        .gte('created_at', oneYearAgo)
         .order('created_at', { ascending: false })
 
     if (error) {
@@ -590,12 +594,58 @@ export async function addPlayerConviction(uid: string, conviction: TPlayerConvic
     const payload: TPlayerConviction = {
         userId: uid,
         content: conviction.content,
-        creditReduce: conviction.creditReduce ?? 0
+        creditReduce: conviction.creditReduce ?? 0,
+        created_at: conviction.created_at,
+        isHidden: conviction.isHidden ?? false
     }
 
     const { data, error } = await supabase
         .from('playerConvictions')
         .insert(payload as any)
+        .select('*')
+        .single()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}
+
+export async function getPlayerConvictionsForAdmin(uid: string) {
+    const { data, error } = await supabase
+        .from('playerConvictions')
+        .select('*')
+        .eq('userId', uid)
+        .order('created_at', { ascending: false })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}
+
+export async function updatePlayerConviction(uid: string, convictionId: number, conviction: TPlayerConviction) {
+    const payload: TPlayerConviction = {
+        content: conviction.content,
+        creditReduce: conviction.creditReduce,
+        created_at: conviction.created_at,
+        isHidden: conviction.isHidden
+    }
+
+    Object.keys(payload).forEach((key) => {
+        const typedKey = key as keyof TPlayerConviction
+        if (payload[typedKey] === undefined) {
+            delete payload[typedKey]
+        }
+    })
+
+    const { data, error } = await supabase
+        .from('playerConvictions')
+        .update(payload as any)
+        .eq('id', convictionId)
+        .eq('userId', uid)
         .select('*')
         .single()
 

@@ -16,7 +16,9 @@ import {
     updatePlayer,
     getPlayerInventoryItems,
     getPlayerConvictions,
-    addPlayerConviction
+    addPlayerConviction,
+    getPlayerConvictionsForAdmin,
+    updatePlayerConviction
 } from '@src/services/player.service'
 import { getPostsByUserWithLikeStatus } from '@src/services/community.service'
 import getAuthUid from '@src/middleware/get-auth-uid'
@@ -641,10 +643,16 @@ router.route('/:uid/community-posts')
  *         description: Internal server error
  */
 router.route('/:uid/convictions')
-    .get(async (req, res) => {
+    .get(optionalAuth, async (req, res) => {
         const { uid } = req.params
+        const isAdmin = !!res.locals.authenticated && !!res.locals.user?.isAdmin
 
         try {
+            if (isAdmin) {
+                res.send(await getPlayerConvictionsForAdmin(uid))
+                return
+            }
+
             res.send(await getPlayerConvictions(uid))
         } catch (err) {
             console.error(err)
@@ -653,17 +661,85 @@ router.route('/:uid/convictions')
     })
     .post(adminAuth, async (req, res) => {
         const { uid } = req.params
-        const { content, creditReduce } = req.body ?? {}
+        const { content, creditReduce, createdAt, isHidden } = req.body ?? {}
 
         if (!content || String(content).trim().length === 0) {
             res.status(400).send({ message: 'content is required' })
             return
         }
 
+        let parsedCreatedAt: string | undefined
+        if (createdAt !== undefined && createdAt !== null && String(createdAt).trim() !== '') {
+            const date = new Date(String(createdAt))
+            if (Number.isNaN(date.getTime())) {
+                res.status(400).send({ message: 'createdAt must be a valid date' })
+                return
+            }
+
+            parsedCreatedAt = date.toISOString()
+        }
+
         try {
             const conviction = await addPlayerConviction(uid, {
                 content: String(content).trim(),
-                creditReduce: Number.isFinite(Number(creditReduce)) ? Number(creditReduce) : 0
+                creditReduce: Number.isFinite(Number(creditReduce)) ? Number(creditReduce) : 0,
+                created_at: parsedCreatedAt,
+                isHidden: !!isHidden
+            })
+
+            res.send(conviction)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:uid/convictions/:id')
+    .patch(adminAuth, async (req, res) => {
+        const { uid, id } = req.params
+        const convictionId = parseInt(id)
+
+        if (Number.isNaN(convictionId)) {
+            res.status(400).send({ message: 'id must be a valid number' })
+            return
+        }
+
+        const { content, creditReduce, createdAt, isHidden } = req.body ?? {}
+
+        let parsedCreatedAt: string | undefined
+        if (createdAt !== undefined && createdAt !== null && String(createdAt).trim() !== '') {
+            const date = new Date(String(createdAt))
+            if (Number.isNaN(date.getTime())) {
+                res.status(400).send({ message: 'createdAt must be a valid date' })
+                return
+            }
+
+            parsedCreatedAt = date.toISOString()
+        }
+
+        const shouldUpdateContent = content !== undefined
+        const shouldUpdateCredit = creditReduce !== undefined
+        const shouldUpdateCreatedAt = createdAt !== undefined
+        const shouldUpdateHidden = isHidden !== undefined
+
+        if (!shouldUpdateContent && !shouldUpdateCredit && !shouldUpdateCreatedAt && !shouldUpdateHidden) {
+            res.status(400).send({ message: 'no editable fields in payload' })
+            return
+        }
+
+        if (shouldUpdateContent && String(content).trim().length === 0) {
+            res.status(400).send({ message: 'content cannot be empty' })
+            return
+        }
+
+        try {
+            const conviction = await updatePlayerConviction(uid, convictionId, {
+                content: shouldUpdateContent ? String(content).trim() : undefined,
+                creditReduce: shouldUpdateCredit
+                    ? (Number.isFinite(Number(creditReduce)) ? Number(creditReduce) : 0)
+                    : undefined,
+                created_at: shouldUpdateCreatedAt ? parsedCreatedAt : undefined,
+                isHidden: shouldUpdateHidden ? !!isHidden : undefined
             })
 
             res.send(conviction)

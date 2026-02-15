@@ -2390,6 +2390,7 @@ export type Database = {
           created_at: string
           creditReduce: number
           id: number
+          isHidden: boolean
           userId: string | null
         }
         Insert: {
@@ -2397,6 +2398,7 @@ export type Database = {
           created_at?: string
           creditReduce?: number
           id?: number
+          isHidden?: boolean
           userId?: string | null
         }
         Update: {
@@ -2404,6 +2406,7 @@ export type Database = {
           created_at?: string
           creditReduce?: number
           id?: number
+          isHidden?: boolean
           userId?: string | null
         }
         Relationships: [
