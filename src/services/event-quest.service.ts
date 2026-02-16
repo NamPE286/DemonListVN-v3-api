@@ -185,7 +185,7 @@ export async function isQuestCompleted(user: Tables<"players">, questId: number)
     for (const condition of conditions) {
         const value = attribute.get(condition.attribute)
 
-        if (!value) {
+        if (value === undefined || value === null) {
             throw new Error('Attribute not exists')
         }
 
