@@ -543,8 +543,7 @@ router.route('/quest/:questId/claim')
             }
 
             const quest = await getEventQuest(Number(questId))
-            const event = await getEvent(quest.eventId)
-
+            
             var { error } = await supabase
                 .from('eventQuestClaims')
                 .insert({
