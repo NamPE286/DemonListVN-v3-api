@@ -12,6 +12,7 @@ export type CamelizeDeep<T> =
         : T
 
 const WORDS_TO_KEEP = new Set([
+    // PostgREST select/order keywords and count hints that should not be renamed.
     'asc',
     'desc',
     'nullsfirst',

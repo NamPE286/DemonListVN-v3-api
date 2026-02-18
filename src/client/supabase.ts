@@ -4,6 +4,28 @@ import { camelizeDeep, snakeCaseDeep, snakeCaseExpression, toSnakeCase } from '@
 
 const rawSupabase = createClient<Database>(process.env.SUPABASE_API_URL!, process.env.SUPABASE_API_KEY!)
 
+const COLUMN_BASED_FILTER_METHODS = new Set([
+    'order',
+    'eq',
+    'neq',
+    'gt',
+    'gte',
+    'lt',
+    'lte',
+    'like',
+    'ilike',
+    'is',
+    'contains',
+    'containedBy',
+    'overlaps',
+    'rangeGt',
+    'rangeGte',
+    'rangeLt',
+    'rangeLte',
+    'textSearch',
+    'in'
+]);
+
 function wrapQueryBuilder<T>(queryBuilder: T): T {
     if (!queryBuilder || typeof queryBuilder !== 'object') {
         return queryBuilder;
@@ -40,12 +62,7 @@ function wrapQueryBuilder<T>(queryBuilder: T): T {
                         transformedArgs = args.map((value, index) => index === 0 && typeof value === 'string'
                             ? snakeCaseExpression(value)
                             : value);
-                    } else if (prop === 'order' || prop === 'eq' || prop === 'neq' || prop === 'gt'
-                        || prop === 'gte' || prop === 'lt' || prop === 'lte' || prop === 'like'
-                        || prop === 'ilike' || prop === 'is' || prop === 'contains' || prop === 'containedBy'
-                        || prop === 'overlaps' || prop === 'rangeGt' || prop === 'rangeGte'
-                        || prop === 'rangeLt' || prop === 'rangeLte' || prop === 'textSearch'
-                        || prop === 'in') {
+                    } else if (COLUMN_BASED_FILTER_METHODS.has(prop)) {
                         transformedArgs = args.map((value, index) => {
                             if (index !== 0 || typeof value !== 'string') {
                                 return value;
