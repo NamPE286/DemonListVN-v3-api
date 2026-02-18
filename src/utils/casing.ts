@@ -19,11 +19,11 @@ const WORDS_TO_KEEP = new Set([
 ]);
 
 export function toSnakeCase(value: string): string {
-    return snakify(value as any) as string;
+    return snakify<string>(value) as string;
 }
 
 export function toCamelCase(value: string): string {
-    return camelize(value as any) as string;
+    return camelize<string>(value) as string;
 }
 
 export function snakeCaseExpression(value: string): string {
