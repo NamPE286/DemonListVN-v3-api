@@ -1,15 +1,7 @@
-type Primitive = string | number | boolean | bigint | symbol | null | undefined | Date
+import camelize, { type Camelize } from 'camelize-ts'
+import snakify from 'snakify-ts'
 
-export type CamelCase<S extends string> = S extends `${infer P1}_${infer P2}${infer P3}`
-    ? `${P1}${Uppercase<P2>}${CamelCase<P3>}`
-    : S
-
-export type CamelizeDeep<T> =
-    T extends Primitive ? T
-    : T extends Array<infer U> ? Array<CamelizeDeep<U>>
-    : T extends Record<string, unknown>
-        ? { [K in keyof T as K extends string ? CamelCase<K> : K]: CamelizeDeep<T[K]> }
-        : T
+export type CamelizeDeep<T> = Camelize<T>
 
 const WORDS_TO_KEEP = new Set([
     // PostgREST select/order keywords and count hints that should not be renamed.
@@ -27,15 +19,11 @@ const WORDS_TO_KEEP = new Set([
 ]);
 
 export function toSnakeCase(value: string): string {
-    return value
-        .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
-        .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-        .replace(/[-\s]+/g, '_')
-        .toLowerCase();
+    return snakify(value as any) as string;
 }
 
 export function toCamelCase(value: string): string {
-    return value.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+    return camelize(value as any) as string;
 }
 
 export function snakeCaseExpression(value: string): string {
@@ -50,35 +38,9 @@ export function snakeCaseExpression(value: string): string {
 }
 
 export function snakeCaseDeep<T>(value: T): T {
-    if (Array.isArray(value)) {
-        return value.map(item => snakeCaseDeep(item)) as T;
-    }
-
-    if (!value || typeof value !== 'object' || value instanceof Date) {
-        return value;
-    }
-
-    const result: Record<string, unknown> = {};
-    for (const [key, nestedValue] of Object.entries(value)) {
-        result[toSnakeCase(key)] = snakeCaseDeep(nestedValue);
-    }
-
-    return result as T;
+    return snakify(value) as T;
 }
 
 export function camelizeDeep<T>(value: T): CamelizeDeep<T> {
-    if (Array.isArray(value)) {
-        return value.map(item => camelizeDeep(item)) as CamelizeDeep<T>;
-    }
-
-    if (!value || typeof value !== 'object' || value instanceof Date) {
-        return value as CamelizeDeep<T>;
-    }
-
-    const result: Record<string, unknown> = {};
-    for (const [key, nestedValue] of Object.entries(value)) {
-        result[toCamelCase(key)] = camelizeDeep(nestedValue);
-    }
-
-    return result as CamelizeDeep<T>;
+    return camelize(value) as CamelizeDeep<T>;
 }
