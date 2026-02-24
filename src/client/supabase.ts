@@ -1,30 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@src/types/supabase'
-import { camelizeDeep, snakeCaseDeep, snakeCaseExpression, toSnakeCase } from '@src/utils/casing'
+import { camelizeDeep } from '@src/utils/casing'
 
 const rawSupabase = createClient<Database>(process.env.SUPABASE_API_URL!, process.env.SUPABASE_API_KEY!)
-
-const COLUMN_BASED_FILTER_METHODS = new Set([
-    'order',
-    'eq',
-    'neq',
-    'gt',
-    'gte',
-    'lt',
-    'lte',
-    'like',
-    'ilike',
-    'is',
-    'contains',
-    'containedBy',
-    'overlaps',
-    'rangeGt',
-    'rangeGte',
-    'rangeLt',
-    'rangeLte',
-    'textSearch',
-    'in'
-]);
 
 function wrapQueryBuilder<T>(queryBuilder: T): T {
     if (!queryBuilder || typeof queryBuilder !== 'object') {
@@ -55,29 +33,7 @@ function wrapQueryBuilder<T>(queryBuilder: T): T {
             }
 
             return (...args: unknown[]) => {
-                let transformedArgs = args;
-
-                if (typeof prop === 'string') {
-                    if (prop === 'select') {
-                        transformedArgs = args.map((value, index) => index === 0 && typeof value === 'string'
-                            ? snakeCaseExpression(value)
-                            : value);
-                    } else if (COLUMN_BASED_FILTER_METHODS.has(prop)) {
-                        transformedArgs = args.map((value, index) => {
-                            if (index !== 0 || typeof value !== 'string') {
-                                return value;
-                            }
-
-                            return snakeCaseExpression(value);
-                        });
-                    } else if (prop === 'match') {
-                        transformedArgs = args.map((value, index) => index === 0 ? snakeCaseDeep(value) : value);
-                    } else if (prop === 'insert' || prop === 'update' || prop === 'upsert') {
-                        transformedArgs = args.map((value, index) => index === 0 ? snakeCaseDeep(value) : value);
-                    }
-                }
-
-                const nextResult = original.apply(target, transformedArgs);
+                const nextResult = original.apply(target, args);
                 return wrapQueryBuilder(nextResult);
             };
         }
@@ -87,14 +43,14 @@ function wrapQueryBuilder<T>(queryBuilder: T): T {
 const supabase = new Proxy(rawSupabase, {
     get(target, prop, receiver) {
         if (prop === 'from') {
-            return (table: string) => wrapQueryBuilder((target.from as (relation: string) => unknown)(toSnakeCase(table)));
+            return (table: string) => wrapQueryBuilder((target.from as (relation: string) => unknown)(table));
         }
 
         if (prop === 'rpc') {
             return (fn: string, args?: object, options?: object) =>
                 wrapQueryBuilder((target.rpc as (name: string, params?: object, rpcOptions?: object) => unknown)(
-                    toSnakeCase(fn),
-                    args ? snakeCaseDeep(args) : undefined,
+                    fn,
+                    args,
                     options
                 ));
         }
