@@ -8,11 +8,24 @@ type CamelizedQueryResult<T> = T extends { data: infer D }
     ? Omit<T, 'data'> & { data: CamelizeDeep<D> }
     : T
 
+type CamelizedQueryBuilder<T> = Omit<T, 'then'> & {
+    then<TResult1 = CamelizedQueryResult<Awaited<T>>, TResult2 = never>(
+        onfulfilled?: ((value: CamelizedQueryResult<Awaited<T>>) => TResult1 | PromiseLike<TResult1>) | null,
+        onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
+    ): Promise<TResult1 | TResult2>
+}
+
 const rawSupabase = createClient<Database>(process.env.SUPABASE_API_URL!, process.env.SUPABASE_API_KEY!)
 
-function wrapQueryBuilder<T>(queryBuilder: T): T {
+type RawSupabaseClient = typeof rawSupabase
+type ProxiedSupabaseClient = Omit<RawSupabaseClient, 'from' | 'rpc'> & {
+    from: (...args: Parameters<RawSupabaseClient['from']>) => CamelizedQueryBuilder<ReturnType<RawSupabaseClient['from']>>
+    rpc: (...args: Parameters<RawSupabaseClient['rpc']>) => CamelizedQueryBuilder<ReturnType<RawSupabaseClient['rpc']>>
+}
+
+function wrapQueryBuilder<T>(queryBuilder: T): CamelizedQueryBuilder<T> {
     if (!queryBuilder || typeof queryBuilder !== 'object') {
-        return queryBuilder;
+        return queryBuilder as CamelizedQueryBuilder<T>;
     }
 
     return new Proxy(queryBuilder as object, {
@@ -43,7 +56,7 @@ function wrapQueryBuilder<T>(queryBuilder: T): T {
                 return wrapQueryBuilder(nextResult);
             };
         }
-    }) as T;
+    }) as CamelizedQueryBuilder<T>;
 }
 
 const supabase = new Proxy(rawSupabase, {
@@ -62,6 +75,6 @@ const supabase = new Proxy(rawSupabase, {
 
         return original.bind(target);
     }
-});
+}) as unknown as ProxiedSupabaseClient;
 
 export default supabase
