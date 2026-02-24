@@ -581,9 +581,9 @@ export async function resolveReport(id: number) {
 export async function getUserRecordsForPicker(uid: string) {
     const { data, error } = await db
         .from('records')
-        .select('levelid, progress, videoLink, mobile, dlPt, flPt, plPt, clPt, levels!public_records_levelid_fkey!inner(id, name, creator, difficulty, isPlatformer)')
+        .select('levelid, progress, video_link, mobile, dl_pt, fl_pt, pl_pt, cl_pt, levels!public_records_levelid_fkey!inner(id, name, creator, difficulty, is_platformer)')
         .eq('userid', uid)
-        .eq('isChecked', true)
+        .eq('is_checked', true)
         .order('timestamp', { ascending: false })
         .limit(100)
 
@@ -594,14 +594,14 @@ export async function getUserRecordsForPicker(uid: string) {
 export async function getLevelsForPicker(search?: string, limit = 20) {
     let query = db
         .from('levels')
-        .select('id, name, creator, difficulty, isPlatformer, rating')
+        .select('id, name, creator, difficulty, is_platformer, rating')
         .eq('accepted', true)
 
     if (search) {
         query = query.ilike('name', `%${search}%`)
     }
 
-    query = query.order('dlTop', { ascending: true }).limit(limit)
+    query = query.order('dl_top', { ascending: true }).limit(limit)
 
     const { data, error } = await query
     if (error) throw new Error(error.message)
@@ -611,7 +611,7 @@ export async function getLevelsForPicker(search?: string, limit = 20) {
 export async function searchPlayers(query: string, limit = 10) {
     const { data, error } = await db
         .from('players')
-        .select('*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)')
+        .select('*, clans!id(tag, tag_bg_color, tag_text_color, boosted_until)')
         .ilike('name', `%${query}%`)
         .limit(limit)
 

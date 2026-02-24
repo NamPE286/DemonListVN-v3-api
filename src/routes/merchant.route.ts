@@ -29,10 +29,10 @@ router.route('/orders')
     .get(adminAuth, async (req, res) => {
         const { data, error } = await supabase
             .from("orders")
-            .select("*, orderTracking(*)")
+            .select("*, order_tracking(*)")
             .or("and(paymentMethod.eq.COD,state.eq.PENDING),and(paymentMethod.eq.Bank Transfer,state.eq.PAID,delivered.eq.false)")
             .order("created_at", { ascending: false })
-            .order("created_at", { referencedTable : "orderTracking", ascending: false })
+            .order("created_at", { referencedTable : "order_tracking", ascending: false })
 
         if (error) {
             console.error(error)
@@ -83,11 +83,11 @@ router.route('/order/:id/tracking')
         const { id } = req.params
 
         var { error } = await supabase
-            .from("orderTracking")
+            .from("order_tracking")
             .insert({
-                orderID: parseInt(id),
+                order_id: parseInt(id),
                 content: content,
-                link: (link ? link : null)
+                link: (link ? link: null)
             })
 
         if (error) {

@@ -2,9 +2,9 @@ import supabase from "@src/client/supabase";
 
 export async function getCase(id: number) {
     const { data, error } = await supabase
-        .from('caseItems')
-        .select('*, items!caseItems_itemId_fkey(*)')
-        .eq('caseId', id)
+        .from('case_items')
+        .select('*, items!case_items_item_id_fkey(*)')
+        .eq('case_id', id)
 
     if (error) {
         throw new Error(error.message)

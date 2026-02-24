@@ -153,9 +153,9 @@ router.route("/new")
             .from("levels")
             .select("*")
             .is("rating", null)
-            .is("flTop", null)
-            .is("insaneTier", null)
-            .is("isNonList", false);
+            .is("fl_top", null)
+            .is("insane_tier", null)
+            .is("is_non_list", false);
 
         if (error) {
             res.status(500).send();
@@ -414,10 +414,10 @@ router.route('/:id/inEvent')
         }
 
         const { data, error } = await supabase
-            .from('eventProofs')
-            .select('userid, eventID, events!inner(start, end, type, eventLevels!inner(levelID))')
+            .from('event_proofs')
+            .select('userid, event_id, events!inner(start, end, type, event_levels!inner(level_id))')
             .eq('userid', user.uid!)
-            .eq('events.eventLevels.levelID', Number(id))
+            .eq('events.event_levels.level_id', Number(id))
             .eq('events.type', String(type))
             .lte('events.start', now)
             .gte('events.end', now)

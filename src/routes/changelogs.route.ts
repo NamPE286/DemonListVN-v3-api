@@ -35,7 +35,7 @@ router.route('/publish')
     .post(adminAuth, async (req, res) => {
         const { data, error } = await supabase
             .from('changelogs')
-            .select('*, levelID(*)')
+            .select('*, level_id(*)')
             .eq('published', false)
             .order('created_at', { ascending: true })
 

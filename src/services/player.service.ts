@@ -14,7 +14,7 @@ export async function getPlayers({ province = '', city = '', sortBy = 'rating', 
         .select('*, clans!id(*)')
         .order(sortBy, { ascending: ascending == 'true', nullsFirst: false })
         .eq('province', province)
-        .eq('isHidden', false)
+        .eq('is_hidden', false)
 
     if (city) {
         query = query.eq('city', city)
@@ -38,7 +38,7 @@ export async function getDemonListLeaderboard({ start = 0, end = 50, sortBy = 'o
         .from('players')
         .select('*, clans!id(*)')
         .not('overallRank', 'is', null)
-        .eq('isHidden', false)
+        .eq('is_hidden', false)
         .order(sortBy, { ascending: ascending })
         .range(start, end)
 
@@ -58,7 +58,7 @@ export async function getFeaturedListLeaderboard({ start = 0, end = 50, sortBy =
         .from('players')
         .select('*, clans!id(*)')
         .not('flrank', 'is', null)
-        .eq('isHidden', false)
+        .eq('is_hidden', false)
         .order(sortBy, { ascending: ascending })
         .range(start, end)
 
@@ -78,7 +78,7 @@ export async function getPlatformerListLeaderboard({ start = 0, end = 50, sortBy
         .from('players')
         .select('*, clans!id(*)')
         .not('plRating', 'is', null)
-        .eq('isHidden', false)
+        .eq('is_hidden', false)
         .order(sortBy, { ascending: ascending })
         .range(start, end)
 
@@ -98,7 +98,7 @@ export async function getChallengeListLeaderboard({ start = 0, end = 50, sortBy 
         .from('players')
         .select('*, clans!id(*)')
         .not('clRating', 'is', null)
-        .eq('isHidden', false)
+        .eq('is_hidden', false)
         .order(sortBy, { ascending: ascending })
         .range(start, end)
 
@@ -464,7 +464,7 @@ export function getPlayerTitle(player: Strict<TPlayer>, list: string) {
 export async function updatePlayerDiscord(uid: string, discordId: string): Promise<void> {
     const { error } = await supabase
         .from("players")
-        .update({ discord: discordId, DiscordDMChannelID: null })
+        .update({ discord: discordId, discord_dm_channel_id: null })
         .eq("uid", uid)
 
     if (error) {
@@ -482,7 +482,7 @@ export async function getPlayerInventoryItems(uid: string, filters?: { itemType?
     let query = supabase
         .from('inventory')
         .select('*, items!inner(*)')
-        .eq('userID', uid)
+        .eq('user_id', uid)
         .eq('consumed', false)
         .or(`expireAt.is.null,expireAt.gt.${new Date().toISOString()}`)
 
@@ -491,7 +491,7 @@ export async function getPlayerInventoryItems(uid: string, filters?: { itemType?
     }
 
     if (filters?.itemId) {
-        query = query.eq('itemId', filters.itemId)
+        query = query.eq('item_id', filters.itemId)
     }
 
     const { data, error } = await query
@@ -576,10 +576,10 @@ export async function getPlayerConvictions(uid: string) {
     const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString()
 
     const { data, error } = await supabase
-        .from('playerConvictions')
+        .from('player_convictions')
         .select('*')
-        .eq('userId', uid)
-        .eq('isHidden', false)
+        .eq('user_id', uid)
+        .eq('is_hidden', false)
         .gte('created_at', oneYearAgo)
         .order('created_at', { ascending: false })
 
@@ -600,7 +600,7 @@ export async function addPlayerConviction(uid: string, conviction: TPlayerConvic
     }
 
     const { data, error } = await supabase
-        .from('playerConvictions')
+        .from('player_convictions')
         .insert(payload as any)
         .select('*')
         .single()
@@ -614,9 +614,9 @@ export async function addPlayerConviction(uid: string, conviction: TPlayerConvic
 
 export async function getPlayerConvictionsForAdmin(uid: string) {
     const { data, error } = await supabase
-        .from('playerConvictions')
+        .from('player_convictions')
         .select('*')
-        .eq('userId', uid)
+        .eq('user_id', uid)
         .order('created_at', { ascending: false })
 
     if (error) {
@@ -642,10 +642,10 @@ export async function updatePlayerConviction(uid: string, convictionId: number, 
     })
 
     const { data, error } = await supabase
-        .from('playerConvictions')
+        .from('player_convictions')
         .update(payload as any)
         .eq('id', convictionId)
-        .eq('userId', uid)
+        .eq('user_id', uid)
         .select('*')
         .single()
 

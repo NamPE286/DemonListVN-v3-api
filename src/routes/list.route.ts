@@ -531,11 +531,11 @@ async function getIDBound(list: string, min: boolean) {
         .limit(1)
 
     if (list == 'cl') {
-        query = query.eq('isChallenge', true)
+        query = query.eq('is_challenge', true)
     } else if (list == 'pl') {
-        query = query.eq('isPlatformer', true).eq('isChallenge', false)
+        query = query.eq('is_platformer', true).eq('is_challenge', false)
     } else if (list == 'dl') {
-        query = query.eq('isPlatformer', false).eq('isChallenge', false)
+        query = query.eq('is_platformer', false).eq('is_challenge', false)
     }
 
     const { data, error } = await query.single()
@@ -594,11 +594,11 @@ router.route('/:list/random')
             .limit(1)
 
         if (list == 'cl') {
-            query = query.eq('isChallenge', true)
+            query = query.eq('is_challenge', true)
         } else if (list == 'pl') {
-            query = query.eq('isPlatformer', true).eq('isChallenge', false)
+            query = query.eq('is_platformer', true).eq('is_challenge', false)
         } else if (list == 'dl') {
-            query = query.eq('isPlatformer', false).eq('isChallenge', false)
+            query = query.eq('is_platformer', false).eq('is_challenge', false)
         }
 
         var { data, error } = await query.single()

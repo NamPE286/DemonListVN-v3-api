@@ -28,7 +28,7 @@ export async function getDemonListRecords({ start = 0, end = 0, isChecked = fals
     const { data, error } = await supabase
         .from('records')
         .select('*')
-        .match({ isChecked: isChecked })
+        .match({ is_checked: isChecked })
         .not('dlPt', 'is', null)
         .order('timestamp', { ascending: true })
         .range(start, end)
@@ -48,7 +48,7 @@ export async function getFeaturedListRecords({ start = 0, end = 0, isChecked = f
     const { data, error } = await supabase
         .from('records')
         .select('*')
-        .match({ isChecked: isChecked })
+        .match({ is_checked: isChecked })
         .not('flPt', 'is', null)
         .order('timestamp', { ascending: true })
         .range(start, end)
@@ -68,7 +68,7 @@ export async function getChallengeListRecords({ start = 0, end = 0, isChecked = 
     const { data, error } = await supabase
         .from('records')
         .select('*')
-        .match({ isChecked: isChecked })
+        .match({ is_checked: isChecked })
         .not('clPt', 'is', null)
         .order('timestamp', { ascending: true })
         .range(start, end)
@@ -83,7 +83,7 @@ export async function getChallengeListRecords({ start = 0, end = 0, isChecked = 
 export async function getPlayerRecordRating(uid: string) {
     const { data, error } = await supabase
         .from('records')
-        .select('userid, progress, no, levels!public_records_levelid_fkey!inner(id, rating), dlPt')
+        .select('userid, progress, no, levels!public_records_levelid_fkey!inner(id, rating), dl_pt')
         .eq('userid', uid)
         .not('dlPt', 'is', null)
         .order('no')
@@ -106,46 +106,46 @@ export async function getPlayerRecords(uid: string, { start = '0', end = '50', s
         .from('records')
         .select('*, levels!public_records_levelid_fkey!inner(*)')
         .eq('userid', uid)
-        .eq('isChecked', isChecked == 'true')
-        .eq('levels.isPlatformer', false)
-        .eq('levels.isChallenge', false)
+        .eq('is_checked', isChecked == 'true')
+        .eq('levels.is_platformer', false)
+        .eq('levels.is_challenge', false)
     let query1 = supabase
         .from('records')
         .select('*, levels!public_records_levelid_fkey!inner(*)')
         .eq('userid', uid)
-        .eq('isChecked', isChecked == 'true')
+        .eq('is_checked', isChecked == 'true')
     let query2 = supabase
         .from('records')
         .select('*, levels!public_records_levelid_fkey!inner(*)')
         .eq('userid', uid)
-        .eq('isChecked', isChecked == 'true')
-        .eq('levels.isPlatformer', true)
-        .eq('levels.isChallenge', false)
+        .eq('is_checked', isChecked == 'true')
+        .eq('levels.is_platformer', true)
+        .eq('levels.is_challenge', false)
     let query3 = supabase
         .from('records')
         .select('*, levels!public_records_levelid_fkey!inner(*)')
         .eq('userid', uid)
-        .eq('isChecked', isChecked == 'true')
-        .eq('levels.isChallenge', true)
+        .eq('is_checked', isChecked == 'true')
+        .eq('levels.is_challenge', true)
 
     if (sortBy == 'pt') {
         query = query
-            .order('dlPt', { ascending: ascending == 'true' })
+            .order('dl_pt', { ascending: ascending == 'true' })
             .order('timestamp', { ascending: false })
             .not('levels.rating', 'is', null)
             .range(parseInt(start), parseInt(end))
         query1 = query1
-            .order('flPt', { ascending: ascending == 'true' })
+            .order('fl_pt', { ascending: ascending == 'true' })
             .order('timestamp', { ascending: false })
             .not('levels.flTop', 'is', null)
             .range(parseInt(start), parseInt(end))
         query2 = query2
-            .order('plPt', { ascending: ascending == 'true' })
+            .order('pl_pt', { ascending: ascending == 'true' })
             .order('timestamp', { ascending: false })
             .not('levels.rating', 'is', null)
             .range(parseInt(start), parseInt(end))
         query3 = query3
-            .order('clPt', { ascending: ascending == 'true' })
+            .order('cl_pt', { ascending: ascending == 'true' })
             .order('timestamp', { ascending: false })
             .not('levels.rating', 'is', null)
             .range(parseInt(start), parseInt(end))
@@ -193,9 +193,9 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, isCheck
     const { data, error } = await supabase
         .from('records')
         .select('*, players!userid!inner(*, clans!id(*)), reviewer:players!reviewer(*, clans!id(*))')
-        .eq('players.isHidden', false)
+        .eq('players.is_hidden', false)
         .eq('levelid', id)
-        .eq('isChecked', isChecked)
+        .eq('is_checked', isChecked)
         .order('progress', { ascending: level.isPlatformer })
         .order('timestamp')
         .range(start, end)
@@ -231,8 +231,8 @@ export async function retrieveRecord(user: TPlayer) {
         .from('records')
         .select('*, levels!public_records_levelid_fkey!inner(*)')
         .neq('userid', user.uid!)
-        .eq('needMod', false)
-        .eq('isChecked', false)
+        .eq('need_mod', false)
+        .eq('is_checked', false)
         .eq('reviewer', user.uid!)
         .limit(1)
         .single()
@@ -246,11 +246,11 @@ export async function retrieveRecord(user: TPlayer) {
         .select('*, levels!public_records_levelid_fkey!inner(*)')
         .lte('levels.rating', user.rating! + 500)
         .neq('userid', user.uid!)
-        .eq('needMod', false)
-        .eq('isChecked', false)
-        .eq("levels.isPlatformer", false)
+        .eq('need_mod', false)
+        .eq('is_checked', false)
+        .eq("levels.is_platformer", false)
         .is('reviewer', null)
-        .order('queueNo', { ascending: true, nullsFirst: false })
+        .order('queue_no', { ascending: true, nullsFirst: false })
         .limit(1)
         .single()
 
@@ -260,11 +260,11 @@ export async function retrieveRecord(user: TPlayer) {
         .from('records')
         .select('*, levels!public_records_levelid_fkey!inner(*)')
         .neq('userid', user.uid!)
-        .eq('needMod', false)
-        .eq('isChecked', false)
-        .eq("levels.isPlatformer", false)
+        .eq('need_mod', false)
+        .eq('is_checked', false)
+        .eq("levels.is_platformer", false)
         .is('reviewer', null)
-        .order('queueNo', { ascending: true, nullsFirst: false })
+        .order('queue_no', { ascending: true, nullsFirst: false })
         .limit(1)
         .single()
 
@@ -299,10 +299,10 @@ export async function getRecords({ start = 0, end = 50, isChecked = false } = {}
     const { data, error } = await supabase
         .from('records')
         .select('*, players!userid!inner(*, clans!id(*)), reviewer:players!reviewer(*), levels!public_records_levelid_fkey(*)')
-        .match({ isChecked: isChecked })
-        .eq('players.isHidden', false)
-        .order('needMod', { ascending: false })
-        .order('queueNo', { ascending: true, nullsFirst: false })
+        .match({ is_checked: isChecked })
+        .eq('players.is_hidden', false)
+        .order('need_mod', { ascending: false })
+        .order('queue_no', { ascending: true, nullsFirst: false })
         .order('timestamp', { ascending: true })
         .range(start, end)
 
@@ -318,7 +318,7 @@ export async function getPlayerSubmissions(uid: string, { start = '0', end = '50
         .from('records')
         .select('*, levels!public_records_levelid_fkey(*)')
         .eq('userid', uid)
-        .eq('isChecked', false)
+        .eq('is_checked', false)
         .order('timestamp', { ascending: ascending == 'true' })
         .range(parseInt(start), parseInt(end))
 
@@ -352,7 +352,7 @@ export async function getEstimatedQueue(userID: string, levelID: number, priorit
 export async function changeSuggestedRating(uid: string, levelID: number, rating: number) {
     const { data, error } = await supabase
         .from('records')
-        .update({ suggestedRating: rating })
+        .update({ suggested_rating: rating })
         .eq('levelid', levelID)
         .eq('userid', uid)
 
@@ -637,7 +637,7 @@ export async function prioritizeRecord(userID: string, levelID: number, ms: numb
     const { error } = await supabase
         .from('records')
         .update({
-            prioritizedBy: record.prioritizedBy + ms
+            prioritized_by: record.prioritizedBy + ms
         })
         .match({ userid: userID, levelid: levelID })
 

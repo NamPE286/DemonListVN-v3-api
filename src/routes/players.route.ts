@@ -452,7 +452,7 @@ router.route('/:uid/events')
     .get(async (req, res) => {
         const { uid } = req.params
         const { data, error } = await supabase
-            .from('eventProofs')
+            .from('event_proofs')
             .select(`*, events(${EVENT_SELECT_STR})`)
             .eq('userid', uid)
             .order('events(start)', { ascending: false })
@@ -494,9 +494,9 @@ router.route('/:uid/cards')
         const { uid } = req.params
         const { data, error } = await supabase
             .from('cards')
-            .select('id, created_at, supporterIncluded, owner, activationDate, name, img')
+            .select('id, created_at, supporter_included, owner, activation_date, name, img')
             .eq('owner', uid)
-            .order('activationDate')
+            .order('activation_date')
 
         if (error) {
             console.error(error);
@@ -536,9 +536,9 @@ router.route('/:uid/created-challenges')
         const { data, error } = await supabase
             .from('levels')
             .select('*')
-            .eq('creatorId', uid)
-            .eq('isChallenge', true)
-            .order('dlTop', { ascending: true })
+            .eq('creator_id', uid)
+            .eq('is_challenge', true)
+            .order('dl_top', { ascending: true })
 
         if (error) {
             console.error(error);

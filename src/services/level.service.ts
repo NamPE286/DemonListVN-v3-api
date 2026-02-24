@@ -37,18 +37,18 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
+        .select('*, creator_data:players!creator_id(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
         .not('dlTop', 'is', null)
-        .eq('isPlatformer', false)
-        .eq('isChallenge', false)
-        .eq('isNonList', false)
+        .eq('is_platformer', false)
+        .eq('is_challenge', false)
+        .eq('is_non_list', false)
 
     // Apply filters
     if (topStart !== null && topStart !== '') {
-        query = query.gte('dlTop', topStart)
+        query = query.gte('dl_top', topStart)
     }
     if (topEnd !== null && topEnd !== '') {
-        query = query.lte('dlTop', topEnd)
+        query = query.lte('dl_top', topEnd)
     }
     if (ratingMin !== null && ratingMin !== '') {
         query = query.gte('rating', ratingMin)
@@ -88,7 +88,7 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
 
     var b = await supabase
         .from('records')
-        .select('levelid, userid, progress, isChecked')
+        .select('levelid, userid, progress, is_checked')
         .eq('userid', uid)
         .in('levelid', IDs)
 
@@ -138,18 +138,18 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
+        .select('*, creator_data:players!creator_id(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
         .not('dlTop', 'is', null)
-        .eq('isPlatformer', true)
-        .eq('isChallenge', false)
-        .eq('isNonList', false)
+        .eq('is_platformer', true)
+        .eq('is_challenge', false)
+        .eq('is_non_list', false)
 
     // Apply filters
     if (topStart !== null && topStart !== '') {
-        query = query.gte('dlTop', topStart)
+        query = query.gte('dl_top', topStart)
     }
     if (topEnd !== null && topEnd !== '') {
-        query = query.lte('dlTop', topEnd)
+        query = query.lte('dl_top', topEnd)
     }
     if (ratingMin !== null && ratingMin !== '') {
         query = query.gte('rating', ratingMin)
@@ -189,7 +189,7 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
 
     var b = await supabase
         .from('records')
-        .select('levelid, userid, progress, isChecked')
+        .select('levelid, userid, progress, is_checked')
         .eq('userid', uid)
         .in('levelid', IDs)
 
@@ -239,22 +239,22 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
+        .select('*, creator_data:players!creator_id(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
         .not('flTop', 'is', null)
-        .eq('isNonList', false)
+        .eq('is_non_list', false)
 
     // Apply filters
     if (topStart !== null && topStart !== '') {
-        query = query.gte('flTop', topStart)
+        query = query.gte('fl_top', topStart)
     }
     if (topEnd !== null && topEnd !== '') {
-        query = query.lte('flTop', topEnd)
+        query = query.lte('fl_top', topEnd)
     }
     if (ratingMin !== null && ratingMin !== '') {
-        query = query.gte('flPt', ratingMin)
+        query = query.gte('fl_pt', ratingMin)
     }
     if (ratingMax !== null && ratingMax !== '') {
-        query = query.lte('flPt', ratingMax)
+        query = query.lte('fl_pt', ratingMax)
     }
     if (nameSearch && nameSearch.trim() !== '') {
         query = query.ilike('name', `%${nameSearch}%`)
@@ -288,9 +288,9 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
 
     var b = await supabase
         .from('records')
-        .select('levelid, userid, progress, isChecked')
+        .select('levelid, userid, progress, is_checked')
         .eq('userid', uid)
-        .eq('isChecked', true)
+        .eq('is_checked', true)
         .in('levelid', IDs)
 
     if (b.error || !b.data) {
@@ -339,17 +339,17 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
+        .select('*, creator_data:players!creator_id(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
         .not('dlTop', 'is', null)
-        .eq('isChallenge', true)
-        .eq('isNonList', false)
+        .eq('is_challenge', true)
+        .eq('is_non_list', false)
 
     // Apply filters
     if (topStart !== null && topStart !== '') {
-        query = query.gte('dlTop', topStart)
+        query = query.gte('dl_top', topStart)
     }
     if (topEnd !== null && topEnd !== '') {
-        query = query.lte('dlTop', topEnd)
+        query = query.lte('dl_top', topEnd)
     }
     if (ratingMin !== null && ratingMin !== '') {
         query = query.gte('rating', ratingMin)
@@ -389,7 +389,7 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
 
     var b = await supabase
         .from('records')
-        .select('levelid, userid, progress, isChecked')
+        .select('levelid, userid, progress, is_checked')
         .eq('userid', uid)
         .in('levelid', IDs)
 
@@ -420,7 +420,7 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
 export async function getLevel(levelId: number) {
     const { data, error } = await supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*))')
+        .select('*, creator_data:players!creator_id(*, clans!id(*))')
         .eq('id', levelId)
         .single()
 
@@ -473,7 +473,7 @@ export async function deleteLevel(levelId: number): Promise<void> {
 export async function retrieveOrCreateLevel(payload: TablesInsert<'levels'>): Promise<TLevel> {
     const sel = await supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*))')
+        .select('*, creator_data:players!creator_id(*, clans!id(*))')
         .eq('id', payload.id)
         .maybeSingle()
 
@@ -507,9 +507,9 @@ export async function refreshLevel() {
     ]
 
     await supabase
-        .from('levelGDStates')
-        .update({ isDaily: false, isWeekly: false })
-        .gte('levelId', 0)
+        .from('level_gd_states')
+        .update({ is_daily: false, is_weekly: false })
+        .gte('level_id', 0)
 
     for (const p of pairs) {
         const id = p.gd.id
@@ -531,7 +531,7 @@ export async function refreshLevel() {
         }
 
         const { error: stateErr } = await supabase
-            .from('levelGDStates')
+            .from('level_gd_states')
             .upsert(state as any)
 
         if (stateErr) {

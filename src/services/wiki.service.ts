@@ -52,7 +52,7 @@ export async function getWikis(
         limit: 10
     }) {
     const { data: treeItem, error } = await supabase
-        .from('wikiTree')
+        .from('wiki_tree')
         .select('*')
         .eq('path', path)
         .single()
@@ -70,7 +70,7 @@ export async function getWikis(
 
     if (treeItem.type == 'folder') {
         const { data, error } = await supabase
-            .from('wikiTree')
+            .from('wiki_tree')
             .select('*')
             .eq('parent', treeItem.path!)
             .order('type', { ascending: false })
@@ -108,7 +108,7 @@ export async function getLatestWikiFiles(
     limit: number = 8
 ) {
     const { data, error } = await supabase
-        .from('wikiTree')
+        .from('wiki_tree')
         .select('*')
         .eq('type', 'file')
         .order('created_at', { ascending: false })

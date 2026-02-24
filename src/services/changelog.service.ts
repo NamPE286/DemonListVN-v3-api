@@ -10,7 +10,7 @@ export async function addChangelog(id: number, oldData: any) {
 
     const { error } = await supabase
         .from('changelogs')
-        .insert({ levelID: id, old: oldData, new: data })
+        .insert({ level_id: id, old: oldData, new: data })
 
     if (error) {
         throw new Error(error.message)

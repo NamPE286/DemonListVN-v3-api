@@ -45,9 +45,9 @@ export async function consumeItem(inventoryItemId: number, quantity: number = 1,
             }
 
             var { error } = await supabase
-                .from('itemTransactions')
+                .from('item_transactions')
                 .insert({
-                    inventoryItemId: inventoryItemId,
+                    inventory_item_id: inventoryItemId,
                     diff: -consumeQty,
                     data: data
                 })
@@ -63,9 +63,9 @@ export async function consumeItem(inventoryItemId: number, quantity: number = 1,
             .eq('id', inventoryItemId);
 
         var { error } = await supabase
-            .from('itemTransactions')
+            .from('item_transactions')
             .insert({
-                inventoryItemId: inventoryItemId,
+                inventory_item_id: inventoryItemId,
                 diff: -1,
                 data: data
             })
@@ -87,11 +87,11 @@ export async function addCaseResult(player: Player, inventoryItemId: number, cas
     }
 
     var { error } = await supabase
-        .from('caseResult')
+        .from('case_result')
         .insert({
-            openerId: player.uid!,
-            resultId: caseItem ? caseItem.id : null,
-            caseId: caseItem?.caseId!
+            opener_id: player.uid!,
+            result_id: caseItem ? caseItem.id: null,
+            case_id: caseItem?.caseId!
         })
 
     if (error) {
@@ -110,8 +110,8 @@ export async function addInventoryItem(insertData: TablesInsert<"inventory">) {
         const { data: existingItem } = await supabase
             .from('inventory')
             .select('id, quantity')
-            .eq('userID', insertData.userID)
-            .eq('itemId', insertData.itemId)
+            .eq('user_id', insertData.userID)
+            .eq('item_id', insertData.itemId)
             .eq('consumed', false)
             .maybeSingle()
 
@@ -132,9 +132,9 @@ export async function addInventoryItem(insertData: TablesInsert<"inventory">) {
             }
 
             var { error } = await supabase
-                .from('itemTransactions')
+                .from('item_transactions')
                 .insert({
-                    inventoryItemId: existingItem.id,
+                    inventory_item_id: existingItem.id,
                     diff: addedQuantity,
                     data: null
                 })
@@ -161,9 +161,9 @@ export async function addInventoryItem(insertData: TablesInsert<"inventory">) {
     }
 
     var { error } = await supabase
-        .from('itemTransactions')
+        .from('item_transactions')
         .insert({
-            inventoryItemId: newItem.id,
+            inventory_item_id: newItem.id,
             diff: insertData.quantity || 1,
             data: null
         })
@@ -191,8 +191,8 @@ export async function addInventoryCaseItem(player: Player, caseItem: CaseItem) {
             .from('coupons')
             .insert({
                 percent: 1,
-                validUntil: new Date(new Date().getTime() + expireAfter).toISOString(),
-                productID: caseItem.items?.productId,
+                valid_until: new Date(new Date().getTime() + expireAfter).toISOString(),
+                product_id: caseItem.items?.productId,
                 owner: player.uid,
                 quantity: caseItem.items.quantity
             })
@@ -245,8 +245,8 @@ export async function receiveReward(player: Player, reward: Reward) {
             .from('coupons')
             .insert({
                 percent: 1,
-                validUntil: new Date(new Date().getTime() + reward.expireAfter).toISOString(),
-                productID: reward.productId,
+                valid_until: new Date(new Date().getTime() + reward.expireAfter).toISOString(),
+                product_id: reward.productId,
                 owner: player.uid
             })
             .select()

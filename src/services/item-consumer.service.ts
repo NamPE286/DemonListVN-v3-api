@@ -33,7 +33,7 @@ export async function consumeQueueBoost(userID: string, levelID: number, numOfDa
     const { data, error } = await supabase
         .from('inventory')
         .select('*')
-        .match({ userID: userID, itemId: ItemId.QUEUE_BOOST })
+        .match({ user_id: userID, item_id: ItemId.QUEUE_BOOST })
         .single()
 
     if (error) {

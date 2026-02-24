@@ -68,18 +68,18 @@ export async function addNewOrder(
         .from("orders")
         .insert({
             id: orderID,
-            userID: userID,
+            user_id: userID,
             state: "PENDING",
             quantity: quantity,
-            productID: productID,
-            giftTo: giftTo, amount: amount,
+            product_id: productID,
+            gift_to: giftTo, amount: amount,
             currency: currency,
-            paymentMethod: paymentMethod,
+            payment_method: paymentMethod,
             address: address,
             phone: phone,
             fee: fee,
-            recipientName: recipientName,
-            targetClanID: targetClanID,
+            recipient_name: recipientName,
+            target_clan_id: targetClanID,
             data: data
         })
 
@@ -102,8 +102,8 @@ export async function changeOrderState(orderID: number, state: string) {
 export async function getOrders(userID: string) {
     const { data, error } = await supabase
         .from("orders")
-        .select("*, products(*), coupons(*), players!giftTo(*, clans!id(*))")
-        .eq("userID", userID)
+        .select("*, products(*), coupons(*), players!gift_to(*, clans!id(*))")
+        .eq("user_id", userID)
         .order("created_at", { ascending: false })
 
     if (error) {
@@ -277,7 +277,7 @@ export async function addOrderItems(
     await addNewOrder(orderID, null, buyer.uid!, null, null, amount, 'VND', paymentMethod, address, phone, fee, recipientName)
 
     const { error } = await supabase
-        .from('orderItems')
+        .from('order_items')
         .insert(items)
 
     if (error) {
@@ -290,7 +290,7 @@ export async function addOrderItems(
 export async function getOrder(id: number) {
     const { data, error } = await supabase
         .from("orders")
-        .select("*, orderItems(*, products(*)), products(*), coupons(*), players!giftTo(*, clans!id(*)), orderTracking(*)")
+        .select("*, order_items(*, products(*)), products(*), coupons(*), players!gift_to(*, clans!id(*)), order_tracking(*)")
         .eq("id", id)
         .single();
 
@@ -347,10 +347,10 @@ export async function renewStock(order: Awaited<ReturnType<typeof getOrder>>) {
     }
 
     var { error } = await supabase
-        .from('orderTracking')
+        .from('order_tracking')
         .insert({
             content: "Order cancelled",
-            orderID: order.id
+            order_id: order.id
         })
 
     if (error) {

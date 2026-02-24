@@ -74,7 +74,7 @@ export async function updateEvent(id: number, data: Tables<"events">) {
 
 export async function updateEventLevel(data: Tables<"eventLevels">) {
     const { error } = await supabase
-        .from("eventLevels")
+        .from("event_levels")
         .update(data)
         .eq('id', data.id)
 
@@ -87,7 +87,7 @@ export async function upsertEventLevel(eventID: number, data: Tables<"eventLevel
     data.eventID = eventID;
 
     const { error } = await supabase
-        .from("eventLevels")
+        .from("event_levels")
         .upsert(data)
 
     if (error) {
@@ -97,9 +97,9 @@ export async function upsertEventLevel(eventID: number, data: Tables<"eventLevel
 
 export async function deleteEventLevel(eventID: number, levelID: number) {
     const { error } = await supabase
-        .from("eventLevels")
+        .from("event_levels")
         .delete()
-        .match({ eventID: eventID, levelID: levelID })
+        .match({ event_id: eventID, level_id: levelID })
 
     if (error) {
         throw new Error(error.message)
@@ -117,16 +117,16 @@ export async function getEvents(filter: EventFilter) {
     }
 
     if (filter.eventType === 'contest') {
-        query = query.eq('isContest', true)
+        query = query.eq('is_contest', true)
     } else if (filter.eventType === 'nonContest') {
-        query = query.eq('isContest', false)
+        query = query.eq('is_contest', false)
     }
 
     if (filter.eventType !== 'nonContest' && filter.contestType !== 'all') {
         if (filter.contestType === 'ranked') {
-            query = query.eq('isRanked', true)
+            query = query.eq('is_ranked', true)
         } else if (filter.contestType === 'unranked') {
-            query = query.eq('isRanked', false)
+            query = query.eq('is_ranked', false)
         }
     }
 
@@ -192,9 +192,9 @@ export async function getOngoingEvents() {
 
 export async function getEventProof(eventID: number, uid: string) {
     const { data, error } = await supabase
-        .from('eventProofs')
+        .from('event_proofs')
         .select('*')
-        .match({ eventID: eventID, userid: uid })
+        .match({ event_id: eventID, userid: uid })
         .limit(1)
         .single()
 
@@ -207,12 +207,12 @@ export async function getEventProof(eventID: number, uid: string) {
 
 export async function getEventProofs(eventID: number | null, { start = 0, end = 50, accepted = 'true' } = {}) {
     let query = supabase
-        .from('eventProofs')
+        .from('event_proofs')
         .select('*, events!inner(*), players(*)')
-        .eq('events.isContest', false)
+        .eq('events.is_contest', false)
 
     if (eventID) {
-        query = query.eq('eventID', eventID)
+        query = query.eq('event_id', eventID)
     }
 
     if (accepted !== 'all') {
@@ -235,7 +235,7 @@ export async function getEventProofs(eventID: number | null, { start = 0, end = 
 
 export async function upsertEventProof(data: any) {
     const { error } = await supabase
-        .from('eventProofs')
+        .from('event_proofs')
         .upsert(data)
 
     if (error) {
@@ -245,7 +245,7 @@ export async function upsertEventProof(data: any) {
 
 export async function insertEventProof(data: any) {
     const { error } = await supabase
-        .from('eventProofs')
+        .from('event_proofs')
         .insert(data)
 
     if (error) {
@@ -255,9 +255,9 @@ export async function insertEventProof(data: any) {
 
 export async function deleteEventProof(eventID: number, uid: string) {
     const { error } = await supabase
-        .from('eventProofs')
+        .from('event_proofs')
         .delete()
-        .match({ eventID: eventID, userid: uid })
+        .match({ event_id: eventID, userid: uid })
 
     if (error) {
         throw new Error(error.message)
@@ -266,9 +266,9 @@ export async function deleteEventProof(eventID: number, uid: string) {
 
 export async function getEventLevels(eventID: number) {
     const { data, error } = await supabase
-        .from('eventLevels')
+        .from('event_levels')
         .select('*, levels(*)')
-        .eq("eventID", eventID)
+        .eq("event_id", eventID)
         .order("id")
 
     if (error) {
@@ -290,9 +290,9 @@ export async function getEventLevels(eventID: number) {
 
 export async function getEventLevelsSafe(eventID: number) {
     const { data, error } = await supabase
-        .from('eventLevels')
+        .from('event_levels')
         .select('*, levels(*)')
-        .eq("eventID", eventID)
+        .eq("event_id", eventID)
         .order("id")
 
     if (error) {
@@ -335,10 +335,10 @@ export async function getEventSubmissions(eventID: number, userID: string) {
     const levels = await getEventLevels(eventID)
 
     const { data, error } = await supabase
-        .from("eventRecords")
-        .select("*, eventLevels!inner(*)")
-        .eq("userID", userID)
-        .eq("eventLevels.eventID", eventID)
+        .from("event_records")
+        .select("*, event_levels!inner(*)")
+        .eq("user_id", userID)
+        .eq("event_levels.event_id", eventID)
 
     if (error) {
         throw new Error(error.message)
@@ -351,10 +351,10 @@ export async function get_event_leaderboard(eventID: number, ignoreFreeze: boole
     const event = await getEvent(eventID)
     const levels = await getEventLevels(eventID)
     const { data, error } = await supabase
-        .from("eventProofs")
-        .select("userid, eventID, diff, players!inner(*, clans!id(*), eventRecords(*, eventLevels(*)))")
-        .eq("eventID", eventID)
-        .lte("players.eventRecords.created_at", event.freeze && !ignoreFreeze ? event.freeze : new Date().toISOString());
+        .from("event_proofs")
+        .select("userid, event_id, diff, players!inner(*, clans!id(*), event_records(*, event_levels(*)))")
+        .eq("event_id", eventID)
+        .lte("players.event_records.created_at", event.freeze && !ignoreFreeze ? event.freeze : new Date().toISOString());
 
     if (error) {
         throw new Error(error.message)
@@ -419,9 +419,9 @@ export async function get_event_leaderboard(eventID: number, ignoreFreeze: boole
 
 export async function deleteEventSubmission(levelID: number, userID: string) {
     const { error } = await supabase
-        .from('eventRecords')
+        .from('event_records')
         .delete()
-        .match({ userID: userID, levelID: levelID })
+        .match({ user_id: userID, level_id: levelID })
 
     if (error) {
         throw new Error(error.message)
@@ -430,7 +430,7 @@ export async function deleteEventSubmission(levelID: number, userID: string) {
 
 export async function insertEventSubmission(submission: any) {
     var { error } = await supabase
-        .from("eventRecords")
+        .from("event_records")
         .insert(submission)
 
     if (error) {
@@ -438,8 +438,8 @@ export async function insertEventSubmission(submission: any) {
     }
 
     var { data, error } = await supabase
-        .from("eventLevels")
-        .select("id, eventID")
+        .from("event_levels")
+        .select("id, event_id")
         .eq("id", submission.levelID)
         .single()
 
@@ -459,6 +459,6 @@ export async function insertEventSubmission(submission: any) {
 
 export async function upsertEventSubmission(submission: any) {
     var { error } = await supabase
-        .from("eventRecords")
+        .from("event_records")
         .upsert(submission)
 }

@@ -14,11 +14,11 @@ export async function getActiveseason() {
     const now = new Date().toISOString();
 
     const { data, error } = await supabase
-        .from('battlePassSeasons')
+        .from('battle_pass_seasons')
         .select('*')
         .lte('start', now)
         .gte('end', now)
-        .eq('isArchived', false)
+        .eq('is_archived', false)
         .order('start', { ascending: false })
         .limit(1)
         .single();
@@ -32,7 +32,7 @@ export async function getActiveseason() {
 
 export async function getSeason(seasonId: number) {
     const { data, error } = await supabase
-        .from('battlePassSeasons')
+        .from('battle_pass_seasons')
         .select('*')
         .eq('id', seasonId)
         .single();
@@ -55,7 +55,7 @@ export async function isSeasonActive(seasonId: number): Promise<boolean> {
 
 export async function createSeason(season: TablesInsert<"battlePassSeasons">) {
     const { data, error } = await supabase
-        .from('battlePassSeasons')
+        .from('battle_pass_seasons')
         .insert(season)
         .select()
         .single();
@@ -69,7 +69,7 @@ export async function createSeason(season: TablesInsert<"battlePassSeasons">) {
 
 export async function updateSeason(seasonId: number, updates: Partial<TablesInsert<"battlePassSeasons">>) {
     const { error } = await supabase
-        .from('battlePassSeasons')
+        .from('battle_pass_seasons')
         .update(updates)
         .eq('id', seasonId);
 
@@ -80,8 +80,8 @@ export async function updateSeason(seasonId: number, updates: Partial<TablesInse
 
 export async function archiveSeason(seasonId: number) {
     const { error } = await supabase
-        .from('battlePassSeasons')
-        .update({ isArchived: true })
+        .from('battle_pass_seasons')
+        .update({ is_archived: true })
         .eq('id', seasonId);
 
     if (error) {
@@ -95,14 +95,14 @@ export async function hasPlayerSubscription(userId: string, subscriptionType: st
     const now = new Date().toISOString();
 
     let query = supabase
-        .from('playerSubscriptions')
+        .from('player_subscriptions')
         .select('*, subscriptions!inner(*)')
-        .eq('userID', userId)
+        .eq('user_id', userId)
         .eq('subscriptions.type', subscriptionType)
         .lte('start', now);
 
     if (refId !== undefined) {
-        query = query.eq('subscriptions.refId', refId);
+        query = query.eq('subscriptions.ref_id', refId);
     }
 
     const { data, error } = await query;
@@ -121,7 +121,7 @@ export async function hasBattlePassPremium(userId: string, seasonId: number) {
 
 export async function addPlayerSubscription(subscription: TablesInsert<"playerSubscriptions">) {
     const { data, error } = await supabase
-        .from('playerSubscriptions')
+        .from('player_subscriptions')
         .insert(subscription)
         .select()
         .single();
@@ -135,9 +135,9 @@ export async function addPlayerSubscription(subscription: TablesInsert<"playerSu
 
 export async function getPlayerSubscriptions(userId: string) {
     const { data, error } = await supabase
-        .from('playerSubscriptions')
+        .from('player_subscriptions')
         .select('*, subscriptions(*)')
-        .eq('userID', userId);
+        .eq('user_id', userId);
 
     if (error) {
         throw new Error(error.message);
@@ -150,10 +150,10 @@ export async function getPlayerSubscriptions(userId: string) {
 
 export async function getPlayerProgress(seasonId: number, userId: string) {
     const { data, error } = await supabase
-        .from('battlePassProgress')
+        .from('battle_pass_progress')
         .select('*')
-        .eq('seasonId', seasonId)
-        .eq('userID', userId)
+        .eq('season_id', seasonId)
+        .eq('user_id', userId)
         .maybeSingle();
 
     if (error) {
@@ -192,10 +192,10 @@ export async function addXp(
     const newXp = (progress?.xp || 0) + xp;
 
     const { error } = await supabase
-        .from('battlePassProgress')
+        .from('battle_pass_progress')
         .upsert({
             seasonId,
-            userID: userId,
+            user_id: userId,
             xp: newXp
         });
 
@@ -225,9 +225,9 @@ export async function logXP(
     description: string | null = null
 ) {
     const { error } = await supabase
-        .from('battlePassXPLogs')
+        .from('battle_pass_xp_logs')
         .insert({
-            userID: userId,
+            user_id: userId,
             seasonId,
             amount,
             source,
@@ -243,10 +243,10 @@ export async function logXP(
 
 export async function getPlayerXPLogs(seasonId: number, userId: string, limit: number = 50) {
     const { data, error } = await supabase
-        .from('battlePassXPLogs')
+        .from('battle_pass_xp_logs')
         .select('*')
-        .eq('userID', userId)
-        .eq('seasonId', seasonId)
+        .eq('user_id', userId)
+        .eq('season_id', seasonId)
         .order('created_at', { ascending: false })
         .limit(limit);
 
@@ -263,7 +263,7 @@ export async function upgradeToPremium(seasonId: number, userId: string) {
         .from('subscriptions')
         .select('*')
         .eq('type', SubscriptionType.BP_PREMIUM)
-        .eq('refId', seasonId)
+        .eq('ref_id', seasonId)
         .maybeSingle();
 
     if (subError) {
@@ -277,7 +277,7 @@ export async function upgradeToPremium(seasonId: number, userId: string) {
             .from('subscriptions')
             .insert({
                 type: SubscriptionType.BP_PREMIUM,
-                refId: seasonId,
+                ref_id: seasonId,
                 name: `Battle Pass Premium - ${season.title}`,
                 price: 0
             })
@@ -292,10 +292,10 @@ export async function upgradeToPremium(seasonId: number, userId: string) {
 
     // Add player subscription
     const { error } = await supabase
-        .from('playerSubscriptions')
+        .from('player_subscriptions')
         .insert({
-            userID: userId,
-            subscriptionId: subscription.id,
+            user_id: userId,
+            subscription_id: subscription.id,
             end: null // Permanent for the season
         });
 
@@ -312,9 +312,9 @@ export function calculateTier(xp: number): number {
 
 export async function getSeasonLevels(seasonId: number) {
     const { data, error } = await supabase
-        .from('battlePassLevels')
+        .from('battle_pass_levels')
         .select('*, levels(*)')
-        .eq('seasonId', seasonId)
+        .eq('season_id', seasonId)
         .eq('type', 'normal')
         .order('id', { ascending: true });
 
@@ -327,7 +327,7 @@ export async function getSeasonLevels(seasonId: number) {
 
 export async function addSeasonLevel(level: TablesInsert<"battlePassLevels">) {
     const { data, error } = await supabase
-        .from('battlePassLevels')
+        .from('battle_pass_levels')
         .insert(level)
         .select()
         .single();
@@ -341,7 +341,7 @@ export async function addSeasonLevel(level: TablesInsert<"battlePassLevels">) {
 
 export async function updateSeasonLevel(levelId: number, updates: Partial<TablesInsert<"battlePassLevels">>) {
     const { error } = await supabase
-        .from('battlePassLevels')
+        .from('battle_pass_levels')
         .update(updates)
         .eq('id', levelId);
 
@@ -352,7 +352,7 @@ export async function updateSeasonLevel(levelId: number, updates: Partial<Tables
 
 export async function deleteSeasonLevel(levelId: number) {
     const { error } = await supabase
-        .from('battlePassLevels')
+        .from('battle_pass_levels')
         .delete()
         .eq('id', levelId);
 
@@ -372,10 +372,10 @@ export async function getActiveBattlePassLevelByLevelID(levelID: number) {
     }
 
     const { data, error } = await supabase
-        .from('battlePassLevels')
+        .from('battle_pass_levels')
         .select('*')
-        .eq('seasonId', season.id)
-        .eq('levelID', levelID)
+        .eq('season_id', season.id)
+        .eq('level_id', levelID)
         .single();
 
     if (error) {
@@ -396,10 +396,10 @@ export async function getActiveBattlePassLevelByLevelID(levelID: number) {
 
 export async function getPlayerLevelProgress(battlePassLevelId: number, userId: string) {
     const { data, error } = await supabase
-        .from('battlePassLevelProgress')
+        .from('battle_pass_level_progress')
         .select('*')
-        .eq('battlePassLevelId', battlePassLevelId)
-        .eq('userID', userId)
+        .eq('battle_pass_level_id', battlePassLevelId)
+        .eq('user_id', userId)
         .maybeSingle();
 
     if (error) {
@@ -420,9 +420,9 @@ export async function getSeasonLevelByType(seasonId: number, type: LevelType) {
     // For daily/weekly we only want the latest level (limit 1)
     if (type === 'daily' || type === 'weekly') {
         const { data, error } = await supabase
-            .from('battlePassLevels')
+            .from('battle_pass_levels')
             .select('*, levels(*)')
-            .eq('seasonId', seasonId)
+            .eq('season_id', seasonId)
             .eq('type', type)
             .order('created_at', { ascending: false })
             .limit(1)
@@ -436,9 +436,9 @@ export async function getSeasonLevelByType(seasonId: number, type: LevelType) {
 
     // For normal type return all levels for the season
     const { data, error } = await supabase
-        .from('battlePassLevels')
+        .from('battle_pass_levels')
         .select('*, levels(*)')
-        .eq('seasonId', seasonId)
+        .eq('season_id', seasonId)
         .eq('type', type)
         .order('id', { ascending: true });
 
@@ -454,9 +454,9 @@ export async function getSeasonLevelByType(seasonId: number, type: LevelType) {
  */
 export async function getDailyWeeklyLevels(seasonId: number, userId?: string) {
     const { data, error } = await supabase
-        .from('battlePassLevels')
+        .from('battle_pass_levels')
         .select('*, levels(*)')
-        .eq('seasonId', seasonId)
+        .eq('season_id', seasonId)
         .in('type', ['daily', 'weekly']);
 
     if (error) {
@@ -506,7 +506,7 @@ export async function claimDailyWeeklyReward(
 ) {
     // Get the battle pass level
     const { data: bpLevel, error: bpLevelError } = await supabase
-        .from('battlePassLevels')
+        .from('battle_pass_levels')
         .select('*, levels(*)')
         .eq('id', battlePassLevelId)
         .single();
@@ -556,10 +556,10 @@ export async function claimDailyWeeklyReward(
     // Update claim status
     const updateField = claimType === 'minProgress' ? 'minProgressClaimed' : 'completionClaimed';
     const { error: updateError } = await supabase
-        .from('battlePassLevelProgress')
+        .from('battle_pass_level_progress')
         .update({ [updateField]: true })
-        .eq('battlePassLevelId', battlePassLevelId)
-        .eq('userID', userId);
+        .eq('battle_pass_level_id', battlePassLevelId)
+        .eq('user_id', userId);
 
     if (updateError) {
         throw new Error(updateError.message);
@@ -593,9 +593,9 @@ export async function refreshDailyLevelProgress() {
 
     // Get all daily levels for the current season
     const { data: dailyLevels, error: levelsError } = await supabase
-        .from('battlePassLevels')
+        .from('battle_pass_levels')
         .select('id')
-        .eq('seasonId', season.id)
+        .eq('season_id', season.id)
         .eq('type', 'daily');
 
     if (levelsError) {
@@ -610,9 +610,9 @@ export async function refreshDailyLevelProgress() {
 
     // Delete all progress for these levels
     const { error: deleteError, count } = await supabase
-        .from('battlePassLevelProgress')
+        .from('battle_pass_level_progress')
         .delete()
-        .in('battlePassLevelId', levelIds);
+        .in('battle_pass_level_id', levelIds);
 
     if (deleteError) {
         throw new Error(deleteError.message);
@@ -637,9 +637,9 @@ export async function refreshWeeklyLevelProgress() {
 
     // Get all weekly levels for the current season
     const { data: weeklyLevels, error: levelsError } = await supabase
-        .from('battlePassLevels')
+        .from('battle_pass_levels')
         .select('id')
-        .eq('seasonId', season.id)
+        .eq('season_id', season.id)
         .eq('type', 'weekly');
 
     if (levelsError) {
@@ -654,9 +654,9 @@ export async function refreshWeeklyLevelProgress() {
 
     // Delete all progress for these levels
     const { error: deleteError, count } = await supabase
-        .from('battlePassLevelProgress')
+        .from('battle_pass_level_progress')
         .delete()
-        .in('battlePassLevelId', levelIds);
+        .in('battle_pass_level_id', levelIds);
 
     if (deleteError) {
         throw new Error(deleteError.message);
@@ -677,13 +677,13 @@ export async function updatePlayerLevelProgress(
     const existing = await getPlayerLevelProgress(battlePassLevelId, userId);
 
     const { error } = await supabase
-        .from('battlePassLevelProgress')
+        .from('battle_pass_level_progress')
         .upsert({
             battlePassLevelId,
-            userID: userId,
+            user_id: userId,
             progress,
-            minProgressClaimed: existing?.minProgressClaimed || false,
-            completionClaimed: existing?.completionClaimed || false
+            min_progress_claimed: existing?.minProgressClaimed || false,
+            completion_claimed: existing?.completionClaimed || false
         });
 
     if (error) {
@@ -699,7 +699,7 @@ export async function updateLevelProgressWithMissionCheck(
 ) {
     // Get the battle pass level details
     const { data: bpLevel, error: bpLevelError } = await supabase
-        .from('battlePassLevels')
+        .from('battle_pass_levels')
         .select('*, levels(*)')
         .eq('id', battlePassLevelId)
         .single();
@@ -715,9 +715,9 @@ export async function updateLevelProgressWithMissionCheck(
     if (progress >= COMPLETION_THRESHOLD) {
         // Find all mapPackLevels that contain this levelID
         const { data: mapPackLevels } = await supabase
-            .from('mapPackLevels')
-            .select('mapPackId, levelID')
-            .eq('levelID', bpLevel.levelID);
+            .from('map_pack_levels')
+            .select('map_pack_id, level_id')
+            .eq('level_id', bpLevel.levelID);
 
         if (mapPackLevels && mapPackLevels.length > 0) {
             // Extract all mapPackIds for batch query
@@ -725,10 +725,10 @@ export async function updateLevelProgressWithMissionCheck(
 
             // Find all battlePassMapPacks for this season in one query
             const { data: bpMapPacks } = await supabase
-                .from('battlePassMapPacks')
-                .select('id, mapPackId')
-                .eq('seasonId', bpLevel.seasonId)
-                .in('mapPackId', mapPackIds);
+                .from('battle_pass_map_packs')
+                .select('id, map_pack_id')
+                .eq('season_id', bpLevel.seasonId)
+                .in('map_pack_id', mapPackIds);
 
             if (bpMapPacks && bpMapPacks.length > 0) {
                 const bpMapPackIds = bpMapPacks.map(bpmp => bpmp.id);
@@ -756,8 +756,8 @@ export async function updateLevelProgressWithMissionCheck(
 // Get map pack by id (from mapPacks table)
 export async function getMapPackById(mapPackId: number) {
     const { data, error } = await supabase
-        .from('mapPacks')
-        .select('*, mapPackLevels(*, levels(*))')
+        .from('map_packs')
+        .select('*, map_pack_levels(*, levels(*))')
         .eq('id', mapPackId)
         .single();
 
@@ -771,8 +771,8 @@ export async function getMapPackById(mapPackId: number) {
 // Get all map packs
 export async function getAllMapPacks() {
     const { data, error } = await supabase
-        .from('mapPacks')
-        .select('*, mapPackLevels(*, levels(*))');
+        .from('map_packs')
+        .select('*, map_pack_levels(*, levels(*))');
 
     if (error) {
         throw new Error(error.message);
@@ -784,7 +784,7 @@ export async function getAllMapPacks() {
 // Create a map pack (in mapPacks table)
 export async function createMapPackGeneral(mapPack: TablesInsert<"mapPacks">) {
     const { data, error } = await supabase
-        .from('mapPacks')
+        .from('map_packs')
         .insert(mapPack)
         .select()
         .single();
@@ -799,7 +799,7 @@ export async function createMapPackGeneral(mapPack: TablesInsert<"mapPacks">) {
 // Update a map pack (in mapPacks table)
 export async function updateMapPackGeneral(mapPackId: number, updates: Partial<TablesInsert<"mapPacks">>) {
     const { error } = await supabase
-        .from('mapPacks')
+        .from('map_packs')
         .update(updates)
         .eq('id', mapPackId);
 
@@ -811,7 +811,7 @@ export async function updateMapPackGeneral(mapPackId: number, updates: Partial<T
 // Delete a map pack (from mapPacks table)
 export async function deleteMapPackGeneral(mapPackId: number) {
     const { error } = await supabase
-        .from('mapPacks')
+        .from('map_packs')
         .delete()
         .eq('id', mapPackId);
 
@@ -823,7 +823,7 @@ export async function deleteMapPackGeneral(mapPackId: number) {
 // Add level to a map pack (in mapPackLevels table)
 export async function addMapPackLevelGeneral(level: TablesInsert<"mapPackLevels">) {
     const { data, error } = await supabase
-        .from('mapPackLevels')
+        .from('map_pack_levels')
         .insert(level)
         .select()
         .single();
@@ -838,7 +838,7 @@ export async function addMapPackLevelGeneral(level: TablesInsert<"mapPackLevels"
 // Delete level from a map pack (from mapPackLevels table)
 export async function deleteMapPackLevelGeneral(levelId: number) {
     const { error } = await supabase
-        .from('mapPackLevels')
+        .from('map_pack_levels')
         .delete()
         .eq('id', levelId);
 
@@ -856,11 +856,11 @@ export async function getSeasonMapPacks(seasonId: number) {
     const weeksSinceStart = Math.max(0, Math.floor((now.getTime() - seasonStart.getTime()) / (7 * 24 * 60 * 60 * 1000)));
 
     const { data, error } = await supabase
-        .from('battlePassMapPacks')
-        .select('*, mapPacks(*, mapPackLevels(*, levels(*)))')
-        .eq('seasonId', seasonId)
-        .lte('unlockWeek', weeksSinceStart + 1)
-        .order('unlockWeek', { ascending: false })
+        .from('battle_pass_map_packs')
+        .select('*, map_packs(*, map_pack_levels(*, levels(*)))')
+        .eq('season_id', seasonId)
+        .lte('unlock_week', weeksSinceStart + 1)
+        .order('unlock_week', { ascending: false })
         .order('order', { ascending: true });
 
     if (error) {
@@ -872,10 +872,10 @@ export async function getSeasonMapPacks(seasonId: number) {
 
 export async function getAllSeasonMapPacks(seasonId: number) {
     const { data, error } = await supabase
-        .from('battlePassMapPacks')
-        .select('*, mapPacks(*, mapPackLevels(*, levels(*)))')
-        .eq('seasonId', seasonId)
-        .order('unlockWeek', { ascending: true })
+        .from('battle_pass_map_packs')
+        .select('*, map_packs(*, map_pack_levels(*, levels(*)))')
+        .eq('season_id', seasonId)
+        .order('unlock_week', { ascending: true })
         .order('order', { ascending: true });
 
     if (error) {
@@ -887,8 +887,8 @@ export async function getAllSeasonMapPacks(seasonId: number) {
 
 export async function getBattlePassMapPack(battlePassMapPackId: number) {
     const { data, error } = await supabase
-        .from('battlePassMapPacks')
-        .select('*, mapPacks(*, mapPackLevels(*, levels(*)))')
+        .from('battle_pass_map_packs')
+        .select('*, map_packs(*, map_pack_levels(*, levels(*)))')
         .eq('id', battlePassMapPackId)
         .single();
 
@@ -904,9 +904,9 @@ export async function addBattlePassMapPack(bpMapPack: TablesInsert<"battlePassMa
     if (bpMapPack.order !== undefined && bpMapPack.seasonId !== undefined) {
         // Get all map packs that need to be shifted
         const { data: mapPacksToShift, error: fetchError } = await supabase
-            .from('battlePassMapPacks')
+            .from('battle_pass_map_packs')
             .select('id, order')
-            .eq('seasonId', bpMapPack.seasonId)
+            .eq('season_id', bpMapPack.seasonId)
             .gte('order', bpMapPack.order);
 
         if (fetchError) {
@@ -916,7 +916,7 @@ export async function addBattlePassMapPack(bpMapPack: TablesInsert<"battlePassMa
         // Update each map pack by incrementing its order
         for (const mapPack of mapPacksToShift || []) {
             const { error: updateError } = await supabase
-                .from('battlePassMapPacks')
+                .from('battle_pass_map_packs')
                 .update({ order: mapPack.order + 1 })
                 .eq('id', mapPack.id);
 
@@ -927,7 +927,7 @@ export async function addBattlePassMapPack(bpMapPack: TablesInsert<"battlePassMa
     }
 
     const { data, error } = await supabase
-        .from('battlePassMapPacks')
+        .from('battle_pass_map_packs')
         .insert(bpMapPack)
         .select()
         .single();
@@ -942,8 +942,8 @@ export async function addBattlePassMapPack(bpMapPack: TablesInsert<"battlePassMa
 export async function updateBattlePassMapPack(battlePassMapPackId: number, updates: Partial<TablesInsert<"battlePassMapPacks">>) {
     if (updates.order !== undefined) {
         const { data: currentMapPack, error: fetchError } = await supabase
-            .from('battlePassMapPacks')
-            .select('seasonId, order')
+            .from('battle_pass_map_packs')
+            .select('season_id, order')
             .eq('id', battlePassMapPackId)
             .single();
 
@@ -953,7 +953,7 @@ export async function updateBattlePassMapPack(battlePassMapPackId: number, updat
     }
 
     const { error } = await supabase
-        .from('battlePassMapPacks')
+        .from('battle_pass_map_packs')
         .update(updates)
         .eq('id', battlePassMapPackId);
 
@@ -964,7 +964,7 @@ export async function updateBattlePassMapPack(battlePassMapPackId: number, updat
 
 export async function deleteBattlePassMapPack(battlePassMapPackId: number) {
     const { error } = await supabase
-        .from('battlePassMapPacks')
+        .from('battle_pass_map_packs')
         .delete()
         .eq('id', battlePassMapPackId);
 
@@ -975,10 +975,10 @@ export async function deleteBattlePassMapPack(battlePassMapPackId: number) {
 
 export async function getPlayerMapPackProgress(battlePassMapPackId: number, userId: string) {
     const { data, error } = await supabase
-        .from('battlePassMapPackProgress')
+        .from('battle_pass_map_pack_progress')
         .select('*')
-        .eq('battlePassMapPackId', battlePassMapPackId)
-        .eq('userID', userId)
+        .eq('battle_pass_map_pack_id', battlePassMapPackId)
+        .eq('user_id', userId)
         .maybeSingle();
 
     if (error) {
@@ -991,11 +991,11 @@ export async function getPlayerMapPackProgress(battlePassMapPackId: number, user
 export async function completeMapPackLevel(battlePassMapPackId: number, userId: string, levelId: number) {
     // Update level progress to 100%
     const { error } = await supabase
-        .from('battlePassMapPackLevelProgress')
+        .from('battle_pass_map_pack_level_progress')
         .upsert({
             battlePassMapPackId,
-            levelID: levelId,
-            userID: userId,
+            level_id: levelId,
+            user_id: userId,
             progress: 100
         });
 
@@ -1014,10 +1014,10 @@ export async function updatePlayerMapPackProgress(battlePassMapPackId: number, u
 
     // Get total progress from all levels
     const { data: levelsProgress, error: levelsError } = await supabase
-        .from('battlePassMapPackLevelProgress')
+        .from('battle_pass_map_pack_level_progress')
         .select('progress')
-        .eq('battlePassMapPackId', battlePassMapPackId)
-        .eq('userID', userId);
+        .eq('battle_pass_map_pack_id', battlePassMapPackId)
+        .eq('user_id', userId);
 
     if (levelsError) {
         throw new Error(levelsError.message);
@@ -1035,12 +1035,12 @@ export async function updatePlayerMapPackProgress(battlePassMapPackId: number, u
 
     // Update progress
     const { error } = await supabase
-        .from('battlePassMapPackProgress')
+        .from('battle_pass_map_pack_progress')
         .upsert({
             battlePassMapPackId,
-            userID: userId,
+            user_id: userId,
             progress: overallProgress * 100,
-            claimed: shouldClaim ? true : (progress?.claimed || false)
+            claimed: shouldClaim ? true: (progress?.claimed || false)
         });
 
     if (error) {
@@ -1093,10 +1093,10 @@ export async function claimMapPackReward(battlePassMapPackId: number, userId: st
     }
 
     const { error } = await supabase
-        .from('battlePassMapPackProgress')
+        .from('battle_pass_map_pack_progress')
         .update({ claimed: true })
-        .eq('battlePassMapPackId', battlePassMapPackId)
-        .eq('userID', userId);
+        .eq('battle_pass_map_pack_id', battlePassMapPackId)
+        .eq('user_id', userId);
 
     if (error) {
         throw new Error(error.message);
@@ -1122,11 +1122,11 @@ export async function claimMapPackReward(battlePassMapPackId: number, userId: st
 
 export async function getTierRewards(seasonId: number) {
     const { data, error } = await supabase
-        .from('battlePassTierRewards')
+        .from('battle_pass_tier_rewards')
         .select('*, items(*)')
-        .eq('seasonId', seasonId)
+        .eq('season_id', seasonId)
         .order('tier', { ascending: true })
-        .order('isPremium', { ascending: true });
+        .order('is_premium', { ascending: true });
 
     if (error) {
         throw new Error(error.message);
@@ -1137,7 +1137,7 @@ export async function getTierRewards(seasonId: number) {
 
 export async function createTierReward(reward: TablesInsert<"battlePassTierRewards">) {
     const { data, error } = await supabase
-        .from('battlePassTierRewards')
+        .from('battle_pass_tier_rewards')
         .insert(reward)
         .select()
         .single();
@@ -1151,7 +1151,7 @@ export async function createTierReward(reward: TablesInsert<"battlePassTierRewar
 
 export async function deleteTierReward(rewardId: number) {
     const { error } = await supabase
-        .from('battlePassTierRewards')
+        .from('battle_pass_tier_rewards')
         .delete()
         .eq('id', rewardId);
 
@@ -1162,10 +1162,10 @@ export async function deleteTierReward(rewardId: number) {
 
 export async function getPlayerClaimedRewards(seasonId: number, userId: string) {
     const { data, error } = await supabase
-        .from('battlePassRewardClaims')
-        .select('*, battlePassTierRewards!inner(*)')
-        .eq('battlePassTierRewards.seasonId', seasonId)
-        .eq('userID', userId);
+        .from('battle_pass_reward_claims')
+        .select('*, battle_pass_tier_rewards!inner(*)')
+        .eq('battle_pass_tier_rewards.season_id', seasonId)
+        .eq('user_id', userId);
 
     if (error) {
         throw new Error(error.message);
@@ -1177,7 +1177,7 @@ export async function getPlayerClaimedRewards(seasonId: number, userId: string) 
 export async function claimTierReward(rewardId: number, userId: string) {
     // Get reward details
     const { data: reward, error: rewardError } = await supabase
-        .from('battlePassTierRewards')
+        .from('battle_pass_tier_rewards')
         .select('*, items(*)')
         .eq('id', rewardId)
         .single();
@@ -1207,10 +1207,10 @@ export async function claimTierReward(rewardId: number, userId: string) {
 
     // Check if already claimed
     const { data: existingClaim } = await supabase
-        .from('battlePassRewardClaims')
+        .from('battle_pass_reward_claims')
         .select('*')
-        .eq('rewardId', rewardId)
-        .eq('userID', userId)
+        .eq('reward_id', rewardId)
+        .eq('user_id', userId)
         .maybeSingle();
 
     if (existingClaim) {
@@ -1219,10 +1219,10 @@ export async function claimTierReward(rewardId: number, userId: string) {
 
     // Claim the reward
     const { error: claimError } = await supabase
-        .from('battlePassRewardClaims')
+        .from('battle_pass_reward_claims')
         .insert({
             rewardId,
-            userID: userId
+            user_id: userId
         });
 
     if (claimError) {
@@ -1260,9 +1260,9 @@ export async function getClaimableRewards(seasonId: number, userId: string) {
 
 export async function getSeasonMissions(seasonId: number) {
     const { data, error } = await supabase
-        .from('battlePassMissions')
-        .select('*, rewards:battlePassMissionRewards(*, items(*))')
-        .eq('seasonId', seasonId)
+        .from('battle_pass_missions')
+        .select('*, rewards:battle_pass_mission_rewards(*, items(*))')
+        .eq('season_id', seasonId)
         .order('order', { ascending: true });
 
     if (error) {
@@ -1274,8 +1274,8 @@ export async function getSeasonMissions(seasonId: number) {
 
 export async function getMission(missionId: number) {
     const { data, error } = await supabase
-        .from('battlePassMissions')
-        .select('*, rewards:battlePassMissionRewards(*, items(*))')
+        .from('battle_pass_missions')
+        .select('*, rewards:battle_pass_mission_rewards(*, items(*))')
         .eq('id', missionId)
         .single();
 
@@ -1288,7 +1288,7 @@ export async function getMission(missionId: number) {
 
 export async function createMission(mission: TablesInsert<"battlePassMissions">) {
     const { data, error } = await supabase
-        .from('battlePassMissions')
+        .from('battle_pass_missions')
         .insert(mission)
         .select()
         .single();
@@ -1302,7 +1302,7 @@ export async function createMission(mission: TablesInsert<"battlePassMissions">)
 
 export async function updateMission(missionId: number, updates: Partial<TablesInsert<"battlePassMissions">>) {
     const { error } = await supabase
-        .from('battlePassMissions')
+        .from('battle_pass_missions')
         .update(updates)
         .eq('id', missionId);
 
@@ -1314,7 +1314,7 @@ export async function updateMission(missionId: number, updates: Partial<TablesIn
 export async function deleteMission(missionId: number) {
     // CASCADE DELETE is configured on foreign keys, so we only need to delete the mission
     const { error } = await supabase
-        .from('battlePassMissions')
+        .from('battle_pass_missions')
         .delete()
         .eq('id', missionId);
 
@@ -1327,7 +1327,7 @@ export async function addMissionReward(missionId: number, itemId: number, quanti
     if (expireAfter === null) {
         const { data } = await supabase
             .from('items')
-            .select('defaultExpireAfter')
+            .select('default_expire_after')
             .eq('id', itemId)
             .single();
 
@@ -1337,7 +1337,7 @@ export async function addMissionReward(missionId: number, itemId: number, quanti
     }
 
     const { data, error } = await supabase
-        .from('battlePassMissionRewards')
+        .from('battle_pass_mission_rewards')
         .insert({
             missionId,
             itemId,
@@ -1356,7 +1356,7 @@ export async function addMissionReward(missionId: number, itemId: number, quanti
 
 export async function removeMissionReward(rewardId: number) {
     const { error } = await supabase
-        .from('battlePassMissionRewards')
+        .from('battle_pass_mission_rewards')
         .delete()
         .eq('id', rewardId);
 
@@ -1367,10 +1367,10 @@ export async function removeMissionReward(rewardId: number) {
 
 export async function isMissionClaimed(userId: string, missionId: number) {
     const { data, error } = await supabase
-        .from('battlePassMissionClaims')
+        .from('battle_pass_mission_claims')
         .select('*')
-        .eq('userID', userId)
-        .eq('missionId', missionId)
+        .eq('user_id', userId)
+        .eq('mission_id', missionId)
         .maybeSingle();
 
     if (error) {
@@ -1382,10 +1382,10 @@ export async function isMissionClaimed(userId: string, missionId: number) {
 
 export async function getMissionProgress(userId: string, missionId: number) {
     const { data, error } = await supabase
-        .from('battlePassMissionProgress')
+        .from('battle_pass_mission_progress')
         .select('*')
-        .eq('userID', userId)
-        .eq('missionId', missionId)
+        .eq('user_id', userId)
+        .eq('mission_id', missionId)
         .maybeSingle();
 
     if (error) {
@@ -1397,10 +1397,10 @@ export async function getMissionProgress(userId: string, missionId: number) {
 
 export async function setMissionCompleted(userId: string, missionId: number) {
     const { error } = await supabase
-        .from('battlePassMissionProgress')
+        .from('battle_pass_mission_progress')
         .upsert({
             missionId,
-            userID: userId,
+            user_id: userId,
             completed: true
         });
 
@@ -1536,10 +1536,10 @@ export async function claimMission(missionId: number, userId: string) {
 
     // Insert claim record
     const { error: claimError } = await supabase
-        .from('battlePassMissionClaims')
+        .from('battle_pass_mission_claims')
         .insert({
             missionId,
-            userID: userId
+            user_id: userId
         });
 
     if (claimError) {
@@ -1587,10 +1587,10 @@ export async function getPlayerMissionStatus(seasonId: number, userId: string) {
 
     // Batch fetch claims
     const { data: claims, error: claimsError } = await supabase
-        .from('battlePassMissionClaims')
-        .select('missionId')
-        .eq('userID', userId)
-        .in('missionId', missionIds);
+        .from('battle_pass_mission_claims')
+        .select('mission_id')
+        .eq('user_id', userId)
+        .in('mission_id', missionIds);
 
     if (claimsError) {
         throw new Error(claimsError.message);
@@ -1600,10 +1600,10 @@ export async function getPlayerMissionStatus(seasonId: number, userId: string) {
 
     // Batch fetch progress
     const { data: progressList, error: progressError } = await supabase
-        .from('battlePassMissionProgress')
-        .select('missionId, completed')
-        .eq('userID', userId)
-        .in('missionId', missionIds);
+        .from('battle_pass_mission_progress')
+        .select('mission_id, completed')
+        .eq('user_id', userId)
+        .in('mission_id', missionIds);
 
     if (progressError) {
         throw new Error(progressError.message);
@@ -1636,10 +1636,10 @@ export async function getBatchLevelProgress(battlePassLevelIds: number[], userId
     }
 
     const { data, error } = await supabase
-        .from('battlePassLevelProgress')
+        .from('battle_pass_level_progress')
         .select('*')
-        .eq('userID', userId)
-        .in('battlePassLevelId', battlePassLevelIds);
+        .eq('user_id', userId)
+        .in('battle_pass_level_id', battlePassLevelIds);
 
     if (error) {
         throw new Error(error.message);
@@ -1669,10 +1669,10 @@ export async function getBatchMapPackProgress(battlePassMapPackIds: number[], us
     }
 
     const { data, error } = await supabase
-        .from('battlePassMapPackProgress')
+        .from('battle_pass_map_pack_progress')
         .select('*')
-        .eq('userID', userId)
-        .in('battlePassMapPackId', battlePassMapPackIds);
+        .eq('user_id', userId)
+        .in('battle_pass_map_pack_id', battlePassMapPackIds);
 
     if (error) {
         throw new Error(error.message);
@@ -1705,10 +1705,10 @@ export async function getBatchMapPackLevelProgress(
 
     const mapPackIds = [...new Set(levels.map(l => l.mapPackId))];
     const { data, error } = await (supabase as any)
-        .from('battlePassMapPackLevelProgress')
+        .from('battle_pass_map_pack_level_progress')
         .select('*')
-        .eq('userID', userId)
-        .in('battlePassMapPackId', mapPackIds);
+        .eq('user_id', userId)
+        .in('battle_pass_map_pack_id', mapPackIds);
 
     if (error) {
         throw new Error(error.message);
@@ -1743,11 +1743,11 @@ export async function updateMapPackLevelProgress(
     progress: number
 ) {
     const { error } = await (supabase as any)
-        .from('battlePassMapPackLevelProgress')
+        .from('battle_pass_map_pack_level_progress')
         .upsert({
             battlePassMapPackId,
             levelID,
-            userID: userId,
+            user_id: userId,
             progress
         });
 
@@ -1765,11 +1765,11 @@ export async function batchUpdateMapPackLevelProgress(
     if (mapPackIds.length === 0) return;
 
     const { data: existingRows, error: existingError } = await (supabase as any)
-        .from('battlePassMapPackLevelProgress')
-        .select('battlePassMapPackId, progress')
-        .eq('userID', userId)
-        .eq('levelID', levelID)
-        .in('battlePassMapPackId', mapPackIds);
+        .from('battle_pass_map_pack_level_progress')
+        .select('battle_pass_map_pack_id, progress')
+        .eq('user_id', userId)
+        .eq('level_id', levelID)
+        .in('battle_pass_map_pack_id', mapPackIds);
 
     if (existingError) {
         throw new Error(existingError.message);
@@ -1795,7 +1795,7 @@ export async function batchUpdateMapPackLevelProgress(
     if (records.length === 0) return;
 
     const { error } = await (supabase as any)
-        .from('battlePassMapPackLevelProgress')
+        .from('battle_pass_map_pack_level_progress')
         .upsert(records);
 
     if (error) {
@@ -1808,8 +1808,8 @@ export async function batchUpdatePlayerMapPackProgress(mapPackIds: number[], use
 
     // 1. Fetch Map Pack details + existing progress via join
     const { data: bpMapPacks, error: fetchError } = await supabase
-        .from('battlePassMapPacks')
-        .select('id, seasonId, mapPacks(*, mapPackLevels(*)), battlePassMapPackProgress!left(userID, claimed)')
+        .from('battle_pass_map_packs')
+        .select('id, season_id, map_packs(*, map_pack_levels(*)), battle_pass_map_pack_progress!left(user_id, claimed)')
         .in('id', mapPackIds)
         .or(`userID.eq.${userId},userID.is.null`, { foreignTable: 'battlePassMapPackProgress' });
 
@@ -1821,10 +1821,10 @@ export async function batchUpdatePlayerMapPackProgress(mapPackIds: number[], use
 
     // 2. Fetch level progress for all these map packs
     const { data: levelsProgress, error: levelsError } = await supabase
-        .from('battlePassMapPackLevelProgress')
-        .select('battlePassMapPackId, progress')
-        .in('battlePassMapPackId', mapPackIds)
-        .eq('userID', userId);
+        .from('battle_pass_map_pack_level_progress')
+        .select('battle_pass_map_pack_id, progress')
+        .in('battle_pass_map_pack_id', mapPackIds)
+        .eq('user_id', userId);
 
     if (levelsError) {
         throw new Error(levelsError.message);
@@ -1886,7 +1886,7 @@ export async function batchUpdatePlayerMapPackProgress(mapPackIds: number[], use
     // 5. Batch upsert
     if (updates.length > 0) {
         const { error: upsertError } = await supabase
-            .from('battlePassMapPackProgress')
+            .from('battle_pass_map_pack_progress')
             .upsert(updates);
 
         if (upsertError) {
@@ -1909,10 +1909,10 @@ export async function batchUpdatePlayerMapPackProgress(mapPackIds: number[], use
 
 export async function getMapPackIdsForLevel(seasonId: number, levelID: number) {
     const { data, error } = await supabase
-        .from('battlePassMapPacks')
-        .select('id, mapPackId, mapPacks!inner(mapPackLevels!inner(levelID))')
-        .eq('seasonId', seasonId)
-        .eq('mapPacks.mapPackLevels.levelID', levelID);
+        .from('battle_pass_map_packs')
+        .select('id, map_pack_id, map_packs!inner(map_pack_levels!inner(level_id))')
+        .eq('season_id', seasonId)
+        .eq('map_packs.map_pack_levels.level_id', levelID);
 
     if (error) {
         throw new Error(error.message);
@@ -1960,10 +1960,10 @@ export async function trackProgressAfterDeathCount(
                     );
 
                     await supabase
-                        .from('battlePassLevelProgress')
-                        .update({ minProgressClaimed: true })
-                        .eq('battlePassLevelId', bpLevel.id)
-                        .eq('userID', uid);
+                        .from('battle_pass_level_progress')
+                        .update({ min_progress_claimed: true })
+                        .eq('battle_pass_level_id', bpLevel.id)
+                        .eq('user_id', uid);
                 }
 
                 // Completion reward
@@ -1981,10 +1981,10 @@ export async function trackProgressAfterDeathCount(
                     }
 
                     await supabase
-                        .from('battlePassLevelProgress')
-                        .update({ completionClaimed: true })
-                        .eq('battlePassLevelId', bpLevel.id)
-                        .eq('userID', uid);
+                        .from('battle_pass_level_progress')
+                        .update({ completion_claimed: true })
+                        .eq('battle_pass_level_id', bpLevel.id)
+                        .eq('user_id', uid);
                 }
             }
         }
@@ -2020,10 +2020,10 @@ export type RefreshType = 'none' | 'daily' | 'weekly';
  */
 export async function getMissionsToRefresh(refreshType: RefreshType) {
     const { data, error } = await supabase
-        .from('battlePassMissions')
-        .select('*, battlePassSeasons!inner(*)')
-        .eq('refreshType', refreshType)
-        .eq('battlePassSeasons.isArchived', false);
+        .from('battle_pass_missions')
+        .select('*, battle_pass_seasons!inner(*)')
+        .eq('refresh_type', refreshType)
+        .eq('battle_pass_seasons.is_archived', false);
 
     if (error) {
         throw new Error(error.message);
@@ -2043,9 +2043,9 @@ export async function getMissionsToRefresh(refreshType: RefreshType) {
 export async function refreshMission(missionId: number) {
     // Delete all mission claims for this mission
     const { error: claimsError } = await supabase
-        .from('battlePassMissionClaims')
+        .from('battle_pass_mission_claims')
         .delete()
-        .eq('missionId', missionId);
+        .eq('mission_id', missionId);
 
     if (claimsError) {
         console.error(`Failed to delete claims for mission ${missionId}:`, claimsError.message);
@@ -2054,9 +2054,9 @@ export async function refreshMission(missionId: number) {
 
     // Delete all mission progress for this mission
     const { error: progressError } = await supabase
-        .from('battlePassMissionProgress')
+        .from('battle_pass_mission_progress')
         .delete()
-        .eq('missionId', missionId);
+        .eq('mission_id', missionId);
 
     if (progressError) {
         console.error(`Failed to delete progress for mission ${missionId}:`, progressError.message);

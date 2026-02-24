@@ -36,8 +36,8 @@ router.route('/')
         const { start = 0, end = 50 } = req.query
 
         const { data, error } = await supabase
-            .from('levelSubmissions')
-            .select('*, levels(*), players!userId(*)')
+            .from('level_submissions')
+            .select('*, levels(*), players!user_id(*)')
             .order('created_at', { ascending: true })
             .range(Number(start), Number(end))
 
@@ -89,7 +89,7 @@ router.route('/')
             // Check if level already exists in database
             const { data: existingLevel } = await supabase
                 .from('levels')
-                .select('id, isChallenge, isNonList')
+                .select('id, is_challenge, is_non_list')
                 .eq('id', levelId)
                 .maybeSingle()
 
@@ -103,10 +103,10 @@ router.route('/')
 
             // Check if user already submitted this level
             const { data: existingSubmission } = await supabase
-                .from('levelSubmissions')
+                .from('level_submissions')
                 .select('*')
-                .eq('userId', user.uid)
-                .eq('levelId', levelId)
+                .eq('user_id', user.uid)
+                .eq('level_id', levelId)
                 .maybeSingle()
 
             if (existingSubmission) {
@@ -136,16 +136,16 @@ router.route('/')
                 // Update videoID if level exists but videoID is provided
                 await supabase
                     .from('levels')
-                    .update({ videoID: videoID })
+                    .update({ video_id: videoID })
                     .eq('id', levelId)
             }
 
             // Insert level submission
             const { error: insertError } = await supabase
-                .from('levelSubmissions')
+                .from('level_submissions')
                 .insert({
-                    userId: user.uid,
-                    levelId: levelId,
+                    user_id: user.uid,
+                    level_id: levelId,
                     comment: comment || null,
                     accepted: false
                 })
@@ -186,9 +186,9 @@ router.route('/user/:userId')
 
         try {
             const { data, error } = await supabase
-                .from('levelSubmissions')
+                .from('level_submissions')
                 .select('*, levels(*)')
-                .eq('userId', userId)
+                .eq('user_id', userId)
                 .eq('accepted', false)
                 .order('created_at', { ascending: false })
 
@@ -234,10 +234,10 @@ router.route('/:userId/:levelId')
         const { userId, levelId } = req.params
 
         const { error } = await supabase
-            .from('levelSubmissions')
+            .from('level_submissions')
             .delete()
-            .eq('userId', userId)
-            .eq('levelId', Number(levelId))
+            .eq('user_id', userId)
+            .eq('level_id', Number(levelId))
 
         if (error) {
             console.error(error)
@@ -309,10 +309,10 @@ router.route('/:userId/:levelId/verdict')
 
                 // Update submission as accepted
                 const { error: updateError } = await supabase
-                    .from('levelSubmissions')
+                    .from('level_submissions')
                     .update({ accepted: true })
-                    .eq('userId', userId)
-                    .eq('levelId', Number(levelId))
+                    .eq('user_id', userId)
+                    .eq('level_id', Number(levelId))
 
                 if (updateError) {
                     throw updateError
@@ -329,10 +329,10 @@ router.route('/:userId/:levelId/verdict')
             } else {
                 // Delete the submission
                 const { error: deleteError } = await supabase
-                    .from('levelSubmissions')
+                    .from('level_submissions')
                     .delete()
-                    .eq('userId', userId)
-                    .eq('levelId', Number(levelId))
+                    .eq('user_id', userId)
+                    .eq('level_id', Number(levelId))
 
                 if (deleteError) {
                     throw deleteError

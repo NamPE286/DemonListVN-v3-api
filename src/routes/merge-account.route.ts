@@ -44,8 +44,8 @@ router.route('/:a/:b')
 
         var { error } = await supabase
             .from('levels')
-            .update({ creatorId: b })
-            .match({ creatorId: a })
+            .update({ creator_id: b })
+            .match({ creator_id: a })
 
         if (error) {
             res.status(500).send(error)
@@ -53,9 +53,9 @@ router.route('/:a/:b')
         }
 
         var { error } = await supabase
-            .from('levelSubmissions')
-            .update({ userId: b })
-            .match({ userId: a })
+            .from('level_submissions')
+            .update({ user_id: b })
+            .match({ user_id: a })
 
         if (error) {
             res.status(500).send(error)

@@ -86,7 +86,7 @@ export async function consumeOTP(code: string) {
     }
 
     const { data, error } = await supabase
-        .from('APIKey')
+        .from('api_key')
         .insert({ uid: otp.granted_by })
         .select('key')
         .single()

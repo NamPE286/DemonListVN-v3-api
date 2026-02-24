@@ -4,7 +4,7 @@ import { getActiveseason, getActiveBattlePassLevelByLevelID, getAllSeasonMapPack
 
 export async function fetchPlayerDeathCount(uid: string, levelID: number, tag: string) {
     let { data, error } = await supabase
-        .from('deathCount')
+        .from('death_count')
         .select('*')
         .match({ uid, levelID, tag })
         .limit(1)
@@ -25,9 +25,9 @@ export async function fetchPlayerDeathCount(uid: string, levelID: number, tag: s
 
 async function fetchLevelData(levelID: number) {
     let { data, error } = await supabase
-        .from('levelDeathCount')
+        .from('level_death_count')
         .select('*')
-        .eq('levelID', levelID)
+        .eq('level_id', levelID)
         .limit(1)
         .single()
 
@@ -44,9 +44,9 @@ async function isEligible(levelID: number, eventCheck = true, battlepassCheck = 
     if (eventCheck) {
         // Check if level is part of an active event
         const a = await supabase
-            .from('eventLevels')
+            .from('event_levels')
             .select('*, events(*)')
-            .eq('levelID', levelID)
+            .eq('level_id', levelID)
 
         if (!a.error) {
             for (const lv of a.data) {
@@ -145,7 +145,7 @@ export async function updateDeathCount(uid: string, levelID: number, tag: string
     }
 
     const { error: deathCountError } = await supabase
-        .from('deathCount')
+        .from('death_count')
         .upsert(player)
 
     if (deathCountError) {
@@ -154,7 +154,7 @@ export async function updateDeathCount(uid: string, levelID: number, tag: string
 
     if (!isBattlepass) {
         const { error: levelDeathCountError } = await supabase
-            .from('levelDeathCount')
+            .from('level_death_count')
             .upsert(level)
 
         if (levelDeathCountError) {

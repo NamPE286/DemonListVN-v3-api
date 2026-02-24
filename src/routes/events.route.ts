@@ -319,11 +319,11 @@ router.route('/submitLevel/:levelID')
 
         const now = new Date().toISOString()
         var { data, error } = await supabase
-            .from('eventProofs')
-            .select('userid, eventID, events!inner(start, end, type, eventLevels!inner(*, eventRecords(userID, levelID, progress, accepted, videoLink)))')
+            .from('event_proofs')
+            .select('userid, event_id, events!inner(start, end, type, event_levels!inner(*, event_records(user_id, level_id, progress, accepted, video_link)))')
             .eq('userid', user.uid!)
-            .eq('events.eventLevels.levelID', Number(levelID))
-            .eq('events.eventLevels.eventRecords.userID', user.uid!)
+            .eq('events.event_levels.level_id', Number(levelID))
+            .eq('events.event_levels.event_records.user_id', user.uid!)
             .lte('events.start', now)
             .gte('events.end', now)
 
@@ -414,7 +414,7 @@ router.route('/submitLevel/:levelID')
         }
 
         var { error } = await supabase
-            .from('eventRecords')
+            .from('event_records')
             .upsert(eventRecordUpsertData)
 
         if (error) {
@@ -545,10 +545,10 @@ router.route('/quest/:questId/claim')
             const quest = await getEventQuest(Number(questId))
             
             var { error } = await supabase
-                .from('eventQuestClaims')
+                .from('event_quest_claims')
                 .insert({
-                    userId: user.uid!,
-                    questId: Number(questId)
+                    user_id: user.uid!,
+                    quest_id: Number(questId)
                 })
 
             if (error) {
@@ -1119,7 +1119,7 @@ router.route('/:id/calc')
         }
 
         var { error } = await supabase
-            .from('eventProofs')
+            .from('event_proofs')
             .upsert(newData.map((item) => ({
                 userid: item.userID,
                 eventID: Number(id),

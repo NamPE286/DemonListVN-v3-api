@@ -128,7 +128,7 @@ router.route('/invitations')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
         const { data, error } = await supabase
-            .from('clanInvitations')
+            .from('clan_invitations')
             .select('*, clans(*, players!owner(*, clans!id(*)))')
             .eq('to', user.uid!)
 
@@ -267,7 +267,7 @@ router.route('/:id')
 
         await supabase
             .storage
-            .from('clanPhotos')
+            .from('clan_photos')
             .remove([`${id}.jpg`])
 
         res.send()
@@ -567,7 +567,7 @@ router.route('/:id/join')
         await addClanMember(Number(id), user.uid!)
 
         const { error } = await supabase
-            .from('clanInvitations')
+            .from('clan_invitations')
             .delete()
             .eq('to', user.uid!)
 
@@ -721,7 +721,7 @@ router.route('/:id/invitations')
     .get(async (req, res) => {
         const { id } = req.params
         const { data, error } = await supabase
-            .from('clanInvitations')
+            .from('clan_invitations')
             .select('*, players(*)')
             .eq('clan', parseInt(id))
             .order('created_at', { ascending: false })
@@ -828,10 +828,10 @@ router.route('/:id/list/:list')
 
         const { data, error } = await supabase
             .from('levels')
-            .select('*, records!inner(userid, levelid, isChecked, players!public_records_userid_fkey!inner(uid, clan))')
+            .select('*, records!inner(userid, levelid, is_checked, players!public_records_userid_fkey!inner(uid, clan))')
             .eq("records.players.clan", Number(id))
-            .eq("records.isChecked", true)
-            .eq('isPlatformer', isPlat)
+            .eq("records.is_checked", true)
+            .eq('is_platformer', isPlat)
             .not(x, 'is', null)
             .order(x, { ascending: false })
             .range(from ? Number(from) : 0, to ? Number(to) : 49)

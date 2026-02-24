@@ -11,7 +11,7 @@ async function searchPlayersByName(query: string, includeHidden = false, limit =
         .ilike('name', `%${query}%`)
 
     if (!includeHidden) {
-        request = request.eq('isHidden', false)
+        request = request.eq('is_hidden', false)
     }
 
     const { data, error } = await request.limit(limit)
@@ -30,7 +30,7 @@ async function getPlayerByDiscordIDWithVisibility(id: string, includeHidden = fa
         .eq('discord', id)
 
     if (!includeHidden) {
-        request = request.eq('isHidden', false)
+        request = request.eq('is_hidden', false)
     }
 
     const { data, error } = await request

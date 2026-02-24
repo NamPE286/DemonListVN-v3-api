@@ -2,7 +2,7 @@ import supabase from "@src/client/supabase";
 
 export async function getAllAPIKey(uid: string) {
     const { data, error } = await supabase
-        .from('APIKey')
+        .from('api_key')
         .select('*')
         .eq('uid', uid)
 
@@ -15,7 +15,7 @@ export async function getAllAPIKey(uid: string) {
 
 export async function createAPIKey(uid: string) {
     const { data, error } = await supabase
-        .from('APIKey')
+        .from('api_key')
         .insert({ uid: uid })
 
     if (error) {
@@ -25,7 +25,7 @@ export async function createAPIKey(uid: string) {
 
 export async function deleteAPIKey(uid: string, key: string) {
     const { error } = await supabase
-        .from('APIKey')
+        .from('api_key')
         .delete()
         .match({ uid: uid, key: key })
 

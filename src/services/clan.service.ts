@@ -102,7 +102,7 @@ export async function fetchClanMembers(clanId: number, { start = 0, end = 50, so
         .from('players')
         .select('*, clans!id(*)')
         .eq('clan', clanId)
-        .eq('isHidden', false)
+        .eq('is_hidden', false)
         .order(sortBy, { ascending: ascending == 'true', nullsFirst: false })
         .range(start, end)
 
@@ -132,7 +132,7 @@ export async function addClanMember(clanId: number, uid: string): Promise<TClan>
     
     const { error } = await supabase
         .from('clans')
-        .update({ memberCount: tmp.memberCount })
+        .update({ member_count: tmp.memberCount })
         .eq('id', clanId)
 
     if (error) {
@@ -160,7 +160,7 @@ export async function removeClanMember(clanId: number, uid: string): Promise<TCl
     
     const { error } = await supabase
         .from('clans')
-        .update({ memberCount: tmp.memberCount })
+        .update({ member_count: tmp.memberCount })
         .eq('id', clanId)
 
     if (error) {
@@ -189,8 +189,8 @@ export async function fetchClanRecords(clanId: number, { start = 0, end = 50, so
         .from('records')
         .select('*, players!userid!inner(*, clans!id(*)), levels!public_records_levelid_fkey(*)')
         .eq('players.clan', clanId)
-        .eq('players.isHidden', false)
-        .eq('isChecked', true)
+        .eq('players.is_hidden', false)
+        .eq('is_checked', true)
         .not(sortBy, 'is', null)
         .order(sortBy, { ascending: ascending == 'true' })
         .range(start, end)
@@ -236,7 +236,7 @@ export function isBoostActive(clanData: { boostedUntil?: string | null }): boole
 
 export async function clanInvitationExists(to: string, clanId: number): Promise<boolean> {
     const { data, error } = await supabase
-        .from('clanInvitations')
+        .from('clan_invitations')
         .select('*')
         .match({ to, clan: clanId })
 
@@ -249,7 +249,7 @@ export async function clanInvitationExists(to: string, clanId: number): Promise<
 
 export async function getClanInvitation(to: string, clanId: number): Promise<TClanInvitation> {
     const { data, error } = await supabase
-        .from('clanInvitations')
+        .from('clan_invitations')
         .select('*')
         .match({ to, clan: clanId })
         .single()
@@ -263,7 +263,7 @@ export async function getClanInvitation(to: string, clanId: number): Promise<TCl
 
 export async function upsertClanInvitation(invitation: TClanInvitation): Promise<void> {
     const { error } = await supabase
-        .from('clanInvitations')
+        .from('clan_invitations')
         .upsert(invitation as any)
 
     if (error) {
@@ -279,7 +279,7 @@ export async function acceptClanInvitation(to: string, clanId: number): Promise<
     await addClanMember(clanId, to)
 
     const { error } = await supabase
-        .from('clanInvitations')
+        .from('clan_invitations')
         .delete()
         .eq('to', to)
 
@@ -294,7 +294,7 @@ export async function rejectClanInvitation(to: string, clanId: number): Promise<
     }
 
     const { error } = await supabase
-        .from('clanInvitations')
+        .from('clan_invitations')
         .delete()
         .match({ to, clan: clanId })
 

@@ -4,9 +4,9 @@ import type { Tables } from "@src/types/supabase";
 
 export async function getEventQuests(eventId: number) {
     const { data, error } = await supabase
-        .from('eventQuests')
-        .select('*, rewards:eventQuestRewards(expireAfter, reward:items(*))')
-        .eq('eventId', eventId)
+        .from('event_quests')
+        .select('*, rewards:event_quest_rewards(expire_after, reward:items(*))')
+        .eq('event_id', eventId)
         .order('id');
 
     if (error) {
@@ -26,8 +26,8 @@ export async function getEventQuests(eventId: number) {
 
 export async function getEventQuest(questId: number) {
     const { data, error } = await supabase
-        .from('eventQuests')
-        .select('*, rewards:eventQuestRewards(expireAfter, reward:items(*))')
+        .from('event_quests')
+        .select('*, rewards:event_quest_rewards(expire_after, reward:items(*))')
         .eq('id', questId)
         .single()
 
@@ -48,7 +48,7 @@ export async function getEventQuest(questId: number) {
 
 export async function createEventQuest(eventId: number, title: string, condition: any) {
     const { data, error } = await supabase
-        .from('eventQuests')
+        .from('event_quests')
         .insert({
             eventId,
             title,
@@ -66,7 +66,7 @@ export async function createEventQuest(eventId: number, title: string, condition
 
 export async function updateEventQuest(questId: number, updates: { title?: string; condition?: any }) {
     const { data, error } = await supabase
-        .from('eventQuests')
+        .from('event_quests')
         .update(updates)
         .eq('id', questId)
         .select()
@@ -82,19 +82,19 @@ export async function updateEventQuest(questId: number, updates: { title?: strin
 export async function deleteEventQuest(questId: number) {
     // First delete all rewards associated with this quest
     await supabase
-        .from('eventQuestRewards')
+        .from('event_quest_rewards')
         .delete()
-        .eq('questId', questId);
+        .eq('quest_id', questId);
 
     // Then delete all claims associated with this quest
     await supabase
-        .from('eventQuestClaims')
+        .from('event_quest_claims')
         .delete()
-        .eq('questId', questId);
+        .eq('quest_id', questId);
 
     // Finally delete the quest itself
     const { error } = await supabase
-        .from('eventQuests')
+        .from('event_quests')
         .delete()
         .eq('id', questId);
 
@@ -117,7 +117,7 @@ export async function addQuestReward(questId: number, rewardId: number, expireAf
     }
 
     const { data, error } = await supabase
-        .from('eventQuestRewards')
+        .from('event_quest_rewards')
         .insert({
             questId,
             rewardId,
@@ -135,10 +135,10 @@ export async function addQuestReward(questId: number, rewardId: number, expireAf
 
 export async function removeQuestReward(questId: number, rewardId: number) {
     const { error } = await supabase
-        .from('eventQuestRewards')
+        .from('event_quest_rewards')
         .delete()
-        .eq('questId', questId)
-        .eq('rewardId', rewardId);
+        .eq('quest_id', questId)
+        .eq('reward_id', rewardId);
 
     if (error) {
         throw new Error(error.message);
@@ -147,10 +147,10 @@ export async function removeQuestReward(questId: number, rewardId: number) {
 
 export async function isQuestClaimed(user: Tables<"players">, questId: number) {
     const { data, error } = await supabase
-        .from('eventQuestClaims')
+        .from('event_quest_claims')
         .select('*')
-        .eq('userId', user.uid!)
-        .eq('questId', questId)
+        .eq('user_id', user.uid!)
+        .eq('quest_id', questId)
 
     if (!data || !data.length || error) {
         return false;

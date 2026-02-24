@@ -46,7 +46,7 @@ router.route('/')
 
         var { error } = await supabase
             .from('players')
-            .update({ reviewCooldown: new Date() } as any)
+            .update({ review_cooldown: new Date() } as any)
             .match({ uid: res.locals.user.uid })
 
         if (error) {

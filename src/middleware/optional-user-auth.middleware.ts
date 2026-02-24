@@ -48,7 +48,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             const key = req.headers.authorization.split(' ')[1]
 
             const { data, error } = await supabase
-                .from('APIKey')
+                .from('api_key')
                 .select('*, players(*, clans!id(*))')
                 .eq('key', key)
                 .limit(1)
