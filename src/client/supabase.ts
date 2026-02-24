@@ -3,6 +3,7 @@ import type { Database } from '@src/types/supabase'
 import type { CamelizeDeep } from '@src/utils/casing'
 import { camelizeDeep } from '@src/utils/casing'
 
+
 type CamelizedQueryResult<T> = T extends { data: infer D }
     ? Omit<T, 'data'> & { data: CamelizeDeep<D> }
     : T
