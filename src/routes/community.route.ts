@@ -3,7 +3,7 @@ import userAuth from '@src/middleware/user-auth.middleware'
 import optionalAuth from '@src/middleware/optional-user-auth.middleware'
 import adminAuth from '@src/middleware/admin-auth.middleware'
 import _supabase from '@src/client/supabase'
-const db: any = _supabase
+const db = _supabase
 import {
     getPostsWithLikeStatus,
     getPostWithLikeStatus,
@@ -60,23 +60,23 @@ const router = express.Router()
 async function getApprovedPostIds(postIds: number[]): Promise<Set<number>> {
     if (postIds.length === 0) return new Set()
     const { data, error } = await db
-        .from('community_posts_admin')
-        .select('post_id')
-        .in('post_id', postIds)
-        .eq('moderation_status', 'approved')
+        .from('communityPostsAdmin')
+        .select('postId')
+        .in('postId', postIds)
+        .eq('moderationStatus', 'approved')
     if (error) throw new Error(error.message)
-    return new Set((data || []).map((r: any) => r.post_id))
+    return new Set((data || []).map((r: any) => r.postId))
 }
 
 /** Check if a single post is approved */
 async function isPostApproved(postId: number): Promise<boolean> {
     const { data, error } = await db
-        .from('community_posts_admin')
-        .select('moderation_status')
-        .eq('post_id', postId)
+        .from('communityPostsAdmin')
+        .select('moderationStatus')
+        .eq('postId', postId)
         .single()
     if (error) return false
-    return data?.moderation_status === 'approved'
+    return data?.moderationStatus === 'approved'
 }
 
 /** Map service errors to HTTP status codes */
@@ -136,7 +136,7 @@ router.route('/posts')
         const type = req.query.type as string | undefined
         const limit = parseInt(req.query.limit as string) || 20
         const offset = parseInt(req.query.offset as string) || 0
-        const sortBy = (req.query.sortBy as string) || 'created_at'
+        const sortBy = (req.query.sortBy as string) || 'createdAt'
         const ascending = req.query.ascending === 'true'
         const search = req.query.search as string | undefined
         const tagId = req.query.tagId ? parseInt(req.query.tagId as string) : undefined
@@ -591,7 +591,7 @@ router.route('/posts/:id/comments')
                 uid: res.locals.user.uid,
                 userName: res.locals.user.name || undefined,
                 content: req.body.content,
-                attached_level: req.body.attached_level
+                attachedLevel: req.body.attachedLevel
             })
             res.status(201).json(comment)
         } catch (e) {
@@ -697,7 +697,7 @@ router.route('/admin/posts')
         const hidden = req.query.hidden === 'true' ? true : req.query.hidden === 'false' ? false : undefined
 
         const [posts, total] = await Promise.all([
-            getCommunityPosts({ type, limit, offset, sortBy: 'created_at', ascending: false, pinFirst: false, hidden }),
+            getCommunityPosts({ type, limit, offset, sortBy: 'createdAt', ascending: false, pinFirst: false, hidden }),
             getCommunityPostsCount(type, undefined, hidden)
         ])
 
@@ -777,7 +777,7 @@ router.route('/posts/:id/report')
         try {
             const report = await reportContent({
                 uid: res.locals.user.uid,
-                post_id: parseInt(req.params.id),
+                postId: parseInt(req.params.id),
                 reason: req.body.reason,
                 description: req.body.description
             })
@@ -793,7 +793,7 @@ router.route('/comments/:id/report')
         try {
             const report = await reportContent({
                 uid: res.locals.user.uid,
-                comment_id: parseInt(req.params.id),
+                commentId: parseInt(req.params.id),
                 reason: req.body.reason,
                 description: req.body.description
             })
@@ -849,7 +849,7 @@ router.route('/admin/posts/:id/hidden')
         const { hidden } = req.body
 
         try {
-            const post = await toggleHidden('community_posts', postId, hidden)
+            const post = await toggleHidden('communityPosts', postId, hidden)
             res.json(post)
         } catch (e: any) {
             res.status(400).json({ error: e.message })
@@ -1103,13 +1103,13 @@ router.route('/tags/:id')
 router.route('/posts/:id/tags')
     .put(userAuth, async (req, res) => {
         try {
-            const { tag_ids } = req.body
-            if (!Array.isArray(tag_ids)) {
-                res.status(400).json({ error: 'tag_ids must be an array' })
+            const { tagIds } = req.body
+            if (!Array.isArray(tagIds)) {
+                res.status(400).json({ error: 'tagIds must be an array' })
                 return
             }
             const isAdmin = res.locals.user.isAdmin
-            const tags = await setPostTags(parseInt(req.params.id), tag_ids, isAdmin)
+            const tags = await setPostTags(parseInt(req.params.id), tagIds, isAdmin)
             res.json(tags)
         } catch (e) {
             handleServiceError(res, e)

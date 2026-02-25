@@ -921,43 +921,43 @@ export type Database = {
           },
         ]
       }
-      community_comments: {
+      communityComments: {
         Row: {
-          attached_level: Json | null
+          attachedLevel: Json | null
           content: string
-          created_at: string
+          createdAt: string
           hidden: boolean
           id: number
-          likes_count: number
-          post_id: number
+          likesCount: number
+          postId: number
           uid: string
         }
         Insert: {
-          attached_level?: Json | null
+          attachedLevel?: Json | null
           content: string
-          created_at?: string
+          createdAt?: string
           hidden?: boolean
           id?: number
-          likes_count?: number
-          post_id: number
+          likesCount?: number
+          postId: number
           uid: string
         }
         Update: {
-          attached_level?: Json | null
+          attachedLevel?: Json | null
           content?: string
-          created_at?: string
+          createdAt?: string
           hidden?: boolean
           id?: number
-          likes_count?: number
-          post_id?: number
+          likesCount?: number
+          postId?: number
           uid?: string
         }
         Relationships: [
           {
             foreignKeyName: "community_comments_post_id_fkey"
-            columns: ["post_id"]
+            columns: ["postId"]
             isOneToOne: false
-            referencedRelation: "community_posts"
+            referencedRelation: "communityPosts"
             referencedColumns: ["id"]
           },
           {
@@ -969,70 +969,70 @@ export type Database = {
           },
         ]
       }
-      community_comments_admin: {
+      communityCommentsAdmin: {
         Row: {
-          comment_id: number
+          commentId: number
           hidden: boolean
-          moderation_result: Json | null
-          moderation_status: string
+          moderationResult: Json | null
+          moderationStatus: string
         }
         Insert: {
-          comment_id: number
+          commentId: number
           hidden?: boolean
-          moderation_result?: Json | null
-          moderation_status?: string
+          moderationResult?: Json | null
+          moderationStatus?: string
         }
         Update: {
-          comment_id?: number
+          commentId?: number
           hidden?: boolean
-          moderation_result?: Json | null
-          moderation_status?: string
+          moderationResult?: Json | null
+          moderationStatus?: string
         }
         Relationships: [
           {
             foreignKeyName: "community_comments_admin_comment_id_fkey"
-            columns: ["comment_id"]
+            columns: ["commentId"]
             isOneToOne: true
-            referencedRelation: "community_comments"
+            referencedRelation: "communityComments"
             referencedColumns: ["id"]
           },
         ]
       }
-      community_likes: {
+      communityLikes: {
         Row: {
-          comment_id: number | null
-          created_at: string
+          commentId: number | null
+          createdAt: string
           id: number
-          post_id: number | null
+          postId: number | null
           uid: string
         }
         Insert: {
-          comment_id?: number | null
-          created_at?: string
+          commentId?: number | null
+          createdAt?: string
           id?: number
-          post_id?: number | null
+          postId?: number | null
           uid: string
         }
         Update: {
-          comment_id?: number | null
-          created_at?: string
+          commentId?: number | null
+          createdAt?: string
           id?: number
-          post_id?: number | null
+          postId?: number | null
           uid?: string
         }
         Relationships: [
           {
             foreignKeyName: "community_likes_comment_id_fkey"
-            columns: ["comment_id"]
+            columns: ["commentId"]
             isOneToOne: false
-            referencedRelation: "community_comments"
+            referencedRelation: "communityComments"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "community_likes_post_id_fkey"
-            columns: ["post_id"]
+            columns: ["postId"]
             isOneToOne: false
-            referencedRelation: "community_posts"
+            referencedRelation: "communityPosts"
             referencedColumns: ["id"]
           },
           {
@@ -1044,37 +1044,37 @@ export type Database = {
           },
         ]
       }
-      community_post_views: {
+      communityPostViews: {
         Row: {
-          created_at: string
+          createdAt: string
           id: number
-          last_viewed_at: string
-          post_id: number
+          lastViewedAt: string
+          postId: number
           uid: string
-          view_count: number
+          viewCount: number
         }
         Insert: {
-          created_at?: string
+          createdAt?: string
           id?: number
-          last_viewed_at?: string
-          post_id: number
+          lastViewedAt?: string
+          postId: number
           uid: string
-          view_count?: number
+          viewCount?: number
         }
         Update: {
-          created_at?: string
+          createdAt?: string
           id?: number
-          last_viewed_at?: string
-          post_id?: number
+          lastViewedAt?: string
+          postId?: number
           uid?: string
-          view_count?: number
+          viewCount?: number
         }
         Relationships: [
           {
             foreignKeyName: "community_post_views_post_id_fkey"
-            columns: ["post_id"]
+            columns: ["postId"]
             isOneToOne: false
-            referencedRelation: "community_posts"
+            referencedRelation: "communityPosts"
             referencedColumns: ["id"]
           },
           {
@@ -1086,63 +1086,63 @@ export type Database = {
           },
         ]
       }
-      community_posts: {
+      communityPosts: {
         Row: {
-          attached_level: Json | null
-          attached_record: Json | null
-          comments_count: number
+          attachedLevel: Json | null
+          attachedRecord: Json | null
+          commentsCount: number
           content: string
-          created_at: string
+          createdAt: string
           fts: unknown
           id: number
-          image_url: string | null
-          is_recommended: boolean | null
-          likes_count: number
+          imageUrl: string | null
+          isRecommended: boolean | null
+          likesCount: number
           pinned: boolean
           title: string
           type: string
           uid: string
-          updated_at: string | null
-          video_url: string | null
-          views_count: number
+          updatedAt: string | null
+          videoUrl: string | null
+          viewsCount: number
         }
         Insert: {
-          attached_level?: Json | null
-          attached_record?: Json | null
-          comments_count?: number
+          attachedLevel?: Json | null
+          attachedRecord?: Json | null
+          commentsCount?: number
           content?: string
-          created_at?: string
+          createdAt?: string
           fts?: unknown
           id?: number
-          image_url?: string | null
-          is_recommended?: boolean | null
-          likes_count?: number
+          imageUrl?: string | null
+          isRecommended?: boolean | null
+          likesCount?: number
           pinned?: boolean
           title: string
           type?: string
           uid: string
-          updated_at?: string | null
-          video_url?: string | null
-          views_count?: number
+          updatedAt?: string | null
+          videoUrl?: string | null
+          viewsCount?: number
         }
         Update: {
-          attached_level?: Json | null
-          attached_record?: Json | null
-          comments_count?: number
+          attachedLevel?: Json | null
+          attachedRecord?: Json | null
+          commentsCount?: number
           content?: string
-          created_at?: string
+          createdAt?: string
           fts?: unknown
           id?: number
-          image_url?: string | null
-          is_recommended?: boolean | null
-          likes_count?: number
+          imageUrl?: string | null
+          isRecommended?: boolean | null
+          likesCount?: number
           pinned?: boolean
           title?: string
           type?: string
           uid?: string
-          updated_at?: string | null
-          video_url?: string | null
-          views_count?: number
+          updatedAt?: string | null
+          videoUrl?: string | null
+          viewsCount?: number
         }
         Relationships: [
           {
@@ -1154,92 +1154,92 @@ export type Database = {
           },
         ]
       }
-      community_posts_admin: {
+      communityPostsAdmin: {
         Row: {
           hidden: boolean
-          moderation_result: Json | null
-          moderation_status: string
-          post_id: number
+          moderationResult: Json | null
+          moderationStatus: string
+          postId: number
         }
         Insert: {
           hidden?: boolean
-          moderation_result?: Json | null
-          moderation_status?: string
-          post_id: number
+          moderationResult?: Json | null
+          moderationStatus?: string
+          postId: number
         }
         Update: {
           hidden?: boolean
-          moderation_result?: Json | null
-          moderation_status?: string
-          post_id?: number
+          moderationResult?: Json | null
+          moderationStatus?: string
+          postId?: number
         }
         Relationships: [
           {
             foreignKeyName: "community_posts_admin_post_id_fkey"
-            columns: ["post_id"]
+            columns: ["postId"]
             isOneToOne: true
-            referencedRelation: "community_posts"
+            referencedRelation: "communityPosts"
             referencedColumns: ["id"]
           },
         ]
       }
-      community_posts_tags: {
+      communityPostsTags: {
         Row: {
-          post_id: number
-          tag_id: number
+          postId: number
+          tagId: number
         }
         Insert: {
-          post_id: number
-          tag_id: number
+          postId: number
+          tagId: number
         }
         Update: {
-          post_id?: number
-          tag_id?: number
+          postId?: number
+          tagId?: number
         }
         Relationships: [
           {
             foreignKeyName: "community_posts_tags_post_id_fkey"
-            columns: ["post_id"]
+            columns: ["postId"]
             isOneToOne: false
-            referencedRelation: "community_posts"
+            referencedRelation: "communityPosts"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "community_posts_tags_tag_id_fkey"
-            columns: ["tag_id"]
+            columns: ["tagId"]
             isOneToOne: false
-            referencedRelation: "post_tags"
+            referencedRelation: "postTags"
             referencedColumns: ["id"]
           },
         ]
       }
-      community_reports: {
+      communityReports: {
         Row: {
-          comment_id: number | null
-          created_at: string
+          commentId: number | null
+          createdAt: string
           description: string | null
           id: number
-          post_id: number | null
+          postId: number | null
           reason: string
           resolved: boolean
           uid: string
         }
         Insert: {
-          comment_id?: number | null
-          created_at?: string
+          commentId?: number | null
+          createdAt?: string
           description?: string | null
           id?: number
-          post_id?: number | null
+          postId?: number | null
           reason?: string
           resolved?: boolean
           uid: string
         }
         Update: {
-          comment_id?: number | null
-          created_at?: string
+          commentId?: number | null
+          createdAt?: string
           description?: string | null
           id?: number
-          post_id?: number | null
+          postId?: number | null
           reason?: string
           resolved?: boolean
           uid?: string
@@ -1247,16 +1247,16 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "community_reports_comment_id_fkey"
-            columns: ["comment_id"]
+            columns: ["commentId"]
             isOneToOne: false
-            referencedRelation: "community_comments"
+            referencedRelation: "communityComments"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "community_reports_post_id_fkey"
-            columns: ["post_id"]
+            columns: ["postId"]
             isOneToOne: false
-            referencedRelation: "community_posts"
+            referencedRelation: "communityPosts"
             referencedColumns: ["id"]
           },
           {
@@ -2646,25 +2646,25 @@ export type Database = {
           },
         ]
       }
-      post_tags: {
+      postTags: {
         Row: {
-          admin_only: boolean
+          adminOnly: boolean
           color: string
-          created_at: string
+          createdAt: string
           id: number
           name: string
         }
         Insert: {
-          admin_only?: boolean
+          adminOnly?: boolean
           color?: string
-          created_at?: string
+          createdAt?: string
           id?: number
           name: string
         }
         Update: {
-          admin_only?: boolean
+          adminOnly?: boolean
           color?: string
-          created_at?: string
+          createdAt?: string
           id?: number
           name?: string
         }
@@ -3070,24 +3070,24 @@ export type Database = {
           p_user_id?: string
         }
         Returns: {
-          attached_level: Json
-          attached_record: Json
-          comments_count: number
+          attachedLevel: Json
+          attachedRecord: Json
+          commentsCount: number
           content: string
-          created_at: string
+          createdAt: string
           hidden: boolean
           id: number
-          image_url: string
-          is_recommended: boolean
-          likes_count: number
+          imageUrl: string
+          isRecommended: boolean
+          likesCount: number
           pinned: boolean
-          recommendation_score: number
+          recommendationScore: number
           title: string
           type: string
           uid: string
-          updated_at: string
-          video_url: string
-          views_count: number
+          updatedAt: string
+          videoUrl: string
+          viewsCount: number
         }[]
       }
       get_top_buyers: {
