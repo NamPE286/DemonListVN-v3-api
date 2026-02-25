@@ -413,25 +413,32 @@ export async function getPlayerLevelProgress(battlePassLevelId: number, userId: 
 
 export type LevelType = 'normal' | 'daily' | 'weekly';
 
+async function getLatestDailyWeeklyLevel(seasonId: number, type: 'daily' | 'weekly') {
+    const { data, error } = await supabase
+        .from('battlePassLevels')
+        .select('*, levels(*)')
+        .eq('seasonId', seasonId)
+        .eq('type', type)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
 /**
  * Get daily or weekly level for a season
  */
 export async function getSeasonLevelByType(seasonId: number, type: LevelType) {
     // For daily/weekly we only want the latest level (limit 1)
     if (type === 'daily' || type === 'weekly') {
-        const { data, error } = await supabase
-            .from('battlePassLevels')
-            .select('*, levels(*)')
-            .eq('seasonId', seasonId)
-            .eq('type', type)
-            .order('created_at', { ascending: false })
-            .limit(1)
-
-        if (error) {
-            throw new Error(error.message);
-        }
-
-        return data;
+        const latestLevel = await getLatestDailyWeeklyLevel(seasonId, type);
+        return latestLevel ? [latestLevel] : [];
     }
 
     // For normal type return all levels for the season
@@ -453,18 +460,10 @@ export async function getSeasonLevelByType(seasonId: number, type: LevelType) {
  * Get both daily and weekly levels for a season with optional user progress
  */
 export async function getDailyWeeklyLevels(seasonId: number, userId?: string) {
-    const { data, error } = await supabase
-        .from('battlePassLevels')
-        .select('*, levels(*)')
-        .eq('seasonId', seasonId)
-        .in('type', ['daily', 'weekly']);
-
-    if (error) {
-        throw new Error(error.message);
-    }
-
-    const dailyLevel = data?.find(l => l.type === 'daily') || null;
-    const weeklyLevel = data?.find(l => l.type === 'weekly') || null;
+    const [dailyLevel, weeklyLevel] = await Promise.all([
+        getLatestDailyWeeklyLevel(seasonId, 'daily'),
+        getLatestDailyWeeklyLevel(seasonId, 'weekly')
+    ]);
 
     // If userId provided, fetch progress for these levels
     let dailyProgress = null;
@@ -520,6 +519,12 @@ export async function claimDailyWeeklyReward(
         throw new Error('This is not a daily or weekly level');
     }
 
+    // Ensure only latest daily/weekly level is claimable
+    const latestLevel = await getLatestDailyWeeklyLevel(bpLevel.seasonId, bpLevel.type);
+    if (!latestLevel || latestLevel.id !== bpLevel.id) {
+        throw new Error('Daily or Weekly level expired');
+    }
+
     // Check if season is active
     const isActive = await isSeasonActive(bpLevel.seasonId);
     if (!isActive) {
@@ -553,16 +558,25 @@ export async function claimDailyWeeklyReward(
     // Calculate XP to award
     const xpToAward = claimType === 'minProgress' ? bpLevel.minProgressXp : bpLevel.xp;
 
-    // Update claim status
+    // Update claim status atomically to prevent double claim in concurrent requests
     const updateField = claimType === 'minProgress' ? 'minProgressClaimed' : 'completionClaimed';
-    const { error: updateError } = await supabase
+    const { data: updatedClaim, error: updateError } = await supabase
         .from('battlePassLevelProgress')
         .update({ [updateField]: true })
         .eq('battlePassLevelId', battlePassLevelId)
-        .eq('userID', userId);
+        .eq('userID', userId)
+        .eq(updateField, false)
+        .select('battlePassLevelId')
+        .maybeSingle();
 
     if (updateError) {
         throw new Error(updateError.message);
+    }
+
+    if (!updatedClaim) {
+        throw new Error(claimType === 'minProgress'
+            ? 'Minimum progress reward already claimed'
+            : 'Completion reward already claimed');
     }
 
     // Award XP
@@ -591,28 +605,16 @@ export async function refreshDailyLevelProgress() {
         return { refreshed: 0, message: 'No active season' };
     }
 
-    // Get all daily levels for the current season
-    const { data: dailyLevels, error: levelsError } = await supabase
-        .from('battlePassLevels')
-        .select('id')
-        .eq('seasonId', season.id)
-        .eq('type', 'daily');
-
-    if (levelsError) {
-        throw new Error(levelsError.message);
-    }
-
-    if (!dailyLevels || dailyLevels.length === 0) {
+    const latestDailyLevel = await getLatestDailyWeeklyLevel(season.id, 'daily');
+    if (!latestDailyLevel) {
         return { refreshed: 0, message: 'No daily levels found' };
     }
 
-    const levelIds = dailyLevels.map(l => l.id);
-
-    // Delete all progress for these levels
+    // Delete all progress for latest daily level only
     const { error: deleteError, count } = await supabase
         .from('battlePassLevelProgress')
         .delete()
-        .in('battlePassLevelId', levelIds);
+        .eq('battlePassLevelId', latestDailyLevel.id);
 
     if (deleteError) {
         throw new Error(deleteError.message);
@@ -620,7 +622,7 @@ export async function refreshDailyLevelProgress() {
 
     return {
         refreshed: count ?? 0,
-        levelIds,
+        levelIds: [latestDailyLevel.id],
         seasonId: season.id
     };
 }
@@ -635,28 +637,16 @@ export async function refreshWeeklyLevelProgress() {
         return { refreshed: 0, message: 'No active season' };
     }
 
-    // Get all weekly levels for the current season
-    const { data: weeklyLevels, error: levelsError } = await supabase
-        .from('battlePassLevels')
-        .select('id')
-        .eq('seasonId', season.id)
-        .eq('type', 'weekly');
-
-    if (levelsError) {
-        throw new Error(levelsError.message);
-    }
-
-    if (!weeklyLevels || weeklyLevels.length === 0) {
+    const latestWeeklyLevel = await getLatestDailyWeeklyLevel(season.id, 'weekly');
+    if (!latestWeeklyLevel) {
         return { refreshed: 0, message: 'No weekly levels found' };
     }
 
-    const levelIds = weeklyLevels.map(l => l.id);
-
-    // Delete all progress for these levels
+    // Delete all progress for latest weekly level only
     const { error: deleteError, count } = await supabase
         .from('battlePassLevelProgress')
         .delete()
-        .in('battlePassLevelId', levelIds);
+        .eq('battlePassLevelId', latestWeeklyLevel.id);
 
     if (deleteError) {
         throw new Error(deleteError.message);
@@ -664,7 +654,7 @@ export async function refreshWeeklyLevelProgress() {
 
     return {
         refreshed: count ?? 0,
-        levelIds,
+        levelIds: [latestWeeklyLevel.id],
         seasonId: season.id
     };
 }
