@@ -861,7 +861,7 @@ export async function getSeasonMapPacks(seasonId: number) {
         .eq('seasonId', seasonId)
         .lte('unlockWeek', weeksSinceStart + 1)
         .order('unlockWeek', { ascending: false })
-        .order('order', { ascending: true });
+        .order('sortOrder', { ascending: true });
 
     if (error) {
         throw new Error(error.message);
@@ -876,7 +876,7 @@ export async function getAllSeasonMapPacks(seasonId: number) {
         .select('*, mapPacks(*, mapPackLevels(*, levels(*)))')
         .eq('seasonId', seasonId)
         .order('unlockWeek', { ascending: true })
-        .order('order', { ascending: true });
+        .order('sortOrder', { ascending: true });
 
     if (error) {
         throw new Error(error.message);
@@ -900,24 +900,24 @@ export async function getBattlePassMapPack(battlePassMapPackId: number) {
 }
 
 export async function addBattlePassMapPack(bpMapPack: TablesInsert<"battlePassMapPacks">) {
-    // Push all map packs with order >= new order by 1
-    if (bpMapPack.order !== undefined && bpMapPack.seasonId !== undefined) {
+    // Push all map packs with sortOrder >= new sortOrder by 1
+    if (bpMapPack.sortOrder !== undefined && bpMapPack.seasonId !== undefined) {
         // Get all map packs that need to be shifted
         const { data: mapPacksToShift, error: fetchError } = await supabase
             .from('battlePassMapPacks')
-            .select('id, order')
+            .select('id, sortOrder')
             .eq('seasonId', bpMapPack.seasonId)
-            .gte('order', bpMapPack.order);
+            .gte('sortOrder', bpMapPack.sortOrder);
 
         if (fetchError) {
             throw new Error(fetchError.message);
         }
 
-        // Update each map pack by incrementing its order
+        // Update each map pack by incrementing its sortOrder
         for (const mapPack of mapPacksToShift || []) {
             const { error: updateError } = await supabase
                 .from('battlePassMapPacks')
-                .update({ order: mapPack.order + 1 })
+                .update({ sortOrder: mapPack.sortOrder + 1 })
                 .eq('id', mapPack.id);
 
             if (updateError) {
@@ -940,10 +940,10 @@ export async function addBattlePassMapPack(bpMapPack: TablesInsert<"battlePassMa
 }
 
 export async function updateBattlePassMapPack(battlePassMapPackId: number, updates: Partial<TablesInsert<"battlePassMapPacks">>) {
-    if (updates.order !== undefined) {
+    if (updates.sortOrder !== undefined) {
         const { data: currentMapPack, error: fetchError } = await supabase
             .from('battlePassMapPacks')
-            .select('seasonId, order')
+            .select('seasonId, sortOrder')
             .eq('id', battlePassMapPackId)
             .single();
 
