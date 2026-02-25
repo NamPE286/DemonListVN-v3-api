@@ -91,28 +91,27 @@ CREATE OR REPLACE FUNCTION "public"."auto_hide_reported_content"() RETURNS "trig
 DECLARE
     report_count integer;
 BEGIN
-    -- Count unresolved reports for this content in the last 24 hours
-    IF NEW.post_id IS NOT NULL THEN
+    IF NEW."postId" IS NOT NULL THEN
         SELECT COUNT(*) INTO report_count
-        FROM public.community_reports
-        WHERE post_id = NEW.post_id
+        FROM public."communityReports"
+        WHERE "postId" = NEW."postId"
           AND resolved = false
-          AND created_at > now() - interval '24 hours';
+          AND "createdAt" > now() - interval '24 hours';
 
         IF report_count >= 10 THEN
-            UPDATE public.community_posts SET hidden = true WHERE id = NEW.post_id;
+            UPDATE public."communityPosts" SET hidden = true WHERE id = NEW."postId";
         END IF;
     END IF;
 
-    IF NEW.comment_id IS NOT NULL THEN
+    IF NEW."commentId" IS NOT NULL THEN
         SELECT COUNT(*) INTO report_count
-        FROM public.community_reports
-        WHERE comment_id = NEW.comment_id
+        FROM public."communityReports"
+        WHERE "commentId" = NEW."commentId"
           AND resolved = false
-          AND created_at > now() - interval '24 hours';
+          AND "createdAt" > now() - interval '24 hours';
 
         IF report_count >= 10 THEN
-            UPDATE public.community_comments SET hidden = true WHERE id = NEW.comment_id;
+            UPDATE public."communityComments" SET hidden = true WHERE id = NEW."commentId";
         END IF;
     END IF;
 
@@ -128,8 +127,8 @@ CREATE OR REPLACE FUNCTION "public"."auto_hide_reported_posts"() RETURNS "trigge
     LANGUAGE "plpgsql"
     AS $$
 BEGIN
-    IF (SELECT count(*) FROM public.community_reports WHERE post_id = NEW.post_id AND resolved = false) >= 5 THEN
-        UPDATE public.community_posts_admin SET hidden = true WHERE post_id = NEW.post_id;
+    IF (SELECT count(*) FROM public."communityReports" WHERE "postId" = NEW."postId" AND resolved = false) >= 5 THEN
+        UPDATE public."communityPostsAdmin" SET hidden = true WHERE "postId" = NEW."postId";
     END IF;
     RETURN NEW;
 END;
@@ -282,25 +281,24 @@ $$;
 ALTER FUNCTION "public"."get_random_levels"("row_count" integer, "filter_type" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_recommended_community_posts"("p_user_id" "uuid" DEFAULT NULL::"uuid", "p_limit" integer DEFAULT 25, "p_offset" integer DEFAULT 0, "p_type" "text" DEFAULT NULL::"text") RETURNS TABLE("id" integer, "uid" "uuid", "title" "text", "content" "text", "type" "text", "image_url" "text", "video_url" "text", "attached_record" "jsonb", "attached_level" "jsonb", "pinned" boolean, "likes_count" integer, "comments_count" integer, "views_count" integer, "is_recommended" boolean, "hidden" boolean, "created_at" timestamp with time zone, "updated_at" timestamp with time zone, "recommendation_score" double precision)
+CREATE OR REPLACE FUNCTION "public"."get_recommended_community_posts"("p_user_id" "uuid" DEFAULT NULL::"uuid", "p_limit" integer DEFAULT 25, "p_offset" integer DEFAULT 0, "p_type" "text" DEFAULT NULL::"text") RETURNS TABLE("id" integer, "uid" "uuid", "title" "text", "content" "text", "type" "text", "imageUrl" "text", "videoUrl" "text", "attachedRecord" "jsonb", "attachedLevel" "jsonb", "pinned" boolean, "likesCount" integer, "commentsCount" integer, "viewsCount" integer, "isRecommended" boolean, "hidden" boolean, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "recommendationScore" double precision)
     LANGUAGE "plpgsql" STABLE
     AS $$
 DECLARE
     v_preferred_types text[];
 BEGIN
-    -- Get user's preferred post types (types they've liked most)
     IF p_user_id IS NOT NULL THEN
         SELECT ARRAY_AGG(preferred_type)
         INTO v_preferred_types
         FROM (
             SELECT cp.type AS preferred_type
-            FROM public.community_likes cl
-            JOIN public.community_posts cp ON cp.id = cl.post_id
-            JOIN public.community_posts_admin cpa ON cpa.post_id = cp.id
+            FROM public."communityLikes" cl
+            JOIN public."communityPosts" cp ON cp.id = cl."postId"
+            JOIN public."communityPostsAdmin" cpa ON cpa."postId" = cp.id
             WHERE cl.uid = p_user_id
-              AND cl.post_id IS NOT NULL
+              AND cl."postId" IS NOT NULL
               AND cpa.hidden = false
-              AND cpa.moderation_status = 'approved'
+              AND cpa."moderationStatus" = 'approved'
             GROUP BY cp.type
             ORDER BY COUNT(*) DESC
             LIMIT 3
@@ -314,46 +312,41 @@ BEGIN
         p.title,
         p.content,
         p.type,
-        p.image_url,
-        p.video_url,
-        p.attached_record,
-        p.attached_level,
+        p."imageUrl",
+        p."videoUrl",
+        p."attachedRecord",
+        p."attachedLevel",
         p.pinned,
-        p.likes_count,
-        p.comments_count,
-        p.views_count,
-        p.is_recommended,
+        p."likesCount",
+        p."commentsCount",
+        p."viewsCount",
+        p."isRecommended",
         pa.hidden,
-        p.created_at,
-        p.updated_at,
+        p."createdAt",
+        p."updatedAt",
         (
-            -- Engagement score
-            (p.likes_count * 2.0 + p.comments_count * 3.0 + COALESCE(p.views_count, 0) * 0.1 + 1.0)
-            -- Recency multiplier (decays over days)
-            * (1.0 / POWER(EXTRACT(EPOCH FROM (now() - p.created_at)) / 86400.0 + 1.0, 0.8))
-            -- Preference boost for user's preferred types
-            * CASE
-                WHEN p_user_id IS NOT NULL AND v_preferred_types IS NOT NULL AND p.type = ANY(v_preferred_types) THEN 1.5
-                ELSE 1.0
-              END
-            -- Penalty for posts user has already viewed many times
-            * CASE
-                WHEN p_user_id IS NOT NULL THEN
-                    COALESCE(
-                        1.0 / (1.0 + (SELECT pv.view_count FROM public.community_post_views pv WHERE pv.uid = p_user_id AND pv.post_id = p.id)),
-                        1.0
-                    )
-                ELSE 1.0
-              END
-            -- Pinned posts get a bonus
-            * CASE WHEN p.pinned THEN 2.0 ELSE 1.0 END
-        )::double precision AS recommendation_score
-    FROM public.community_posts p
-    JOIN public.community_posts_admin pa ON pa.post_id = p.id
+            (CASE WHEN p.pinned THEN 50 ELSE 0 END) +
+            (LEAST(p."likesCount", 100) * 1.5) +
+            (LEAST(p."commentsCount", 50) * 2.0) +
+            (LEAST(p."viewsCount", 500) * 0.1) +
+            (CASE
+                WHEN p_type IS NOT NULL AND p.type = p_type THEN 20
+                WHEN v_preferred_types IS NOT NULL AND p.type = ANY(v_preferred_types) THEN 15
+                ELSE 0
+             END) +
+            (CASE
+                WHEN p."createdAt" > now() - interval '1 day' THEN 30
+                WHEN p."createdAt" > now() - interval '3 days' THEN 20
+                WHEN p."createdAt" > now() - interval '7 days' THEN 10
+                ELSE 0
+             END)
+        )::double precision AS "recommendationScore"
+    FROM public."communityPosts" p
+    JOIN public."communityPostsAdmin" pa ON pa."postId" = p.id
     WHERE pa.hidden = false
-      AND pa.moderation_status = 'approved'
+      AND pa."moderationStatus" = 'approved'
       AND (p_type IS NULL OR p.type = p_type)
-    ORDER BY recommendation_score DESC
+    ORDER BY "recommendationScore" DESC, p."createdAt" DESC
     LIMIT p_limit
     OFFSET p_offset;
 END;
@@ -390,12 +383,12 @@ CREATE OR REPLACE FUNCTION "public"."record_community_post_view"("p_user_id" "uu
     LANGUAGE "plpgsql"
     AS $$
 BEGIN
-    INSERT INTO public.community_post_views (uid, post_id, view_count, last_viewed_at)
+    INSERT INTO public."communityPostViews" (uid, "postId", "viewCount", "lastViewedAt")
     VALUES (p_user_id, p_post_id, 1, now())
-    ON CONFLICT (uid, post_id)
+    ON CONFLICT (uid, "postId")
     DO UPDATE SET
-        view_count = community_post_views.view_count + 1,
-        last_viewed_at = now();
+        "viewCount" = "communityPostViews"."viewCount" + 1,
+        "lastViewedAt" = now();
 END;
 $$;
 
@@ -436,16 +429,16 @@ ALTER FUNCTION "public"."update_community_comment_count"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."update_community_comments_count"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
-begin
-    if tg_op = 'INSERT' then
-        update public.community_posts set comments_count = comments_count + 1 where id = new.post_id;
-        return new;
-    elsif tg_op = 'DELETE' then
-        update public.community_posts set comments_count = comments_count - 1 where id = old.post_id;
-        return old;
-    end if;
-    return null;
-end;
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE public."communityPosts" SET "commentsCount" = "commentsCount" + 1 WHERE id = NEW."postId";
+        RETURN NEW;
+    ELSIF TG_OP = 'DELETE' THEN
+        UPDATE public."communityPosts" SET "commentsCount" = "commentsCount" - 1 WHERE id = OLD."postId";
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
 $$;
 
 
@@ -482,26 +475,26 @@ ALTER FUNCTION "public"."update_community_like_count"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."update_community_likes_count"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
-begin
-    if tg_op = 'INSERT' then
-        if new.post_id is not null then
-            update public.community_posts set likes_count = likes_count + 1 where id = new.post_id;
-        end if;
-        if new.comment_id is not null then
-            update public.community_comments set likes_count = likes_count + 1 where id = new.comment_id;
-        end if;
-        return new;
-    elsif tg_op = 'DELETE' then
-        if old.post_id is not null then
-            update public.community_posts set likes_count = likes_count - 1 where id = old.post_id;
-        end if;
-        if old.comment_id is not null then
-            update public.community_comments set likes_count = likes_count - 1 where id = old.comment_id;
-        end if;
-        return old;
-    end if;
-    return null;
-end;
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        IF NEW."postId" IS NOT NULL THEN
+            UPDATE public."communityPosts" SET "likesCount" = "likesCount" + 1 WHERE id = NEW."postId";
+        END IF;
+        IF NEW."commentId" IS NOT NULL THEN
+            UPDATE public."communityComments" SET "likesCount" = "likesCount" + 1 WHERE id = NEW."commentId";
+        END IF;
+        RETURN NEW;
+    ELSIF TG_OP = 'DELETE' THEN
+        IF OLD."postId" IS NOT NULL THEN
+            UPDATE public."communityPosts" SET "likesCount" = "likesCount" - 1 WHERE id = OLD."postId";
+        END IF;
+        IF OLD."commentId" IS NOT NULL THEN
+            UPDATE public."communityComments" SET "likesCount" = "likesCount" - 1 WHERE id = OLD."commentId";
+        END IF;
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
 $$;
 
 
@@ -512,20 +505,19 @@ CREATE OR REPLACE FUNCTION "public"."update_community_post_updated_at"() RETURNS
     LANGUAGE "plpgsql"
     AS $$
 BEGIN
-    -- Only update updated_at when content-related fields change
     IF (
         OLD.title IS DISTINCT FROM NEW.title OR
         OLD.content IS DISTINCT FROM NEW.content OR
         OLD.type IS DISTINCT FROM NEW.type OR
-        OLD.image_url IS DISTINCT FROM NEW.image_url OR
-        OLD.video_url IS DISTINCT FROM NEW.video_url OR
-        OLD.attached_record IS DISTINCT FROM NEW.attached_record OR
-        OLD.attached_level IS DISTINCT FROM NEW.attached_level OR
-        OLD.is_recommended IS DISTINCT FROM NEW.is_recommended
+        OLD."imageUrl" IS DISTINCT FROM NEW."imageUrl" OR
+        OLD."videoUrl" IS DISTINCT FROM NEW."videoUrl" OR
+        OLD."attachedRecord" IS DISTINCT FROM NEW."attachedRecord" OR
+        OLD."attachedLevel" IS DISTINCT FROM NEW."attachedLevel" OR
+        OLD."isRecommended" IS DISTINCT FROM NEW."isRecommended"
     ) THEN
-        NEW.updated_at = now();
+        NEW."updatedAt" = now();
     ELSE
-        NEW.updated_at = OLD.updated_at;
+        NEW."updatedAt" = OLD."updatedAt";
     END IF;
     RETURN NEW;
 END;
@@ -540,9 +532,9 @@ CREATE OR REPLACE FUNCTION "public"."update_community_post_views_count"() RETURN
     AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
-        UPDATE public.community_posts
-        SET views_count = views_count + 1
-        WHERE id = NEW.post_id;
+        UPDATE public."communityPosts"
+        SET "viewsCount" = "viewsCount" + 1
+        WHERE id = NEW."postId";
         RETURN NEW;
     END IF;
     RETURN NULL;
@@ -1537,7 +1529,7 @@ CREATE TABLE IF NOT EXISTS "public"."battlePassMapPacks" (
     "seasonId" bigint NOT NULL,
     "mapPackId" bigint NOT NULL,
     "unlockWeek" bigint NOT NULL,
-    "order" bigint DEFAULT '0'::bigint NOT NULL
+    "sortOrder" bigint DEFAULT '0'::bigint NOT NULL
 );
 
 
@@ -1890,31 +1882,120 @@ ALTER TABLE "public"."clans" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENT
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."community_comments" (
+CREATE TABLE IF NOT EXISTS "public"."communityComments" (
     "id" integer NOT NULL,
-    "post_id" integer NOT NULL,
+    "postId" integer NOT NULL,
     "uid" "uuid" NOT NULL,
     "content" "text" NOT NULL,
-    "likes_count" integer DEFAULT 0 NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "likesCount" integer DEFAULT 0 NOT NULL,
+    "createdAt" timestamp with time zone DEFAULT "now"() NOT NULL,
     "hidden" boolean DEFAULT false NOT NULL,
-    "attached_level" "jsonb"
+    "attachedLevel" "jsonb"
 );
 
 
-ALTER TABLE "public"."community_comments" OWNER TO "postgres";
+ALTER TABLE "public"."communityComments" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."community_comments_admin" (
-    "comment_id" integer NOT NULL,
-    "moderation_status" "text" DEFAULT 'approved'::"text" NOT NULL,
-    "moderation_result" "jsonb",
+CREATE TABLE IF NOT EXISTS "public"."communityCommentsAdmin" (
+    "commentId" integer NOT NULL,
+    "moderationStatus" "text" DEFAULT 'approved'::"text" NOT NULL,
+    "moderationResult" "jsonb",
     "hidden" boolean DEFAULT false NOT NULL,
-    CONSTRAINT "community_comments_admin_moderation_status_check" CHECK (("moderation_status" = ANY (ARRAY['approved'::"text", 'pending'::"text", 'rejected'::"text"])))
+    CONSTRAINT "community_comments_admin_moderation_status_check" CHECK (("moderationStatus" = ANY (ARRAY['approved'::"text", 'pending'::"text", 'rejected'::"text"])))
 );
 
 
-ALTER TABLE "public"."community_comments_admin" OWNER TO "postgres";
+ALTER TABLE "public"."communityCommentsAdmin" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."communityLikes" (
+    "id" integer NOT NULL,
+    "uid" "uuid" NOT NULL,
+    "postId" integer,
+    "commentId" integer,
+    "createdAt" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "community_likes_target_check" CHECK (((("postId" IS NOT NULL) AND ("commentId" IS NULL)) OR (("postId" IS NULL) AND ("commentId" IS NOT NULL))))
+);
+
+
+ALTER TABLE "public"."communityLikes" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."communityPostViews" (
+    "id" integer NOT NULL,
+    "uid" "uuid" NOT NULL,
+    "postId" integer NOT NULL,
+    "viewCount" integer DEFAULT 1 NOT NULL,
+    "lastViewedAt" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "createdAt" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."communityPostViews" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."communityPosts" (
+    "id" integer NOT NULL,
+    "uid" "uuid" NOT NULL,
+    "title" "text" NOT NULL,
+    "content" "text" DEFAULT ''::"text" NOT NULL,
+    "type" "text" DEFAULT 'discussion'::"text" NOT NULL,
+    "imageUrl" "text",
+    "pinned" boolean DEFAULT false NOT NULL,
+    "likesCount" integer DEFAULT 0 NOT NULL,
+    "commentsCount" integer DEFAULT 0 NOT NULL,
+    "createdAt" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updatedAt" timestamp with time zone,
+    "videoUrl" "text",
+    "attachedRecord" "jsonb",
+    "attachedLevel" "jsonb",
+    "isRecommended" boolean,
+    "fts" "tsvector" GENERATED ALWAYS AS (("setweight"("to_tsvector"('"english"'::"regconfig", COALESCE("title", ''::"text")), 'A'::"char") || "setweight"("to_tsvector"('"english"'::"regconfig", COALESCE("content", ''::"text")), 'B'::"char"))) STORED,
+    "viewsCount" integer DEFAULT 0 NOT NULL,
+    CONSTRAINT "community_posts_type_check" CHECK (("type" = ANY (ARRAY['discussion'::"text", 'media'::"text", 'guide'::"text", 'announcement'::"text", 'review'::"text"])))
+);
+
+
+ALTER TABLE "public"."communityPosts" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."communityPostsAdmin" (
+    "postId" integer NOT NULL,
+    "moderationStatus" "text" DEFAULT 'approved'::"text" NOT NULL,
+    "moderationResult" "jsonb",
+    "hidden" boolean DEFAULT false NOT NULL,
+    CONSTRAINT "community_posts_admin_moderation_status_check" CHECK (("moderationStatus" = ANY (ARRAY['approved'::"text", 'pending'::"text", 'rejected'::"text"])))
+);
+
+
+ALTER TABLE "public"."communityPostsAdmin" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."communityPostsTags" (
+    "postId" integer NOT NULL,
+    "tagId" integer NOT NULL
+);
+
+
+ALTER TABLE "public"."communityPostsTags" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."communityReports" (
+    "id" integer NOT NULL,
+    "uid" "uuid" NOT NULL,
+    "postId" integer,
+    "commentId" integer,
+    "reason" "text" DEFAULT 'inappropriate'::"text" NOT NULL,
+    "description" "text",
+    "resolved" boolean DEFAULT false NOT NULL,
+    "createdAt" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "community_reports_reason_check" CHECK (("reason" = ANY (ARRAY['inappropriate'::"text", 'spam'::"text", 'harassment'::"text", 'misinformation'::"text", 'other'::"text"]))),
+    CONSTRAINT "community_reports_target_check" CHECK (((("postId" IS NOT NULL) AND ("commentId" IS NULL)) OR (("postId" IS NULL) AND ("commentId" IS NOT NULL))))
+);
+
+
+ALTER TABLE "public"."communityReports" OWNER TO "postgres";
 
 
 CREATE SEQUENCE IF NOT EXISTS "public"."community_comments_id_seq"
@@ -1929,21 +2010,8 @@ CREATE SEQUENCE IF NOT EXISTS "public"."community_comments_id_seq"
 ALTER SEQUENCE "public"."community_comments_id_seq" OWNER TO "postgres";
 
 
-ALTER SEQUENCE "public"."community_comments_id_seq" OWNED BY "public"."community_comments"."id";
+ALTER SEQUENCE "public"."community_comments_id_seq" OWNED BY "public"."communityComments"."id";
 
-
-
-CREATE TABLE IF NOT EXISTS "public"."community_likes" (
-    "id" integer NOT NULL,
-    "uid" "uuid" NOT NULL,
-    "post_id" integer,
-    "comment_id" integer,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "community_likes_target_check" CHECK (((("post_id" IS NOT NULL) AND ("comment_id" IS NULL)) OR (("post_id" IS NULL) AND ("comment_id" IS NOT NULL))))
-);
-
-
-ALTER TABLE "public"."community_likes" OWNER TO "postgres";
 
 
 CREATE SEQUENCE IF NOT EXISTS "public"."community_likes_id_seq"
@@ -1958,21 +2026,8 @@ CREATE SEQUENCE IF NOT EXISTS "public"."community_likes_id_seq"
 ALTER SEQUENCE "public"."community_likes_id_seq" OWNER TO "postgres";
 
 
-ALTER SEQUENCE "public"."community_likes_id_seq" OWNED BY "public"."community_likes"."id";
+ALTER SEQUENCE "public"."community_likes_id_seq" OWNED BY "public"."communityLikes"."id";
 
-
-
-CREATE TABLE IF NOT EXISTS "public"."community_post_views" (
-    "id" integer NOT NULL,
-    "uid" "uuid" NOT NULL,
-    "post_id" integer NOT NULL,
-    "view_count" integer DEFAULT 1 NOT NULL,
-    "last_viewed_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
-);
-
-
-ALTER TABLE "public"."community_post_views" OWNER TO "postgres";
 
 
 CREATE SEQUENCE IF NOT EXISTS "public"."community_post_views_id_seq"
@@ -1987,45 +2042,8 @@ CREATE SEQUENCE IF NOT EXISTS "public"."community_post_views_id_seq"
 ALTER SEQUENCE "public"."community_post_views_id_seq" OWNER TO "postgres";
 
 
-ALTER SEQUENCE "public"."community_post_views_id_seq" OWNED BY "public"."community_post_views"."id";
+ALTER SEQUENCE "public"."community_post_views_id_seq" OWNED BY "public"."communityPostViews"."id";
 
-
-
-CREATE TABLE IF NOT EXISTS "public"."community_posts" (
-    "id" integer NOT NULL,
-    "uid" "uuid" NOT NULL,
-    "title" "text" NOT NULL,
-    "content" "text" DEFAULT ''::"text" NOT NULL,
-    "type" "text" DEFAULT 'discussion'::"text" NOT NULL,
-    "image_url" "text",
-    "pinned" boolean DEFAULT false NOT NULL,
-    "likes_count" integer DEFAULT 0 NOT NULL,
-    "comments_count" integer DEFAULT 0 NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone,
-    "video_url" "text",
-    "attached_record" "jsonb",
-    "attached_level" "jsonb",
-    "is_recommended" boolean,
-    "fts" "tsvector" GENERATED ALWAYS AS (("setweight"("to_tsvector"('"english"'::"regconfig", COALESCE("title", ''::"text")), 'A'::"char") || "setweight"("to_tsvector"('"english"'::"regconfig", COALESCE("content", ''::"text")), 'B'::"char"))) STORED,
-    "views_count" integer DEFAULT 0 NOT NULL,
-    CONSTRAINT "community_posts_type_check" CHECK (("type" = ANY (ARRAY['discussion'::"text", 'media'::"text", 'guide'::"text", 'announcement'::"text", 'review'::"text"])))
-);
-
-
-ALTER TABLE "public"."community_posts" OWNER TO "postgres";
-
-
-CREATE TABLE IF NOT EXISTS "public"."community_posts_admin" (
-    "post_id" integer NOT NULL,
-    "moderation_status" "text" DEFAULT 'approved'::"text" NOT NULL,
-    "moderation_result" "jsonb",
-    "hidden" boolean DEFAULT false NOT NULL,
-    CONSTRAINT "community_posts_admin_moderation_status_check" CHECK (("moderation_status" = ANY (ARRAY['approved'::"text", 'pending'::"text", 'rejected'::"text"])))
-);
-
-
-ALTER TABLE "public"."community_posts_admin" OWNER TO "postgres";
 
 
 CREATE SEQUENCE IF NOT EXISTS "public"."community_posts_id_seq"
@@ -2040,34 +2058,8 @@ CREATE SEQUENCE IF NOT EXISTS "public"."community_posts_id_seq"
 ALTER SEQUENCE "public"."community_posts_id_seq" OWNER TO "postgres";
 
 
-ALTER SEQUENCE "public"."community_posts_id_seq" OWNED BY "public"."community_posts"."id";
+ALTER SEQUENCE "public"."community_posts_id_seq" OWNED BY "public"."communityPosts"."id";
 
-
-
-CREATE TABLE IF NOT EXISTS "public"."community_posts_tags" (
-    "post_id" integer NOT NULL,
-    "tag_id" integer NOT NULL
-);
-
-
-ALTER TABLE "public"."community_posts_tags" OWNER TO "postgres";
-
-
-CREATE TABLE IF NOT EXISTS "public"."community_reports" (
-    "id" integer NOT NULL,
-    "uid" "uuid" NOT NULL,
-    "post_id" integer,
-    "comment_id" integer,
-    "reason" "text" DEFAULT 'inappropriate'::"text" NOT NULL,
-    "description" "text",
-    "resolved" boolean DEFAULT false NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "community_reports_reason_check" CHECK (("reason" = ANY (ARRAY['inappropriate'::"text", 'spam'::"text", 'harassment'::"text", 'misinformation'::"text", 'other'::"text"]))),
-    CONSTRAINT "community_reports_target_check" CHECK (((("post_id" IS NOT NULL) AND ("comment_id" IS NULL)) OR (("post_id" IS NULL) AND ("comment_id" IS NOT NULL))))
-);
-
-
-ALTER TABLE "public"."community_reports" OWNER TO "postgres";
 
 
 CREATE SEQUENCE IF NOT EXISTS "public"."community_reports_id_seq"
@@ -2082,7 +2074,7 @@ CREATE SEQUENCE IF NOT EXISTS "public"."community_reports_id_seq"
 ALTER SEQUENCE "public"."community_reports_id_seq" OWNER TO "postgres";
 
 
-ALTER SEQUENCE "public"."community_reports_id_seq" OWNED BY "public"."community_reports"."id";
+ALTER SEQUENCE "public"."community_reports_id_seq" OWNED BY "public"."communityReports"."id";
 
 
 
@@ -2607,7 +2599,9 @@ CREATE TABLE IF NOT EXISTS "public"."playerConvictions" (
     "id" bigint NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "content" "text" NOT NULL,
-    "userId" "uuid"
+    "userId" "uuid",
+    "creditReduce" bigint DEFAULT '0'::bigint NOT NULL,
+    "isHidden" boolean DEFAULT false NOT NULL
 );
 
 
@@ -2734,16 +2728,16 @@ ALTER TABLE "public"."players" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDE
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."post_tags" (
+CREATE TABLE IF NOT EXISTS "public"."postTags" (
     "id" integer NOT NULL,
     "name" "text" NOT NULL,
     "color" "text" DEFAULT '#6b7280'::"text" NOT NULL,
-    "admin_only" boolean DEFAULT false NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "adminOnly" boolean DEFAULT false NOT NULL,
+    "createdAt" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
 
-ALTER TABLE "public"."post_tags" OWNER TO "postgres";
+ALTER TABLE "public"."postTags" OWNER TO "postgres";
 
 
 CREATE SEQUENCE IF NOT EXISTS "public"."post_tags_id_seq"
@@ -2758,7 +2752,7 @@ CREATE SEQUENCE IF NOT EXISTS "public"."post_tags_id_seq"
 ALTER SEQUENCE "public"."post_tags_id_seq" OWNER TO "postgres";
 
 
-ALTER SEQUENCE "public"."post_tags_id_seq" OWNED BY "public"."post_tags"."id";
+ALTER SEQUENCE "public"."post_tags_id_seq" OWNED BY "public"."postTags"."id";
 
 
 
@@ -2958,23 +2952,23 @@ CREATE MATERIALIZED VIEW "public"."wikiTree" AS
 ALTER MATERIALIZED VIEW "public"."wikiTree" OWNER TO "postgres";
 
 
-ALTER TABLE ONLY "public"."community_comments" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."community_comments_id_seq"'::"regclass");
+ALTER TABLE ONLY "public"."communityComments" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."community_comments_id_seq"'::"regclass");
 
 
 
-ALTER TABLE ONLY "public"."community_likes" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."community_likes_id_seq"'::"regclass");
+ALTER TABLE ONLY "public"."communityLikes" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."community_likes_id_seq"'::"regclass");
 
 
 
-ALTER TABLE ONLY "public"."community_post_views" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."community_post_views_id_seq"'::"regclass");
+ALTER TABLE ONLY "public"."communityPostViews" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."community_post_views_id_seq"'::"regclass");
 
 
 
-ALTER TABLE ONLY "public"."community_posts" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."community_posts_id_seq"'::"regclass");
+ALTER TABLE ONLY "public"."communityPosts" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."community_posts_id_seq"'::"regclass");
 
 
 
-ALTER TABLE ONLY "public"."community_reports" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."community_reports_id_seq"'::"regclass");
+ALTER TABLE ONLY "public"."communityReports" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."community_reports_id_seq"'::"regclass");
 
 
 
@@ -2982,7 +2976,7 @@ ALTER TABLE ONLY "public"."level_tags" ALTER COLUMN "id" SET DEFAULT "nextval"('
 
 
 
-ALTER TABLE ONLY "public"."post_tags" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."post_tags_id_seq"'::"regclass");
+ALTER TABLE ONLY "public"."postTags" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."post_tags_id_seq"'::"regclass");
 
 
 
@@ -3146,63 +3140,63 @@ ALTER TABLE ONLY "public"."clans"
 
 
 
-ALTER TABLE ONLY "public"."community_comments_admin"
-    ADD CONSTRAINT "community_comments_admin_pkey" PRIMARY KEY ("comment_id");
+ALTER TABLE ONLY "public"."communityCommentsAdmin"
+    ADD CONSTRAINT "community_comments_admin_pkey" PRIMARY KEY ("commentId");
 
 
 
-ALTER TABLE ONLY "public"."community_comments"
+ALTER TABLE ONLY "public"."communityComments"
     ADD CONSTRAINT "community_comments_pkey" PRIMARY KEY ("id");
 
 
 
-ALTER TABLE ONLY "public"."community_likes"
-    ADD CONSTRAINT "community_likes_comment_unique" UNIQUE ("uid", "comment_id");
+ALTER TABLE ONLY "public"."communityLikes"
+    ADD CONSTRAINT "community_likes_comment_unique" UNIQUE ("uid", "commentId");
 
 
 
-ALTER TABLE ONLY "public"."community_likes"
+ALTER TABLE ONLY "public"."communityLikes"
     ADD CONSTRAINT "community_likes_pkey" PRIMARY KEY ("id");
 
 
 
-ALTER TABLE ONLY "public"."community_likes"
-    ADD CONSTRAINT "community_likes_post_unique" UNIQUE ("uid", "post_id");
+ALTER TABLE ONLY "public"."communityLikes"
+    ADD CONSTRAINT "community_likes_post_unique" UNIQUE ("uid", "postId");
 
 
 
-ALTER TABLE ONLY "public"."community_post_views"
+ALTER TABLE ONLY "public"."communityPostViews"
     ADD CONSTRAINT "community_post_views_pkey" PRIMARY KEY ("id");
 
 
 
-ALTER TABLE ONLY "public"."community_post_views"
-    ADD CONSTRAINT "community_post_views_unique" UNIQUE ("uid", "post_id");
+ALTER TABLE ONLY "public"."communityPostViews"
+    ADD CONSTRAINT "community_post_views_unique" UNIQUE ("uid", "postId");
 
 
 
-ALTER TABLE ONLY "public"."community_posts_admin"
-    ADD CONSTRAINT "community_posts_admin_pkey" PRIMARY KEY ("post_id");
+ALTER TABLE ONLY "public"."communityPostsAdmin"
+    ADD CONSTRAINT "community_posts_admin_pkey" PRIMARY KEY ("postId");
 
 
 
-ALTER TABLE ONLY "public"."community_posts"
+ALTER TABLE ONLY "public"."communityPosts"
     ADD CONSTRAINT "community_posts_pkey" PRIMARY KEY ("id");
 
 
 
-ALTER TABLE ONLY "public"."community_posts_tags"
-    ADD CONSTRAINT "community_posts_tags_pkey" PRIMARY KEY ("post_id", "tag_id");
+ALTER TABLE ONLY "public"."communityPostsTags"
+    ADD CONSTRAINT "community_posts_tags_pkey" PRIMARY KEY ("postId", "tagId");
 
 
 
-ALTER TABLE ONLY "public"."community_reports"
+ALTER TABLE ONLY "public"."communityReports"
     ADD CONSTRAINT "community_reports_pkey" PRIMARY KEY ("id");
 
 
 
-ALTER TABLE ONLY "public"."community_reports"
-    ADD CONSTRAINT "community_reports_unique" UNIQUE ("uid", "post_id", "comment_id");
+ALTER TABLE ONLY "public"."communityReports"
+    ADD CONSTRAINT "community_reports_unique" UNIQUE ("uid", "postId", "commentId");
 
 
 
@@ -3386,12 +3380,12 @@ ALTER TABLE ONLY "public"."players"
 
 
 
-ALTER TABLE ONLY "public"."post_tags"
+ALTER TABLE ONLY "public"."postTags"
     ADD CONSTRAINT "post_tags_name_key" UNIQUE ("name");
 
 
 
-ALTER TABLE ONLY "public"."post_tags"
+ALTER TABLE ONLY "public"."postTags"
     ADD CONSTRAINT "post_tags_pkey" PRIMARY KEY ("id");
 
 
@@ -3456,87 +3450,87 @@ CREATE INDEX "battlePassXPLogs_userID_idx" ON "public"."battlePassXPLogs" USING 
 
 
 
-CREATE INDEX "idx_community_comments_admin_hidden" ON "public"."community_comments_admin" USING "btree" ("hidden");
+CREATE INDEX "idx_community_comments_admin_hidden" ON "public"."communityCommentsAdmin" USING "btree" ("hidden");
 
 
 
-CREATE INDEX "idx_community_comments_admin_status" ON "public"."community_comments_admin" USING "btree" ("moderation_status");
+CREATE INDEX "idx_community_comments_admin_status" ON "public"."communityCommentsAdmin" USING "btree" ("moderationStatus");
 
 
 
-CREATE INDEX "idx_community_comments_hidden" ON "public"."community_comments" USING "btree" ("hidden");
+CREATE INDEX "idx_community_comments_hidden" ON "public"."communityComments" USING "btree" ("hidden");
 
 
 
-CREATE INDEX "idx_community_comments_post_id" ON "public"."community_comments" USING "btree" ("post_id");
+CREATE INDEX "idx_community_comments_post_id" ON "public"."communityComments" USING "btree" ("postId");
 
 
 
-CREATE INDEX "idx_community_comments_uid" ON "public"."community_comments" USING "btree" ("uid");
+CREATE INDEX "idx_community_comments_uid" ON "public"."communityComments" USING "btree" ("uid");
 
 
 
-CREATE INDEX "idx_community_likes_comment_id" ON "public"."community_likes" USING "btree" ("comment_id");
+CREATE INDEX "idx_community_likes_comment_id" ON "public"."communityLikes" USING "btree" ("commentId");
 
 
 
-CREATE INDEX "idx_community_likes_post_id" ON "public"."community_likes" USING "btree" ("post_id");
+CREATE INDEX "idx_community_likes_post_id" ON "public"."communityLikes" USING "btree" ("postId");
 
 
 
-CREATE INDEX "idx_community_likes_uid" ON "public"."community_likes" USING "btree" ("uid");
+CREATE INDEX "idx_community_likes_uid" ON "public"."communityLikes" USING "btree" ("uid");
 
 
 
-CREATE INDEX "idx_community_post_views_post_id" ON "public"."community_post_views" USING "btree" ("post_id");
+CREATE INDEX "idx_community_post_views_post_id" ON "public"."communityPostViews" USING "btree" ("postId");
 
 
 
-CREATE INDEX "idx_community_post_views_uid" ON "public"."community_post_views" USING "btree" ("uid");
+CREATE INDEX "idx_community_post_views_uid" ON "public"."communityPostViews" USING "btree" ("uid");
 
 
 
-CREATE INDEX "idx_community_posts_admin_hidden" ON "public"."community_posts_admin" USING "btree" ("hidden");
+CREATE INDEX "idx_community_posts_admin_hidden" ON "public"."communityPostsAdmin" USING "btree" ("hidden");
 
 
 
-CREATE INDEX "idx_community_posts_admin_status" ON "public"."community_posts_admin" USING "btree" ("moderation_status");
+CREATE INDEX "idx_community_posts_admin_status" ON "public"."communityPostsAdmin" USING "btree" ("moderationStatus");
 
 
 
-CREATE INDEX "idx_community_posts_created_at" ON "public"."community_posts" USING "btree" ("created_at" DESC);
+CREATE INDEX "idx_community_posts_created_at" ON "public"."communityPosts" USING "btree" ("createdAt" DESC);
 
 
 
-CREATE INDEX "idx_community_posts_fts" ON "public"."community_posts" USING "gin" ("fts");
+CREATE INDEX "idx_community_posts_fts" ON "public"."communityPosts" USING "gin" ("fts");
 
 
 
-CREATE INDEX "idx_community_posts_pinned" ON "public"."community_posts" USING "btree" ("pinned" DESC, "created_at" DESC);
+CREATE INDEX "idx_community_posts_pinned" ON "public"."communityPosts" USING "btree" ("pinned" DESC, "createdAt" DESC);
 
 
 
-CREATE INDEX "idx_community_posts_tags_post_id" ON "public"."community_posts_tags" USING "btree" ("post_id");
+CREATE INDEX "idx_community_posts_tags_post_id" ON "public"."communityPostsTags" USING "btree" ("postId");
 
 
 
-CREATE INDEX "idx_community_posts_tags_tag_id" ON "public"."community_posts_tags" USING "btree" ("tag_id");
+CREATE INDEX "idx_community_posts_tags_tag_id" ON "public"."communityPostsTags" USING "btree" ("tagId");
 
 
 
-CREATE INDEX "idx_community_posts_type" ON "public"."community_posts" USING "btree" ("type");
+CREATE INDEX "idx_community_posts_type" ON "public"."communityPosts" USING "btree" ("type");
 
 
 
-CREATE INDEX "idx_community_posts_uid" ON "public"."community_posts" USING "btree" ("uid");
+CREATE INDEX "idx_community_posts_uid" ON "public"."communityPosts" USING "btree" ("uid");
 
 
 
-CREATE INDEX "idx_community_reports_post_id" ON "public"."community_reports" USING "btree" ("post_id");
+CREATE INDEX "idx_community_reports_post_id" ON "public"."communityReports" USING "btree" ("postId");
 
 
 
-CREATE INDEX "idx_community_reports_resolved" ON "public"."community_reports" USING "btree" ("resolved");
+CREATE INDEX "idx_community_reports_resolved" ON "public"."communityReports" USING "btree" ("resolved");
 
 
 
@@ -3560,19 +3554,19 @@ CREATE UNIQUE INDEX "wikitree_path_uidx" ON "public"."wikiTree" USING "btree" ("
 
 
 
-CREATE OR REPLACE TRIGGER "community_auto_hide_trigger" AFTER INSERT ON "public"."community_reports" FOR EACH ROW EXECUTE FUNCTION "public"."auto_hide_reported_content"();
+CREATE OR REPLACE TRIGGER "community_auto_hide_trigger" AFTER INSERT ON "public"."communityReports" FOR EACH ROW EXECUTE FUNCTION "public"."auto_hide_reported_content"();
 
 
 
-CREATE OR REPLACE TRIGGER "community_comments_count_trigger" AFTER INSERT OR DELETE ON "public"."community_comments" FOR EACH ROW EXECUTE FUNCTION "public"."update_community_comments_count"();
+CREATE OR REPLACE TRIGGER "community_comments_count_trigger" AFTER INSERT OR DELETE ON "public"."communityComments" FOR EACH ROW EXECUTE FUNCTION "public"."update_community_comments_count"();
 
 
 
-CREATE OR REPLACE TRIGGER "community_likes_count_trigger" AFTER INSERT OR DELETE ON "public"."community_likes" FOR EACH ROW EXECUTE FUNCTION "public"."update_community_likes_count"();
+CREATE OR REPLACE TRIGGER "community_likes_count_trigger" AFTER INSERT OR DELETE ON "public"."communityLikes" FOR EACH ROW EXECUTE FUNCTION "public"."update_community_likes_count"();
 
 
 
-CREATE OR REPLACE TRIGGER "community_post_views_count_trigger" AFTER INSERT ON "public"."community_post_views" FOR EACH ROW EXECUTE FUNCTION "public"."update_community_post_views_count"();
+CREATE OR REPLACE TRIGGER "community_post_views_count_trigger" AFTER INSERT ON "public"."communityPostViews" FOR EACH ROW EXECUTE FUNCTION "public"."update_community_post_views_count"();
 
 
 
@@ -3780,77 +3774,77 @@ ALTER TABLE ONLY "public"."clans"
 
 
 
-ALTER TABLE ONLY "public"."community_comments_admin"
-    ADD CONSTRAINT "community_comments_admin_comment_id_fkey" FOREIGN KEY ("comment_id") REFERENCES "public"."community_comments"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."communityCommentsAdmin"
+    ADD CONSTRAINT "community_comments_admin_comment_id_fkey" FOREIGN KEY ("commentId") REFERENCES "public"."communityComments"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."community_comments"
-    ADD CONSTRAINT "community_comments_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "public"."community_posts"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."communityComments"
+    ADD CONSTRAINT "community_comments_post_id_fkey" FOREIGN KEY ("postId") REFERENCES "public"."communityPosts"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."community_comments"
+ALTER TABLE ONLY "public"."communityComments"
     ADD CONSTRAINT "community_comments_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."community_likes"
-    ADD CONSTRAINT "community_likes_comment_id_fkey" FOREIGN KEY ("comment_id") REFERENCES "public"."community_comments"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."communityLikes"
+    ADD CONSTRAINT "community_likes_comment_id_fkey" FOREIGN KEY ("commentId") REFERENCES "public"."communityComments"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."community_likes"
-    ADD CONSTRAINT "community_likes_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "public"."community_posts"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."communityLikes"
+    ADD CONSTRAINT "community_likes_post_id_fkey" FOREIGN KEY ("postId") REFERENCES "public"."communityPosts"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."community_likes"
+ALTER TABLE ONLY "public"."communityLikes"
     ADD CONSTRAINT "community_likes_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."community_post_views"
-    ADD CONSTRAINT "community_post_views_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "public"."community_posts"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."communityPostViews"
+    ADD CONSTRAINT "community_post_views_post_id_fkey" FOREIGN KEY ("postId") REFERENCES "public"."communityPosts"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."community_post_views"
+ALTER TABLE ONLY "public"."communityPostViews"
     ADD CONSTRAINT "community_post_views_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."community_posts_admin"
-    ADD CONSTRAINT "community_posts_admin_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "public"."community_posts"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."communityPostsAdmin"
+    ADD CONSTRAINT "community_posts_admin_post_id_fkey" FOREIGN KEY ("postId") REFERENCES "public"."communityPosts"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."community_posts_tags"
-    ADD CONSTRAINT "community_posts_tags_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "public"."community_posts"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."communityPostsTags"
+    ADD CONSTRAINT "community_posts_tags_post_id_fkey" FOREIGN KEY ("postId") REFERENCES "public"."communityPosts"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."community_posts_tags"
-    ADD CONSTRAINT "community_posts_tags_tag_id_fkey" FOREIGN KEY ("tag_id") REFERENCES "public"."post_tags"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."communityPostsTags"
+    ADD CONSTRAINT "community_posts_tags_tag_id_fkey" FOREIGN KEY ("tagId") REFERENCES "public"."postTags"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."community_posts"
+ALTER TABLE ONLY "public"."communityPosts"
     ADD CONSTRAINT "community_posts_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."community_reports"
-    ADD CONSTRAINT "community_reports_comment_id_fkey" FOREIGN KEY ("comment_id") REFERENCES "public"."community_comments"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."communityReports"
+    ADD CONSTRAINT "community_reports_comment_id_fkey" FOREIGN KEY ("commentId") REFERENCES "public"."communityComments"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."community_reports"
-    ADD CONSTRAINT "community_reports_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "public"."community_posts"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."communityReports"
+    ADD CONSTRAINT "community_reports_post_id_fkey" FOREIGN KEY ("postId") REFERENCES "public"."communityPosts"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."community_reports"
+ALTER TABLE ONLY "public"."communityReports"
     ADD CONSTRAINT "community_reports_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
 
 
@@ -4223,91 +4217,91 @@ ALTER TABLE "public"."clanInvitations" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."clans" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."community_comments" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."communityComments" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."community_comments_admin" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."communityCommentsAdmin" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "community_comments_delete" ON "public"."community_comments" FOR DELETE USING (("auth"."uid"() = "uid"));
+ALTER TABLE "public"."communityLikes" ENABLE ROW LEVEL SECURITY;
 
 
-
-CREATE POLICY "community_comments_insert" ON "public"."community_comments" FOR INSERT WITH CHECK (("auth"."uid"() = "uid"));
-
+ALTER TABLE "public"."communityPostViews" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "community_comments_read" ON "public"."community_comments" FOR SELECT USING (true);
+ALTER TABLE "public"."communityPosts" ENABLE ROW LEVEL SECURITY;
 
 
-
-ALTER TABLE "public"."community_likes" ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY "community_likes_delete" ON "public"."community_likes" FOR DELETE USING (("auth"."uid"() = "uid"));
+ALTER TABLE "public"."communityPostsAdmin" ENABLE ROW LEVEL SECURITY;
 
 
-
-CREATE POLICY "community_likes_insert" ON "public"."community_likes" FOR INSERT WITH CHECK (("auth"."uid"() = "uid"));
-
+ALTER TABLE "public"."communityPostsTags" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "community_likes_read" ON "public"."community_likes" FOR SELECT USING (true);
+ALTER TABLE "public"."communityReports" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "community_comments_delete" ON "public"."communityComments" FOR DELETE USING (("auth"."uid"() = "uid"));
 
 
 
-ALTER TABLE "public"."community_post_views" ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY "community_post_views_insert" ON "public"."community_post_views" FOR INSERT WITH CHECK (("auth"."uid"() = "uid"));
+CREATE POLICY "community_comments_insert" ON "public"."communityComments" FOR INSERT WITH CHECK (("auth"."uid"() = "uid"));
 
 
 
-CREATE POLICY "community_post_views_read" ON "public"."community_post_views" FOR SELECT USING (true);
+CREATE POLICY "community_comments_read" ON "public"."communityComments" FOR SELECT USING (true);
 
 
 
-CREATE POLICY "community_post_views_update" ON "public"."community_post_views" FOR UPDATE USING (("auth"."uid"() = "uid"));
+CREATE POLICY "community_likes_delete" ON "public"."communityLikes" FOR DELETE USING (("auth"."uid"() = "uid"));
 
 
 
-ALTER TABLE "public"."community_posts" ENABLE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."community_posts_admin" ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY "community_posts_delete" ON "public"."community_posts" FOR DELETE USING (("auth"."uid"() = "uid"));
+CREATE POLICY "community_likes_insert" ON "public"."communityLikes" FOR INSERT WITH CHECK (("auth"."uid"() = "uid"));
 
 
 
-CREATE POLICY "community_posts_insert" ON "public"."community_posts" FOR INSERT WITH CHECK (("auth"."uid"() = "uid"));
+CREATE POLICY "community_likes_read" ON "public"."communityLikes" FOR SELECT USING (true);
 
 
 
-CREATE POLICY "community_posts_read" ON "public"."community_posts" FOR SELECT USING (true);
+CREATE POLICY "community_post_views_insert" ON "public"."communityPostViews" FOR INSERT WITH CHECK (("auth"."uid"() = "uid"));
 
 
 
-ALTER TABLE "public"."community_posts_tags" ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY "community_posts_update" ON "public"."community_posts" FOR UPDATE USING (("auth"."uid"() = "uid"));
+CREATE POLICY "community_post_views_read" ON "public"."communityPostViews" FOR SELECT USING (true);
 
 
 
-ALTER TABLE "public"."community_reports" ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY "community_reports_delete" ON "public"."community_reports" FOR DELETE USING (("auth"."uid"() = "uid"));
+CREATE POLICY "community_post_views_update" ON "public"."communityPostViews" FOR UPDATE USING (("auth"."uid"() = "uid"));
 
 
 
-CREATE POLICY "community_reports_insert" ON "public"."community_reports" FOR INSERT WITH CHECK (("auth"."uid"() = "uid"));
+CREATE POLICY "community_posts_delete" ON "public"."communityPosts" FOR DELETE USING (("auth"."uid"() = "uid"));
 
 
 
-CREATE POLICY "community_reports_read" ON "public"."community_reports" FOR SELECT USING (true);
+CREATE POLICY "community_posts_insert" ON "public"."communityPosts" FOR INSERT WITH CHECK (("auth"."uid"() = "uid"));
+
+
+
+CREATE POLICY "community_posts_read" ON "public"."communityPosts" FOR SELECT USING (true);
+
+
+
+CREATE POLICY "community_posts_update" ON "public"."communityPosts" FOR UPDATE USING (("auth"."uid"() = "uid"));
+
+
+
+CREATE POLICY "community_reports_delete" ON "public"."communityReports" FOR DELETE USING (("auth"."uid"() = "uid"));
+
+
+
+CREATE POLICY "community_reports_insert" ON "public"."communityReports" FOR INSERT WITH CHECK (("auth"."uid"() = "uid"));
+
+
+
+CREATE POLICY "community_reports_read" ON "public"."communityReports" FOR SELECT USING (true);
 
 
 
@@ -4404,7 +4398,7 @@ ALTER TABLE "public"."players" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."playersAchievement" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."post_tags" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."postTags" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."products" ENABLE ROW LEVEL SECURITY;
@@ -4999,15 +4993,51 @@ GRANT ALL ON SEQUENCE "public"."clans_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."community_comments" TO "anon";
-GRANT ALL ON TABLE "public"."community_comments" TO "authenticated";
-GRANT ALL ON TABLE "public"."community_comments" TO "service_role";
+GRANT ALL ON TABLE "public"."communityComments" TO "anon";
+GRANT ALL ON TABLE "public"."communityComments" TO "authenticated";
+GRANT ALL ON TABLE "public"."communityComments" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."community_comments_admin" TO "anon";
-GRANT ALL ON TABLE "public"."community_comments_admin" TO "authenticated";
-GRANT ALL ON TABLE "public"."community_comments_admin" TO "service_role";
+GRANT ALL ON TABLE "public"."communityCommentsAdmin" TO "anon";
+GRANT ALL ON TABLE "public"."communityCommentsAdmin" TO "authenticated";
+GRANT ALL ON TABLE "public"."communityCommentsAdmin" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."communityLikes" TO "anon";
+GRANT ALL ON TABLE "public"."communityLikes" TO "authenticated";
+GRANT ALL ON TABLE "public"."communityLikes" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."communityPostViews" TO "anon";
+GRANT ALL ON TABLE "public"."communityPostViews" TO "authenticated";
+GRANT ALL ON TABLE "public"."communityPostViews" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."communityPosts" TO "anon";
+GRANT ALL ON TABLE "public"."communityPosts" TO "authenticated";
+GRANT ALL ON TABLE "public"."communityPosts" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."communityPostsAdmin" TO "anon";
+GRANT ALL ON TABLE "public"."communityPostsAdmin" TO "authenticated";
+GRANT ALL ON TABLE "public"."communityPostsAdmin" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."communityPostsTags" TO "anon";
+GRANT ALL ON TABLE "public"."communityPostsTags" TO "authenticated";
+GRANT ALL ON TABLE "public"."communityPostsTags" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."communityReports" TO "anon";
+GRANT ALL ON TABLE "public"."communityReports" TO "authenticated";
+GRANT ALL ON TABLE "public"."communityReports" TO "service_role";
 
 
 
@@ -5017,21 +5047,9 @@ GRANT ALL ON SEQUENCE "public"."community_comments_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."community_likes" TO "anon";
-GRANT ALL ON TABLE "public"."community_likes" TO "authenticated";
-GRANT ALL ON TABLE "public"."community_likes" TO "service_role";
-
-
-
 GRANT ALL ON SEQUENCE "public"."community_likes_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."community_likes_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."community_likes_id_seq" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."community_post_views" TO "anon";
-GRANT ALL ON TABLE "public"."community_post_views" TO "authenticated";
-GRANT ALL ON TABLE "public"."community_post_views" TO "service_role";
 
 
 
@@ -5041,33 +5059,9 @@ GRANT ALL ON SEQUENCE "public"."community_post_views_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."community_posts" TO "anon";
-GRANT ALL ON TABLE "public"."community_posts" TO "authenticated";
-GRANT ALL ON TABLE "public"."community_posts" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."community_posts_admin" TO "anon";
-GRANT ALL ON TABLE "public"."community_posts_admin" TO "authenticated";
-GRANT ALL ON TABLE "public"."community_posts_admin" TO "service_role";
-
-
-
 GRANT ALL ON SEQUENCE "public"."community_posts_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."community_posts_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."community_posts_id_seq" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."community_posts_tags" TO "anon";
-GRANT ALL ON TABLE "public"."community_posts_tags" TO "authenticated";
-GRANT ALL ON TABLE "public"."community_posts_tags" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."community_reports" TO "anon";
-GRANT ALL ON TABLE "public"."community_reports" TO "authenticated";
-GRANT ALL ON TABLE "public"."community_reports" TO "service_role";
 
 
 
@@ -5359,9 +5353,9 @@ GRANT ALL ON SEQUENCE "public"."players_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."post_tags" TO "anon";
-GRANT ALL ON TABLE "public"."post_tags" TO "authenticated";
-GRANT ALL ON TABLE "public"."post_tags" TO "service_role";
+GRANT ALL ON TABLE "public"."postTags" TO "anon";
+GRANT ALL ON TABLE "public"."postTags" TO "authenticated";
+GRANT ALL ON TABLE "public"."postTags" TO "service_role";
 
 
 
@@ -5515,3 +5509,4 @@ drop trigger if exists "prefixes_delete_hierarchy" on "storage"."prefixes";
   for insert
   to public
 with check (true);
+

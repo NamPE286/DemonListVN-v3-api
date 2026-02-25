@@ -233,24 +233,24 @@ export type Database = {
           created_at: string
           id: number
           mapPackId: number
-          order: number
           seasonId: number
+          sortOrder: number
           unlockWeek: number
         }
         Insert: {
           created_at?: string
           id?: number
           mapPackId: number
-          order?: number
           seasonId: number
+          sortOrder?: number
           unlockWeek: number
         }
         Update: {
           created_at?: string
           id?: number
           mapPackId?: number
-          order?: number
           seasonId?: number
+          sortOrder?: number
           unlockWeek?: number
         }
         Relationships: [
@@ -1044,48 +1044,6 @@ export type Database = {
           },
         ]
       }
-      communityPostViews: {
-        Row: {
-          createdAt: string
-          id: number
-          lastViewedAt: string
-          postId: number
-          uid: string
-          viewCount: number
-        }
-        Insert: {
-          createdAt?: string
-          id?: number
-          lastViewedAt?: string
-          postId: number
-          uid: string
-          viewCount?: number
-        }
-        Update: {
-          createdAt?: string
-          id?: number
-          lastViewedAt?: string
-          postId?: number
-          uid?: string
-          viewCount?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "community_post_views_post_id_fkey"
-            columns: ["postId"]
-            isOneToOne: false
-            referencedRelation: "communityPosts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "community_post_views_uid_fkey"
-            columns: ["uid"]
-            isOneToOne: false
-            referencedRelation: "players"
-            referencedColumns: ["uid"]
-          },
-        ]
-      }
       communityPosts: {
         Row: {
           attachedLevel: Json | null
@@ -1210,6 +1168,48 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "postTags"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      communityPostViews: {
+        Row: {
+          createdAt: string
+          id: number
+          lastViewedAt: string
+          postId: number
+          uid: string
+          viewCount: number
+        }
+        Insert: {
+          createdAt?: string
+          id?: number
+          lastViewedAt?: string
+          postId: number
+          uid: string
+          viewCount?: number
+        }
+        Update: {
+          createdAt?: string
+          id?: number
+          lastViewedAt?: string
+          postId?: number
+          uid?: string
+          viewCount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_post_views_post_id_fkey"
+            columns: ["postId"]
+            isOneToOne: false
+            referencedRelation: "communityPosts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_post_views_uid_fkey"
+            columns: ["uid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
           },
         ]
       }
