@@ -859,7 +859,7 @@ export async function getSeasonMapPacks(seasonId: number) {
         .from('battlePassMapPacks')
         .select('*, mapPacks(*, mapPackLevels(*, levels(*)))')
         .eq('seasonId', seasonId)
-        .lte('unlockWeek', weeksSinceStart + 1)
+        .lte('unlockWeek', weeksSinceStart)
         .order('unlockWeek', { ascending: false })
         .order('sortOrder', { ascending: true });
 
@@ -868,6 +868,38 @@ export async function getSeasonMapPacks(seasonId: number) {
     }
 
     return data;
+}
+
+export async function getNextLockedSeasonMapPack(seasonId: number) {
+    const now = new Date();
+    const season = await getSeason(seasonId);
+    const seasonStart = new Date(season.start);
+    const weeksSinceStart = Math.max(0, Math.floor((now.getTime() - seasonStart.getTime()) / (7 * 24 * 60 * 60 * 1000)));
+
+    const { data, error } = await supabase
+        .from('battlePassMapPacks')
+        .select('*, mapPacks(*, mapPackLevels(*, levels(*)))')
+        .eq('seasonId', seasonId)
+        .gt('unlockWeek', weeksSinceStart)
+        .order('unlockWeek', { ascending: true })
+        .order('sortOrder', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    if (!data) {
+        return null;
+    }
+
+    const unlockAt = new Date(seasonStart.getTime() + data.unlockWeek * 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    return {
+        ...data,
+        unlockAt
+    };
 }
 
 export async function getAllSeasonMapPacks(seasonId: number) {

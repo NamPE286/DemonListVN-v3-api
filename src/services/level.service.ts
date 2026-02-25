@@ -563,8 +563,8 @@ export async function refreshLevel() {
         }
     }
 
-    await refreshDailyLevelProgress()
-    await refreshWeeklyLevelProgress()
+    // await refreshDailyLevelProgress()
+    // await refreshWeeklyLevelProgress()
 
     return { daily: dailyLevel.id, weekly: weeklyLevel.id }
 }

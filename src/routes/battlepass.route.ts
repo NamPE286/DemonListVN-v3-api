@@ -17,6 +17,7 @@ import {
     updateSeasonLevel,
     deleteSeasonLevel,
     getSeasonMapPacks,
+    getNextLockedSeasonMapPack,
     getAllSeasonMapPacks,
     getBattlePassMapPack,
     addBattlePassMapPack,
@@ -865,6 +866,23 @@ router.route('/mappacks')
             }
 
             res.send(mapPacks)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+router.route('/mappacks/next-locked')
+    .get(async (_req, res) => {
+        try {
+            const season = await getActiveseason()
+            if (!season) {
+                res.status(404).send({ message: 'No active season' })
+                return
+            }
+
+            const nextLockedMapPack = await getNextLockedSeasonMapPack(season.id)
+            res.send({ nextLockedMapPack })
         } catch (err) {
             console.error(err)
             res.status(500).send()
