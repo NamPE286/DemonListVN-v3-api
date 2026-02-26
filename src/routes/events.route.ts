@@ -1042,6 +1042,18 @@ router.route('/:id/proofs/:uid')
             return
         }
 
+        if (!user.isAdmin && user.uid == uid) {
+            const event = await getEvent(parseInt(id))
+            const eventStarted = new Date(event.start) <= new Date()
+            const isContestOrRaid = event.type === 'contest' || event.type === 'raid'
+            const canCancelRegistration = event.type === 'basic' || (isContestOrRaid && !eventStarted)
+
+            if (!canCancelRegistration) {
+                res.status(401).send()
+                return
+            }
+        }
+
         try {
             res.send(await deleteEventProof(parseInt(id), uid))
         } catch {
