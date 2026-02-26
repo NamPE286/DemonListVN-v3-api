@@ -501,6 +501,21 @@ export async function retrieveOrCreateLevel(payload: TablesInsert<'levels'>): Pr
 export async function refreshLevel() {
     const dailyLevel = await getGJDailyLevel(false)
     const weeklyLevel = await getGJDailyLevel(true)
+    const currentStates = await supabase
+        .from('levelGDStates')
+        .select('levelId, isDaily, isWeekly')
+        .or('isDaily.eq.true,isWeekly.eq.true')
+
+    if (currentStates.error) {
+        throw currentStates.error
+    }
+
+    const currentDailyId = (currentStates.data || []).find((state: any) => state.isDaily)?.levelId ?? null
+    const currentWeeklyId = (currentStates.data || []).find((state: any) => state.isWeekly)?.levelId ?? null
+
+    const isDailyChanged = currentDailyId !== dailyLevel.id
+    const isWeeklyChanged = currentWeeklyId !== weeklyLevel.id
+
     const pairs = [
         { gd: dailyLevel, isDaily: true, isWeekly: false },
         { gd: weeklyLevel, isDaily: false, isWeekly: true }
@@ -563,8 +578,13 @@ export async function refreshLevel() {
         }
     }
 
-    // await refreshDailyLevelProgress()
-    // await refreshWeeklyLevelProgress()
+    if (isDailyChanged) {
+        await refreshDailyLevelProgress()
+    }
+
+    if (isWeeklyChanged) {
+        await refreshWeeklyLevelProgress()
+    }
 
     return { daily: dailyLevel.id, weekly: weeklyLevel.id }
 }
