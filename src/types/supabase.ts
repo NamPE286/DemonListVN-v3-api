@@ -2451,6 +2451,8 @@ export type Database = {
           name: string | null
           nameLocked: boolean
           overallRank: number | null
+          overwatchReviewCount: number
+          overwatchReviewDate: string | null
           overviewData: Json | null
           plrank: number | null
           plRating: number | null
@@ -2497,6 +2499,8 @@ export type Database = {
           name?: string | null
           nameLocked?: boolean
           overallRank?: number | null
+          overwatchReviewCount?: number
+          overwatchReviewDate?: string | null
           overviewData?: Json | null
           plrank?: number | null
           plRating?: number | null
@@ -2543,6 +2547,8 @@ export type Database = {
           name?: string | null
           nameLocked?: boolean
           overallRank?: number | null
+          overwatchReviewCount?: number
+          overwatchReviewDate?: string | null
           overviewData?: Json | null
           plrank?: number | null
           plRating?: number | null
@@ -3097,6 +3103,7 @@ export type Database = {
           uid: string
         }[]
       }
+      reset_overwatch_daily_limits: { Args: never; Returns: undefined }
       record_community_post_view: {
         Args: { p_post_id: number; p_user_id: string }
         Returns: undefined

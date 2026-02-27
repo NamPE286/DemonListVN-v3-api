@@ -44,9 +44,14 @@ router.route('/')
             return
         }
 
+        const today = new Date().toISOString().slice(0, 10)
+        const prevCount = user.overwatchReviewDate === today ? (user.overwatchReviewCount || 0) : 0
         var { error } = await supabase
             .from('players')
-            .update({ reviewCooldown: new Date() } as any)
+            .update({
+                overwatchReviewDate: today,
+                overwatchReviewCount: prevCount + 1
+            } as any)
             .match({ uid: res.locals.user.uid })
 
         if (error) {

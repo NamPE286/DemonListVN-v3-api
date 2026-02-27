@@ -572,6 +572,30 @@ export async function getTopBuyers(interval: number, limit: number, offset: numb
     return res;
 }
 
+export async function getSupporterRevenueProgress(interval: number) {
+    const { data, error } = await supabase
+        .rpc('get_top_buyers', {
+            interval_ms: interval,
+            limit_count: 10000,
+            offset_count: 0
+        })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    const totalRevenue = (data || []).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0)
+    const serverCostGoal = 1_500_000
+    const minecraftServerGoal = 2_000_000
+
+    const toPercent = (goal: number) => Math.min(100, Math.round((totalRevenue / goal) * 10000) / 100)
+
+    return {
+        serverCostPercent: toPercent(serverCostGoal),
+        minecraftServerPercent: toPercent(minecraftServerGoal)
+    }
+}
+
 export async function getPlayerConvictions(uid: string) {
     const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString()
 

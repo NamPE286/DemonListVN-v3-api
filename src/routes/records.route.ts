@@ -6,6 +6,17 @@ import { changeSuggestedRating, getEstimatedQueue } from '@src/services/record.s
 import logger from '@src/utils/logger'
 
 const router = express.Router()
+const OVERWATCH_DAILY_LIMIT = 3
+
+function getOverwatchDailyCount(user: any) {
+    const today = new Date().toISOString().slice(0, 10)
+
+    if (user.overwatchReviewDate !== today) {
+        return 0
+    }
+
+    return user.overwatchReviewCount || 0
+}
 
 router.route('/')
     /**
@@ -220,16 +231,47 @@ router.route('/retrieve')
             return
         }
 
-        if (user.reviewCooldown && (new Date()).getTime() - new Date(user.reviewCooldown).getTime() < 7200000) {
-            res.status(429).send()
+        const usedToday = getOverwatchDailyCount(user)
+        const limitLeft = Math.max(0, OVERWATCH_DAILY_LIMIT - usedToday)
+
+        if (limitLeft <= 0) {
+            res.status(429).send({
+                message: 'Daily limit reached',
+                limit: OVERWATCH_DAILY_LIMIT,
+                limitLeft: 0
+            })
             return
         }
 
         try {
-            res.send(await retrieveRecord(user))
+            const record = await retrieveRecord(user)
+            res.send({
+                ...record,
+                limit: OVERWATCH_DAILY_LIMIT,
+                limitLeft
+            })
         } catch (err) {
             res.status(500).send()
         }
+    })
+
+router.route('/retrieve-limit')
+    .get(userAuth, async (req, res) => {
+        const { user } = res.locals
+
+        if (!user.isAdmin && !user.isTrusted) {
+            res.status(401).send()
+            return
+        }
+
+        const usedToday = getOverwatchDailyCount(user)
+        const limitLeft = Math.max(0, OVERWATCH_DAILY_LIMIT - usedToday)
+
+        res.send({
+            limit: OVERWATCH_DAILY_LIMIT,
+            usedToday,
+            limitLeft
+        })
     })
 
 router.route('/:userID/:levelID/getEstimatedQueue/:prioritizedBy')

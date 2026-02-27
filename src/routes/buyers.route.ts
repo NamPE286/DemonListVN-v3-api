@@ -1,4 +1,4 @@
-import { getTopBuyers } from '@src/services/player.service'
+import { getSupporterRevenueProgress, getTopBuyers } from '@src/services/player.service'
 import express from 'express'
 
 const router = express.Router()
@@ -12,6 +12,13 @@ router.route('/top')
             parseInt(String(limit)),
             parseInt(String(offset))
         ))
+    })
+
+router.route('/progress')
+    .get(async (req, res) => {
+        const { interval = 2592000000 } = req.query
+
+        res.send(await getSupporterRevenueProgress(parseInt(String(interval))))
     })
 
 export default router
