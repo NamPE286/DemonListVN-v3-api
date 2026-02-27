@@ -7,6 +7,7 @@ import { fetchPlayerDeathCount, getDeathCountProgress } from "@src/services/deat
 const XP_PER_TIER = 100;
 const MAX_TIER = 100;
 const COMPLETION_THRESHOLD = 100;
+const COURSE_CLEAR_XP = 100;
 
 // ==================== Season Functions ====================
 
@@ -1233,7 +1234,10 @@ export async function createCourseEntry(entry: {
 }) {
     const { data, error } = await (supabase as any)
         .from('battlePassCourseEntries')
-        .insert(entry)
+        .insert({
+            ...entry,
+            rewardXp: COURSE_CLEAR_XP
+        })
         .select('*')
         .single();
 
@@ -1254,7 +1258,10 @@ export async function updateCourseEntry(entryId: number, updates: {
 }) {
     const { error } = await (supabase as any)
         .from('battlePassCourseEntries')
-        .update(updates)
+        .update({
+            ...updates,
+            rewardXp: COURSE_CLEAR_XP
+        })
         .eq('id', entryId);
 
     if (error) {
@@ -1339,6 +1346,7 @@ export async function syncCourseProgressForUser(seasonId: number, userId: string
 
     const now = new Date().toISOString();
     const rowsToUpsert: any[] = [];
+    const xpAwards: { entryId: number; type: CourseEntryType; refId: number }[] = [];
 
     for (const entry of entries) {
         const existing = currentProgressMap.get(entry.id);
@@ -1356,8 +1364,14 @@ export async function syncCourseProgressForUser(seasonId: number, userId: string
                 userID: userId,
                 completed: true,
                 completedAt: now,
-                claimed: existing?.claimed || false,
-                claimedAt: existing?.claimedAt || null
+                claimed: true,
+                claimedAt: now
+            });
+
+            xpAwards.push({
+                entryId: entry.id,
+                type: entry.type,
+                refId: Number(entry.refId)
             });
         }
     }
@@ -1370,6 +1384,17 @@ export async function syncCourseProgressForUser(seasonId: number, userId: string
         if (upsertError) {
             throw new Error(upsertError.message);
         }
+    }
+
+    for (const award of xpAwards) {
+        await addXp(
+            seasonId,
+            userId,
+            COURSE_CLEAR_XP,
+            'course_clear',
+            award.entryId,
+            `Cleared course ${award.type}: ${award.refId}`
+        );
     }
 }
 
@@ -1412,6 +1437,7 @@ export async function getActiveSeasonCourse(userId?: string) {
 
         return {
             ...entry,
+            rewardXp: COURSE_CLEAR_XP,
             unlocked,
             completed,
             claimed
