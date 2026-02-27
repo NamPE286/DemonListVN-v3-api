@@ -585,8 +585,8 @@ export async function getSupporterRevenueProgress(interval: number) {
     }
 
     const totalRevenue = (data || []).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0)
-    const serverCostGoal = 1_500_000
-    const minecraftServerGoal = 2_000_000
+    const serverCostGoal = 2_000_000
+    const minecraftServerGoal = 3_000_000
 
     const toPercent = (goal: number) => Math.min(100, Math.round((totalRevenue / goal) * 10000) / 100)
 
