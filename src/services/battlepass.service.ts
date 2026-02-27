@@ -1140,6 +1140,390 @@ export async function claimMapPackReward(battlePassMapPackId: number, userId: st
     return mapPackXp;
 }
 
+// ==================== Course Mode Functions ====================
+
+type CourseEntryType = 'level' | 'mappack';
+
+export async function getAllCourses() {
+    const { data, error } = await (supabase as any)
+        .from('battlePassCourses')
+        .select('*')
+        .order('id', { ascending: false });
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data || [];
+}
+
+export async function getCourse(courseId: number) {
+    const { data, error } = await (supabase as any)
+        .from('battlePassCourses')
+        .select('*')
+        .eq('id', courseId)
+        .single();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+export async function createCourse(course: { title: string; description?: string | null }) {
+    const { data, error } = await (supabase as any)
+        .from('battlePassCourses')
+        .insert(course)
+        .select('*')
+        .single();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+export async function updateCourse(courseId: number, updates: { title?: string; description?: string | null }) {
+    const { error } = await (supabase as any)
+        .from('battlePassCourses')
+        .update(updates)
+        .eq('id', courseId);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+}
+
+export async function deleteCourse(courseId: number) {
+    const { error } = await (supabase as any)
+        .from('battlePassCourses')
+        .delete()
+        .eq('id', courseId);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+}
+
+export async function getCourseEntries(courseId: number) {
+    const { data, error } = await (supabase as any)
+        .from('battlePassCourseEntries')
+        .select('*')
+        .eq('courseId', courseId)
+        .order('sortOrder', { ascending: true })
+        .order('id', { ascending: true });
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data || [];
+}
+
+export async function createCourseEntry(entry: {
+    courseId: number;
+    type: CourseEntryType;
+    refId: number;
+    sortOrder?: number;
+    rewardXp?: number;
+    rewardItemId?: number | null;
+    rewardQuantity?: number;
+}) {
+    const { data, error } = await (supabase as any)
+        .from('battlePassCourseEntries')
+        .insert(entry)
+        .select('*')
+        .single();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+export async function updateCourseEntry(entryId: number, updates: {
+    type?: CourseEntryType;
+    refId?: number;
+    sortOrder?: number;
+    rewardXp?: number;
+    rewardItemId?: number | null;
+    rewardQuantity?: number;
+}) {
+    const { error } = await (supabase as any)
+        .from('battlePassCourseEntries')
+        .update(updates)
+        .eq('id', entryId);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+}
+
+export async function deleteCourseEntry(entryId: number) {
+    const { error } = await (supabase as any)
+        .from('battlePassCourseEntries')
+        .delete()
+        .eq('id', entryId);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+}
+
+export async function syncCourseProgressForUser(seasonId: number, userId: string) {
+    const season = await getSeason(seasonId) as any;
+    if (!season?.courseId) {
+        return;
+    }
+
+    const entries = await getCourseEntries(Number(season.courseId));
+    if (entries.length === 0) {
+        return;
+    }
+
+    const levelEntryRefs = entries.filter((e: any) => e.type === 'level').map((e: any) => Number(e.refId));
+    const mapPackEntryRefs = entries.filter((e: any) => e.type === 'mappack').map((e: any) => Number(e.refId));
+
+    const completedLevelIds = new Set<number>();
+    const completedMapPackIds = new Set<number>();
+
+    if (levelEntryRefs.length > 0) {
+        const { data: levelProgress, error: levelProgressError } = await supabase
+            .from('battlePassLevelProgress')
+            .select('battlePassLevelId, progress')
+            .eq('userID', userId)
+            .in('battlePassLevelId', levelEntryRefs)
+            .gte('progress', 100);
+
+        if (levelProgressError) {
+            throw new Error(levelProgressError.message);
+        }
+
+        levelProgress?.forEach(p => completedLevelIds.add(p.battlePassLevelId));
+    }
+
+    if (mapPackEntryRefs.length > 0) {
+        const { data: mapPackProgress, error: mapPackProgressError } = await supabase
+            .from('battlePassMapPackProgress')
+            .select('battlePassMapPackId, progress, claimed')
+            .eq('userID', userId)
+            .in('battlePassMapPackId', mapPackEntryRefs);
+
+        if (mapPackProgressError) {
+            throw new Error(mapPackProgressError.message);
+        }
+
+        mapPackProgress?.forEach(p => {
+            if ((p.progress || 0) >= 100 || p.claimed) {
+                completedMapPackIds.add(p.battlePassMapPackId);
+            }
+        });
+    }
+
+    const entryIds = entries.map((e: any) => e.id);
+    const { data: currentProgressRows, error: currentProgressError } = await (supabase as any)
+        .from('battlePassCourseEntryProgress')
+        .select('*')
+        .eq('userID', userId)
+        .in('entryId', entryIds);
+
+    if (currentProgressError) {
+        throw new Error(currentProgressError.message);
+    }
+
+    const currentProgressMap = new Map<number, any>();
+    (currentProgressRows || []).forEach((row: any) => currentProgressMap.set(row.entryId, row));
+
+    const now = new Date().toISOString();
+    const rowsToUpsert: any[] = [];
+
+    for (const entry of entries) {
+        const existing = currentProgressMap.get(entry.id);
+        const completed = entry.type === 'level'
+            ? completedLevelIds.has(Number(entry.refId))
+            : completedMapPackIds.has(Number(entry.refId));
+
+        if (!completed) {
+            continue;
+        }
+
+        if (!existing || !existing.completed) {
+            rowsToUpsert.push({
+                entryId: entry.id,
+                userID: userId,
+                completed: true,
+                completedAt: now,
+                claimed: existing?.claimed || false,
+                claimedAt: existing?.claimedAt || null
+            });
+        }
+    }
+
+    if (rowsToUpsert.length > 0) {
+        const { error: upsertError } = await (supabase as any)
+            .from('battlePassCourseEntryProgress')
+            .upsert(rowsToUpsert);
+
+        if (upsertError) {
+            throw new Error(upsertError.message);
+        }
+    }
+}
+
+export async function getActiveSeasonCourse(userId?: string) {
+    const season = await getActiveseason() as any;
+    if (!season || !season.courseId) {
+        return null;
+    }
+
+    if (userId) {
+        await syncCourseProgressForUser(season.id, userId);
+    }
+
+    const course = await getCourse(Number(season.courseId));
+    const entries = await getCourseEntries(Number(season.courseId));
+
+    let progressMap = new Map<number, any>();
+    if (userId && entries.length > 0) {
+        const { data: progressRows, error: progressError } = await (supabase as any)
+            .from('battlePassCourseEntryProgress')
+            .select('*')
+            .eq('userID', userId)
+            .in('entryId', entries.map((e: any) => e.id));
+
+        if (progressError) {
+            throw new Error(progressError.message);
+        }
+
+        progressMap = new Map<number, any>((progressRows || []).map((p: any) => [p.entryId, p]));
+    }
+
+    let allPreviousCompleted = true;
+    const entriesWithProgress = entries.map((entry: any, index: number) => {
+        const progress = progressMap.get(entry.id);
+        const completed = !!progress?.completed;
+        const claimed = !!progress?.claimed;
+
+        const unlocked = index === 0 ? true : allPreviousCompleted;
+        allPreviousCompleted = allPreviousCompleted && completed;
+
+        return {
+            ...entry,
+            unlocked,
+            completed,
+            claimed
+        };
+    });
+
+    return {
+        course,
+        seasonId: season.id,
+        entries: entriesWithProgress
+    };
+}
+
+export async function claimCourseEntryReward(entryId: number, userId: string) {
+    const { data: entry, error: entryError } = await (supabase as any)
+        .from('battlePassCourseEntries')
+        .select('*')
+        .eq('id', entryId)
+        .single();
+
+    if (entryError || !entry) {
+        throw new Error('Course entry not found');
+    }
+
+    const season = await getActiveseason() as any;
+    if (!season || Number(season.courseId) !== Number(entry.courseId)) {
+        throw new Error('Season is not active');
+    }
+
+    await syncCourseProgressForUser(season.id, userId);
+
+    const entries = await getCourseEntries(Number(entry.courseId));
+    const targetIndex = entries.findIndex((e: any) => e.id === entryId);
+    if (targetIndex < 0) {
+        throw new Error('Course entry not found');
+    }
+
+    const { data: progressRows, error: progressError } = await (supabase as any)
+        .from('battlePassCourseEntryProgress')
+        .select('*')
+        .eq('userID', userId)
+        .in('entryId', entries.map((e: any) => e.id));
+
+    if (progressError) {
+        throw new Error(progressError.message);
+    }
+
+    const progressMap = new Map<number, any>((progressRows || []).map((p: any) => [p.entryId, p]));
+    const targetProgress = progressMap.get(entryId);
+
+    if (!targetProgress?.completed) {
+        throw new Error('Course entry not completed');
+    }
+
+    if (targetProgress?.claimed) {
+        throw new Error('Already claimed');
+    }
+
+    for (let i = 0; i < targetIndex; i++) {
+        const previousProgress = progressMap.get(entries[i].id);
+        if (!previousProgress?.completed) {
+            throw new Error('Course entry is locked');
+        }
+    }
+
+    const now = new Date().toISOString();
+    const { error: claimError } = await (supabase as any)
+        .from('battlePassCourseEntryProgress')
+        .upsert({
+            entryId,
+            userID: userId,
+            completed: true,
+            completedAt: targetProgress.completedAt || now,
+            claimed: true,
+            claimedAt: now
+        });
+
+    if (claimError) {
+        throw new Error(claimError.message);
+    }
+
+    const rewardXp = Number(entry.rewardXp || 0);
+    if (rewardXp > 0) {
+        await addXp(
+            season.id,
+            userId,
+            rewardXp,
+            'course',
+            entryId,
+            `Claimed course entry reward: ${entry.type}#${entry.refId}`
+        );
+    }
+
+    const rewardItemId = entry.rewardItemId ? Number(entry.rewardItemId) : null;
+    const rewardQuantity = Number(entry.rewardQuantity || 1);
+    if (rewardItemId && rewardQuantity > 0) {
+        for (let i = 0; i < rewardQuantity; i++) {
+            await addInventoryItem({
+                userID: userId,
+                itemId: rewardItemId,
+                expireAt: null
+            });
+        }
+    }
+
+    return {
+        rewardXp,
+        rewardItemId,
+        rewardQuantity
+    };
+}
+
 // ==================== Tier Reward Functions ====================
 
 export async function getTierRewards(seasonId: number) {
@@ -2015,18 +2399,28 @@ export async function trackProgressAfterDeathCount(
     const mapPackIds = await getMapPackIdsForLevel(season.id, levelIDNum);
     const finalProgress = setCompleted ? 100 : progressPercent;
 
-    await batchUpdateMapPackLevelProgress(
-        mapPackIds,
-        levelIDNum,
-        uid,
-        finalProgress
-    );
+    try {
+        await batchUpdateMapPackLevelProgress(
+            mapPackIds,
+            levelIDNum,
+            uid,
+            finalProgress
+        );
+    } catch (error: any) {
+        console.error(`Failed to update map pack level progress:`, error.message);
+    }
 
     // Always update map pack progress
     try {
         await batchUpdatePlayerMapPackProgress(mapPackIds, uid);
     } catch (error: any) {
         console.error(`Failed to update map pack progress:`, error.message);
+    }
+
+    try {
+        await syncCourseProgressForUser(season.id, uid);
+    } catch (error: any) {
+        console.error(`Failed to sync course progress:`, error.message);
     }
 
 }

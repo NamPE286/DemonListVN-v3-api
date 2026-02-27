@@ -52,6 +52,17 @@ import {
     claimDailyWeeklyReward,
     refreshDailyLevelProgress,
     refreshWeeklyLevelProgress,
+    getAllCourses,
+    getCourse,
+    createCourse,
+    updateCourse,
+    deleteCourse,
+    getCourseEntries,
+    createCourseEntry,
+    updateCourseEntry,
+    deleteCourseEntry,
+    getActiveSeasonCourse,
+    claimCourseEntryReward,
     type RefreshType,
     type LevelType
 } from '@src/services/battlepass.service'
@@ -1133,6 +1144,147 @@ router.route('/mappack/:mapPackId/claim')
             } else {
                 res.status(500).send({ message: err.message })
             }
+        }
+    })
+
+router.route('/course')
+    .get(optionalUserAuth, async (req, res) => {
+        const { user, authenticated } = res.locals
+
+        try {
+            const course = await getActiveSeasonCourse(authenticated && user ? user.uid! : undefined)
+            if (!course) {
+                res.status(404).send({ message: 'No active course' })
+                return
+            }
+
+            res.send(course)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+router.route('/course/entry/:entryId/claim')
+    .post(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { entryId } = req.params
+
+        try {
+            const reward = await claimCourseEntryReward(Number(entryId), user.uid!)
+            res.send(reward)
+        } catch (err: any) {
+            console.error(err)
+            if (
+                err.message === 'Already claimed' ||
+                err.message === 'Course entry not completed' ||
+                err.message === 'Course entry is locked' ||
+                err.message === 'Season is not active' ||
+                err.message === 'Course entry not found'
+            ) {
+                res.status(400).send({ message: err.message })
+            } else {
+                res.status(500).send({ message: err.message })
+            }
+        }
+    })
+
+router.route('/courses')
+    .get(adminAuth, async (_req, res) => {
+        try {
+            const courses = await getAllCourses()
+            res.send(courses)
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+    .post(adminAuth, async (req, res) => {
+        try {
+            const course = await createCourse(req.body)
+            res.send(course)
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+
+router.route('/course/:courseId')
+    .get(adminAuth, async (req, res) => {
+        const { courseId } = req.params
+        try {
+            const course = await getCourse(Number(courseId))
+            res.send(course)
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+    .patch(adminAuth, async (req, res) => {
+        const { courseId } = req.params
+        try {
+            await updateCourse(Number(courseId), req.body)
+            res.send()
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+    .delete(adminAuth, async (req, res) => {
+        const { courseId } = req.params
+        try {
+            await deleteCourse(Number(courseId))
+            res.send()
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+
+router.route('/course/:courseId/entries')
+    .get(adminAuth, async (req, res) => {
+        const { courseId } = req.params
+        try {
+            const entries = await getCourseEntries(Number(courseId))
+            res.send(entries)
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+    .post(adminAuth, async (req, res) => {
+        const { courseId } = req.params
+        try {
+            const entry = await createCourseEntry({
+                courseId: Number(courseId),
+                ...req.body
+            })
+            res.send(entry)
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+
+router.route('/course/entry/:entryId')
+    .patch(adminAuth, async (req, res) => {
+        const { entryId } = req.params
+        try {
+            await updateCourseEntry(Number(entryId), req.body)
+            res.send()
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message })
+        }
+    })
+    .delete(adminAuth, async (req, res) => {
+        const { entryId } = req.params
+        try {
+            await deleteCourseEntry(Number(entryId))
+            res.send()
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({ message: err.message })
         }
     })
 
