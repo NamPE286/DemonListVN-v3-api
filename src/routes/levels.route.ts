@@ -215,6 +215,66 @@ router.route("/random")
         res.send(data)
     });
 
+/**
+ * @openapi
+ * "/levels/batch":
+ *   post:
+ *     tags:
+ *       - Level
+ *     summary: Get multiple levels by IDs
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               batch:
+ *                 type: array
+ *                 items:
+ *                   type: number
+ *                 description: Array of level IDs
+ *     responses:
+ *       200:
+ *         description: Success
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/batch')
+    .post(async (req, res) => {
+        const { batch } = req.body ?? {}
+
+        if (!Array.isArray(batch) || batch.length === 0) {
+            res.send([])
+            return
+        }
+
+        const ids = [...new Set(batch.map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id)))]
+
+        if (ids.length === 0) {
+            res.send([])
+            return
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('levels')
+                .select('*')
+                .in('id', ids)
+
+            if (error) {
+                console.error(error)
+                res.status(500).send()
+                return
+            }
+
+            res.send(data || [])
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
 
 router.route('/:id')
     /**

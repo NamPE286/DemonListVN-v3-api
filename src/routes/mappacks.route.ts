@@ -1,5 +1,6 @@
 import express from 'express'
 import adminAuth from '@src/middleware/admin-auth.middleware'
+import supabase from '@src/client/supabase'
 import {
     getAllMapPacks,
     getMapPackById,
@@ -68,6 +69,66 @@ router.route('/')
         } catch (err: any) {
             console.error(err)
             res.status(500).send({ message: err.message })
+        }
+    })
+
+/**
+ * @openapi
+ * "/mappacks/batch":
+ *   post:
+ *     tags:
+ *       - Map Packs
+ *     summary: Get multiple map packs by IDs
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               batch:
+ *                 type: array
+ *                 items:
+ *                   type: number
+ *                 description: Array of map pack IDs
+ *     responses:
+ *       200:
+ *         description: Success
+ *       500:
+ *         description: Internal server error
+ */
+router.route('/batch')
+    .post(async (req, res) => {
+        const { batch } = req.body ?? {}
+
+        if (!Array.isArray(batch) || batch.length === 0) {
+            res.send([])
+            return
+        }
+
+        const ids = [...new Set(batch.map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id)))]
+
+        if (ids.length === 0) {
+            res.send([])
+            return
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('mapPacks')
+                .select('*, mapPackLevels(*, levels(*))')
+                .in('id', ids)
+
+            if (error) {
+                console.error(error)
+                res.status(500).send()
+                return
+            }
+
+            res.send(data || [])
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
         }
     })
 

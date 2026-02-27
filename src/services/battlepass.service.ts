@@ -1411,6 +1411,51 @@ export async function getActiveSeasonCourse(userId?: string) {
     const course = await getCourse(Number(season.courseId));
     const entries = await getCourseEntries(Number(season.courseId));
 
+    const levelEntryRefs = [...new Set(entries
+        .filter((entry: any) => entry.type === 'level')
+        .map((entry: any) => Number(entry.refId)))];
+
+    const mapPackEntryRefs = [...new Set(entries
+        .filter((entry: any) => entry.type === 'mappack')
+        .map((entry: any) => Number(entry.refId)))];
+
+    const levelDataMap = new Map<number, any>();
+    const mapPackDataMap = new Map<number, any>();
+
+    if (levelEntryRefs.length > 0) {
+        const { data: levelRows, error: levelRowsError } = await (supabase as any)
+            .from('battlePassLevels')
+            .select('id, levelID, levels(*)')
+            .in('id', levelEntryRefs);
+
+        if (levelRowsError) {
+            throw new Error(levelRowsError.message);
+        }
+
+        (levelRows || []).forEach((row: any) => {
+            if (row?.id != null) {
+                levelDataMap.set(Number(row.id), row.levels || null);
+            }
+        });
+    }
+
+    if (mapPackEntryRefs.length > 0) {
+        const { data: mapPackRows, error: mapPackRowsError } = await (supabase as any)
+            .from('battlePassMapPacks')
+            .select('id, mapPackId, mapPacks(*, mapPackLevels(*, levels(*)))')
+            .in('id', mapPackEntryRefs);
+
+        if (mapPackRowsError) {
+            throw new Error(mapPackRowsError.message);
+        }
+
+        (mapPackRows || []).forEach((row: any) => {
+            if (row?.id != null) {
+                mapPackDataMap.set(Number(row.id), row.mapPacks || null);
+            }
+        });
+    }
+
     let progressMap = new Map<number, any>();
     if (userId && entries.length > 0) {
         const { data: progressRows, error: progressError } = await (supabase as any)
@@ -1438,6 +1483,8 @@ export async function getActiveSeasonCourse(userId?: string) {
         return {
             ...entry,
             rewardXp: COURSE_CLEAR_XP,
+            levelData: entry.type === 'level' ? (levelDataMap.get(Number(entry.refId)) || null) : null,
+            mapPackData: entry.type === 'mappack' ? (mapPackDataMap.get(Number(entry.refId)) || null) : null,
             unlocked,
             completed,
             claimed
