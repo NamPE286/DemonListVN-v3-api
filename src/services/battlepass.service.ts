@@ -1419,8 +1419,13 @@ export async function getActiveSeasonCourse(userId?: string) {
         .filter((entry: any) => entry.type === 'mappack')
         .map((entry: any) => Number(entry.refId)))];
 
+    const rewardItemIds = [...new Set(entries
+        .map((entry: any) => entry.rewardItemId ? Number(entry.rewardItemId) : null)
+        .filter((itemId: number | null) => itemId !== null))] as number[];
+
     const levelDataMap = new Map<number, any>();
     const mapPackDataMap = new Map<number, any>();
+    const rewardItemDataMap = new Map<number, any>();
 
     if (levelEntryRefs.length > 0) {
         const { data: levelRows, error: levelRowsError } = await (supabase as any)
@@ -1456,6 +1461,23 @@ export async function getActiveSeasonCourse(userId?: string) {
         });
     }
 
+    if (rewardItemIds.length > 0) {
+        const { data: rewardItemRows, error: rewardItemRowsError } = await (supabase as any)
+            .from('items')
+            .select('*')
+            .in('id', rewardItemIds);
+
+        if (rewardItemRowsError) {
+            console.error('Failed to join course reward items:', rewardItemRowsError.message);
+        } else {
+            (rewardItemRows || []).forEach((row: any) => {
+                if (row?.id != null) {
+                    rewardItemDataMap.set(Number(row.id), row);
+                }
+            });
+        }
+    }
+
     let progressMap = new Map<number, any>();
     if (userId && entries.length > 0) {
         const { data: progressRows, error: progressError } = await (supabase as any)
@@ -1483,6 +1505,7 @@ export async function getActiveSeasonCourse(userId?: string) {
         return {
             ...entry,
             rewardXp: COURSE_CLEAR_XP,
+            rewardItemData: entry.rewardItemId ? (rewardItemDataMap.get(Number(entry.rewardItemId)) || null) : null,
             levelData: entry.type === 'level' ? (levelDataMap.get(Number(entry.refId)) || null) : null,
             mapPackData: entry.type === 'mappack' ? (mapPackDataMap.get(Number(entry.refId)) || null) : null,
             unlocked,
