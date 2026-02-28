@@ -1,6 +1,6 @@
 import supabase from "@src/client/supabase";
 import { fetchLevelFromGD } from "@src/services/level.service";
-import { getActiveseason, getActiveBattlePassLevelByLevelID, getAllSeasonMapPacks } from "@src/services/battlepass.service";
+import { getActiveseason, getActiveBattlePassLevelByLevelID, getCourseEntries } from "@src/services/battlepass.service";
 
 export async function fetchPlayerDeathCount(uid: string, levelID: number, tag: string) {
     let { data, error } = await supabase
@@ -76,8 +76,8 @@ async function isEligible(levelID: number, eventCheck = true, battlepassCheck = 
 
     if (battlepassCheck) {
         try {
-            // Check if level is part of an active season (normal, daily, weekly, or map pack)
-            const activeSeason = await getActiveseason();
+            // Check if level is part of active season battle pass or active season course
+            const activeSeason = await getActiveseason() as any;
 
             if (activeSeason) {
                 // Check if level is a battle pass level (normal, daily, weekly)
@@ -90,13 +90,65 @@ async function isEligible(levelID: number, eventCheck = true, battlepassCheck = 
                     }
                 } catch { }
 
-                // Check if level is in a map pack for this season
-                const seasonMapPacks = await getAllSeasonMapPacks(activeSeason.id);
+                // Check if level is in active season course entries (direct level or map pack level)
+                if (activeSeason.courseId) {
+                    const courseEntries = await getCourseEntries(Number(activeSeason.courseId));
 
-                for (const bpMapPack of seasonMapPacks) {
-                    if (bpMapPack.mapPacks?.mapPackLevels) {
-                        const hasLevel = bpMapPack.mapPacks.mapPackLevels.some((mpl: any) => mpl.levelID === levelID);
-                        if (hasLevel) {
+                    const levelEntryRefs = [...new Set(
+                        (courseEntries || [])
+                            .filter((entry: any) => entry.type === 'level')
+                            .map((entry: any) => Number(entry.refId))
+                            .filter((id: number) => Number.isFinite(id))
+                    )];
+
+                    if (levelEntryRefs.includes(Number(levelID))) {
+                        return true;
+                    }
+
+                    if (levelEntryRefs.length > 0) {
+                        const { data: bpLevelRows, error: bpLevelRowsError } = await (supabase as any)
+                            .from('battlePassLevels')
+                            .select('id, levelID')
+                            .eq('seasonId', Number(activeSeason.id))
+                            .in('id', levelEntryRefs);
+
+                        if (!bpLevelRowsError && (bpLevelRows || []).some((row: any) => Number(row.levelID) === Number(levelID))) {
+                            return true;
+                        }
+                    }
+
+                    const mapPackEntryRefs = [...new Set(
+                        (courseEntries || [])
+                            .filter((entry: any) => entry.type === 'mappack')
+                            .map((entry: any) => Number(entry.refId))
+                            .filter((id: number) => Number.isFinite(id))
+                    )];
+
+                    if (mapPackEntryRefs.length > 0) {
+                        const checkMapPackRowsForLevel = (rows: any[]) => {
+                            return (rows || []).some((bpMapPack: any) => {
+                                const mapPackLevels = bpMapPack?.mapPacks?.mapPackLevels || [];
+                                return Array.isArray(mapPackLevels) && mapPackLevels.some((mpl: any) => Number(mpl.levelID) === Number(levelID));
+                            });
+                        };
+
+                        const { data: bpMapPackRowsById, error: bpMapPackRowsByIdError } = await (supabase as any)
+                            .from('battlePassMapPacks')
+                            .select('id, mapPackId, mapPacks(*, mapPackLevels(levelID))')
+                            .eq('seasonId', Number(activeSeason.id))
+                            .in('id', mapPackEntryRefs);
+
+                        if (!bpMapPackRowsByIdError && checkMapPackRowsForLevel(bpMapPackRowsById || [])) {
+                            return true;
+                        }
+
+                        const { data: bpMapPackRowsByMapPackId, error: bpMapPackRowsByMapPackIdError } = await (supabase as any)
+                            .from('battlePassMapPacks')
+                            .select('id, mapPackId, mapPacks(*, mapPackLevels(levelID))')
+                            .eq('seasonId', Number(activeSeason.id))
+                            .in('mapPackId', mapPackEntryRefs);
+
+                        if (!bpMapPackRowsByMapPackIdError && checkMapPackRowsForLevel(bpMapPackRowsByMapPackId || [])) {
                             return true;
                         }
                     }
