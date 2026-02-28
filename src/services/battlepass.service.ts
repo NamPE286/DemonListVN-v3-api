@@ -1287,10 +1287,177 @@ export async function updateCourseProgress(
     progress: number
 
 ) {
-    // TODO
-    // Upsert row to battlePassCourseEntryProgress
-    // If progress == 100, add 100 XP to player and give reward item to player
-    // Only upsert if progress is greater than current or row does not exist yet
+    const season = await getSeason(seasonId) as any;
+    const courseId = season?.courseId ? Number(season.courseId) : null;
+
+    if (!courseId) {
+        return { updated: 0, rewarded: 0 };
+    }
+
+    const entries = await getCourseEntries(courseId);
+    if (!entries.length) {
+        return { updated: 0, rewarded: 0 };
+    }
+
+    const normalizedProgress = Math.max(0, Math.min(100, Number(progress) || 0));
+
+    const { data: bpLevelRows, error: bpLevelRowsError } = await (supabase as any)
+        .from('battlePassLevels')
+        .select('id')
+        .eq('seasonId', seasonId)
+        .eq('levelID', levelId);
+
+    if (bpLevelRowsError) {
+        throw new Error(bpLevelRowsError.message);
+    }
+
+    const matchedLevelEntryIds = new Set<number>();
+    const bpLevelIds = new Set<number>((bpLevelRows || []).map((row: any) => Number(row.id)));
+
+    for (const entry of entries as any[]) {
+        if (entry.type === 'level' && bpLevelIds.has(Number(entry.refId))) {
+            matchedLevelEntryIds.add(Number(entry.id));
+        }
+    }
+
+    const { data: mapPackRows, error: mapPackRowsError } = await (supabase as any)
+        .from('battlePassMapPacks')
+        .select('id, mapPackId, mapPacks!inner(mapPackLevels!inner(levelID))')
+        .eq('seasonId', seasonId)
+        .eq('mapPacks.mapPackLevels.levelID', levelId);
+
+    if (mapPackRowsError) {
+        throw new Error(mapPackRowsError.message);
+    }
+
+    const mapPackIdToBpMapPackId = new Map<number, number>();
+    (mapPackRows || []).forEach((row: any) => {
+        mapPackIdToBpMapPackId.set(Number(row.id), Number(row.id));
+    });
+
+    const matchedMapPackEntries = (entries as any[])
+        .filter((entry: any) => entry.type === 'mappack' && mapPackIdToBpMapPackId.has(Number(entry.refId)));
+
+    const matchedEntryIds = [
+        ...Array.from(matchedLevelEntryIds),
+        ...matchedMapPackEntries.map((entry: any) => Number(entry.id))
+    ];
+
+    if (matchedEntryIds.length === 0) {
+        return { updated: 0, rewarded: 0 };
+    }
+
+    const { data: existingProgressRows, error: existingProgressError } = await (supabase as any)
+        .from('battlePassCourseEntryProgress')
+        .select('*')
+        .eq('userID', userId)
+        .in('entryId', matchedEntryIds);
+
+    if (existingProgressError) {
+        throw new Error(existingProgressError.message);
+    }
+
+    const existingProgressMap = new Map<number, any>((existingProgressRows || []).map((row: any) => [Number(row.entryId), row]));
+
+    const mapPackEntryByBpMapPackId = new Map<number, any>();
+    for (const entry of matchedMapPackEntries) {
+        mapPackEntryByBpMapPackId.set(Number(entry.refId), entry);
+    }
+
+    let mapPackProgressMap = new Map<number, number>();
+    const matchedBpMapPackIds = Array.from(mapPackEntryByBpMapPackId.keys());
+    if (matchedBpMapPackIds.length > 0) {
+        const { data: mapPackProgressRows, error: mapPackProgressError } = await (supabase as any)
+            .from('battlePassMapPackProgress')
+            .select('battlePassMapPackId, progress')
+            .eq('userID', userId)
+            .in('battlePassMapPackId', matchedBpMapPackIds);
+
+        if (mapPackProgressError) {
+            throw new Error(mapPackProgressError.message);
+        }
+
+        mapPackProgressMap = new Map<number, number>();
+        (mapPackProgressRows || []).forEach((row: any) => {
+            mapPackProgressMap.set(Number(row.battlePassMapPackId), Number(row.progress) || 0);
+        });
+    }
+
+    let updated = 0;
+    let rewarded = 0;
+
+    for (const entry of entries as any[]) {
+        const entryId = Number(entry.id);
+        if (!matchedEntryIds.includes(entryId)) {
+            continue;
+        }
+
+        const nextProgress = entry.type === 'mappack'
+            ? Math.max(0, Math.min(100, mapPackProgressMap.get(Number(entry.refId)) || 0))
+            : normalizedProgress;
+
+        const current = existingProgressMap.get(entryId);
+        const currentProgress = Number(current?.progress || 0);
+
+        if (current && nextProgress <= currentProgress) {
+            continue;
+        }
+
+        const now = new Date().toISOString();
+        const completed = nextProgress >= 100;
+        const claimed = completed ? true : !!current?.claimed;
+
+        const { error: upsertError } = await (supabase as any)
+            .from('battlePassCourseEntryProgress')
+            .upsert({
+                entryId,
+                userID: userId,
+                progress: nextProgress,
+                completed,
+                completedAt: completed ? (current?.completedAt || now) : null,
+                claimed,
+                claimedAt: completed ? (current?.claimedAt || now) : null
+            });
+
+        if (upsertError) {
+            throw new Error(upsertError.message);
+        }
+
+        updated++;
+
+        const shouldReward = completed && !current?.claimed;
+        if (!shouldReward) {
+            continue;
+        }
+
+        const rewardXp = Number(entry.rewardXp || COURSE_CLEAR_XP);
+        if (rewardXp > 0) {
+            await addXp(
+                seasonId,
+                userId,
+                rewardXp,
+                'course_auto',
+                entryId,
+                `Auto-completed course entry reward: ${entry.type}#${entry.refId}`
+            );
+        }
+
+        const rewardItemId = entry.rewardItemId ? Number(entry.rewardItemId) : null;
+        const rewardQuantity = Number(entry.rewardQuantity || 1);
+        if (rewardItemId && rewardQuantity > 0) {
+            for (let i = 0; i < rewardQuantity; i++) {
+                await addInventoryItem({
+                    userID: userId,
+                    itemId: rewardItemId,
+                    expireAt: null
+                });
+            }
+        }
+
+        rewarded++;
+    }
+
+    return { updated, rewarded };
 }
 
 export async function getActiveSeasonCourse(userId?: string) {
