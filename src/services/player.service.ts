@@ -565,8 +565,7 @@ export async function getTopBuyers(interval: number, limit: number, offset: numb
     const players = getPlayersBatch(uids)
     const playerMap = new Map((await players).map(p => [p!.uid, p]));
     const res = data.map(i => ({
-        player: playerMap.get(i.uid),
-        totalAmount: i.totalAmount
+        player: playerMap.get(i.uid)
     }));
 
     return res;
