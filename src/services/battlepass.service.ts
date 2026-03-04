@@ -1282,6 +1282,21 @@ export async function deleteCourseEntry(entryId: number) {
     }
 }
 
+function previousEntriesCompleted(
+    levelEntries: Array<{ id: number; sortOrder: number | null }>,
+    currentEntry: { sortOrder: number | null },
+    progressMap: Map<number, number>
+): boolean {
+    const currentSortOrder = Number(currentEntry.sortOrder ?? 0);
+
+    return levelEntries
+        .filter(levelEntry => Number(levelEntry.sortOrder ?? 0) < currentSortOrder)
+        .every(levelEntry => {
+            const lowerProgress = progressMap.get(Number(levelEntry.id)) || 0;
+            return lowerProgress >= COMPLETION_THRESHOLD;
+        });
+}
+
 export async function updateCourseProgress(
     seasonId: number,
     userId: string,
@@ -1302,32 +1317,51 @@ export async function updateCourseProgress(
         return;
     }
 
-    progress = Math.min(100, Math.max(0, progress))
+    progress = Math.min(100, Math.max(0, progress));
 
-    for(const entry of entries) {
+    const levelEntries = entries.filter(entry => entry.type === EntryType.LEVEL);
+    const levelEntryIds = levelEntries.map(entry => entry.id);
+
+    const progressMap = new Map<number, number>();
+
+    if (levelEntryIds.length > 0) {
+        const { data: progressRows, error: progressError } = await supabase
+            .from('battlePassCourseEntryProgress')
+            .select('entryId, progress')
+            .eq('userID', userId)
+            .in('entryId', levelEntryIds);
+
+        if (progressError) {
+            throw new Error(progressError.message);
+        }
+
+        (progressRows || []).forEach(row => {
+            progressMap.set(Number(row.entryId), Number(row.progress || 0));
+        });
+    }
+
+    for (const entry of entries) {
         if (entry.type === EntryType.LEVEL && entry.refId === levelId) {
-            const { data, error } = await supabase
-                .from('battlePassCourseEntryProgress')
-                .select('*')
-                .match({ entryId: entry.id, userID: userId })
-                .maybeSingle()
-
-            if (error) {
-                throw new Error(error.message)
+            if (!previousEntriesCompleted(levelEntries, entry, progressMap)) {
+                continue;
             }
 
-            if (data?.progress || 0 < progress) {
+            const currentProgress = progressMap.get(Number(entry.id)) || 0;
+
+            if (currentProgress < progress) {
                 const { error } = await supabase
                     .from('battlePassCourseEntryProgress')
                     .upsert({
                         entryId: entry.id,
                         userID: userId,
-                        progress: progress
-                    })
+                        progress
+                    });
 
                 if (error) {
-                    throw new Error(error.message)
+                    throw new Error(error.message);
                 }
+
+                progressMap.set(Number(entry.id), progress);
             }
         } else if (entry.type === EntryType.MAPPACK) {
             // TODO
