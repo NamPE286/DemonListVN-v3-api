@@ -115,28 +115,28 @@ export type Database = {
         Row: {
           claimed: boolean
           claimedAt: string | null
-          completed: boolean
           completedAt: string | null
           created_at: string
           entryId: number
+          progress: number
           userID: string
         }
         Insert: {
           claimed?: boolean
           claimedAt?: string | null
-          completed?: boolean
           completedAt?: string | null
           created_at?: string
           entryId: number
+          progress?: number
           userID: string
         }
         Update: {
           claimed?: boolean
           claimedAt?: string | null
-          completed?: boolean
           completedAt?: string | null
           created_at?: string
           entryId?: number
+          progress?: number
           userID?: string
         }
         Relationships: [

@@ -3,6 +3,8 @@ import { addInventoryItem } from "@src/services/inventory.service";
 import { SubscriptionType } from "@src/const/subscription-type-const";
 import { fetchPlayerDeathCount, getDeathCountProgress } from "@src/services/death-count.service";
 import type { TablesInsert } from "@src/types/supabase";
+import { Battlepass, EntryType } from "@src/const/battlepass";
+import { getLevel } from "@src/services/level.service";
 
 const XP_PER_TIER = 100;
 const MAX_TIER = 100;
@@ -1302,7 +1304,35 @@ export async function updateCourseProgress(
 
     progress = Math.min(100, Math.max(0, progress))
 
+    for(const entry of entries) {
+        if (entry.type === EntryType.LEVEL && entry.refId === levelId) {
+            const { data, error } = await supabase
+                .from('battlePassCourseEntryProgress')
+                .select('*')
+                .match({ entryId: entry.id, userID: userId })
+                .maybeSingle()
 
+            if (error) {
+                throw new Error(error.message)
+            }
+
+            if (data?.progress || 0 < progress) {
+                const { error } = await supabase
+                    .from('battlePassCourseEntryProgress')
+                    .upsert({
+                        entryId: entry.id,
+                        userID: userId,
+                        progress: progress
+                    })
+
+                if (error) {
+                    throw new Error(error.message)
+                }
+            }
+        } else if (entry.type === EntryType.MAPPACK) {
+            // TODO
+        }
+    }
 }
 
 export async function getActiveSeasonCourse(userId?: string) {
