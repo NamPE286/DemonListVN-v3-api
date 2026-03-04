@@ -1299,7 +1299,7 @@ export async function updateCourseProgress(
     const entries = await getCourseEntries(courseId);
 
     if (!entries.length) {
-        return { updated: 0, rewarded: 0 };
+        return;
     }
 
     progress = Math.min(100, Math.max(0, progress))
@@ -1428,9 +1428,11 @@ export async function getActiveSeasonCourse(userId?: string) {
 
     let allPreviousCompleted = true;
     const entriesWithProgress = entries.map((entry: any, index: number) => {
-        const progress = progressMap.get(entry.id);
-        const completed = !!progress?.completed;
-        const claimed = !!progress?.claimed;
+        const progressRow = progressMap.get(entry.id);
+        const rawProgress = Math.min(100, Math.max(0, Number(progressRow?.progress || 0)));
+        const claimed = !!progressRow?.claimed;
+        const completed = rawProgress >= COMPLETION_THRESHOLD || !!progressRow?.completedAt || claimed;
+        const progress = completed ? COMPLETION_THRESHOLD : rawProgress;
 
         const unlocked = index === 0 ? true : allPreviousCompleted;
         allPreviousCompleted = allPreviousCompleted && completed;
@@ -1441,6 +1443,7 @@ export async function getActiveSeasonCourse(userId?: string) {
             rewardItemData: entry.rewardItemId ? (rewardItemDataMap.get(Number(entry.rewardItemId)) || null) : null,
             levelData: entry.type === 'level' ? (levelDataMap.get(Number(entry.refId)) || null) : null,
             mapPackData: entry.type === 'mappack' ? (mapPackDataMap.get(Number(entry.refId)) || null) : null,
+            progress,
             unlocked,
             completed,
             claimed
@@ -1488,8 +1491,10 @@ export async function claimCourseEntryReward(entryId: number, userId: string) {
 
     const progressMap = new Map<number, any>((progressRows || []).map((p: any) => [p.entryId, p]));
     const targetProgress = progressMap.get(entryId);
+    const targetProgressValue = Math.min(100, Math.max(0, Number(targetProgress?.progress || 0)));
+    const targetCompleted = targetProgressValue >= COMPLETION_THRESHOLD || !!targetProgress?.completedAt;
 
-    if (!targetProgress?.completed) {
+    if (!targetCompleted) {
         throw new Error('Course entry not completed');
     }
 
@@ -1499,7 +1504,9 @@ export async function claimCourseEntryReward(entryId: number, userId: string) {
 
     for (let i = 0; i < targetIndex; i++) {
         const previousProgress = progressMap.get(entries[i].id);
-        if (!previousProgress?.completed) {
+        const previousProgressValue = Math.min(100, Math.max(0, Number(previousProgress?.progress || 0)));
+        const previousCompleted = previousProgressValue >= COMPLETION_THRESHOLD || !!previousProgress?.completedAt || !!previousProgress?.claimed;
+        if (!previousCompleted) {
             throw new Error('Course entry is locked');
         }
     }
@@ -1510,7 +1517,7 @@ export async function claimCourseEntryReward(entryId: number, userId: string) {
         .upsert({
             entryId,
             userID: userId,
-            completed: true,
+            progress: Math.max(COMPLETION_THRESHOLD, targetProgressValue),
             completedAt: targetProgress.completedAt || now,
             claimed: true,
             claimedAt: now
@@ -2361,8 +2368,7 @@ export async function trackProgressAfterDeathCount(
     player: Awaited<ReturnType<typeof fetchPlayerDeathCount>>
 ) {
 
-    const progressPercent = setCompleted ? 100 : getDeathCountProgress(player.count);
-    const finalProgress = setCompleted && player.completedTime ? 100 : progressPercent;
+    const progress = setCompleted ? 100 : getDeathCountProgress(player.count);
     const season = await getActiveseason();
     let battlePassLevelIdForCourseSync: number | null = null;
 
@@ -2377,14 +2383,14 @@ export async function trackProgressAfterDeathCount(
         if (bpLevel) {
             battlePassLevelIdForCourseSync = bpLevel.id;
 
-            await updatePlayerLevelProgress(bpLevel.id, uid, finalProgress);
+            await updatePlayerLevelProgress(bpLevel.id, uid, progress);
 
             // Check and award XP if milestones are reached
             const bpProgress = await getPlayerLevelProgress(bpLevel.id, uid);
 
-            if (bpProgress && progressPercent > bpProgress.progress) {
+            if (bpProgress && progress > bpProgress.progress) {
                 // Min progress reward
-                if (bpLevel.minProgress > 0 && finalProgress >= bpLevel.minProgress && !bpProgress.minProgressClaimed) {
+                if (bpLevel.minProgress > 0 && progress >= bpLevel.minProgress && !bpProgress.minProgressClaimed) {
                     await addXp(
                         bpLevel.seasonId,
                         uid,
@@ -2402,7 +2408,7 @@ export async function trackProgressAfterDeathCount(
                 }
 
                 // Completion reward
-                if (finalProgress >= 100 && !bpProgress.completionClaimed) {
+                if (progress >= 100 && !bpProgress.completionClaimed) {
                     const xpAmount = bpLevel.xp - bpLevel.minProgressXp;
                     if (xpAmount > 0) {
                         await addXp(
@@ -2432,7 +2438,7 @@ export async function trackProgressAfterDeathCount(
             mapPackIds,
             levelIDNum,
             uid,
-            finalProgress
+            progress
         );
     } catch (error: any) {
         console.error(`Failed to update map pack level progress:`, error.message);
@@ -2446,7 +2452,7 @@ export async function trackProgressAfterDeathCount(
     }
 
     try {
-        await updateCourseProgress(season.id, uid, levelIDNum, finalProgress);
+        await updateCourseProgress(season.id, uid, levelIDNum, progress);
     } catch (error: any) {
         console.error(`Failed to sync course progress:`, error.message);
     }
