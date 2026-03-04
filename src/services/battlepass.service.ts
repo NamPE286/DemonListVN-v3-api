@@ -1,8 +1,8 @@
 import supabase from "@src/client/supabase";
-import type { TablesInsert } from "@src/types/supabase";
 import { addInventoryItem } from "@src/services/inventory.service";
 import { SubscriptionType } from "@src/const/subscription-type-const";
 import { fetchPlayerDeathCount, getDeathCountProgress } from "@src/services/death-count.service";
+import type { TablesInsert } from "@src/types/supabase";
 
 const XP_PER_TIER = 100;
 const MAX_TIER = 100;
@@ -1146,7 +1146,7 @@ export async function claimMapPackReward(battlePassMapPackId: number, userId: st
 type CourseEntryType = 'level' | 'mappack';
 
 export async function getAllCourses() {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
         .from('battlePassCourses')
         .select('*')
         .order('id', { ascending: false });
@@ -1159,7 +1159,7 @@ export async function getAllCourses() {
 }
 
 export async function getCourse(courseId: number) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
         .from('battlePassCourses')
         .select('*')
         .eq('id', courseId)
@@ -1173,7 +1173,7 @@ export async function getCourse(courseId: number) {
 }
 
 export async function createCourse(course: { title: string; description?: string | null }) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
         .from('battlePassCourses')
         .insert(course)
         .select('*')
@@ -1187,7 +1187,7 @@ export async function createCourse(course: { title: string; description?: string
 }
 
 export async function updateCourse(courseId: number, updates: { title?: string; description?: string | null }) {
-    const { error } = await (supabase as any)
+    const { error } = await supabase
         .from('battlePassCourses')
         .update(updates)
         .eq('id', courseId);
@@ -1198,7 +1198,7 @@ export async function updateCourse(courseId: number, updates: { title?: string; 
 }
 
 export async function deleteCourse(courseId: number) {
-    const { error } = await (supabase as any)
+    const { error } = await supabase
         .from('battlePassCourses')
         .delete()
         .eq('id', courseId);
@@ -1209,7 +1209,7 @@ export async function deleteCourse(courseId: number) {
 }
 
 export async function getCourseEntries(courseId: number) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
         .from('battlePassCourseEntries')
         .select('*')
         .eq('courseId', courseId)
@@ -1220,7 +1220,7 @@ export async function getCourseEntries(courseId: number) {
         throw new Error(error.message);
     }
 
-    return data || [];
+    return data;
 }
 
 export async function createCourseEntry(entry: {
@@ -1232,7 +1232,7 @@ export async function createCourseEntry(entry: {
     rewardItemId?: number | null;
     rewardQuantity?: number;
 }) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
         .from('battlePassCourseEntries')
         .insert({
             ...entry,
@@ -1256,7 +1256,7 @@ export async function updateCourseEntry(entryId: number, updates: {
     rewardItemId?: number | null;
     rewardQuantity?: number;
 }) {
-    const { error } = await (supabase as any)
+    const { error } = await supabase
         .from('battlePassCourseEntries')
         .update({
             ...updates,
@@ -1270,7 +1270,7 @@ export async function updateCourseEntry(entryId: number, updates: {
 }
 
 export async function deleteCourseEntry(entryId: number) {
-    const { error } = await (supabase as any)
+    const { error } = await supabase
         .from('battlePassCourseEntries')
         .delete()
         .eq('id', entryId);
@@ -1295,169 +1295,14 @@ export async function updateCourseProgress(
     }
 
     const entries = await getCourseEntries(courseId);
+
     if (!entries.length) {
         return { updated: 0, rewarded: 0 };
     }
 
-    const normalizedProgress = Math.max(0, Math.min(100, Number(progress) || 0));
+    progress = Math.min(100, Math.max(0, progress))
 
-    const { data: bpLevelRows, error: bpLevelRowsError } = await (supabase as any)
-        .from('battlePassLevels')
-        .select('id')
-        .eq('seasonId', seasonId)
-        .eq('levelID', levelId);
 
-    if (bpLevelRowsError) {
-        throw new Error(bpLevelRowsError.message);
-    }
-
-    const matchedLevelEntryIds = new Set<number>();
-    const bpLevelIds = new Set<number>((bpLevelRows || []).map((row: any) => Number(row.id)));
-
-    for (const entry of entries as any[]) {
-        if (entry.type === 'level' && bpLevelIds.has(Number(entry.refId))) {
-            matchedLevelEntryIds.add(Number(entry.id));
-        }
-    }
-
-    const { data: mapPackRows, error: mapPackRowsError } = await (supabase as any)
-        .from('battlePassMapPacks')
-        .select('id, mapPackId, mapPacks!inner(mapPackLevels!inner(levelID))')
-        .eq('seasonId', seasonId)
-        .eq('mapPacks.mapPackLevels.levelID', levelId);
-
-    if (mapPackRowsError) {
-        throw new Error(mapPackRowsError.message);
-    }
-
-    const mapPackIdToBpMapPackId = new Map<number, number>();
-    (mapPackRows || []).forEach((row: any) => {
-        mapPackIdToBpMapPackId.set(Number(row.id), Number(row.id));
-    });
-
-    const matchedMapPackEntries = (entries as any[])
-        .filter((entry: any) => entry.type === 'mappack' && mapPackIdToBpMapPackId.has(Number(entry.refId)));
-
-    const matchedEntryIds = [
-        ...Array.from(matchedLevelEntryIds),
-        ...matchedMapPackEntries.map((entry: any) => Number(entry.id))
-    ];
-
-    if (matchedEntryIds.length === 0) {
-        return { updated: 0, rewarded: 0 };
-    }
-
-    const { data: existingProgressRows, error: existingProgressError } = await (supabase as any)
-        .from('battlePassCourseEntryProgress')
-        .select('*')
-        .eq('userID', userId)
-        .in('entryId', matchedEntryIds);
-
-    if (existingProgressError) {
-        throw new Error(existingProgressError.message);
-    }
-
-    const existingProgressMap = new Map<number, any>((existingProgressRows || []).map((row: any) => [Number(row.entryId), row]));
-
-    const mapPackEntryByBpMapPackId = new Map<number, any>();
-    for (const entry of matchedMapPackEntries) {
-        mapPackEntryByBpMapPackId.set(Number(entry.refId), entry);
-    }
-
-    let mapPackProgressMap = new Map<number, number>();
-    const matchedBpMapPackIds = Array.from(mapPackEntryByBpMapPackId.keys());
-    if (matchedBpMapPackIds.length > 0) {
-        const { data: mapPackProgressRows, error: mapPackProgressError } = await (supabase as any)
-            .from('battlePassMapPackProgress')
-            .select('battlePassMapPackId, progress')
-            .eq('userID', userId)
-            .in('battlePassMapPackId', matchedBpMapPackIds);
-
-        if (mapPackProgressError) {
-            throw new Error(mapPackProgressError.message);
-        }
-
-        mapPackProgressMap = new Map<number, number>();
-        (mapPackProgressRows || []).forEach((row: any) => {
-            mapPackProgressMap.set(Number(row.battlePassMapPackId), Number(row.progress) || 0);
-        });
-    }
-
-    let updated = 0;
-    let rewarded = 0;
-
-    for (const entry of entries as any[]) {
-        const entryId = Number(entry.id);
-        if (!matchedEntryIds.includes(entryId)) {
-            continue;
-        }
-
-        const nextProgress = entry.type === 'mappack'
-            ? Math.max(0, Math.min(100, mapPackProgressMap.get(Number(entry.refId)) || 0))
-            : normalizedProgress;
-
-        const current = existingProgressMap.get(entryId);
-        const currentProgress = Number(current?.progress || 0);
-
-        if (current && nextProgress <= currentProgress) {
-            continue;
-        }
-
-        const now = new Date().toISOString();
-        const completed = nextProgress >= 100;
-        const claimed = completed ? true : !!current?.claimed;
-
-        const { error: upsertError } = await (supabase as any)
-            .from('battlePassCourseEntryProgress')
-            .upsert({
-                entryId,
-                userID: userId,
-                progress: nextProgress,
-                completed,
-                completedAt: completed ? (current?.completedAt || now) : null,
-                claimed,
-                claimedAt: completed ? (current?.claimedAt || now) : null
-            });
-
-        if (upsertError) {
-            throw new Error(upsertError.message);
-        }
-
-        updated++;
-
-        const shouldReward = completed && !current?.claimed;
-        if (!shouldReward) {
-            continue;
-        }
-
-        const rewardXp = Number(entry.rewardXp || COURSE_CLEAR_XP);
-        if (rewardXp > 0) {
-            await addXp(
-                seasonId,
-                userId,
-                rewardXp,
-                'course_auto',
-                entryId,
-                `Auto-completed course entry reward: ${entry.type}#${entry.refId}`
-            );
-        }
-
-        const rewardItemId = entry.rewardItemId ? Number(entry.rewardItemId) : null;
-        const rewardQuantity = Number(entry.rewardQuantity || 1);
-        if (rewardItemId && rewardQuantity > 0) {
-            for (let i = 0; i < rewardQuantity; i++) {
-                await addInventoryItem({
-                    userID: userId,
-                    itemId: rewardItemId,
-                    expireAt: null
-                });
-            }
-        }
-
-        rewarded++;
-    }
-
-    return { updated, rewarded };
 }
 
 export async function getActiveSeasonCourse(userId?: string) {
@@ -1486,7 +1331,7 @@ export async function getActiveSeasonCourse(userId?: string) {
     const rewardItemDataMap = new Map<number, any>();
 
     if (levelEntryRefs.length > 0) {
-        const { data: levelRows, error: levelRowsError } = await (supabase as any)
+        const { data: levelRows, error: levelRowsError } = await supabase
             .from('battlePassLevels')
             .select('id, levelID, levels(*)')
             .in('id', levelEntryRefs);
@@ -1503,7 +1348,7 @@ export async function getActiveSeasonCourse(userId?: string) {
     }
 
     if (mapPackEntryRefs.length > 0) {
-        const { data: mapPackRows, error: mapPackRowsError } = await (supabase as any)
+        const { data: mapPackRows, error: mapPackRowsError } = await supabase
             .from('battlePassMapPacks')
             .select('id, mapPackId, mapPacks(*, mapPackLevels(*, levels(*)))')
             .in('id', mapPackEntryRefs);
@@ -1520,7 +1365,7 @@ export async function getActiveSeasonCourse(userId?: string) {
     }
 
     if (rewardItemIds.length > 0) {
-        const { data: rewardItemRows, error: rewardItemRowsError } = await (supabase as any)
+        const { data: rewardItemRows, error: rewardItemRowsError } = await supabase
             .from('items')
             .select('*')
             .in('id', rewardItemIds);
@@ -1538,7 +1383,7 @@ export async function getActiveSeasonCourse(userId?: string) {
 
     let progressMap = new Map<number, any>();
     if (userId && entries.length > 0) {
-        const { data: progressRows, error: progressError } = await (supabase as any)
+        const { data: progressRows, error: progressError } = await supabase
             .from('battlePassCourseEntryProgress')
             .select('*')
             .eq('userID', userId)
@@ -1580,7 +1425,7 @@ export async function getActiveSeasonCourse(userId?: string) {
 }
 
 export async function claimCourseEntryReward(entryId: number, userId: string) {
-    const { data: entry, error: entryError } = await (supabase as any)
+    const { data: entry, error: entryError } = await supabase
         .from('battlePassCourseEntries')
         .select('*')
         .eq('id', entryId)
@@ -1601,7 +1446,7 @@ export async function claimCourseEntryReward(entryId: number, userId: string) {
         throw new Error('Course entry not found');
     }
 
-    const { data: progressRows, error: progressError } = await (supabase as any)
+    const { data: progressRows, error: progressError } = await supabase
         .from('battlePassCourseEntryProgress')
         .select('*')
         .eq('userID', userId)
@@ -1630,7 +1475,7 @@ export async function claimCourseEntryReward(entryId: number, userId: string) {
     }
 
     const now = new Date().toISOString();
-    const { error: claimError } = await (supabase as any)
+    const { error: claimError } = await supabase
         .from('battlePassCourseEntryProgress')
         .upsert({
             entryId,
@@ -2262,7 +2107,7 @@ export async function getBatchMapPackLevelProgress(
     }
 
     const mapPackIds = [...new Set(levels.map(l => l.mapPackId))];
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
         .from('battlePassMapPackLevelProgress')
         .select('*')
         .eq('userID', userId)
@@ -2300,7 +2145,7 @@ export async function updateMapPackLevelProgress(
     userId: string,
     progress: number
 ) {
-    const { error } = await (supabase as any)
+    const { error } = await supabase
         .from('battlePassMapPackLevelProgress')
         .upsert({
             battlePassMapPackId,
@@ -2322,7 +2167,7 @@ export async function batchUpdateMapPackLevelProgress(
 ) {
     if (mapPackIds.length === 0) return;
 
-    const { data: existingRows, error: existingError } = await (supabase as any)
+    const { data: existingRows, error: existingError } = await supabase
         .from('battlePassMapPackLevelProgress')
         .select('battlePassMapPackId, progress')
         .eq('userID', userId)
@@ -2352,7 +2197,7 @@ export async function batchUpdateMapPackLevelProgress(
 
     if (records.length === 0) return;
 
-    const { error } = await (supabase as any)
+    const { error } = await supabase
         .from('battlePassMapPackLevelProgress')
         .upsert(records);
 

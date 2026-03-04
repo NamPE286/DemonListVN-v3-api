@@ -60,6 +60,123 @@ export type Database = {
           },
         ]
       }
+      battlePassCourseEntries: {
+        Row: {
+          courseId: number
+          created_at: string
+          id: number
+          refId: number
+          rewardItemId: number | null
+          rewardQuantity: number
+          rewardXp: number
+          sortOrder: number
+          type: string
+        }
+        Insert: {
+          courseId: number
+          created_at?: string
+          id?: number
+          refId: number
+          rewardItemId?: number | null
+          rewardQuantity?: number
+          rewardXp?: number
+          sortOrder?: number
+          type: string
+        }
+        Update: {
+          courseId?: number
+          created_at?: string
+          id?: number
+          refId?: number
+          rewardItemId?: number | null
+          rewardQuantity?: number
+          rewardXp?: number
+          sortOrder?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassCourseEntries_courseId_fkey"
+            columns: ["courseId"]
+            isOneToOne: false
+            referencedRelation: "battlePassCourses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassCourseEntries_rewardItemId_fkey"
+            columns: ["rewardItemId"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battlePassCourseEntryProgress: {
+        Row: {
+          claimed: boolean
+          claimedAt: string | null
+          completed: boolean
+          completedAt: string | null
+          created_at: string
+          entryId: number
+          userID: string
+        }
+        Insert: {
+          claimed?: boolean
+          claimedAt?: string | null
+          completed?: boolean
+          completedAt?: string | null
+          created_at?: string
+          entryId: number
+          userID: string
+        }
+        Update: {
+          claimed?: boolean
+          claimedAt?: string | null
+          completed?: boolean
+          completedAt?: string | null
+          created_at?: string
+          entryId?: number
+          userID?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battlePassCourseEntryProgress_entryId_fkey"
+            columns: ["entryId"]
+            isOneToOne: false
+            referencedRelation: "battlePassCourseEntries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battlePassCourseEntryProgress_userID_fkey"
+            columns: ["userID"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      battlePassCourses: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          title?: string
+        }
+        Relationships: []
+      }
       battlePassLevelProgress: {
         Row: {
           battlePassLevelId: number
@@ -496,6 +613,7 @@ export type Database = {
       }
       battlePassSeasons: {
         Row: {
+          courseId: number | null
           created_at: string
           description: string | null
           end: string
@@ -506,6 +624,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          courseId?: number | null
           created_at?: string
           description?: string | null
           end: string
@@ -516,6 +635,7 @@ export type Database = {
           title: string
         }
         Update: {
+          courseId?: number | null
           created_at?: string
           description?: string | null
           end?: string
@@ -525,7 +645,15 @@ export type Database = {
           start?: string
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "battlePassSeasons_courseId_fkey"
+            columns: ["courseId"]
+            isOneToOne: false
+            referencedRelation: "battlePassCourses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       battlePassTierRewards: {
         Row: {
@@ -2451,9 +2579,9 @@ export type Database = {
           name: string | null
           nameLocked: boolean
           overallRank: number | null
+          overviewData: Json | null
           overwatchReviewCount: number
           overwatchReviewDate: string | null
-          overviewData: Json | null
           plrank: number | null
           plRating: number | null
           pointercrate: string | null
@@ -2499,9 +2627,9 @@ export type Database = {
           name?: string | null
           nameLocked?: boolean
           overallRank?: number | null
+          overviewData?: Json | null
           overwatchReviewCount?: number
           overwatchReviewDate?: string | null
-          overviewData?: Json | null
           plrank?: number | null
           plRating?: number | null
           pointercrate?: string | null
@@ -2547,9 +2675,9 @@ export type Database = {
           name?: string | null
           nameLocked?: boolean
           overallRank?: number | null
+          overviewData?: Json | null
           overwatchReviewCount?: number
           overwatchReviewDate?: string | null
-          overviewData?: Json | null
           plrank?: number | null
           plRating?: number | null
           pointercrate?: string | null
@@ -3103,11 +3231,11 @@ export type Database = {
           uid: string
         }[]
       }
-      reset_overwatch_daily_limits: { Args: never; Returns: undefined }
       record_community_post_view: {
         Args: { p_post_id: number; p_user_id: string }
         Returns: undefined
       }
+      reset_overwatch_daily_limits: { Args: never; Returns: undefined }
       update_list: { Args: never; Returns: undefined }
       update_rank: { Args: never; Returns: undefined }
       update_supporter_until: { Args: never; Returns: undefined }
