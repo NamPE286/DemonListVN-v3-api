@@ -2364,11 +2364,10 @@ export async function getMapPackIdsForLevel(seasonId: number, levelID: number) {
 export async function trackProgressAfterDeathCount(
     uid: string,
     levelIDNum: number,
-    setCompleted: boolean,
     player: Awaited<ReturnType<typeof fetchPlayerDeathCount>>
 ) {
 
-    const progress = setCompleted ? 100 : getDeathCountProgress(player.count);
+    const progress = player.completedTime ? 100 : getDeathCountProgress(player.count);
     const season = await getActiveseason();
     let battlePassLevelIdForCourseSync: number | null = null;
 
