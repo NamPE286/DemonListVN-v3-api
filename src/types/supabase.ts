@@ -1184,6 +1184,8 @@ export type Database = {
           imageUrl: string | null
           isRecommended: boolean | null
           likesCount: number
+          maxParticipants: number | null
+          participantsCount: number
           pinned: boolean
           title: string
           type: string
@@ -1203,6 +1205,8 @@ export type Database = {
           imageUrl?: string | null
           isRecommended?: boolean | null
           likesCount?: number
+          maxParticipants?: number | null
+          participantsCount?: number
           pinned?: boolean
           title: string
           type?: string
@@ -1222,6 +1226,8 @@ export type Database = {
           imageUrl?: string | null
           isRecommended?: boolean | null
           likesCount?: number
+          maxParticipants?: number | null
+          participantsCount?: number
           pinned?: boolean
           title?: string
           type?: string
@@ -1233,6 +1239,48 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "community_posts_uid_fkey"
+            columns: ["uid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      communityPostParticipants: {
+        Row: {
+          id: number
+          postId: number
+          uid: string
+          status: string
+          createdAt: string
+          updatedAt: string
+        }
+        Insert: {
+          id?: number
+          postId: number
+          uid: string
+          status?: string
+          createdAt?: string
+          updatedAt?: string
+        }
+        Update: {
+          id?: number
+          postId?: number
+          uid?: string
+          status?: string
+          createdAt?: string
+          updatedAt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_post_participants_post_id_fkey"
+            columns: ["postId"]
+            isOneToOne: false
+            referencedRelation: "communityPosts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_post_participants_uid_fkey"
             columns: ["uid"]
             isOneToOne: false
             referencedRelation: "players"

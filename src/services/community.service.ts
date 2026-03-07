@@ -184,6 +184,7 @@ export async function getCommunityPostsCount(type?: string, search?: string, hid
 export async function getCommunityPost(id: number) {
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
+    // @ts-ignore
     const { data, error } = await db
         .from('communityPosts')
         .select(`*, players!uid(${playerSelect}), communityPostsAdmin(moderationStatus, moderationResult, hidden), communityPostsTags(tagId, postTags(id, name, color, adminOnly))`)
@@ -208,6 +209,7 @@ export async function createCommunityPost(post: {
     attachedRecord?: any,
     attachedLevel?: any,
     isRecommended?: boolean,
+    maxParticipants?: number | null,
 }, adminData?: {
     moderationStatus?: string,
     moderationResult?: any
@@ -818,20 +820,36 @@ export async function createPostFull(params: {
     attachedRecord?: any,
     attachedLevel?: any,
     isRecommended?: boolean,
-    tagIds?: number[]
+    tagIds?: number[],
+    maxParticipants?: number | null
 }) {
-    const { uid, isAdmin, title, content, type, imageUrl, videoUrl, attachedRecord, attachedLevel, isRecommended } = params
+    const { uid, isAdmin, title, content, type, imageUrl, videoUrl, attachedRecord, attachedLevel, isRecommended, maxParticipants } = params
 
     if (!title) {
         throw new ValidationError('Title is required')
     }
 
-    const validTypes = ['discussion', 'media', 'guide', 'announcement', 'review']
+    const validTypes = ['discussion', 'media', 'guide', 'announcement', 'review', 'collab']
     const postType = validTypes.includes(type || '') ? type! : 'discussion'
 
     // Only admins can create announcements
     if (postType === 'announcement' && !isAdmin) {
         throw new ForbiddenError('Only admins can create announcements')
+    }
+
+    // Validate maxParticipants for collab posts
+    let validatedMaxParticipants: number | null = null
+    if (postType === 'collab') {
+        if (maxParticipants === undefined || maxParticipants === null) {
+            throw new ValidationError('Collab posts must specify maxParticipants')
+        }
+        const parsed = Number(maxParticipants)
+        if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
+            throw new ValidationError('maxParticipants must be an integer between 1 and 100')
+        }
+        validatedMaxParticipants = parsed
+    } else if (maxParticipants !== undefined && maxParticipants !== null) {
+        throw new ValidationError('Only collab posts can have maxParticipants')
     }
 
     // Review posts must have an attached level and user must have an accepted record for it
@@ -892,6 +910,7 @@ export async function createPostFull(params: {
         attachedRecord: attachedRecord || undefined,
         attachedLevel: attachedLevel || undefined,
         isRecommended: postType === 'review' ? isRecommended : undefined,
+        maxParticipants: validatedMaxParticipants,
     }, {
         moderationStatus: moderationStatus,
         moderationResult: moderationResult
@@ -942,7 +961,8 @@ export async function createPostFull(params: {
             media: '📸',
             guide: '📖',
             announcement: '📢',
-            review: '⭐'
+            review: '⭐',
+            collab: '🤝'
         }
         const emoji = typeEmoji[postType] || '💬'
         const playerName = post.players?.name || 'Someone'
@@ -1469,7 +1489,8 @@ export async function approvePost(postId: number) {
             media: '📸',
             guide: '📖',
             announcement: '📢',
-            review: '⭐'
+            review: '⭐',
+            collab: '🤝'
         }
         const emoji = typeEmoji[post.type] || '💬'
         const playerName = post.players?.name || 'Someone'
@@ -1687,4 +1708,233 @@ export async function setPostTags(postId: number, tagIds: number[], isAdmin: boo
 
     if (error) throw new Error(error.message)
     return data || []
+}
+
+// ---- Participant Management ----
+
+export async function getPostParticipants(postId: number) {
+    const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+
+    const { data, error } = await db
+        .from('communityPostParticipants')
+        .select(`*, players!uid(${playerSelect})`)
+        .eq('postId', postId)
+        .order('createdAt', { ascending: true })
+
+    if (error) throw new Error(error.message)
+    return data || []
+}
+
+export async function getParticipantStatus(postId: number, uid: string) {
+    const { data, error } = await db
+        .from('communityPostParticipants')
+        .select('*')
+        .eq('postId', postId)
+        .eq('uid', uid)
+        .maybeSingle()
+
+    if (error) throw new Error(error.message)
+    return data
+}
+
+export async function requestParticipation(postId: number, uid: string) {
+    // Fetch the post to check constraints
+    const { data: post, error: postError } = await db
+        .from('communityPosts')
+        .select('uid, type, maxParticipants, participantsCount')
+        .eq('id', postId)
+        .single()
+
+    if (postError || !post) throw new NotFoundError('Post not found')
+
+    // Cannot join your own post
+    if (post.uid === uid) {
+        throw new ValidationError('Cannot request participation on your own post')
+    }
+
+    // Only collab posts accept participants
+    if (post.type !== 'collab') {
+        throw new ValidationError('This post does not accept participants')
+    }
+
+    // Check if already full
+    if (post.participantsCount >= post.maxParticipants!) {
+        throw new ValidationError('This post has reached its participant limit')
+    }
+
+    // Check if already requested
+    const existing = await getParticipantStatus(postId, uid)
+    if (existing) {
+        if (existing.status === 'rejected') {
+            // Allow re-request after rejection
+            const { data, error } = await db
+                .from('communityPostParticipants')
+                .update({ status: 'pending', updatedAt: new Date().toISOString() })
+                .eq('id', existing.id)
+                .select('*')
+                .single()
+            if (error) throw new Error(error.message)
+            return data
+        }
+        throw new ConflictError('You have already requested to participate')
+    }
+
+    const { data, error } = await db
+        .from('communityPostParticipants')
+        .insert({ postId, uid, status: 'pending' })
+        .select('*')
+        .single()
+
+    if (error) throw new Error(error.message)
+    return data
+}
+
+export async function approveParticipant(postId: number, participantUid: string, ownerUid: string) {
+    // Verify ownership
+    const { data: post, error: postError } = await db
+        .from('communityPosts')
+        .select('uid, type, maxParticipants, participantsCount')
+        .eq('id', postId)
+        .single()
+
+    if (postError || !post) throw new NotFoundError('Post not found')
+    if (post.uid !== ownerUid) throw new ForbiddenError('Only the post owner can approve participants')
+    if (post.type !== 'collab') throw new ValidationError('This post does not accept participants')
+
+    // Check if would exceed limit
+    if (post.participantsCount >= post.maxParticipants!) {
+        throw new ValidationError('Cannot approve: participant limit already reached')
+    }
+
+    // Find the pending request
+    const existing = await getParticipantStatus(postId, participantUid)
+    if (!existing) throw new NotFoundError('Participation request not found')
+    if (existing.status === 'approved') throw new ConflictError('Already approved')
+    if (existing.status !== 'pending') throw new ValidationError('Can only approve pending requests')
+
+    // Approve the participant
+    const { data, error } = await db
+        .from('communityPostParticipants')
+        .update({ status: 'approved', updatedAt: new Date().toISOString() })
+        .eq('id', existing.id)
+        .select('*')
+        .single()
+
+    if (error) throw new Error(error.message)
+
+    // Increment participantsCount
+    await db
+        .from('communityPosts')
+        .update({ participantsCount: post.participantsCount + 1 })
+        .eq('id', postId)
+
+    // Send notification to the approved participant
+    try {
+        const { data: owner } = await db.from('players').select('name').eq('uid', ownerUid).single()
+        await sendNotification({
+            to: participantUid,
+            content: `**${owner?.name || 'Someone'}** đã chấp nhận yêu cầu tham gia của bạn`,
+            redirect: `${FRONTEND_URL}/community/${postId}`
+        })
+    } catch {}
+
+    return data
+}
+
+export async function rejectParticipant(postId: number, participantUid: string, ownerUid: string) {
+    // Verify ownership
+    const { data: post, error: postError } = await db
+        .from('communityPosts')
+        .select('uid, maxParticipants')
+        .eq('id', postId)
+        .single()
+
+    if (postError || !post) throw new NotFoundError('Post not found')
+    if (post.uid !== ownerUid) throw new ForbiddenError('Only the post owner can reject participants')
+
+    const existing = await getParticipantStatus(postId, participantUid)
+    if (!existing) throw new NotFoundError('Participation request not found')
+    if (existing.status !== 'pending') throw new ValidationError('Can only reject pending requests')
+
+    const { data, error } = await db
+        .from('communityPostParticipants')
+        .update({ status: 'rejected', updatedAt: new Date().toISOString() })
+        .eq('id', existing.id)
+        .select('*')
+        .single()
+
+    if (error) throw new Error(error.message)
+    return data
+}
+
+export async function revokeParticipant(postId: number, participantUid: string, ownerUid: string) {
+    // Verify ownership
+    const { data: post, error: postError } = await db
+        .from('communityPosts')
+        .select('uid, type, maxParticipants, participantsCount')
+        .eq('id', postId)
+        .single()
+
+    if (postError || !post) throw new NotFoundError('Post not found')
+    if (post.uid !== ownerUid) throw new ForbiddenError('Only the post owner can revoke participants')
+    if (post.type !== 'collab') throw new ValidationError('This post does not accept participants')
+
+    // Cannot revoke when post is full
+    if (post.participantsCount >= post.maxParticipants!) {
+        throw new ValidationError('Cannot revoke participants after the post is full')
+    }
+
+    const existing = await getParticipantStatus(postId, participantUid)
+    if (!existing) throw new NotFoundError('Participant not found')
+    if (existing.status !== 'approved') throw new ValidationError('Can only revoke approved participants')
+
+    // Remove participant record
+    const { error } = await db
+        .from('communityPostParticipants')
+        .delete()
+        .eq('id', existing.id)
+
+    if (error) throw new Error(error.message)
+
+    // Decrement participantsCount
+    await db
+        .from('communityPosts')
+        .update({ participantsCount: Math.max(0, post.participantsCount - 1) })
+        .eq('id', postId)
+
+    return { success: true }
+}
+
+export async function cancelParticipation(postId: number, uid: string) {
+    const existing = await getParticipantStatus(postId, uid)
+    if (!existing) throw new NotFoundError('Participation request not found')
+
+    // If approved, check if post is full - cannot cancel if full
+    if (existing.status === 'approved') {
+        const { data: post } = await db
+            .from('communityPosts')
+            .select('maxParticipants, participantsCount')
+            .eq('id', postId)
+            .single()
+
+        if (post && post.maxParticipants !== null && post.participantsCount >= post.maxParticipants) {
+            throw new ValidationError('Cannot cancel participation after the post is full')
+        }
+
+        // Decrement count
+        if (post) {
+            await db
+                .from('communityPosts')
+                .update({ participantsCount: Math.max(0, post.participantsCount - 1) })
+                .eq('id', postId)
+        }
+    }
+
+    const { error } = await db
+        .from('communityPostParticipants')
+        .delete()
+        .eq('id', existing.id)
+
+    if (error) throw new Error(error.message)
+    return { success: true }
 }

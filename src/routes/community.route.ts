@@ -48,6 +48,13 @@ import {
     deletePostTag,
     setPostTags,
     updatePostTag,
+    getPostParticipants,
+    getParticipantStatus,
+    requestParticipation,
+    approveParticipant,
+    rejectParticipant,
+    revokeParticipant,
+    cancelParticipation,
     ValidationError,
     ForbiddenError,
     NotFoundError,
@@ -107,7 +114,7 @@ router.route('/posts')
      *         name: type
      *         schema:
      *           type: string
-     *           enum: [discussion, media, guide, announcement]
+     *           enum: [discussion, media, guide, announcement, collab]
      *       - in: query
      *         name: limit
      *         schema:
@@ -172,7 +179,7 @@ router.route('/posts/recommended')
      *         name: type
      *         schema:
      *           type: string
-     *           enum: [discussion, media, guide, announcement, review]
+     *           enum: [discussion, media, guide, announcement, review, collab]
      *       - in: query
      *         name: limit
      *         schema:
@@ -308,7 +315,7 @@ router.route('/posts')
      *                 type: string
      *               type:
      *                 type: string
-     *                 enum: [discussion, media, guide, announcement]
+     *                 enum: [discussion, media, guide, announcement, collab]
      *               image_url:
      *                 type: string
      *     responses:
@@ -1059,6 +1066,101 @@ router.route('/levels/:id/posts')
         }
 
         res.json(posts)
+    })
+
+// ---- Participants ----
+
+// Get participants for a post
+router.route('/posts/:id/participants')
+    .get(optionalAuth, async (req, res) => {
+        try {
+            const postId = parseInt(req.params.id)
+            const participants = await getPostParticipants(postId)
+            const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
+
+            let myStatus = null
+            if (userId) {
+                const status = await getParticipantStatus(postId, userId)
+                myStatus = status?.status || null
+            }
+
+            res.json({ participants, myStatus })
+        } catch (e) {
+            handleServiceError(res, e)
+        }
+    })
+
+// Request to participate in a post
+router.route('/posts/:id/participants')
+    .post(userAuth, async (req, res) => {
+        try {
+            const result = await requestParticipation(
+                parseInt(req.params.id),
+                res.locals.user.uid
+            )
+            res.status(201).json(result)
+        } catch (e) {
+            handleServiceError(res, e)
+        }
+    })
+
+// Cancel own participation request
+router.route('/posts/:id/participants/cancel')
+    .post(userAuth, async (req, res) => {
+        try {
+            const result = await cancelParticipation(
+                parseInt(req.params.id),
+                res.locals.user.uid
+            )
+            res.json(result)
+        } catch (e) {
+            handleServiceError(res, e)
+        }
+    })
+
+// Approve a participant (post owner only)
+router.route('/posts/:id/participants/:uid/approve')
+    .put(userAuth, async (req, res) => {
+        try {
+            const result = await approveParticipant(
+                parseInt(req.params.id),
+                req.params.uid,
+                res.locals.user.uid
+            )
+            res.json(result)
+        } catch (e) {
+            handleServiceError(res, e)
+        }
+    })
+
+// Reject a participant (post owner only)
+router.route('/posts/:id/participants/:uid/reject')
+    .put(userAuth, async (req, res) => {
+        try {
+            const result = await rejectParticipant(
+                parseInt(req.params.id),
+                req.params.uid,
+                res.locals.user.uid
+            )
+            res.json(result)
+        } catch (e) {
+            handleServiceError(res, e)
+        }
+    })
+
+// Revoke an approved participant (post owner only)
+router.route('/posts/:id/participants/:uid/revoke')
+    .delete(userAuth, async (req, res) => {
+        try {
+            const result = await revokeParticipant(
+                parseInt(req.params.id),
+                req.params.uid,
+                res.locals.user.uid
+            )
+            res.json(result)
+        } catch (e) {
+            handleServiceError(res, e)
+        }
     })
 
 // ---- Post Tags ----
