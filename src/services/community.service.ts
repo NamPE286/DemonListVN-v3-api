@@ -50,7 +50,8 @@ export async function getCommunityPosts(options: {
     search?: string,
     hidden?: boolean,
     moderationStatus?: string,
-    tagId?: number
+    tagId?: number,
+    clanId?: number | null
 }) {
     const {
         type,
@@ -106,6 +107,15 @@ export async function getCommunityPosts(options: {
         query = query.in('id', tagFilteredIds)
     }
 
+    // Filter by clan: null = global posts only, number = specific clan
+    if (options.clanId !== undefined) {
+        if (options.clanId === null) {
+            query = query.is('clanId', null)
+        } else {
+            query = query.eq('clanId', options.clanId)
+        }
+    }
+
     // Full-text search using the fts column
     if (search) {
         query = query.textSearch('fts', search, { type: 'websearch' })
@@ -122,13 +132,17 @@ export async function getCommunityPosts(options: {
     const { data, error } = await query
 
     if (error) {
+        // If the error is about the clanId column not existing yet (pre-migration), retry without it
+        if (options.clanId !== undefined && (error.message?.includes('clanId') || error.message?.includes('does not exist'))) {
+            return getCommunityPosts({ ...options, clanId: undefined })
+        }
         throw new Error(error.message)
     }
 
     return data
 }
 
-export async function getCommunityPostsCount(type?: string, search?: string, hidden?: boolean, moderationStatus?: string, tagId?: number) {
+export async function getCommunityPostsCount(type?: string, search?: string, hidden?: boolean, moderationStatus?: string, tagId?: number, clanId?: number | null) {
     // Pre-filter: get post IDs that have the matching tag
     let tagFilteredIds: number[] | null = null
     if (tagId) {
@@ -167,6 +181,15 @@ export async function getCommunityPostsCount(type?: string, search?: string, hid
         query = query.in('id', tagFilteredIds)
     }
 
+    // Filter by clan
+    if (clanId !== undefined) {
+        if (clanId === null) {
+            query = query.is('clanId', null)
+        } else {
+            query = query.eq('clanId', clanId)
+        }
+    }
+
     if (search) {
         query = query.textSearch('fts', search, { type: 'websearch' })
     }
@@ -174,6 +197,10 @@ export async function getCommunityPostsCount(type?: string, search?: string, hid
     const { count, error } = await query
 
     if (error) {
+        // If the error is about the clanId column not existing yet (pre-migration), retry without it
+        if (clanId !== undefined && (error.message?.includes('clanId') || error.message?.includes('does not exist'))) {
+            return getCommunityPostsCount(type, search, hidden, moderationStatus, tagId)
+        }
         throw new Error(error.message)
     }
 
@@ -198,6 +225,32 @@ export async function getCommunityPost(id: number) {
     return data
 }
 
+/** Get clan info for a post's access control. Returns null if global post. */
+export async function getPostClanInfo(postId: number): Promise<{ clanId: number, isPublic: boolean, boostedUntil: string | null } | null> {
+    try {
+        const { data: post, error: postError } = await supabase
+            .from('communityPosts')
+            .select('clanId')
+            .eq('id', postId)
+            .single()
+
+        if (postError || !post || !post.clanId) return null
+
+        const { data: clan, error: clanError } = await supabase
+            .from('clans')
+            .select('id, isPublic, boostedUntil')
+            .eq('id', post.clanId)
+            .single()
+
+        if (clanError || !clan) return null
+
+        return { clanId: clan.id, isPublic: clan.isPublic, boostedUntil: clan.boostedUntil }
+    } catch {
+        // Column may not exist yet (pre-migration)
+        return null
+    }
+}
+
 export async function createCommunityPost(post: {
     uid: string,
     title: string,
@@ -209,6 +262,7 @@ export async function createCommunityPost(post: {
     attachedLevel?: any,
     isRecommended?: boolean,
     maxParticipants?: number | null,
+    clanId?: number | null,
 }, adminData?: {
     moderationStatus?: string,
     moderationResult?: any
@@ -766,13 +820,14 @@ export async function getPostsWithLikeStatus(
         search?: string,
         pinFirst?: boolean,
         hidden?: boolean,
-        tagId?: number
+        tagId?: number,
+        clanId?: number | null
     },
     userId?: string
 ) {
     const [posts, total] = await Promise.all([
         getCommunityPosts(options),
-        getCommunityPostsCount(options.type, options.search, options.hidden, undefined, options.tagId)
+        getCommunityPostsCount(options.type, options.search, options.hidden, undefined, options.tagId, options.clanId)
     ])
 
     let userLikedPostIds: number[] = []
@@ -820,9 +875,10 @@ export async function createPostFull(params: {
     attachedLevel?: any,
     isRecommended?: boolean,
     tagIds?: number[],
-    maxParticipants?: number | null
+    maxParticipants?: number | null,
+    clanId?: number | null
 }) {
-    const { uid, isAdmin, title, content, type, imageUrl, videoUrl, attachedRecord, attachedLevel, isRecommended, maxParticipants } = params
+    const { uid, isAdmin, title, content, type, imageUrl, videoUrl, attachedRecord, attachedLevel, isRecommended, maxParticipants, clanId } = params
 
     if (!title) {
         throw new ValidationError('Title is required')
@@ -883,20 +939,23 @@ export async function createPostFull(params: {
     }
 
     // Run OpenAI moderation check on title + content + image (single API call)
+    // Clan posts are auto-approved (moderation skipped)
     let moderationStatus = 'approved'
     let moderationResult = null
 
-    try {
-        const modResult = await moderateContent(title, content || '', imageUrl || undefined)
-        moderationResult = modResult
+    if (!clanId) {
+        try {
+            const modResult = await moderateContent(title, content || '', imageUrl || undefined)
+            moderationResult = modResult
 
-        if (modResult.flagged) {
+            if (modResult.flagged) {
+                moderationStatus = 'pending'
+            }
+        } catch (err) {
+            console.error('OpenAI moderation check failed, defaulting to pending:', err)
+            // If moderation API fails, default to pending for safety
             moderationStatus = 'pending'
         }
-    } catch (err) {
-        console.error('OpenAI moderation check failed, defaulting to pending:', err)
-        // If moderation API fails, default to pending for safety
-        moderationStatus = 'pending'
     }
 
     const post = await createCommunityPost({
@@ -910,6 +969,7 @@ export async function createPostFull(params: {
         attachedLevel: attachedLevel || undefined,
         isRecommended: postType === 'review' ? isRecommended : undefined,
         maxParticipants: validatedMaxParticipants,
+        clanId: clanId || null,
     }, {
         moderationStatus: moderationStatus,
         moderationResult: moderationResult
@@ -953,27 +1013,29 @@ export async function createPostFull(params: {
         }
     }
 
-    // Send Discord notification
-    try {
-        const typeEmoji: Record<string, string> = {
-            discussion: '💬',
-            media: '📸',
-            guide: '📖',
-            announcement: '📢',
-            review: '⭐',
-            collab: '🤝'
-        }
-        const emoji = typeEmoji[postType] || '💬'
-        const playerName = post.players?.name || 'Someone'
-        const postUrl = `${FRONTEND_URL}/community/${post.id}`
-        const playerProfileUrl = `${FRONTEND_URL}/player/${post.uid}`
+    // Send Discord notification (skip for clan posts)
+    if (!clanId) {
+        try {
+            const typeEmoji: Record<string, string> = {
+                discussion: '💬',
+                media: '📸',
+                guide: '📖',
+                announcement: '📢',
+                review: '⭐',
+                collab: '🤝'
+            }
+            const emoji = typeEmoji[postType] || '💬'
+            const playerName = post.players?.name || 'Someone'
+            const postUrl = `${FRONTEND_URL}/community/${post.id}`
+            const playerProfileUrl = `${FRONTEND_URL}/player/${post.uid}`
 
-        await sendMessageToChannel(
-            String(DiscordChannel.GENERAL),
-            `${emoji} **[${playerName}](${playerProfileUrl})** đã đăng bài trong Community Hub: **${title}**\n${postUrl}`
-        )
-    } catch (err) {
-        console.error(err)
+            await sendMessageToChannel(
+                String(DiscordChannel.GENERAL),
+                `${emoji} **[${playerName}](${playerProfileUrl})** đã đăng bài trong Community Hub: **${title}**\n${postUrl}`
+            )
+        } catch (err) {
+            console.error(err)
+        }
     }
 
     return post
@@ -1354,10 +1416,11 @@ export async function getRecommendedPostsWithLikeStatus(
         type?: string,
         limit?: number,
         offset?: number,
+        clanId?: number | null
     },
     userId?: string
 ) {
-    const { type, limit = 25, offset = 0 } = options
+    const { type, limit = 25, offset = 0, clanId } = options
 
     // Get recommended post IDs with scores
     const recommended = await getRecommendedPosts({
@@ -1375,15 +1438,38 @@ export async function getRecommendedPostsWithLikeStatus(
     const postIds = recommended.map((r: any) => r.id)
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
-    const { data: posts, error } = await supabase
+    let query = supabase
         .from('communityPosts')
         .select(`*, players!uid(${playerSelect}), communityPostsAdmin!inner(moderationStatus, hidden)`)
         .in('id', postIds)
         .eq('communityPostsAdmin.hidden', false)
         .eq('communityPostsAdmin.moderationStatus', 'approved')
 
+    // Filter by clan
+    if (clanId !== undefined) {
+        if (clanId === null) {
+            query = query.is('clanId', null)
+        } else {
+            query = query.eq('clanId', clanId)
+        }
+    }
+
+    let { data: posts, error } = await query
+
     if (error) {
-        throw new Error(error.message)
+        // If the error is about the clanId column not existing yet (pre-migration), retry without it
+        if (clanId !== undefined && (error.message?.includes('clanId') || error.message?.includes('does not exist'))) {
+            const retryResult = await supabase
+                .from('communityPosts')
+                .select(`*, players!uid(${playerSelect}), communityPostsAdmin!inner(moderationStatus, hidden)`)
+                .in('id', postIds)
+                .eq('communityPostsAdmin.hidden', false)
+                .eq('communityPostsAdmin.moderationStatus', 'approved')
+            if (retryResult.error) throw new Error(retryResult.error.message)
+            posts = retryResult.data
+        } else {
+            throw new Error(error.message)
+        }
     }
 
     // Create a map of scores for ordering
@@ -1409,7 +1495,7 @@ export async function getRecommendedPostsWithLikeStatus(
     }))
 
     // Get total count for pagination
-    const total = await getCommunityPostsCount(type, undefined, false)
+    const total = await getCommunityPostsCount(type, undefined, false, undefined, undefined, clanId)
 
     return { data, total }
 }

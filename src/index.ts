@@ -40,6 +40,7 @@ import syncRoute from './routes/sync.route'
 import wikiRoute from './routes/wiki.route'
 import levelSubmissionsRoute from './routes/level-submissions.route'
 import communityRoute from './routes/community.route'
+import clanCommunityRoute from './routes/clan-community.route'
 
 const app = express()
 const port = 8787
@@ -68,6 +69,7 @@ app.use('/players', playersRoute)
 app.use('/APIKey', APIKeyRoute)
 app.use('/submitVerdict', submitVerdictRoute)
 app.use('/clans', clansRoute)
+app.use('/clans', clanCommunityRoute)
 app.use('/deathCount', deathCountRoute)
 app.use('/changelogs', changelogsRoute)
 app.use('/events', eventRoute)

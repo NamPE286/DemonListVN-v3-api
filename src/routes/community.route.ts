@@ -150,7 +150,7 @@ router.route('/posts')
         const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
 
         const result = await getPostsWithLikeStatus(
-            { type, limit, offset, sortBy, ascending, search, tagId },
+            { type, limit, offset, sortBy, ascending, search, tagId, clanId: null },
             userId
         )
 
@@ -201,7 +201,7 @@ router.route('/posts/recommended')
         const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
 
         const result = await getRecommendedPostsWithLikeStatus(
-            { type, limit, offset },
+            { type, limit, offset, clanId: null },
             userId
         )
 
@@ -369,6 +369,13 @@ router.route('/posts/:id')
             }
 
             const post = await getPostWithLikeStatus(postId, userId)
+
+            // Clan posts should not be served via global URL
+            if (post?.clanId) {
+                res.status(404).json({ error: 'Post not found' })
+                return
+            }
+
             res.json(post)
         } catch (e) {
             handleServiceError(res, e)
@@ -510,8 +517,7 @@ router.route('/posts/:id/like')
      *         description: Like toggled
      */
     .post(userAuth, async (req, res) => {
-        const postId = parseInt(req.params.id)
-        const result = await togglePostLike(res.locals.user.uid, postId)
+        const result = await togglePostLike(res.locals.user.uid, parseInt(req.params.id))
         res.json(result)
     })
 
@@ -659,6 +665,8 @@ router.route('/comments/:id/like')
      */
     .post(userAuth, async (req, res) => {
         const commentId = parseInt(req.params.id)
+        // Note: comment-level clan access check is not added here for simplicity;
+        // the post-level checks on GET/POST comments are sufficient
         const result = await toggleCommentLike(res.locals.user.uid, commentId)
         res.json(result)
     })

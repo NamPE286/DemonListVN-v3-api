@@ -1176,6 +1176,7 @@ export type Database = {
         Row: {
           attachedLevel: Json | null
           attachedRecord: Json | null
+          clanId: number | null
           commentsCount: number
           content: string
           createdAt: string
@@ -1197,6 +1198,7 @@ export type Database = {
         Insert: {
           attachedLevel?: Json | null
           attachedRecord?: Json | null
+          clanId?: number | null
           commentsCount?: number
           content?: string
           createdAt?: string
@@ -1218,6 +1220,7 @@ export type Database = {
         Update: {
           attachedLevel?: Json | null
           attachedRecord?: Json | null
+          clanId?: number | null
           commentsCount?: number
           content?: string
           createdAt?: string
@@ -1243,6 +1246,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "community_posts_clan_id_fkey"
+            columns: ["clanId"]
+            isOneToOne: false
+            referencedRelation: "clans"
+            referencedColumns: ["id"]
           },
         ]
       }
