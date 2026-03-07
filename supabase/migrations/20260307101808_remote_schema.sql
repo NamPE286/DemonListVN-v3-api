@@ -1506,10 +1506,10 @@ CREATE TABLE IF NOT EXISTS "public"."battlePassCourseEntryProgress" (
     "entryId" bigint NOT NULL,
     "userID" "uuid" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "completed" boolean DEFAULT false NOT NULL,
     "claimed" boolean DEFAULT false NOT NULL,
     "completedAt" timestamp with time zone,
-    "claimedAt" timestamp with time zone
+    "claimedAt" timestamp with time zone,
+    "progress" real DEFAULT '0'::real NOT NULL
 );
 
 
@@ -5684,3 +5684,5 @@ drop trigger if exists "prefixes_delete_hierarchy" on "storage"."prefixes";
   for insert
   to public
 with check (true);
+
+
