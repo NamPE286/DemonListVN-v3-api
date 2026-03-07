@@ -10,8 +10,6 @@ import { moderateContent } from '@src/services/moderation.service'
 import logger from "@src/utils/logger"
 import type { Json } from '@src/types/supabase'
 
-const db = supabase
-
 // ---- Custom error classes for business logic errors ----
 
 export class ValidationError extends Error {
@@ -69,7 +67,7 @@ export async function getCommunityPosts(options: {
     // Pre-filter: get post IDs that have the matching tag
     let tagFilteredIds: number[] | null = null
     if (options.tagId) {
-        const { data: tagRows, error: tagError } = await db
+        const { data: tagRows, error: tagError } = await supabase
             .from('communityPostsTags')
             .select('postId')
             .eq('tagId', options.tagId)
@@ -80,7 +78,8 @@ export async function getCommunityPosts(options: {
 
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
-    let query = db
+    // @ts-ignore
+    let query = supabase
         .from('communityPosts')
         .select(`*, players!uid(${playerSelect}), communityPostsAdmin!inner(moderationStatus, moderationResult, hidden), communityPostsTags(tagId, postTags(id, name, color, adminOnly))`)
 
@@ -133,7 +132,7 @@ export async function getCommunityPostsCount(type?: string, search?: string, hid
     // Pre-filter: get post IDs that have the matching tag
     let tagFilteredIds: number[] | null = null
     if (tagId) {
-        const { data: tagRows, error: tagError } = await db
+        const { data: tagRows, error: tagError } = await supabase
             .from('communityPostsTags')
             .select('postId')
             .eq('tagId', tagId)
@@ -142,7 +141,7 @@ export async function getCommunityPostsCount(type?: string, search?: string, hid
         if (tagFilteredIds.length === 0) return 0
     }
 
-    let query = db
+    let query = supabase
         .from('communityPosts')
         .select('*, communityPostsAdmin!inner(moderationStatus, hidden)', { count: 'exact', head: true })
 
@@ -185,7 +184,7 @@ export async function getCommunityPost(id: number) {
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
     // @ts-ignore
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityPosts')
         .select(`*, players!uid(${playerSelect}), communityPostsAdmin(moderationStatus, moderationResult, hidden), communityPostsTags(tagId, postTags(id, name, color, adminOnly))`)
         .eq('id', id)
@@ -216,7 +215,7 @@ export async function createCommunityPost(post: {
 }) {
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityPosts')
         .insert(post)
         .select(`*, players!uid(${playerSelect})`)
@@ -227,7 +226,7 @@ export async function createCommunityPost(post: {
     }
 
     // Insert admin data into separate table
-    const { error: adminError } = await db
+    const { error: adminError } = await supabase
         .from('communityPostsAdmin')
         .insert({
             postId: data.id,
@@ -238,7 +237,7 @@ export async function createCommunityPost(post: {
 
     if (adminError) {
         // Rollback: delete the post if admin insert fails
-        await db.from('communityPosts').delete().eq('id', data.id)
+        await supabase.from('communityPosts').delete().eq('id', data.id)
         throw new Error(adminError.message)
     }
 
@@ -259,7 +258,7 @@ export async function updateCommunityPost(id: number, updates: {
 }) {
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityPosts')
         .update(updates)
         .eq('id', id)
@@ -286,7 +285,7 @@ export async function updateCommunityPost(id: number, updates: {
         moderationResult = err ?? null
     }
 
-    const { error: adminError } = await db
+    const { error: adminError } = await supabase
         .from('communityPostsAdmin')
         .upsert({
             postId: data.id,
@@ -310,7 +309,7 @@ export async function updateCommunityPost(id: number, updates: {
 }
 
 export async function deleteCommunityPost(id: number) {
-    const { data } = await db
+    const { data } = await supabase
         .from('communityPosts')
         .select('*')
         .eq('id', id)
@@ -324,7 +323,7 @@ export async function deleteCommunityPost(id: number) {
         await deleteImageFromS3(data.imageUrl)
     }
 
-    const { error } = await db
+    const { error } = await supabase
         .from('communityPosts')
         .delete()
         .eq('id', id)
@@ -337,7 +336,7 @@ export async function deleteCommunityPost(id: number) {
 export async function getPostComments(postId: number, limit = 50, offset = 0, includeAll = false) {
     const playerSelect = '*, clans!id(*)'
 
-    let query = db
+    let query = supabase
         .from('communityComments')
         .select(`*, players!uid(${playerSelect}), communityCommentsAdmin!inner(moderationStatus, moderationResult, hidden)`)
         .eq('postId', postId)
@@ -371,7 +370,7 @@ export async function createComment(comment: {
 }) {
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityComments')
         .insert(comment)
         .select(`*, players!uid(${playerSelect})`)
@@ -382,7 +381,7 @@ export async function createComment(comment: {
     }
 
     // Insert admin data into separate table
-    const { error: adminError } = await db
+    const { error: adminError } = await supabase
         .from('communityCommentsAdmin')
         .insert({
             commentId: data.id,
@@ -399,7 +398,7 @@ export async function createComment(comment: {
 }
 
 export async function deleteComment(id: number) {
-    const { error } = await db
+    const { error } = await supabase
         .from('communityComments')
         .delete()
         .eq('id', id)
@@ -410,7 +409,7 @@ export async function deleteComment(id: number) {
 }
 
 export async function getComment(id: number) {
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityComments')
         .select('*')
         .eq('id', id)
@@ -426,7 +425,7 @@ export async function getComment(id: number) {
 
 export async function togglePostLike(uid: string, postId: number) {
     // Check if already liked
-    const { data: existing } = await db
+    const { data: existing } = await supabase
         .from('communityLikes')
         .select('id')
         .eq('uid', uid)
@@ -436,7 +435,7 @@ export async function togglePostLike(uid: string, postId: number) {
 
     if (existing) {
         // Unlike
-        const { error } = await db
+        const { error } = await supabase
             .from('communityLikes')
             .delete()
             .eq('id', existing.id)
@@ -445,7 +444,7 @@ export async function togglePostLike(uid: string, postId: number) {
         return { liked: false }
     } else {
         // Like
-        const { error } = await db
+        const { error } = await supabase
             .from('communityLikes')
             .insert({ uid, postId: postId })
 
@@ -455,7 +454,7 @@ export async function togglePostLike(uid: string, postId: number) {
 }
 
 export async function toggleCommentLike(uid: string, commentId: number) {
-    const { data: existing } = await db
+    const { data: existing } = await supabase
         .from('communityLikes')
         .select('id')
         .eq('uid', uid)
@@ -464,7 +463,7 @@ export async function toggleCommentLike(uid: string, commentId: number) {
         .maybeSingle()
 
     if (existing) {
-        const { error } = await db
+        const { error } = await supabase
             .from('communityLikes')
             .delete()
             .eq('id', existing.id)
@@ -472,7 +471,7 @@ export async function toggleCommentLike(uid: string, commentId: number) {
         if (error) throw new Error(error.message)
         return { liked: false }
     } else {
-        const { error } = await db
+        const { error } = await supabase
             .from('communityLikes')
             .insert({ uid, commentId: commentId })
 
@@ -484,7 +483,7 @@ export async function toggleCommentLike(uid: string, commentId: number) {
 export async function getUserLikes(uid: string, postIds: number[]) {
     if (!postIds.length) return []
 
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityLikes')
         .select('postId')
         .eq('uid', uid)
@@ -497,7 +496,7 @@ export async function getUserLikes(uid: string, postIds: number[]) {
 export async function getUserCommentLikes(uid: string, commentIds: number[]) {
     if (!commentIds.length) return []
 
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityLikes')
         .select('commentId')
         .eq('uid', uid)
@@ -516,7 +515,7 @@ export async function createReport(report: {
     reason: string,
     description?: string
 }) {
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityReports')
         .insert(report)
         .select('*')
@@ -538,7 +537,7 @@ export async function getReports(options: {
 
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
-    let query = db
+    let query = supabase
         .from('communityReports')
         .select(`*, players!uid(${playerSelect}), communityPosts(id, title, type), communityComments(id, content)`)
 
@@ -556,7 +555,7 @@ export async function getReports(options: {
 }
 
 export async function getReportsCount(resolved?: boolean) {
-    let query = db
+    let query = supabase
         .from('communityReports')
         .select('*', { count: 'exact', head: true })
 
@@ -570,7 +569,7 @@ export async function getReportsCount(resolved?: boolean) {
 }
 
 export async function resolveReport(id: number) {
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityReports')
         .update({ resolved: true })
         .eq('id', id)
@@ -582,7 +581,7 @@ export async function resolveReport(id: number) {
 }
 
 export async function getUserRecordsForPicker(uid: string) {
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('records')
         .select('levelid, progress, videoLink, mobile, dlPt, flPt, plPt, clPt, levels!public_records_levelid_fkey!inner(id, name, creator, difficulty, isPlatformer)')
         .eq('userid', uid)
@@ -595,7 +594,7 @@ export async function getUserRecordsForPicker(uid: string) {
 }
 
 export async function getLevelsForPicker(search?: string, limit = 20) {
-    let query = db
+    let query = supabase
         .from('levels')
         .select('id, name, creator, difficulty, isPlatformer, rating')
         .eq('accepted', true)
@@ -612,7 +611,7 @@ export async function getLevelsForPicker(search?: string, limit = 20) {
 }
 
 export async function searchPlayers(query: string, limit = 10) {
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('players')
         .select('*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)')
         .ilike('name', `%${query}%`)
@@ -625,7 +624,7 @@ export async function searchPlayers(query: string, limit = 10) {
 export async function getPostsByLevel(levelId: number, limit = 5) {
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityPosts')
         .select(`*, players!uid(${playerSelect}), communityPostsAdmin!inner(moderationStatus, hidden)`)
         .eq('communityPostsAdmin.hidden', false)
@@ -657,7 +656,7 @@ export async function getAdminComments(options: {
 
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
-    let query = db
+    let query = supabase
         .from('communityComments')
         .select(`*, players!uid(${playerSelect}), communityCommentsAdmin!inner(moderationStatus, moderationResult, hidden), communityPosts!postId(id, title)`)
 
@@ -702,7 +701,7 @@ export async function getAdminCommentsCount(options: {
 }) {
     const { search, hidden, moderationStatus } = options
 
-    let query = db
+    let query = supabase
         .from('communityComments')
         .select('*, communityCommentsAdmin!inner(moderationStatus, hidden)', { count: 'exact', head: true })
 
@@ -732,7 +731,7 @@ export async function getAdminCommentsCount(options: {
 
 export async function toggleHidden(table: 'communityPosts' | 'communityComments', id: number, hidden: boolean) {
     if (table === 'communityPosts') {
-        const { data, error } = await db
+        const { data, error } = await supabase
             .from('communityPostsAdmin')
             .update({ hidden })
             .eq('postId', id)
@@ -743,7 +742,7 @@ export async function toggleHidden(table: 'communityPosts' | 'communityComments'
         return data
     }
 
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityComments')
         .update({ hidden })
         .eq('id', id)
@@ -1261,7 +1260,7 @@ export async function adminUpdatePost(
 export async function getPostsByUser(uid: string, limit = 20, offset = 0) {
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityPosts')
         .select(`*, players!uid(${playerSelect}), communityPostsAdmin!inner(moderationStatus, hidden)`)
         .eq('uid', uid)
@@ -1276,7 +1275,7 @@ export async function getPostsByUser(uid: string, limit = 20, offset = 0) {
 
 /** Get count of posts by a specific user */
 export async function getPostsByUserCount(uid: string) {
-    const { count, error } = await db
+    const { count, error } = await supabase
         .from('communityPosts')
         .select('*, communityPostsAdmin!inner(moderationStatus, hidden)', { count: 'exact', head: true })
         .eq('uid', uid)
@@ -1335,7 +1334,7 @@ export async function getRecommendedPosts(options: {
 }) {
     const { userId, limit = 25, offset = 0, type } = options
 
-    const { data, error } = await db.rpc('get_recommended_community_posts', {
+    const { data, error } = await supabase.rpc('get_recommended_community_posts', {
         p_user_id: userId,
         p_limit: limit,
         p_offset: offset,
@@ -1376,7 +1375,7 @@ export async function getRecommendedPostsWithLikeStatus(
     const postIds = recommended.map((r: any) => r.id)
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
-    const { data: posts, error } = await db
+    const { data: posts, error } = await supabase
         .from('communityPosts')
         .select(`*, players!uid(${playerSelect}), communityPostsAdmin!inner(moderationStatus, hidden)`)
         .in('id', postIds)
@@ -1417,7 +1416,7 @@ export async function getRecommendedPostsWithLikeStatus(
 
 /** Record that a user viewed a post */
 export async function recordPostView(userId: string, postId: number) {
-    const { error } = await db.rpc('record_community_post_view', {
+    const { error } = await supabase.rpc('record_community_post_view', {
         p_user_id: userId,
         p_post_id: postId
     })
@@ -1446,7 +1445,7 @@ export async function getPendingModerationPosts(options: {
     const { limit = 50, offset = 0 } = options
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityPosts')
         .select(`*, players!uid(${playerSelect}), communityPostsAdmin!inner(moderationStatus, moderationResult, hidden)`)
         .eq('communityPostsAdmin.moderationStatus', 'pending')
@@ -1459,7 +1458,7 @@ export async function getPendingModerationPosts(options: {
 
 /** Get count of posts pending moderation */
 export async function getPendingModerationPostsCount() {
-    const { count, error } = await db
+    const { count, error } = await supabase
         .from('communityPosts')
         .select('*, communityPostsAdmin!inner(moderationStatus)', { count: 'exact', head: true })
         .eq('communityPostsAdmin.moderationStatus', 'pending')
@@ -1473,7 +1472,7 @@ export async function approvePost(postId: number) {
     const post = await getCommunityPost(postId)
     if (!post) throw new NotFoundError('Post not found')
 
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityPostsAdmin')
         .update({ moderationStatus: 'approved' })
         .eq('postId', postId)
@@ -1516,7 +1515,7 @@ export async function getPendingModerationComments(options: {
     const { limit = 50, offset = 0 } = options
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityComments')
         .select(`*, players!uid(${playerSelect}), communityCommentsAdmin!inner(moderationStatus, moderationResult, hidden), communityPosts!postId(id, title)`)
         .eq('communityCommentsAdmin.moderationStatus', 'pending')
@@ -1529,7 +1528,7 @@ export async function getPendingModerationComments(options: {
 
 /** Get count of comments pending moderation */
 export async function getPendingModerationCommentsCount() {
-    const { count, error } = await db
+    const { count, error } = await supabase
         .from('communityComments')
         .select('*, communityCommentsAdmin!inner(moderationStatus)', { count: 'exact', head: true })
         .eq('communityCommentsAdmin.moderationStatus', 'pending')
@@ -1543,7 +1542,7 @@ export async function approveComment(commentId: number) {
     const comment = await getComment(commentId)
     if (!comment) throw new NotFoundError('Comment not found')
 
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityCommentsAdmin')
         .update({ moderationStatus: 'approved' })
         .eq('commentId', commentId)
@@ -1576,7 +1575,7 @@ export async function updateCommentModeration(commentId: number, content: string
         moderationStatus = 'pending'
     }
 
-    const { error: adminError } = await db
+    const { error: adminError } = await supabase
         .from('communityCommentsAdmin')
         .upsert({
             commentId: commentId,
@@ -1599,7 +1598,7 @@ export async function updateCommentModeration(commentId: number, content: string
 
 /** Toggle hidden status for a comment via admin table */
 export async function toggleCommentHidden(commentId: number, hidden: boolean) {
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityCommentsAdmin')
         .update({ hidden })
         .eq('commentId', commentId)
@@ -1614,7 +1613,7 @@ export async function toggleCommentHidden(commentId: number, hidden: boolean) {
 
 /** Get all post tags */
 export async function getPostTags() {
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('postTags')
         .select('*')
         .order('name', { ascending: true })
@@ -1625,7 +1624,7 @@ export async function getPostTags() {
 
 /** Create a new post tag (admin only) */
 export async function createPostTag(tag: { name: string, color?: string, adminOnly?: boolean }) {
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('postTags')
         .insert(tag)
         .select('*')
@@ -1641,7 +1640,7 @@ export async function createPostTag(tag: { name: string, color?: string, adminOn
 /** Delete a post tag and all its associations (admin only) */
 export async function deletePostTag(tagId: number) {
     // Cascade will handle removing from communityPostsTags
-    const { error } = await db
+    const { error } = await supabase
         .from('postTags')
         .delete()
         .eq('id', tagId)
@@ -1651,7 +1650,7 @@ export async function deletePostTag(tagId: number) {
 
 /** Update a post tag's name, color, and/or adminOnly flag (admin only) */
 export async function updatePostTag(tagId: number, updates: { name?: string, color?: string, adminOnly?: boolean }) {
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('postTags')
         .update(updates)
         .eq('id', tagId)
@@ -1669,7 +1668,7 @@ export async function updatePostTag(tagId: number, updates: { name?: string, col
 export async function setPostTags(postId: number, tagIds: number[], isAdmin: boolean) {
     // Validate tags exist and check adminOnly constraint
     if (tagIds.length > 0) {
-        const { data: tags, error: tagError } = await db
+        const { data: tags, error: tagError } = await supabase
             .from('postTags')
             .select('id, adminOnly')
             .in('id', tagIds)
@@ -1685,7 +1684,7 @@ export async function setPostTags(postId: number, tagIds: number[], isAdmin: boo
     }
 
     // Remove existing tags
-    await db
+    await supabase
         .from('communityPostsTags')
         .delete()
         .eq('postId', postId)
@@ -1693,7 +1692,7 @@ export async function setPostTags(postId: number, tagIds: number[], isAdmin: boo
     // Insert new tags
     if (tagIds.length > 0) {
         const rows = tagIds.map((tagId) => ({ postId, tagId }))
-        const { error } = await db
+        const { error } = await supabase
             .from('communityPostsTags')
             .insert(rows)
 
@@ -1701,7 +1700,7 @@ export async function setPostTags(postId: number, tagIds: number[], isAdmin: boo
     }
 
     // Return updated tags
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityPostsTags')
         .select('tagId, postTags(id, name, color, adminOnly)')
         .eq('postId', postId)
@@ -1715,7 +1714,7 @@ export async function setPostTags(postId: number, tagIds: number[], isAdmin: boo
 export async function getPostParticipants(postId: number) {
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityPostParticipants')
         .select(`*, players!uid(${playerSelect})`)
         .eq('postId', postId)
@@ -1726,7 +1725,7 @@ export async function getPostParticipants(postId: number) {
 }
 
 export async function getParticipantStatus(postId: number, uid: string) {
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityPostParticipants')
         .select('*')
         .eq('postId', postId)
@@ -1739,7 +1738,7 @@ export async function getParticipantStatus(postId: number, uid: string) {
 
 export async function requestParticipation(postId: number, uid: string) {
     // Fetch the post to check constraints
-    const { data: post, error: postError } = await db
+    const { data: post, error: postError } = await supabase
         .from('communityPosts')
         .select('uid, type, maxParticipants, participantsCount')
         .eq('id', postId)
@@ -1767,7 +1766,7 @@ export async function requestParticipation(postId: number, uid: string) {
     if (existing) {
         if (existing.status === 'rejected') {
             // Allow re-request after rejection
-            const { data, error } = await db
+            const { data, error } = await supabase
                 .from('communityPostParticipants')
                 .update({ status: 'pending', updatedAt: new Date().toISOString() })
                 .eq('id', existing.id)
@@ -1779,7 +1778,7 @@ export async function requestParticipation(postId: number, uid: string) {
         throw new ConflictError('You have already requested to participate')
     }
 
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityPostParticipants')
         .insert({ postId, uid, status: 'pending' })
         .select('*')
@@ -1791,7 +1790,7 @@ export async function requestParticipation(postId: number, uid: string) {
 
 export async function approveParticipant(postId: number, participantUid: string, ownerUid: string) {
     // Verify ownership
-    const { data: post, error: postError } = await db
+    const { data: post, error: postError } = await supabase
         .from('communityPosts')
         .select('uid, type, maxParticipants, participantsCount')
         .eq('id', postId)
@@ -1813,7 +1812,7 @@ export async function approveParticipant(postId: number, participantUid: string,
     if (existing.status !== 'pending') throw new ValidationError('Can only approve pending requests')
 
     // Approve the participant
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityPostParticipants')
         .update({ status: 'approved', updatedAt: new Date().toISOString() })
         .eq('id', existing.id)
@@ -1823,14 +1822,14 @@ export async function approveParticipant(postId: number, participantUid: string,
     if (error) throw new Error(error.message)
 
     // Increment participantsCount
-    await db
+    await supabase
         .from('communityPosts')
         .update({ participantsCount: post.participantsCount + 1 })
         .eq('id', postId)
 
     // Send notification to the approved participant
     try {
-        const { data: owner } = await db.from('players').select('name').eq('uid', ownerUid).single()
+        const { data: owner } = await supabase.from('players').select('name').eq('uid', ownerUid).single()
         await sendNotification({
             to: participantUid,
             content: `**${owner?.name || 'Someone'}** đã chấp nhận yêu cầu tham gia của bạn`,
@@ -1843,7 +1842,7 @@ export async function approveParticipant(postId: number, participantUid: string,
 
 export async function rejectParticipant(postId: number, participantUid: string, ownerUid: string) {
     // Verify ownership
-    const { data: post, error: postError } = await db
+    const { data: post, error: postError } = await supabase
         .from('communityPosts')
         .select('uid, maxParticipants')
         .eq('id', postId)
@@ -1856,7 +1855,7 @@ export async function rejectParticipant(postId: number, participantUid: string, 
     if (!existing) throw new NotFoundError('Participation request not found')
     if (existing.status !== 'pending') throw new ValidationError('Can only reject pending requests')
 
-    const { data, error } = await db
+    const { data, error } = await supabase
         .from('communityPostParticipants')
         .update({ status: 'rejected', updatedAt: new Date().toISOString() })
         .eq('id', existing.id)
@@ -1869,7 +1868,7 @@ export async function rejectParticipant(postId: number, participantUid: string, 
 
 export async function revokeParticipant(postId: number, participantUid: string, ownerUid: string) {
     // Verify ownership
-    const { data: post, error: postError } = await db
+    const { data: post, error: postError } = await supabase
         .from('communityPosts')
         .select('uid, type, maxParticipants, participantsCount')
         .eq('id', postId)
@@ -1889,7 +1888,7 @@ export async function revokeParticipant(postId: number, participantUid: string, 
     if (existing.status !== 'approved') throw new ValidationError('Can only revoke approved participants')
 
     // Remove participant record
-    const { error } = await db
+    const { error } = await supabase
         .from('communityPostParticipants')
         .delete()
         .eq('id', existing.id)
@@ -1897,7 +1896,7 @@ export async function revokeParticipant(postId: number, participantUid: string, 
     if (error) throw new Error(error.message)
 
     // Decrement participantsCount
-    await db
+    await supabase
         .from('communityPosts')
         .update({ participantsCount: Math.max(0, post.participantsCount - 1) })
         .eq('id', postId)
@@ -1911,7 +1910,7 @@ export async function cancelParticipation(postId: number, uid: string) {
 
     // If approved, check if post is full - cannot cancel if full
     if (existing.status === 'approved') {
-        const { data: post } = await db
+        const { data: post } = await supabase
             .from('communityPosts')
             .select('maxParticipants, participantsCount')
             .eq('id', postId)
@@ -1923,14 +1922,14 @@ export async function cancelParticipation(postId: number, uid: string) {
 
         // Decrement count
         if (post) {
-            await db
+            await supabase
                 .from('communityPosts')
                 .update({ participantsCount: Math.max(0, post.participantsCount - 1) })
                 .eq('id', postId)
         }
     }
 
-    const { error } = await db
+    const { error } = await supabase
         .from('communityPostParticipants')
         .delete()
         .eq('id', existing.id)
