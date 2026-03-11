@@ -2542,6 +2542,12 @@ export async function trackProgressAfterDeathCount(
     }
 
     try {
+        await batchUpdatePlayerMapPackProgress(mapPackIds, uid);
+    } catch (error: any) {
+        console.error(`Failed to update map pack progress:`, error.message);
+    }
+
+    try {
         await updateCourseProgress(season.id, uid, levelIDNum, progress);
     } catch (error: any) {
         console.error(`Failed to sync course progress:`, error.message);
