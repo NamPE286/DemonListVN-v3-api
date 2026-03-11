@@ -1,6 +1,6 @@
-# Battle Pass API Documentation
+# Pass API Documentation
 
-This document provides a complete reference for the Battle Pass, Map Pack, Missions, and Subscriptions API endpoints.
+This document provides a complete reference for the Pass, Map Pack, Missions, and Subscriptions API endpoints.
 
 ## Base URL
 
@@ -26,8 +26,8 @@ All endpoints are prefixed with `/battlepass`
 | `mapPackLevels` | Levels within map packs (3-5 levels per pack) |
 | `battlePassMapPacks` | Links season to map packs (12/season, weekly unlock) |
 | `battlePassProgress` | Player XP per season |
-| `battlePassLevelProgress` | Player progress on battle pass levels |
-| `battlePassMapPackProgress` | Player progress on battle pass map packs |
+| `battlePassLevelProgress` | Player progress on Pass levels |
+| `battlePassMapPackProgress` | Player progress on Pass map packs |
 | `battlePassTierRewards` | Tier rewards configuration (Basic/Premium) |
 | `battlePassRewardClaims` | Tracks claimed tier rewards |
 | `battlePassMissions` | Missions with JSONB condition |
@@ -50,7 +50,7 @@ const MAX_TIER = 100;        // 100 tiers maximum
 
 ### GET `/battlepass` 🔓
 
-Get the currently active battle pass season.
+Get the currently active Pass season.
 
 **Response:**
 ```json
@@ -58,7 +58,7 @@ Get the currently active battle pass season.
   "id": 1,
   "created_at": "2026-01-15T00:00:00Z",
   "title": "Season 1: Genesis",
-  "description": "The first battle pass season",
+  "description": "The first Pass season",
   "start": "2026-01-15T00:00:00Z",
   "end": "2026-04-30T00:00:00Z",
   "isArchived": false,
@@ -74,13 +74,13 @@ Get a specific season by ID.
 
 ### POST `/battlepass/season` 🔑
 
-Create a new battle pass season.
+Create a new Pass season.
 
 **Request Body:**
 ```json
 {
   "title": "Season 2: Legends",
-  "description": "The second battle pass season",
+  "description": "The second Pass season",
   "start": "2026-05-01T00:00:00Z",
   "end": "2026-08-15T00:00:00Z"
 }
@@ -110,7 +110,7 @@ Archive a season.
 
 ### GET `/battlepass/progress` 🔐
 
-Get current user's battle pass progress for the active season.
+Get current user's Pass progress for the active season.
 
 **Response:**
 ```json
@@ -131,7 +131,7 @@ Get user's progress for a specific season.
 
 ### POST `/battlepass/upgrade` 🔑
 
-Upgrade a user to premium battle pass (called after payment verification).
+Upgrade a user to premium Pass (called after payment verification).
 
 **Request Body:**
 ```json
@@ -170,7 +170,7 @@ Add XP to a user manually.
 
 ### GET `/battlepass/levels` 🔓
 
-Get active season's battle pass levels.
+Get active season's Pass levels.
 
 **Response:**
 ```json
@@ -220,10 +220,10 @@ Delete a season level.
 
 ### GET `/battlepass/levels/progress?ids=1,2,3` 🔐
 
-Get user's progress on battle pass levels (single or multiple).
+Get user's progress on Pass levels (single or multiple).
 
 **Query Parameters:**
-- `ids` (required): Comma-separated Battle Pass Level IDs, or single ID
+- `ids` (required): Comma-separated Pass Level IDs, or single ID
 
 **Response (single ID):**
 ```json
@@ -330,22 +330,22 @@ Link a map pack to a season.
 
 ### GET `/battlepass/mappack/:mapPackId` 🔓
 
-Get a specific battle pass map pack.
+Get a specific Pass map pack.
 
 ### PATCH `/battlepass/mappack/:mapPackId` 🔑
 
-Update a battle pass map pack.
+Update a Pass map pack.
 
 ### DELETE `/battlepass/mappack/:mapPackId` 🔑
 
-Delete a battle pass map pack.
+Delete a Pass map pack.
 
 ### GET `/battlepass/mappacks/progress?ids=1,2,3` 🔐
 
 Get user's progress on map packs (single or multiple).
 
 **Query Parameters:**
-- `ids` (required): Comma-separated Battle Pass Map Pack IDs, or single ID
+- `ids` (required): Comma-separated Pass Map Pack IDs, or single ID
 
 **Response (single ID):**
 ```json
@@ -425,7 +425,7 @@ Claim XP reward for completing a map pack.
 
 ## General Map Pack Endpoints
 
-These endpoints manage map packs globally (not specific to battle pass seasons).
+These endpoints manage map packs globally (not specific to Pass seasons).
 
 ### GET `/battlepass/mappacks/general` 🔓
 
@@ -635,7 +635,7 @@ Create a mission.
 ```json
 {
   "title": "Clear 5 Levels",
-  "description": "Beat any 5 battle pass levels",
+  "description": "Beat any 5 Pass levels",
   "condition": [
     {"type": "clear_level_count", "value": 5}
   ],
@@ -713,10 +713,10 @@ Remove a reward from a mission.
 
 Premium status is tracked via the `playerSubscriptions` table, which has:
 - `subscriptionId`: Links to subscription type
-- `refId`: Can point to battle pass season ID
+- `refId`: Can point to Pass season ID
 - `end`: Nullable (null = permanent purchase)
 
-To check if a user has premium battle pass:
+To check if a user has premium Pass:
 ```typescript
 // In service code
 const isPremium = await hasBattlePassPremium(userId, seasonId);
@@ -728,7 +728,7 @@ The `getPlayerProgress` endpoint automatically computes `isPremium` from subscri
 
 ## Workflow Examples
 
-### User Progressing Through Battle Pass
+### User Progressing Through Pass
 
 1. **Get active season:** `GET /battlepass`
 2. **Get user progress:** `GET /battlepass/progress`
@@ -751,7 +751,7 @@ The `getPlayerProgress` endpoint automatically computes `isPremium` from subscri
 2. **Create map packs:** `POST /battlepass/mappacks/general`
 3. **Add levels to map packs:** `POST /battlepass/mappacks/general/1/level`
 4. **Link map packs to season:** `POST /battlepass/season/1/mappacks`
-5. **Add battle pass levels:** `POST /battlepass/season/1/levels`
+5. **Add Pass levels:** `POST /battlepass/season/1/levels`
 6. **Create tier rewards:** `POST /battlepass/season/1/rewards`
 7. **Create missions:** `POST /battlepass/season/1/missions`
 8. **Add mission rewards:** `POST /battlepass/mission/1/reward`
@@ -768,8 +768,8 @@ The `getPlayerProgress` endpoint automatically computes `isPremium` from subscri
 
 | Source | XP Amount |
 |--------|-----------|
-| Battle Pass Level (complete) | 1000 XP |
-| Battle Pass Level (min progress) | 500 XP |
+| Pass Level (complete) | 1000 XP |
+| Pass Level (min progress) | 500 XP |
 | Map Pack (Harder or easier) | 200 XP |
 | Map Pack (Medium Demon) | 500 XP |
 | Map Pack (Insane Demon) | 1000 XP |

@@ -282,7 +282,7 @@ export async function upgradeToPremium(seasonId: number, userId: string) {
             .insert({
                 type: SubscriptionType.BP_PREMIUM,
                 refId: seasonId,
-                name: `Battle Pass Premium - ${season.title}`,
+                name: `Pass Premium - ${season.title}`,
                 price: 0
             })
             .select()
@@ -507,7 +507,7 @@ export async function claimDailyWeeklyReward(
     userId: string,
     claimType: 'minProgress' | 'completion'
 ) {
-    // Get the battle pass level
+    // Get the Pass level
     const { data: bpLevel, error: bpLevelError } = await supabase
         .from('battlePassLevels')
         .select('*, levels(*)')
@@ -691,7 +691,7 @@ export async function updateLevelProgressWithMissionCheck(
     userId: string,
     progress: number
 ) {
-    // Get the battle pass level details
+    // Get the Pass level details
     const { data: bpLevel, error: bpLevelError } = await supabase
         .from('battlePassLevels')
         .select('*, levels(*)')
@@ -699,7 +699,7 @@ export async function updateLevelProgressWithMissionCheck(
         .single();
 
     if (bpLevelError || !bpLevel) {
-        throw new Error('Battle pass level not found');
+        throw new Error('Pass level not found');
     }
 
     // Update level progress
@@ -841,7 +841,7 @@ export async function deleteMapPackLevelGeneral(levelId: number) {
     }
 }
 
-// ==================== Battle Pass Map Pack Functions ====================
+// ==================== Pass Map Pack Functions ====================
 
 export async function getSeasonMapPacks(seasonId: number) {
     const now = new Date();
@@ -1955,7 +1955,7 @@ export async function isMissionCompleted(userId: string, missionId: number) {
                 break;
             }
             case 'clear_mappack': {
-                // Check if user has cleared all levels in a battle pass map pack
+                // Check if user has cleared all levels in a Pass map pack
                 if (!condition.targetId) {
                     console.error(`Mission ${missionId}: clear_mappack condition missing targetId`);
                     return false;
@@ -1985,7 +1985,7 @@ export async function isMissionCompleted(userId: string, missionId: number) {
 
                 let completedCount = 0;
 
-                // Count completed battle pass levels
+                // Count completed Pass levels
                 for (const level of seasonLevels) {
                     const levelProgress = await getPlayerLevelProgress(level.id, userId);
                     if (levelProgress && levelProgress.progress >= 100) {

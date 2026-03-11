@@ -201,9 +201,9 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Get active battle pass season",
+        "summary": "Get active Pass season",
         "responses": {
           "200": {
             "description": "Success",
@@ -222,9 +222,9 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/season": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Create a new battle pass season (Admin only)",
+        "summary": "Create a new Pass season (Admin only)",
         "security": [
           {
             "bearerAuth": []
@@ -267,9 +267,9 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/season/{id}": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Get a specific battle pass season",
+        "summary": "Get a specific Pass season",
         "parameters": [
           {
             "name": "id",
@@ -292,9 +292,9 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "patch": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Update a battle pass season (Admin only)",
+        "summary": "Update a Pass season (Admin only)",
         "security": [
           {
             "bearerAuth": []
@@ -334,9 +334,9 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/season/{id}/archive": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Archive a battle pass season (Admin only)",
+        "summary": "Archive a Pass season (Admin only)",
         "security": [
           {
             "bearerAuth": []
@@ -366,9 +366,9 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/progress": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Get current user's battle pass progress",
+        "summary": "Get current user's Pass progress",
         "security": [
           {
             "bearerAuth": []
@@ -390,9 +390,9 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/progress/{seasonId}": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Get current user's battle pass progress for a specific season",
+        "summary": "Get current user's Pass progress for a specific season",
         "security": [
           {
             "bearerAuth": []
@@ -422,9 +422,9 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/upgrade": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Upgrade to premium battle pass (Admin only - typically called after payment)",
+        "summary": "Upgrade to premium Pass (Admin only - typically called after payment)",
         "security": [
           {
             "bearerAuth": []
@@ -461,7 +461,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/levels": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get active season's levels",
         "responses": {
@@ -477,7 +477,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/season/{id}/levels": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get levels for a specific season",
         "parameters": [
@@ -502,7 +502,7 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Add a level to a season (Admin only)",
         "security": [
@@ -558,7 +558,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/level/{levelId}": {
       "patch": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Update a season level (Admin only)",
         "security": [
@@ -570,7 +570,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           {
             "name": "levelId",
             "in": "path",
-            "description": "Battle Pass Level ID",
+            "description": "Pass Level ID",
             "required": true,
             "schema": {
               "type": "integer"
@@ -598,7 +598,7 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "delete": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Delete a season level (Admin only)",
         "security": [
@@ -610,7 +610,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           {
             "name": "levelId",
             "in": "path",
-            "description": "Battle Pass Level ID",
+            "description": "Pass Level ID",
             "required": true,
             "schema": {
               "type": "integer"
@@ -630,7 +630,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/levels/progress": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get user's progress on levels (single or batch)",
         "security": [
@@ -642,7 +642,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           {
             "name": "ids",
             "in": "query",
-            "description": "Comma-separated Battle Pass Level IDs, or single ID",
+            "description": "Comma-separated Pass Level IDs, or single ID",
             "required": true,
             "schema": {
               "type": "string"
@@ -662,7 +662,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/mappacks/progress": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get user's progress on map packs (single or batch)",
         "security": [
@@ -674,7 +674,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           {
             "name": "ids",
             "in": "query",
-            "description": "Comma-separated Battle Pass Map Pack IDs, or single ID",
+            "description": "Comma-separated Pass Map Pack IDs, or single ID",
             "required": true,
             "schema": {
               "type": "string"
@@ -694,7 +694,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/mappacks/levels/progress": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get user's progress on map pack levels",
         "security": [
@@ -741,7 +741,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/mappacks": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get active season's unlocked map packs",
         "responses": {
@@ -757,7 +757,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/season/{id}/mappacks": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get all map packs for a season (Admin gets all, users get unlocked only)",
         "parameters": [
@@ -782,7 +782,7 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Create a map pack for a season (Admin only)",
         "security": [
@@ -847,14 +847,14 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/mappack/{mapPackId}": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Get a specific battle pass map pack",
+        "summary": "Get a specific Pass map pack",
         "parameters": [
           {
             "name": "mapPackId",
             "in": "path",
-            "description": "Battle Pass Map Pack ID",
+            "description": "Pass Map Pack ID",
             "required": true,
             "schema": {
               "type": "integer"
@@ -872,9 +872,9 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "patch": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Update a battle pass map pack (Admin only)",
+        "summary": "Update a Pass map pack (Admin only)",
         "security": [
           {
             "bearerAuth": []
@@ -884,7 +884,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           {
             "name": "mapPackId",
             "in": "path",
-            "description": "Battle Pass Map Pack ID",
+            "description": "Pass Map Pack ID",
             "required": true,
             "schema": {
               "type": "integer"
@@ -912,9 +912,9 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "delete": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Delete a battle pass map pack (Admin only)",
+        "summary": "Delete a Pass map pack (Admin only)",
         "security": [
           {
             "bearerAuth": []
@@ -924,7 +924,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           {
             "name": "mapPackId",
             "in": "path",
-            "description": "Battle Pass Map Pack ID",
+            "description": "Pass Map Pack ID",
             "required": true,
             "schema": {
               "type": "integer"
@@ -944,7 +944,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/mappack/{mapPackId}/claim": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Claim XP reward for completing a map pack",
         "security": [
@@ -979,7 +979,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/rewards": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get active season's tier rewards",
         "responses": {
@@ -995,7 +995,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/season/{id}/rewards": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get tier rewards for a specific season",
         "parameters": [
@@ -1020,7 +1020,7 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Create a tier reward (Admin only)",
         "security": [
@@ -1079,7 +1079,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/reward/{rewardId}": {
       "delete": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Delete a tier reward (Admin only)",
         "security": [
@@ -1111,7 +1111,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/reward/{rewardId}/claim": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Claim a tier reward",
         "security": [
@@ -1146,7 +1146,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/rewards/claimable": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get all claimable rewards for current user",
         "security": [
@@ -1170,7 +1170,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/xp/add": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Add XP to a user (Admin only)",
         "security": [
@@ -1212,7 +1212,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/missions": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get active season's missions with user status",
         "security": [
@@ -1233,7 +1233,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/season/{id}/missions": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get missions for a specific season",
         "parameters": [
@@ -1258,7 +1258,7 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Create a mission for a season (Admin only)",
         "security": [
@@ -1339,7 +1339,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/mission/{missionId}": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get a specific mission",
         "parameters": [
@@ -1364,7 +1364,7 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "patch": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Update a mission (Admin only)",
         "security": [
@@ -1404,7 +1404,7 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "delete": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Delete a mission (Admin only)",
         "security": [
@@ -1436,7 +1436,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/mission/{missionId}/claim": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Claim a completed mission reward",
         "security": [
@@ -1471,7 +1471,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/mission/{missionId}/reward": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Add a reward to a mission (Admin only)",
         "security": [
@@ -1524,7 +1524,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/mission/{missionId}/reward/{rewardId}": {
       "delete": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Remove a reward from a mission (Admin only)",
         "security": [
@@ -1565,7 +1565,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/webhook/refresh/daily": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Webhook to refresh daily missions (Cron only)",
         "description": "Called by cron service to reset all daily missions. Removes all progress and claims for missions with refreshType='daily'.",
@@ -1611,7 +1611,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/webhook/refresh/weekly": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Webhook to refresh weekly missions (Cron only)",
         "description": "Called by cron service to reset all weekly missions. Removes all progress and claims for missions with refreshType='weekly'. Should be called on Mondays at 0:00 AM UTC+7.",
@@ -1657,7 +1657,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/webhook/refresh/{type}": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Webhook to refresh missions by type (Cron only)",
         "description": "Generic endpoint to refresh missions by refresh type.",

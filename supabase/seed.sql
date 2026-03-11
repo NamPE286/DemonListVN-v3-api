@@ -36,7 +36,7 @@ INSERT INTO "public"."products" ("id", "name", "description", "price", "featured
 
 - Những ai dã mua Thẻ thành viên Demon List VN sẽ được bù thêm 2 tháng Supporter vào Thẻ khi mua mới.
 - Thẻ Demon List VN vẫn có thể sử dụng cho đến tháng 6 do tên miền cũ sẽ hết hạn vào tháng 6.', 149000, TRUE, FALSE, '#000000', 3, 1, NULL, 93, '2026-02-11T12:20:24.885077+00:00'),
-  (6, 'Battle Pass', NULL, 149000, FALSE, TRUE, '#FFFFFF', NULL, NULL, NULL, NULL, '2026-01-23T14:11:25.853209+00:00'),
+  (6, 'Pass', NULL, 149000, FALSE, TRUE, '#FFFFFF', NULL, NULL, NULL, NULL, '2026-01-23T14:11:25.853209+00:00'),
   (5, 'Queue Boost', '1 ngày', 5000, FALSE, TRUE, '#FFFFFF', NULL, NULL, NULL, NULL, '2026-01-18T09:46:51.920126+00:00'),
   (4, 'Geometry Dash VN Supporter', '1 ngày', 5000, FALSE, TRUE, '#FFFFFF', NULL, NULL, NULL, NULL, '2025-10-21T16:03:50.720036+00:00'),
   (3, 'Clan Boost', '1 ngày', 5000, FALSE, TRUE, '#FFFFFF', NULL, NULL, '/supporter', NULL, '2025-08-25T20:23:24.740233+00:00'),
@@ -66,8 +66,8 @@ ON CONFLICT DO NOTHING;
 
 -- subscriptions (2 rows)
 INSERT INTO "public"."subscriptions" ("id", "name", "description", "price", "type", "refId", "created_at") VALUES
-  (2, 'Battle Pass Premium - Season 1', NULL, 0, 'battlepass_premium', 3, '2026-02-25T08:53:05.199076+00:00'),
-  (1, 'Battle Pass Premium - Test Season', NULL, 0, 'battlepass_premium', 1, '2026-01-23T16:39:21.960814+00:00')
+  (2, 'Pass Premium - Season 1', NULL, 0, 'battlepass_premium', 3, '2026-02-25T08:53:05.199076+00:00'),
+  (1, 'Pass Premium - Test Season', NULL, 0, 'battlepass_premium', 1, '2026-01-23T16:39:21.960814+00:00')
 ON CONFLICT DO NOTHING;
 
 -- level_tags (10 rows)

@@ -487,7 +487,7 @@ const TABLE_DEFS: TableDef[] = [
     ],
   },
 
-  // ── Battle Pass Seasons ────────────────────────────────────────────────
+  // ── Pass Seasons ────────────────────────────────────────────────
   {
     name: "battlePassCourses",
     columns: ["id", "title", "description", "created_at"],

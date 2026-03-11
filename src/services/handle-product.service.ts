@@ -127,7 +127,7 @@ handleProduct.set(ProductId.BATTLE_PASS, {
     pre: async (buyer, recipient, order) => {
         const season = await getActiveseason();
         if (!season) {
-            throw new Error('No active battle pass season');
+            throw new Error('No active Pass season');
         }
 
         await upgradeToPremium(season.id, recipient.uid!);
@@ -154,7 +154,7 @@ handleProduct.set(ProductId.BATTLE_PASS, {
         }
 
         if (order.giftTo) {
-            msg += ` đã tặng Battle Pass Premium cho `
+            msg += ` đã tặng Pass Premium cho `
 
             if (recipient.discord) {
                 msg += `<@${recipient.discord}>`
@@ -163,12 +163,12 @@ handleProduct.set(ProductId.BATTLE_PASS, {
             }
 
             await sendNotification({
-                content: `Bạn đã được tặng Battle Pass Premium!`,
+                content: `Bạn đã được tặng Pass Premium!`,
                 to: order.giftTo
             })
             await sendMessageToChannel(DiscordChannel.GENERAL, `${msg}`)
         } else {
-            msg += ` đã mua Battle Pass Premium!`
+            msg += ` đã mua Pass Premium!`
             await sendMessageToChannel(DiscordChannel.GENERAL, msg)
         }
     }

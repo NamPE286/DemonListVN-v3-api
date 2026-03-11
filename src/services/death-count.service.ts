@@ -76,11 +76,11 @@ async function isEligible(levelID: number, eventCheck = true, battlepassCheck = 
 
     if (battlepassCheck) {
         try {
-            // Check if level is part of active season battle pass or active season course
+            // Check if level is part of active season Pass or active season course
             const activeSeason = await getActiveseason();
 
             if (activeSeason) {
-                // Check if level is a battle pass level (normal, daily, weekly)
+                // Check if level is a Pass level (normal, daily, weekly)
 
                 try {
                     const battlePassLevel = await getActiveBattlePassLevelByLevelID(levelID);
