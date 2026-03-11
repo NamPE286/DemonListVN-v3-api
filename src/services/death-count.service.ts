@@ -1,6 +1,6 @@
 import supabase from "@src/client/supabase";
 import { fetchLevelFromGD } from "@src/services/level.service";
-import { getActiveseason, getActiveBattlePassLevelByLevelID, getCourseEntries } from "@src/services/battlepass.service";
+import { getActiveseason, getActiveBattlePassLevelByLevelID, getCourseEntries, checkLevelInSeasonMappack } from "@src/services/battlepass.service";
 
 export async function fetchPlayerDeathCount(uid: string, levelID: number, tag: string) {
     let { data, error } = await supabase
@@ -77,15 +77,23 @@ async function isEligible(levelID: number, eventCheck = true, battlepassCheck = 
     if (battlepassCheck) {
         try {
             // Check if level is part of active season battle pass or active season course
-            const activeSeason = await getActiveseason() as any;
+            const activeSeason = await getActiveseason();
 
             if (activeSeason) {
                 // Check if level is a battle pass level (normal, daily, weekly)
 
                 try {
                     const battlePassLevel = await getActiveBattlePassLevelByLevelID(levelID);
-
+                    
                     if (battlePassLevel) {
+                        return true;
+                    }
+                } catch { }
+
+                try {
+                    const check = await checkLevelInSeasonMappack(activeSeason.id, levelID)
+
+                    if (check) {
                         return true;
                     }
                 } catch { }

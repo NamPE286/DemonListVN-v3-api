@@ -2477,13 +2477,6 @@ export async function trackProgressAfterDeathCount(
         console.error(`Failed to update map pack level progress:`, error.message);
     }
 
-    // Always update map pack progress
-    try {
-        await batchUpdatePlayerMapPackProgress(mapPackIds, uid);
-    } catch (error: any) {
-        console.error(`Failed to update map pack progress:`, error.message);
-    }
-
     try {
         await updateCourseProgress(season.id, uid, levelIDNum, progress);
     } catch (error: any) {
@@ -2575,4 +2568,27 @@ export async function refreshMissionsByType(refreshType: RefreshType) {
         total: missions.length,
         missions: results
     };
+}
+
+export async function checkLevelInSeasonMappack(seasonID: number, levelID: number) {
+    const { data: mappack, error: mappackError } = await supabase
+        .from('mapPackLevels')
+        .select('mapPackId')
+        .eq('levelID', levelID)
+        .single()
+
+    if (mappackError) {
+        throw new Error(mappackError.message)
+    }
+
+    const { data, error } = await supabase
+        .from('battlePassMapPacks')
+        .select('id')
+        .match({ seasonId: seasonID, mapPackId: mappack.mapPackId })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data.length !== 0
 }
