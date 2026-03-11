@@ -47,6 +47,7 @@
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "update-types": "supabase gen types typescript --local > ./src/types/supabase.ts",
     "sync": "supabase db pull --yes; supabase db reset; npm run update-types",
-    "generate-docs": "npx tsx scripts/generate-swagger-docs.ts"
+    "generate-docs": "npx tsx scripts/generate-swagger-docs.ts",
+    "generate-seed": "npx tsx scripts/generate-seed-data.ts"
   }
 }

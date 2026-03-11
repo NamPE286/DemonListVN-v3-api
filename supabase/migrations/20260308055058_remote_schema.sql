@@ -2002,6 +2002,36 @@ CREATE TABLE IF NOT EXISTS "public"."communityLikes" (
 ALTER TABLE "public"."communityLikes" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."communityPostParticipants" (
+    "id" integer NOT NULL,
+    "postId" integer NOT NULL,
+    "uid" "uuid" NOT NULL,
+    "status" "text" DEFAULT 'pending'::"text" NOT NULL,
+    "createdAt" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updatedAt" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "communityPostParticipants_status_check" CHECK (("status" = ANY (ARRAY['pending'::"text", 'approved'::"text", 'rejected'::"text"])))
+);
+
+
+ALTER TABLE "public"."communityPostParticipants" OWNER TO "postgres";
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."communityPostParticipants_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."communityPostParticipants_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."communityPostParticipants_id_seq" OWNED BY "public"."communityPostParticipants"."id";
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."communityPostViews" (
     "id" integer NOT NULL,
     "uid" "uuid" NOT NULL,
@@ -2033,7 +2063,10 @@ CREATE TABLE IF NOT EXISTS "public"."communityPosts" (
     "isRecommended" boolean,
     "fts" "tsvector" GENERATED ALWAYS AS (("setweight"("to_tsvector"('"english"'::"regconfig", COALESCE("title", ''::"text")), 'A'::"char") || "setweight"("to_tsvector"('"english"'::"regconfig", COALESCE("content", ''::"text")), 'B'::"char"))) STORED,
     "viewsCount" integer DEFAULT 0 NOT NULL,
-    CONSTRAINT "community_posts_type_check" CHECK (("type" = ANY (ARRAY['discussion'::"text", 'media'::"text", 'guide'::"text", 'announcement'::"text", 'review'::"text"])))
+    "maxParticipants" integer,
+    "participantsCount" integer DEFAULT 0 NOT NULL,
+    "clanId" bigint,
+    CONSTRAINT "communityPosts_type_check" CHECK (("type" = ANY (ARRAY['discussion'::"text", 'media'::"text", 'guide'::"text", 'announcement'::"text", 'review'::"text", 'collab'::"text"])))
 );
 
 
@@ -3042,6 +3075,10 @@ ALTER TABLE ONLY "public"."communityLikes" ALTER COLUMN "id" SET DEFAULT "nextva
 
 
 
+ALTER TABLE ONLY "public"."communityPostParticipants" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."communityPostParticipants_id_seq"'::"regclass");
+
+
+
 ALTER TABLE ONLY "public"."communityPostViews" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."community_post_views_id_seq"'::"regclass");
 
 
@@ -3234,6 +3271,16 @@ ALTER TABLE ONLY "public"."clans"
 
 ALTER TABLE ONLY "public"."clans"
     ADD CONSTRAINT "clans_tag_key" UNIQUE ("tag");
+
+
+
+ALTER TABLE ONLY "public"."communityPostParticipants"
+    ADD CONSTRAINT "communityPostParticipants_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."communityPostParticipants"
+    ADD CONSTRAINT "communityPostParticipants_postId_uid_key" UNIQUE ("postId", "uid");
 
 
 
@@ -3587,6 +3634,18 @@ CREATE INDEX "idx_community_likes_uid" ON "public"."communityLikes" USING "btree
 
 
 
+CREATE INDEX "idx_community_post_participants_post" ON "public"."communityPostParticipants" USING "btree" ("postId");
+
+
+
+CREATE INDEX "idx_community_post_participants_status" ON "public"."communityPostParticipants" USING "btree" ("postId", "status");
+
+
+
+CREATE INDEX "idx_community_post_participants_uid" ON "public"."communityPostParticipants" USING "btree" ("uid");
+
+
+
 CREATE INDEX "idx_community_post_views_post_id" ON "public"."communityPostViews" USING "btree" ("postId");
 
 
@@ -3603,11 +3662,19 @@ CREATE INDEX "idx_community_posts_admin_status" ON "public"."communityPostsAdmin
 
 
 
+CREATE INDEX "idx_community_posts_clan_id" ON "public"."communityPosts" USING "btree" ("clanId") WHERE ("clanId" IS NOT NULL);
+
+
+
 CREATE INDEX "idx_community_posts_created_at" ON "public"."communityPosts" USING "btree" ("createdAt" DESC);
 
 
 
 CREATE INDEX "idx_community_posts_fts" ON "public"."communityPosts" USING "gin" ("fts");
+
+
+
+CREATE INDEX "idx_community_posts_global" ON "public"."communityPosts" USING "btree" ("clanId") WHERE ("clanId" IS NULL);
 
 
 
@@ -3901,6 +3968,21 @@ ALTER TABLE ONLY "public"."clanInvitations"
 
 ALTER TABLE ONLY "public"."clans"
     ADD CONSTRAINT "clans_owner_fkey" FOREIGN KEY ("owner") REFERENCES "public"."players"("uid");
+
+
+
+ALTER TABLE ONLY "public"."communityPostParticipants"
+    ADD CONSTRAINT "communityPostParticipants_postId_fkey" FOREIGN KEY ("postId") REFERENCES "public"."communityPosts"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."communityPostParticipants"
+    ADD CONSTRAINT "communityPostParticipants_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."communityPosts"
+    ADD CONSTRAINT "communityPosts_clanId_fkey" FOREIGN KEY ("clanId") REFERENCES "public"."clans"("id") ON DELETE CASCADE;
 
 
 
@@ -4363,6 +4445,9 @@ ALTER TABLE "public"."communityCommentsAdmin" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."communityLikes" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."communityPostParticipants" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."communityPostViews" ENABLE ROW LEVEL SECURITY;
@@ -5186,6 +5271,18 @@ GRANT ALL ON TABLE "public"."communityLikes" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."communityPostParticipants" TO "anon";
+GRANT ALL ON TABLE "public"."communityPostParticipants" TO "authenticated";
+GRANT ALL ON TABLE "public"."communityPostParticipants" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."communityPostParticipants_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."communityPostParticipants_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."communityPostParticipants_id_seq" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."communityPostViews" TO "anon";
 GRANT ALL ON TABLE "public"."communityPostViews" TO "authenticated";
 GRANT ALL ON TABLE "public"."communityPostViews" TO "service_role";
@@ -5665,24 +5762,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 
 
 
-
-
-drop trigger if exists "objects_delete_delete_prefix" on "storage"."objects";
-
-drop trigger if exists "objects_insert_create_prefix" on "storage"."objects";
-
-drop trigger if exists "objects_update_create_prefix" on "storage"."objects";
-
-drop trigger if exists "prefixes_create_hierarchy" on "storage"."prefixes";
-
-drop trigger if exists "prefixes_delete_hierarchy" on "storage"."prefixes";
-
-
-  create policy "Enable read access for all users"
-  on "storage"."buckets"
-  as permissive
-  for insert
-  to public
-with check (true);
 
 
