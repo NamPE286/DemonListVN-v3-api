@@ -274,6 +274,7 @@ export type Database = {
           levelID: number
           progress: number
           userID: string
+          xpClaimed: boolean
         }
         Insert: {
           battlePassMapPackId: number
@@ -281,6 +282,7 @@ export type Database = {
           levelID: number
           progress?: number
           userID: string
+          xpClaimed?: boolean
         }
         Update: {
           battlePassMapPackId?: number
@@ -288,6 +290,7 @@ export type Database = {
           levelID?: number
           progress?: number
           userID?: string
+          xpClaimed?: boolean
         }
         Relationships: [
           {
