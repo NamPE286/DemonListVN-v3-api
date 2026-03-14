@@ -114,8 +114,12 @@ router.route('/')
             await updatePlayer(data)
 
             res.send()
-        } catch (err) {
-            res.status(500).send()
+        } catch (err: any) {
+            if (err.message === 'Rename cooldown active') {
+                res.status(400).send({ message: 'Đang trong thời gian chờ đổi tên' })
+            } else {
+                res.status(500).send()
+            }
         }
     })
 

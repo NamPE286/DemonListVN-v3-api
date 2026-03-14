@@ -163,6 +163,23 @@ export async function updatePlayer(playerData: TPlayer, { updateClan = false } =
         delete updateData.name
     }
 
+    let newRenameCooldown: string | undefined
+
+    if (updateData.name !== undefined) {
+        const current = await getPlayer(playerData.uid)
+
+        if (current.nameLocked) {
+            delete updateData.name
+        } else if (updateData.name !== current.name) {
+            if (current.renameCooldown && new Date(current.renameCooldown) > new Date()) {
+                throw new Error('Rename cooldown active')
+            }
+            newRenameCooldown = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        } else {
+            delete updateData.name
+        }
+    }
+
     delete updateData.isAdmin
     delete updateData.isTrusted
     delete updateData.isBanned
@@ -179,6 +196,10 @@ export async function updatePlayer(playerData: TPlayer, { updateClan = false } =
 
     if (!updateClan) {
         delete updateData.clan
+    }
+
+    if (newRenameCooldown) {
+        updateData.renameCooldown = newRenameCooldown
     }
 
     const { error } = await supabase
