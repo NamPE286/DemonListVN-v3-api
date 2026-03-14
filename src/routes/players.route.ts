@@ -126,7 +126,9 @@ router.route('/')
             .from("players")
             .insert({
                 uid: userId,
-                name: String(new Date().getTime())
+                name: String(new Date().getTime()),
+                onboarding_done: false,
+                onboarding_step: 1
             })
 
         if (error) {
@@ -135,7 +137,7 @@ router.route('/')
             return;
         }
 
-        res.send();
+        res.status(201).send();
     })
 
 /**
@@ -219,6 +221,95 @@ router.route('/:uid')
         } catch (err) {
             res.status(404).send()
         }
+    })
+
+router.route('/:uid/onboarding')
+    .patch(userAuth, async (req, res) => {
+        const { uid } = req.params
+        const { user } = res.locals
+
+        if (user.uid !== uid) {
+            res.status(403).send()
+            return
+        }
+
+        const { name, province, city, onboarding_step, onboarding_done } = req.body ?? {}
+        const updateData: Record<string, any> = {}
+
+        if (name !== undefined) {
+            if (!/^[A-Za-z0-9]{3,30}$/.test(name)) {
+                res.status(400).send({ message: 'Tên chỉ gồm chữ và số, 3-30 ký tự' })
+                return
+            }
+
+            const { data: current } = await supabase
+                .from('players')
+                .select('nameLocked, renameCooldown')
+                .eq('uid', uid)
+                .single()
+
+            if (current?.nameLocked) {
+                res.status(400).send({ message: 'Tên đã bị khóa' })
+                return
+            }
+
+            if (current?.renameCooldown && new Date(current.renameCooldown) > new Date()) {
+                res.status(400).send({ message: 'Đang trong thời gian chờ đổi tên' })
+                return
+            }
+
+            const { data: existing } = await supabase
+                .from('players')
+                .select('uid')
+                .eq('name', name)
+                .single()
+
+            if (existing && existing.uid !== uid) {
+                res.status(409).send({ message: 'Tên đã được sử dụng' })
+                return
+            }
+
+            updateData.name = name
+            updateData.renameCooldown = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        }
+
+        if (province !== undefined) updateData.province = province
+        if (city !== undefined) updateData.city = city
+        if (onboarding_step !== undefined && typeof onboarding_step === 'number') {
+            updateData.onboarding_step = onboarding_step
+        }
+
+        if (onboarding_done === true) {
+            const { data: current } = await supabase
+                .from('players')
+                .select('supporterUntil')
+                .eq('uid', uid)
+                .single()
+
+            const currentTs = current?.supporterUntil ? new Date(current.supporterUntil).getTime() : 0
+            const sevenDays = 7 * 24 * 60 * 60 * 1000
+            updateData.supporterUntil = new Date(Math.max(Date.now(), currentTs) + sevenDays).toISOString()
+            updateData.onboarding_done = true
+            updateData.onboarding_step = 8
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            res.status(400).send({ message: 'No fields to update' })
+            return
+        }
+
+        const { error } = await supabase
+            .from('players')
+            .update(updateData)
+            .eq('uid', uid)
+
+        if (error) {
+            console.error(error)
+            res.status(500).send()
+            return
+        }
+
+        res.send()
     })
 
 router.route('/:uid/records')
