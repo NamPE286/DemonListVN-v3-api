@@ -42,6 +42,7 @@ import levelSubmissionsRoute from './routes/level-submissions.route'
 import communityRoute from './routes/community.route'
 import clanCommunityRoute from './routes/clan-community.route'
 import homepageRoute from './routes/homepage.route'
+import adsRoute from './routes/ads.route'
 
 const app = express()
 const port = 8787
@@ -94,6 +95,7 @@ app.use('/wiki', wikiRoute)
 app.use('/level-submissions', levelSubmissionsRoute)
 app.use('/community', communityRoute)
 app.use('/homepage', homepageRoute)
+app.use('/ads', adsRoute)
 
 app.listen(port, async () => {
     console.log(`Server started on port ${port}`)
