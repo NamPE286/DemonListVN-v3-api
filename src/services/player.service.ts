@@ -183,6 +183,7 @@ export async function updatePlayer(playerData: TPlayer, { updateClan = false } =
     delete updateData.isAdmin
     delete updateData.isTrusted
     delete updateData.isBanned
+    delete updateData.isManager
     delete updateData.reviewCooldown
     delete updateData.renameCooldown
     delete updateData.rating

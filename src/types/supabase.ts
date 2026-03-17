@@ -2635,6 +2635,7 @@ export type Database = {
           isBanned: boolean
           isBannerGif: boolean
           isHidden: boolean
+          isManager: boolean
           isTrusted: boolean
           matchCount: number
           name: string | null
@@ -2683,6 +2684,7 @@ export type Database = {
           isBanned?: boolean
           isBannerGif?: boolean
           isHidden?: boolean
+          isManager?: boolean
           isTrusted?: boolean
           matchCount?: number
           name?: string | null
@@ -2731,6 +2733,7 @@ export type Database = {
           isBanned?: boolean
           isBannerGif?: boolean
           isHidden?: boolean
+          isManager?: boolean
           isTrusted?: boolean
           matchCount?: number
           name?: string | null
