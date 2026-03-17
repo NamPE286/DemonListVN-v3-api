@@ -100,11 +100,13 @@ export async function changeOrderState(orderID: number, state: string) {
 }
 
 export async function getOrders(userID: string) {
+    // @ts-ignore
     const { data, error } = await supabase
         .from("orders")
         .select("*, products(*), coupons(*), players!giftTo(*, clans!id(*))")
         .eq("userID", userID)
         .order("created_at", { ascending: false })
+        .returns<(Tables<"orders"> & { products: Tables<"products"> | null, coupons: Tables<"coupons"> | null, players: (Tables<"players"> & { clans: Tables<"clans"> | null }) | null })[]>()
 
     if (error) {
         throw new Error(error.message)
@@ -128,6 +130,18 @@ export async function getCoupon(code: string) {
 }
 
 export async function redeem(code: string, player: Tables<"players">) {
+    const { data: existingOrder } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("userID", player.uid!)
+        .eq("address", code)
+        .eq("paymentMethod", "Coupon")
+        .limit(1);
+
+    if (existingOrder && existingOrder.length > 0) {
+        throw new Error("You have already redeemed this coupon");
+    }
+
     const coupon = await getCoupon(code);
     const product = coupon.products
 
