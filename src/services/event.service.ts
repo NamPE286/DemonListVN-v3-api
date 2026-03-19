@@ -367,7 +367,7 @@ export async function get_event_leaderboard(eventID: number, ignoreFreeze: boole
             continue
         }
 
-        if (!i.players.eventRecords === null) {
+        if (!i.players.eventRecords) {
             i.players.eventRecords = []
         }
         // @ts-ignore
@@ -399,11 +399,11 @@ export async function get_event_leaderboard(eventID: number, ignoreFreeze: boole
     } else {
         res.sort((a, b) => {
             const x = a.eventRecords.reduce((sum, record, index) => {
-                return sum + (record && (record.accepted === null || record.accepted === true) ? levels[index].point * record.progress : 0);
+                return sum + (record && levels[index] && (record.accepted === null || record.accepted === true) ? levels[index].point * record.progress : 0);
             }, 0);
 
             const y = b.eventRecords.reduce((sum, record, index) => {
-                return sum + (record && (record.accepted === null || record.accepted === true) ? levels[index].point * record.progress : 0);
+                return sum + (record && levels[index] && (record.accepted === null || record.accepted === true) ? levels[index].point * record.progress : 0);
             }, 0);
 
             if (x == y && x != 0) {
