@@ -43,6 +43,19 @@ export async function linkCard(id: string, player: Player) {
     await extendPlayerSupporter(player.uid!, card.supporterIncluded)
 }
 
+export async function activateCard(id: string) {
+    const { error } = await supabase
+        .from("cards")
+        .update({
+            activationDate: new Date().toISOString()
+        })
+        .eq('id', id)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+}
+
 export async function updateCardContent(id: string, content: string) {
     const { error } = await supabase
         .from("cards")

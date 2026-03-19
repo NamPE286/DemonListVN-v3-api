@@ -1,5 +1,6 @@
-import { getCard, linkCard, updateCardContent } from '@src/services/card.service'
+import { getCard, linkCard, updateCardContent, activateCard } from '@src/services/card.service'
 import userAuth from '@src/middleware/user-auth.middleware'
+import managerAuth from '@src/middleware/manager-auth.middleware'
 import express from 'express'
 
 const router = express.Router()
@@ -76,6 +77,43 @@ router.route("/:id/link")
         }
 
         res.send()
+    })
+
+router.route("/:id/activate")
+    /**
+     * @openapi
+     * "/card/{id}/activate":
+     *   patch:
+     *     tags:
+     *       - Card
+     *     summary: Activate a card
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The ID of the card
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Card activated successfully
+     *       403:
+     *         description: Forbidden
+     *       500:
+     *         description: Internal server error
+     */
+    .patch(managerAuth, async (req, res) => {
+        const { id } = req.params
+
+        try {
+            await activateCard(id)
+            res.send()
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
     })
 
 router.route("/:id/content")
