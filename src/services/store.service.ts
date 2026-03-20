@@ -439,3 +439,63 @@ export async function handlePayment(id: number, sepayOrderData: SepayWebhookOrde
     await pre(buyer, recipient, order)
     await post(buyer, recipient, order)
 }
+
+export async function getAllOrders(filters: { state?: string, paymentMethod?: string, search?: string }) {
+    let query = supabase
+        .from("orders")
+        .select("*, orderTracking(*)")
+
+    if (filters.state) {
+        query = query.eq('state', filters.state)
+    }
+
+    if (filters.paymentMethod) {
+        query = query.eq('paymentMethod', filters.paymentMethod)
+    }
+
+    if (filters.search) {
+        const searchNum = parseInt(filters.search)
+        if (!isNaN(searchNum)) {
+            query = query.or(`recipientName.ilike.%${filters.search}%,id.eq.${searchNum}`)
+        } else {
+            query = query.ilike('recipientName', `%${filters.search}%`)
+        }
+    }
+
+    const { data, error } = await query
+        .order("created_at", { ascending: false })
+        .order("created_at", { referencedTable: "orderTracking", ascending: false })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}
+
+export async function getAllProducts() {
+    const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}
+
+export async function upsertProduct(product: any) {
+    const { data, error } = await supabase
+        .from("products")
+        .upsert(product)
+        .select()
+        .single()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}
