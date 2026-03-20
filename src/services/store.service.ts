@@ -443,7 +443,7 @@ export async function handlePayment(id: number, sepayOrderData: SepayWebhookOrde
 export async function getAllOrders(filters: { state?: string, paymentMethod?: string, search?: string }) {
     let query = supabase
         .from("orders")
-        .select("*, orderTracking(*)")
+        .select("*, orderTracking(*), products(*), orderItems(*, products(*))")
 
     if (filters.state) {
         query = query.eq('state', filters.state)
