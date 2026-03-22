@@ -1,6 +1,7 @@
 import supabase from '@src/client/supabase'
 import { sendNotification } from '@src/services/notification.service'
 import { getOrder, getAllOrders, getAllProducts, changeOrderState, upsertProduct } from '@src/services/store.service'
+import { getAllRecordCards, markRecordCardPrinted } from '@src/services/card.service'
 import managerAuth from '@src/middleware/manager-auth.middleware'
 import express from 'express'
 import { FRONTEND_URL } from '@src/config/url'
@@ -184,6 +185,29 @@ router.route('/order/:id/tracking')
             to: order.userID
         }, true)
 
+    })
+
+router.route('/record-cards')
+    .get(managerAuth, async (req, res) => {
+        try {
+            const data = await getAllRecordCards()
+            res.send(data)
+        } catch (error) {
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/record-cards/:id/printed')
+    .patch(managerAuth, async (req, res) => {
+        const { id } = req.params
+        try {
+            await markRecordCardPrinted(id)
+            res.send()
+        } catch (error) {
+            console.error(error)
+            res.status(500).send()
+        }
     })
 
 export default router

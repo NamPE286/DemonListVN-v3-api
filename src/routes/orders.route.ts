@@ -1,7 +1,9 @@
 import { addOrderItems, getOrder, getOrders } from '@src/services/store.service';
+import { createRecordCard } from '@src/services/card.service';
 import userAuth from '@src/middleware/user-auth.middleware'
 import express from 'express'
 import { sepay } from '@src/client/sepay';
+import supabase from '@src/client/supabase';
 
 const router = express.Router()
 
@@ -145,6 +147,70 @@ router.route('/:id')
         } catch (err) {
             console.error(err)
             res.status(500).send()
+        }
+    })
+
+const PAPER_CARD_PRODUCT_ID = 8
+const PLASTIC_CARD_PRODUCT_ID = 9
+
+router.route('/record-card')
+    .post(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { recordNo, levelID, template, material, address, phone, recipientName } = req.body as {
+            recordNo: number
+            levelID: number
+            template: number
+            material: 'paper' | 'plastic'
+            address: string
+            phone: number
+            recipientName: string
+        }
+
+        if (!recordNo || !levelID || !template || !material || !address || !phone || !recipientName) {
+            res.status(400).send({ message: 'Missing required fields' })
+            return
+        }
+
+        if (!['paper', 'plastic'].includes(material)) {
+            res.status(400).send({ message: 'Invalid material' })
+            return
+        }
+
+        const { data: record, error: recordError } = await supabase
+            .from('records')
+            .select('no, userid, isChecked')
+            .eq('no', recordNo)
+            .eq('userid', user.uid!)
+            .eq('isChecked', true)
+            .single()
+
+        if (recordError || !record) {
+            res.status(404).send({ message: 'Record not found or not accepted' })
+            return
+        }
+
+        const productID = material === 'paper' ? PAPER_CARD_PRODUCT_ID : PLASTIC_CARD_PRODUCT_ID
+
+        try {
+            const orderID = await addOrderItems(
+                user,
+                recipientName,
+                [{ productID, quantity: 1, orderID: 0 }],
+                address,
+                phone,
+                'COD',
+                true
+            )
+
+            const cardID = await createRecordCard(orderID, user.uid!, recordNo, levelID, template, material)
+
+            res.send({ orderID, cardID })
+        } catch (err) {
+            console.error(err)
+            res.status(400).send({
+                // @ts-ignore
+                message: err.message
+            })
         }
     })
 
