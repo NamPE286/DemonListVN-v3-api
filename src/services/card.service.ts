@@ -103,6 +103,27 @@ export async function updateRecordCardImg(id: string, playerUID: string, imgURL:
     }
 }
 
+export async function updateRecordCardAvatar(id: string, playerUID: string, avatarURL: string) {
+    const { data: card, error: fetchError } = await supabase
+        .from("record_cards" as any)
+        .select("owner")
+        .eq('id', id)
+        .single()
+
+    if (fetchError || (card as any).owner !== playerUID) {
+        throw new Error("Unauthorized")
+    }
+
+    const { error } = await supabase
+        .from("record_cards" as any)
+        .update({ avatar: avatarURL })
+        .eq('id', id)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+}
+
 export async function markRecordCardPrinted(id: string) {
     const { error } = await supabase
         .from("record_cards" as any)

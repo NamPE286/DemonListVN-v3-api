@@ -6,5 +6,5 @@ export const s3 = new S3Client({
     credentials: {
         accessKeyId: process.env.CF_ACCESS_KEY_ID!,
         secretAccessKey: process.env.CF_SECRET_ACCESS_KEY!,
-    }
+    },
 });

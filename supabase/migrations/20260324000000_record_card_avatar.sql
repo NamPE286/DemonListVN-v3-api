@@ -1,0 +1,1 @@
+ALTER TABLE record_cards ADD COLUMN IF NOT EXISTS avatar TEXT;
