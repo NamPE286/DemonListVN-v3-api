@@ -14,11 +14,14 @@ interface Item {
     quantity: number;
 }
 
-export async function getProducts(ids: number[] | null = []) {
+export async function getProducts(ids: number[] | null = [], includeHidden: boolean = false) {
     const query = supabase
         .from("products")
         .select("*")
-        .eq('hidden', false)
+
+    if (!includeHidden) {
+        query.eq('hidden', false)
+    }
 
     if (ids !== null) {
         query.in('id', ids)
@@ -270,7 +273,7 @@ export async function addOrderItems(
         ids.push(i.productID)
     }
 
-    const products = (await getProducts(ids)).sort((a, b) => a.id - b.id);
+    const products = (await getProducts(ids, true)).sort((a, b) => a.id - b.id);
     let amount = 0, fee = 25000;
 
     if (pending) {

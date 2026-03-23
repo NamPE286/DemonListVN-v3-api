@@ -166,7 +166,7 @@ router.route('/record-card')
             recipientName: string
         }
 
-        if (!recordNo || !levelID || !template || !material || !address || !phone || !recipientName) {
+        if (recordNo == null || levelID == null || template == null || !material || !address || phone == null || !recipientName) {
             res.status(400).send({ message: 'Missing required fields' })
             return
         }
