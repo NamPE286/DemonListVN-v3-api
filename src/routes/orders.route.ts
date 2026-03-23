@@ -156,8 +156,7 @@ const PLASTIC_CARD_PRODUCT_ID = 9
 router.route('/record-card')
     .post(userAuth, async (req, res) => {
         const { user } = res.locals
-        const { recordNo, levelID, template, material, address, phone, recipientName } = req.body as {
-            recordNo: number
+        const { levelID, template, material, address, phone, recipientName } = req.body as {
             levelID: number
             template: number
             material: 'paper' | 'plastic'
@@ -166,7 +165,7 @@ router.route('/record-card')
             recipientName: string
         }
 
-        if (recordNo == null || levelID == null || template == null || !material || !address || phone == null || !recipientName) {
+        if (levelID == null || template == null || !material || !address || phone == null || !recipientName) {
             res.status(400).send({ message: 'Missing required fields' })
             return
         }
@@ -178,8 +177,8 @@ router.route('/record-card')
 
         const { data: record, error: recordError } = await supabase
             .from('records')
-            .select('no, userid, isChecked')
-            .eq('no', recordNo)
+            .select('userid, isChecked')
+            .eq('levelid', levelID)
             .eq('userid', user.uid!)
             .eq('isChecked', true)
             .single()
@@ -202,7 +201,7 @@ router.route('/record-card')
                 true
             )
 
-            const cardID = await createRecordCard(orderID, user.uid!, recordNo, levelID, template, material)
+            const cardID = await createRecordCard(orderID, user.uid!, levelID, template, material)
 
             res.send({ orderID, cardID })
         } catch (err) {

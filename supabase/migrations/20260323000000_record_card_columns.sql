@@ -3,7 +3,6 @@ CREATE TABLE IF NOT EXISTS record_cards (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     "orderID" BIGINT,
     owner UUID NOT NULL REFERENCES players(uid) ON DELETE CASCADE,
-    "recordNo" BIGINT NOT NULL,
     "levelID" BIGINT NOT NULL REFERENCES levels(id),
     template INTEGER NOT NULL DEFAULT 1,
     material TEXT NOT NULL CHECK (material IN ('paper', 'plastic')),

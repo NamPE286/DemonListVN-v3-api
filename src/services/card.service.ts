@@ -7,7 +7,6 @@ type Player = Awaited<ReturnType<typeof getPlayer>>;
 export async function createRecordCard(
     orderID: number,
     playerUID: string,
-    recordNo: number,
     levelID: number,
     template: number,
     material: string
@@ -17,7 +16,6 @@ export async function createRecordCard(
         .insert({
             owner: playerUID,
             orderID,
-            recordNo,
             levelID,
             template,
             material
@@ -46,7 +44,8 @@ export async function getRecordCard(id: string) {
     const { data: record, error: recErr } = await supabase
         .from('records')
         .select('*, levels!public_records_levelid_fkey(*)')
-        .eq('no', (card as any).recordNo)
+        .eq('levelid', (card as any).levelID)
+        .eq('userid', (card as any).owner.uid)
         .single()
 
     if (recErr) {

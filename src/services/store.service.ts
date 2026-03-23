@@ -106,7 +106,7 @@ export async function getOrders(userID: string) {
     // @ts-ignore
     const { data, error } = await supabase
         .from("orders")
-        .select("*, products(*), coupons(*), players!giftTo(*, clans!id(*))")
+        .select("*, products(*), coupons(*), players!giftTo(*, clans!id(*)), record_cards!orderID(*)")
         .eq("userID", userID)
         .order("created_at", { ascending: false })
         .returns<(Tables<"orders"> & { products: Tables<"products"> | null, coupons: Tables<"coupons"> | null, players: (Tables<"players"> & { clans: Tables<"clans"> | null }) | null })[]>()
@@ -307,7 +307,7 @@ export async function addOrderItems(
 export async function getOrder(id: number) {
     const { data, error } = await supabase
         .from("orders")
-        .select("*, orderItems(*, products(*)), products(*), coupons(*), players!giftTo(*, clans!id(*)), orderTracking(*)")
+        .select("*, orderItems(*, products(*)), products(*), coupons(*), players!giftTo(*, clans!id(*)), orderTracking(*), record_cards!orderID(*, levels(*))")
         .eq("id", id)
         .single();
 
@@ -328,6 +328,22 @@ export async function getOrder(id: number) {
             created_at: new Date().toISOString(),
             products: await getProductByID(1)
         });
+    }
+
+    if ((data as any).record_cards?.length) {
+        const cards = (data as any).record_cards as { levelID: number; owner: string; [key: string]: any }[]
+        const recordLookups = cards.map(rc =>
+            supabase
+                .from('records')
+                .select('progress, userid, levelid')
+                .eq('levelid', rc.levelID)
+                .eq('userid', rc.owner)
+                .single()
+        )
+        const results = await Promise.all(recordLookups)
+        for (let i = 0; i < cards.length; i++) {
+            cards[i].records = results[i].data ?? null
+        }
     }
 
     return data;
