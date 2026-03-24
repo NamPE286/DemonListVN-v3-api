@@ -45,7 +45,7 @@ export async function getRecordCard(id: string) {
         .from('records')
         .select('*, levels!public_records_levelid_fkey(*)')
         .eq('levelid', (card as any).levelID)
-        .eq('userid', (card as any).owner.uid)
+        .eq('userid', (card as any).players.uid)
         .single()
 
     if (recErr) {

@@ -1,4 +1,4 @@
-import { getCard, linkCard, updateCardContent, activateCard, getRecordCard, updateRecordCardImg, updateRecordCardAvatar } from '@src/services/card.service'
+import { getCard, linkCard, updateCardContent, activateCard, updateRecordCardImg, updateRecordCardAvatar } from '@src/services/card.service'
 import userAuth from '@src/middleware/user-auth.middleware'
 import managerAuth from '@src/middleware/manager-auth.middleware'
 import express from 'express'
@@ -160,18 +160,6 @@ router.route("/:id/content")
         }
 
         res.send()
-    })
-
-router.route("/record/:id")
-    .get(async (req, res) => {
-        const { id } = req.params
-        try {
-            const card = await getRecordCard(id)
-            res.send(card)
-        } catch (err) {
-            console.error(err)
-            res.status(404).send()
-        }
     })
 
 router.route("/record/:id/img")
