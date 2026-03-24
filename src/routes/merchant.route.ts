@@ -163,7 +163,7 @@ router.route('/order/:id/tracking')
             res.status(500).send()
         }
 
-        if (content.toLowerCase().includes("delivered")) {
+        if (content.toLowerCase().includes("delivered") || content.includes("đã được giao thành công")) {
             var { error } = await supabase
                 .from("orders")
                 .update({ state: "PAID", delivered: true })
