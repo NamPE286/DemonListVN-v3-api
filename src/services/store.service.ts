@@ -307,7 +307,7 @@ export async function addOrderItems(
 export async function getOrder(id: number) {
     const { data, error } = await supabase
         .from("orders")
-        .select("*, orderItems(*, products(*)), products(*), coupons(*), players!giftTo(*, clans!id(*)), orderTracking(*), record_cards!orderID(*, levels(*))")
+        .select("*, orderItems(*, products(*)), products(*), coupons(*), players!giftTo(*, clans!id(*)), ownerPlayer:players!userID(name, clans!id(tag, tagBgColor, tagTextColor)), orderTracking(*), record_cards!orderID(*, levels(*))")
         .eq("id", id)
         .single();
 
