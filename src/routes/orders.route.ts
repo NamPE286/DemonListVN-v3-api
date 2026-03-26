@@ -150,6 +150,58 @@ router.route('/:id')
         }
     })
 
+router.route('/:id/record-card')
+    .post(userAuth, async (req, res) => {
+        const { id } = req.params
+        const { user } = res.locals
+        const { levelID, template, material } = req.body as {
+            levelID: number
+            template: number
+            material: 'paper' | 'plastic'
+        }
+
+        if (levelID == null || template == null || !material) {
+            res.status(400).send({ message: 'Missing required fields' })
+            return
+        }
+
+        if (!['paper', 'plastic'].includes(material)) {
+            res.status(400).send({ message: 'Invalid material' })
+            return
+        }
+
+        try {
+            const order = await getOrder(parseInt(id))
+
+            if (order.userID !== user.uid) {
+                res.status(401).send()
+                return
+            }
+
+            const { data: record, error: recordError } = await supabase
+                .from('records')
+                .select('userid, isChecked')
+                .eq('levelid', levelID)
+                .eq('userid', user.uid!)
+                .eq('isChecked', true)
+                .single()
+
+            if (recordError || !record) {
+                res.status(404).send({ message: 'Record not found or not accepted' })
+                return
+            }
+
+            const cardID = await createRecordCard(parseInt(id), user.uid!, levelID, template, material)
+            res.send({ cardID })
+        } catch (err) {
+            console.error(err)
+            res.status(400).send({
+                // @ts-ignore
+                message: err.message
+            })
+        }
+    })
+
 const PAPER_CARD_PRODUCT_ID = 8
 const PLASTIC_CARD_PRODUCT_ID = 9
 
