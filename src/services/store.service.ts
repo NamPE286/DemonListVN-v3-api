@@ -235,7 +235,7 @@ export async function updateStock(items: TablesInsert<"orderItems">[], products:
             throw new Error(`Insufficient stock for product ID ${product.id}`);
         }
 
-        if (product.maxQuantity && product.maxQuantity < item.quantity!) {
+        if (product.maxQuantity && product.maxQuantity < (item.quantity || 0)) {
             throw new Error(`Quantity ${item.quantity} exceeds maximum allowed ${product.maxQuantity} for product ID ${product.id}`);
         }
 
