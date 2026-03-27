@@ -216,7 +216,8 @@ export async function redeem(code: string, player: Tables<"players">) {
 }
 
 export async function updateStock(items: TablesInsert<"orderItems">[], products: Tables<"products">[]) {
-    const sortedProducts = products.sort((a, b) => a.id - b.id);
+    const sortedProducts = [...new Map(products.map(products => [products.id, products])).values()]
+        .sort((a, b) => a.id - b.id);
     const sortedItems = items.sort((a, b) => a.productID - b.productID);
 
     for (const item of sortedItems) {
@@ -230,7 +231,7 @@ export async function updateStock(items: TablesInsert<"orderItems">[], products:
             continue
         }
 
-        if (product.stock < item.quantity!) {
+        if (product.stock < (item.quantity || 0)) {
             throw new Error(`Insufficient stock for product ID ${product.id}`);
         }
 
@@ -329,7 +330,7 @@ export async function getOrder(id: number) {
     }
 
     if ((data as any).record_cards?.length) {
-        const cards = (data as any).record_cards as { levelID: number; owner: string; [key: string]: any }[]
+        const cards = (data as any).record_cards as { levelID: number; owner: string;[key: string]: any }[]
         const recordLookups = cards.map(rc =>
             supabase
                 .from('records')
