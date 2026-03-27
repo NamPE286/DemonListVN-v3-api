@@ -45,6 +45,7 @@ import clanCommunityRoute from './routes/clan-community.route'
 import homepageRoute from './routes/homepage.route'
 import adsRoute from './routes/ads.route'
 import analyticsRoute from './routes/analytics.route'
+import checkoutRoute from './routes/checkout.route'
 
 const app = express()
 const port = 8787
@@ -100,6 +101,7 @@ app.use('/community', communityRoute)
 app.use('/homepage', homepageRoute)
 app.use('/ads', adsRoute)
 app.use('/analytics', analyticsRoute)
+app.use('/checkout', checkoutRoute)
 
 app.listen(port, async () => {
     console.log(`Server started on port ${port}`)
