@@ -166,28 +166,18 @@ export async function getEvent(id: number) {
 
 export async function getOngoingEvents() {
     const cur = new Date().toISOString()
-    var { data, error } = await supabase
+    const { data, error } = await supabase
         .from('events')
         .select('*')
-        .gte('end', cur)
+        .or(`end.gte.${cur},end.is.null`)
         .eq('hidden', false)
         .order('start', { ascending: false })
+        
     if (error) {
         throw new Error(error.message)
     }
 
-    const res = data
-
-    var { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .is('end', null)
-
-    if (error) {
-        throw new Error(error.message)
-    }
-
-    return res?.concat(data!)
+    return data
 }
 
 export async function getEventProof(eventID: number, uid: string) {

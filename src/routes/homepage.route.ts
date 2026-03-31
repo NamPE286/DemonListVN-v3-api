@@ -9,60 +9,71 @@ import supabase from '@src/client/supabase'
 
 const router = express.Router()
 
+let cachedHomepageData: any = null
+let homepageDataFetchTime: number = 0
+const CACHE_TTL = 300000 // 5 minutes
+
 router.route('/')
     .get(optionalUserAuth, async (req, res) => {
         try {
-            const query = new URLSearchParams({
-                end: '9',
-                sortBy: 'created_at',
-                ascending: 'false'
-            })
+            const now = Date.now()
+            let publicData: any = null
 
-            const [
-                events,
-                topSupporters,
-                serverProgress,
-                topClans,
-                communityPosts,
-                dlLevels,
-                flLevels,
-                plLevels,
-                clLevels,
-                activeSeason
-            ] = await Promise.all([
-                getOngoingEvents().catch(() => []),
-                getTopBuyers(2592000000, 3, 0).catch(() => []),
-                getSupporterRevenueProgress(2592000000).catch(() => ({ serverCostPercent: 0, minecraftServerPercent: 0 })),
-                getClans({ start: 0, end: 4, sortBy: 'memberCount', ascending: 'false' }).catch(() => []),
-                getCommunityPosts({ limit: 3, offset: 0, sortBy: 'createdAt', ascending: false, clanId: null }).catch(() => []),
-                fetchLevels('dl'),
-                fetchLevels('fl'),
-                fetchLevels('pl'),
-                fetchLevels('cl'),
-                fetchActiveSeason()
-            ])
+            if (cachedHomepageData && (now - homepageDataFetchTime < CACHE_TTL)) {
+                publicData = cachedHomepageData
+            } else {
+                const [
+                    events,
+                    topSupporters,
+                    serverProgress,
+                    topClans,
+                    communityPosts,
+                    dlLevels,
+                    flLevels,
+                    plLevels,
+                    clLevels,
+                    activeSeason
+                ] = await Promise.all([
+                    getOngoingEvents().catch(() => []),
+                    getTopBuyers(2592000000, 3, 0).catch(() => []),
+                    getSupporterRevenueProgress(2592000000).catch(() => ({ serverCostPercent: 0, minecraftServerPercent: 0 })),
+                    getClans({ start: 0, end: 4, sortBy: 'memberCount', ascending: 'false' }).catch(() => []),
+                    getCommunityPosts({ limit: 3, offset: 0, sortBy: 'createdAt', ascending: false, clanId: null }).catch(() => []),
+                    fetchLevels('dl'),
+                    fetchLevels('fl'),
+                    fetchLevels('pl'),
+                    fetchLevels('cl'),
+                    fetchActiveSeason()
+                ])
+
+                publicData = {
+                    events,
+                    topSupporters,
+                    serverProgress,
+                    topClans,
+                    communityPosts,
+                    levels: {
+                        dl: dlLevels,
+                        fl: flLevels,
+                        pl: plLevels,
+                        cl: clLevels
+                    },
+                    activeSeason
+                }
+                cachedHomepageData = publicData
+                homepageDataFetchTime = now
+            }
 
             // If user is authenticated and there's an active season, fetch their BP progress
             let battlepassProgress = null
-            if (res.locals.authenticated && res.locals.user && activeSeason) {
+            if (res.locals.authenticated && res.locals.user && publicData.activeSeason) {
                 try {
-                    battlepassProgress = await getPlayerProgress(activeSeason.id, res.locals.user.uid!)
+                    battlepassProgress = await getPlayerProgress(publicData.activeSeason.id, res.locals.user.uid!)
                 } catch {}
             }
 
             res.send({
-                events,
-                topSupporters,
-                serverProgress,
-                topClans,
-                communityPosts,
-                levels: {
-                    dl: dlLevels,
-                    fl: flLevels,
-                    pl: plLevels,
-                    cl: clLevels
-                },
-                activeSeason,
+                ...publicData,
                 battlepassProgress
             })
         } catch (err) {
@@ -74,7 +85,7 @@ router.route('/')
 async function fetchLevels(list: string) {
     let query = supabase
         .from('levels')
-        .select('*, levels_tags(level_tags(*)), records:records!public_records_levelid_fkey(progress, isChecked)')
+        .select('*, levels_tags(level_tags(*))')
         .not(list === 'fl' ? 'flTop' : 'dlTop', 'is', null)
         .order('created_at', { ascending: false })
         .range(0, 9)
