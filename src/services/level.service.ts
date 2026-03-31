@@ -5,6 +5,29 @@ import { refreshDailyLevelProgress, refreshWeeklyLevelProgress, getActiveseason,
 import type { TLevel } from "@src/types"
 import type { TablesInsert } from "@src/types/supabase"
 
+export async function fetchLevels(list: string) {
+    let query = supabase
+        .from('levels')
+        .select('*, levels_tags(level_tags(*))')
+        .not(list === 'fl' ? 'flTop' : 'dlTop', 'is', null)
+        .order('created_at', { ascending: false })
+        .range(0, 9)
+
+    if (list === 'cl') {
+        query = query.eq('isChallenge', true)
+    } else if (list === 'pl') {
+        query = query.eq('isPlatformer', true).eq('isChallenge', false)
+    } else if (list === 'dl') {
+        query = query.eq('isPlatformer', false).eq('isChallenge', false)
+    }
+
+    const { data, error } = await query
+
+    if (error) return []
+
+    return data
+}
+
 function convertToIDArray(levels: TLevel[]) {
     let res: number[] = []
 

@@ -14,6 +14,22 @@ const MAPPACK_LEVEL_XP = 25;
 
 // ==================== Season Functions ====================
 
+export async function fetchActiveSeason() {
+    const now = new Date().toISOString()
+
+    const { data } = await supabase
+        .from('battlePassSeasons')
+        .select('id, title, start, end, primaryColor, isArchived')
+        .lte('start', now)
+        .gte('end', now)
+        .eq('isArchived', false)
+        .order('start', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+    return data
+}
+
 export async function getActiveseason() {
     const now = new Date().toISOString();
 
