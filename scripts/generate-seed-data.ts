@@ -398,7 +398,7 @@ const TABLE_DEFS: TableDef[] = [
     columns: ["id", "name", "description", "price", "type", "refId", "created_at"],
   },
   {
-    name: "level_tags",
+    name: "levelTags",
     columns: ["id", "name", "color", "created_at"],
   },
   {

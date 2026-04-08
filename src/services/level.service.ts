@@ -8,7 +8,7 @@ import type { TablesInsert } from "@src/types/supabase"
 export async function fetchLevels(list: string) {
     let query = supabase
         .from('levels')
-        .select('*, levels_tags(level_tags(*))')
+        .select('*, levels_tags(levelTags(*))')
         .not(list === 'fl' ? 'flTop' : 'dlTop', 'is', null)
         .order('created_at', { ascending: false })
         .range(0, 9)
@@ -60,7 +60,7 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
+        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, levelTags(id, name, color))')
         .not('dlTop', 'is', null)
         .eq('isPlatformer', false)
         .eq('isChallenge', false)
@@ -161,7 +161,7 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
+        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, levelTags(id, name, color))')
         .not('dlTop', 'is', null)
         .eq('isPlatformer', true)
         .eq('isChallenge', false)
@@ -262,7 +262,7 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
+        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, levelTags(id, name, color))')
         .not('flTop', 'is', null)
         .eq('isNonList', false)
 
@@ -362,7 +362,7 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
+        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, levelTags(id, name, color))')
         .not('dlTop', 'is', null)
         .eq('isChallenge', true)
         .eq('isNonList', false)
@@ -617,7 +617,7 @@ export async function refreshLevel() {
 /** Get all level tags */
 export async function getLevelTags() {
     const { data, error } = await supabase
-        .from('level_tags')
+        .from('levelTags')
         .select('*')
         .order('name', { ascending: true })
 
@@ -628,7 +628,7 @@ export async function getLevelTags() {
 /** Create a new level tag (admin only) */
 export async function createLevelTag(tag: { name: string, color?: string }) {
     const { data, error } = await (supabase as any)
-        .from('level_tags')
+        .from('levelTags')
         .insert(tag)
         .select('*')
         .single()
@@ -644,7 +644,7 @@ export async function createLevelTag(tag: { name: string, color?: string }) {
 export async function deleteLevelTag(tagId: number) {
     // CASCADE will remove from levels_tags automatically
     const { error } = await (supabase as any)
-        .from('level_tags')
+        .from('levelTags')
         .delete()
         .eq('id', tagId)
 
@@ -654,7 +654,7 @@ export async function deleteLevelTag(tagId: number) {
 /** Update a level tag's name and/or color (admin only) */
 export async function updateLevelTag(tagId: number, updates: { name?: string, color?: string }) {
     const { data, error } = await (supabase as any)
-        .from('level_tags')
+        .from('levelTags')
         .update(updates)
         .eq('id', tagId)
         .select('*')
@@ -690,7 +690,7 @@ export async function setLevelTags(levelId: number, tagIds: number[]) {
     // Return updated tags
     const { data, error } = await db
         .from('levels_tags')
-        .select('tag_id, level_tags(id, name, color)')
+        .select('tag_id, levelTags(id, name, color)')
         .eq('level_id', levelId)
 
     if (error) throw new Error(error.message)
@@ -701,7 +701,7 @@ export async function setLevelTags(levelId: number, tagIds: number[]) {
 export async function getLevelTagsForLevel(levelId: number) {
     const { data, error } = await (supabase as any)
         .from('levels_tags')
-        .select('tag_id, level_tags(id, name, color)')
+        .select('tag_id, levelTags(id, name, color)')
         .eq('level_id', levelId)
 
     if (error) throw new Error(error.message)

@@ -2055,7 +2055,7 @@ export type Database = {
           },
         ]
       }
-      level_tags: {
+      levelTags: {
         Row: {
           color: string
           created_at: string
@@ -2220,7 +2220,7 @@ export type Database = {
             foreignKeyName: "levels_tags_tag_id_fkey"
             columns: ["tag_id"]
             isOneToOne: false
-            referencedRelation: "level_tags"
+            referencedRelation: "levelTags"
             referencedColumns: ["id"]
           },
         ]

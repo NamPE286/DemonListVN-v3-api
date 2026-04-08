@@ -70,8 +70,8 @@ INSERT INTO "public"."subscriptions" ("id", "name", "description", "price", "typ
   (1, 'Pass Premium - Test Season', NULL, 0, 'battlepass_premium', 1, '2026-01-23T16:39:21.960814+00:00')
 ON CONFLICT DO NOTHING;
 
--- level_tags (10 rows)
-INSERT INTO "public"."level_tags" ("id", "name", "color", "created_at") VALUES
+-- levelTags (10 rows)
+INSERT INTO "public"."levelTags" ("id", "name", "color", "created_at") VALUES
   (58, 'Icetech', '#3bf4f7', '2026-02-11T17:22:12.658219+00:00'),
   (57, 'RNG', '#3bf761', '2026-02-11T17:19:36.463836+00:00'),
   (56, 'Old Swing', '#f7863b', '2026-02-11T05:41:07.659791+00:00'),

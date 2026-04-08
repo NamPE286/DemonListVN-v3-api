@@ -2494,7 +2494,7 @@ CREATE TABLE IF NOT EXISTS "public"."levelSubmissions" (
 ALTER TABLE "public"."levelSubmissions" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."level_tags" (
+CREATE TABLE IF NOT EXISTS "public"."levelTags" (
     "id" integer NOT NULL,
     "name" "text" NOT NULL,
     "color" "text" DEFAULT '#6b7280'::"text" NOT NULL,
@@ -2502,7 +2502,7 @@ CREATE TABLE IF NOT EXISTS "public"."level_tags" (
 );
 
 
-ALTER TABLE "public"."level_tags" OWNER TO "postgres";
+ALTER TABLE "public"."levelTags" OWNER TO "postgres";
 
 
 CREATE SEQUENCE IF NOT EXISTS "public"."level_tags_id_seq"
@@ -2517,7 +2517,7 @@ CREATE SEQUENCE IF NOT EXISTS "public"."level_tags_id_seq"
 ALTER SEQUENCE "public"."level_tags_id_seq" OWNER TO "postgres";
 
 
-ALTER SEQUENCE "public"."level_tags_id_seq" OWNED BY "public"."level_tags"."id";
+ALTER SEQUENCE "public"."level_tags_id_seq" OWNED BY "public"."levelTags"."id";
 
 
 
@@ -3091,7 +3091,7 @@ ALTER TABLE ONLY "public"."communityReports" ALTER COLUMN "id" SET DEFAULT "next
 
 
 
-ALTER TABLE ONLY "public"."level_tags" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."level_tags_id_seq"'::"regclass");
+ALTER TABLE ONLY "public"."levelTags" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."level_tags_id_seq"'::"regclass");
 
 
 
@@ -3424,12 +3424,12 @@ ALTER TABLE ONLY "public"."levelSubmissions"
 
 
 
-ALTER TABLE ONLY "public"."level_tags"
+ALTER TABLE ONLY "public"."levelTags"
     ADD CONSTRAINT "level_tags_name_key" UNIQUE ("name");
 
 
 
-ALTER TABLE ONLY "public"."level_tags"
+ALTER TABLE ONLY "public"."levelTags"
     ADD CONSTRAINT "level_tags_pkey" PRIMARY KEY ("id");
 
 
@@ -4177,7 +4177,7 @@ ALTER TABLE ONLY "public"."levels_tags"
 
 
 ALTER TABLE ONLY "public"."levels_tags"
-    ADD CONSTRAINT "levels_tags_tag_id_fkey" FOREIGN KEY ("tag_id") REFERENCES "public"."level_tags"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "levels_tags_tag_id_fkey" FOREIGN KEY ("tag_id") REFERENCES "public"."levelTags"("id") ON DELETE CASCADE;
 
 
 
@@ -4580,7 +4580,7 @@ ALTER TABLE "public"."levelGDStates" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."levelSubmissions" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."level_tags" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."levelTags" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."levels" ENABLE ROW LEVEL SECURITY;
@@ -5481,9 +5481,9 @@ GRANT ALL ON TABLE "public"."levelSubmissions" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."level_tags" TO "anon";
-GRANT ALL ON TABLE "public"."level_tags" TO "authenticated";
-GRANT ALL ON TABLE "public"."level_tags" TO "service_role";
+GRANT ALL ON TABLE "public"."levelTags" TO "anon";
+GRANT ALL ON TABLE "public"."levelTags" TO "authenticated";
+GRANT ALL ON TABLE "public"."levelTags" TO "service_role";
 
 
 
