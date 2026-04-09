@@ -10,6 +10,67 @@ import supabase from '@src/client/supabase'
 
 const router = express.Router()
 
+/**
+ * @swagger
+ * tags:
+ *   name: Homepage
+ *   description: Homepage aggregated data
+ */
+
+/**
+ * @swagger
+ * /homepage:
+ *   get:
+ *     summary: Get homepage aggregated data
+ *     tags: [Homepage]
+ *     security:
+ *       - bearerAuth: []
+ *     description: Returns aggregated data for homepage including events, top supporters, clans, community posts, levels, and optionally battlepass progress for authenticated users
+ *     responses:
+ *       200:
+ *         description: Homepage data retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 events:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 topSupporters:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 serverProgress:
+ *                   type: object
+ *                 topClans:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 communityPosts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 levels:
+ *                   type: object
+ *                   properties:
+ *                     dl:
+ *                       type: array
+ *                     fl:
+ *                       type: array
+ *                     pl:
+ *                       type: array
+ *                     cl:
+ *                       type: array
+ *                 activeSeason:
+ *                   type: object
+ *                 battlepassProgress:
+ *                   type: object
+ *                   nullable: true
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/')
     .get(optionalUserAuth, async (req, res) => {
         try {

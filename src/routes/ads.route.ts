@@ -5,8 +5,32 @@ import { getDailyCheckinStatus, confirmDailyCheckinReward } from '@src/services/
 const router = express.Router()
 
 /**
- * GET /ads/rewards/daily-checkin
- * Returns the user's daily check-in status.
+ * @swagger
+ * tags:
+ *   name: Ads
+ *   description: Advertisement and rewards endpoints
+ */
+
+/**
+ * @swagger
+ * /ads/rewards/daily-checkin:
+ *   get:
+ *     summary: Get daily check-in reward status
+ *     tags: [Ads]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Daily check-in status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 claimed:
+ *                   type: boolean
+ *       500:
+ *         description: Internal server error
  */
 router.route('/rewards/daily-checkin')
     .get(userAuth, async (req, res) => {
@@ -21,10 +45,46 @@ router.route('/rewards/daily-checkin')
     })
 
 /**
- * GET /ads/rewards/confirm
- * Server-side callback called by Google after a rewarded ad is completed.
- * Query params: user_id, reward_type, reward_amount, token, timestamp
- * Google expects a 200 response to confirm delivery.
+ * @swagger
+ * /ads/rewards/confirm:
+ *   get:
+ *     summary: Confirm daily check-in reward (Google Ads callback)
+ *     tags: [Ads]
+ *     description: Server-side callback called by Google after a rewarded ad is completed
+ *     parameters:
+ *       - in: query
+ *         name: user_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *       - in: query
+ *         name: reward_type
+ *         schema:
+ *           type: string
+ *         description: Type of reward
+ *       - in: query
+ *         name: reward_amount
+ *         schema:
+ *           type: integer
+ *         description: Amount of reward
+ *       - in: query
+ *         name: token
+ *         schema:
+ *           type: string
+ *         description: Verification token
+ *       - in: query
+ *         name: timestamp
+ *         schema:
+ *           type: integer
+ *         description: Timestamp of the reward
+ *     responses:
+ *       200:
+ *         description: Reward confirmed or already claimed
+ *       400:
+ *         description: Missing user_id
+ *       500:
+ *         description: Internal server error
  */
 router.route('/rewards/confirm')
     .get(async (req, res) => {

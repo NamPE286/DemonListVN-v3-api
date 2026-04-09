@@ -10,6 +10,40 @@ const router = express.Router()
 
 const VALID_STATES = ['PENDING', 'PAID', 'CANCELLED', 'EXPIRED']
 
+/**
+ * @openapi
+ * "/merchant/orders/all":
+ *   get:
+ *     tags:
+ *       - Merchant
+ *     summary: Get all orders with filtering (manager only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: state
+ *         in: query
+ *         description: Filter by order state
+ *         schema:
+ *           type: string
+ *       - name: paymentMethod
+ *         in: query
+ *         description: Filter by payment method
+ *         schema:
+ *           type: string
+ *       - name: search
+ *         in: query
+ *         description: Search term
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/orders/all')
     .get(managerAuth, async (req, res) => {
         try {
@@ -25,6 +59,40 @@ router.route('/orders/all')
     })
 
 router.route('/order/:id/state')
+    /**
+     * @openapi
+     * "/merchant/order/{id}/state":
+     *   patch:
+     *     tags:
+     *       - Merchant
+     *     summary: Change order state (manager only)
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The order ID
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               state:
+     *                 type: string
+     *                 enum: [PENDING, PAID, CANCELLED, EXPIRED]
+     *     responses:
+     *       200:
+     *         description: Order state updated successfully
+     *       400:
+     *         description: Invalid state
+     *       500:
+     *         description: Internal server error
+     */
     .patch(managerAuth, async (req, res) => {
         const { state } = req.body as { state: string }
         const { id } = req.params
@@ -44,6 +112,41 @@ router.route('/order/:id/state')
     })
 
 router.route('/products')
+    /**
+     * @openapi
+     * "/merchant/products":
+     *   get:
+     *     tags:
+     *       - Merchant
+     *     summary: Get all products (manager only)
+     *     security:
+     *       - bearerAuth: []
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     *       500:
+     *         description: Internal server error
+     *   post:
+     *     tags:
+     *       - Merchant
+     *     summary: Create a product (manager only)
+     *     security:
+     *       - bearerAuth: []
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *     responses:
+     *       200:
+     *         description: Product created successfully
+     *       500:
+     *         description: Internal server error
+     */
     .get(managerAuth, async (req, res) => {
         try {
             const data = await getAllProducts()
@@ -64,6 +167,34 @@ router.route('/products')
     })
 
 router.route('/products/:id')
+    /**
+     * @openapi
+     * "/merchant/products/{id}":
+     *   patch:
+     *     tags:
+     *       - Merchant
+     *     summary: Update a product (manager only)
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The product ID
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *     responses:
+     *       200:
+     *         description: Product updated successfully
+     *       500:
+     *         description: Internal server error
+     */
     .patch(managerAuth, async (req, res) => {
         const { id } = req.params
         try {
@@ -188,6 +319,24 @@ router.route('/order/:id/tracking')
     })
 
 router.route('/record-cards')
+    /**
+     * @openapi
+     * "/merchant/record-cards":
+     *   get:
+     *     tags:
+     *       - Merchant
+     *     summary: Get all record cards (manager only)
+     *     security:
+     *       - bearerAuth: []
+     *     responses:
+     *       200:
+     *         description: Success
+     *         content:
+     *           application/json:
+     *             schema:
+     *       500:
+     *         description: Internal server error
+     */
     .get(managerAuth, async (req, res) => {
         try {
             const data = await getAllRecordCards()
@@ -199,6 +348,28 @@ router.route('/record-cards')
     })
 
 router.route('/record-cards/:id/printed')
+    /**
+     * @openapi
+     * "/merchant/record-cards/{id}/printed":
+     *   patch:
+     *     tags:
+     *       - Merchant
+     *     summary: Mark a record card as printed (manager only)
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The record card ID
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Record card marked as printed successfully
+     *       500:
+     *         description: Internal server error
+     */
     .patch(managerAuth, async (req, res) => {
         const { id } = req.params
         try {

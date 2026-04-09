@@ -109,6 +109,32 @@ router.route('/presign')
     })
 
 router.route('/object')
+    /**
+     * @openapi
+     * "/storage/object":
+     *   delete:
+     *     tags:
+     *       - Storage
+     *     summary: Delete a file from S3 storage
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: path
+     *         in: query
+     *         description: File path to delete
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: File deleted successfully
+     *       400:
+     *         description: Missing file path
+     *       403:
+     *         description: Forbidden - user not authorized for this path
+     *       500:
+     *         description: Internal server error
+     */
     .delete(userAuth, async (req, res) => {
         const { user } = res.locals
         const { path } = req.query as { path: string }

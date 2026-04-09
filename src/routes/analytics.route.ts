@@ -4,6 +4,57 @@ import express from 'express'
 
 const router = express.Router()
 
+/**
+ * @swagger
+ * tags:
+ *   name: Analytics
+ *   description: Analytics and metrics endpoints
+ */
+
+/**
+ * @swagger
+ * /analytics/revenue:
+ *   get:
+ *     summary: Get revenue analytics data
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           default: 30d
+ *         description: Time period for analytics (e.g., 7d, 30d, 90d)
+ *       - in: query
+ *         name: from
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Start date (ISO format)
+ *       - in: query
+ *         name: to
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: End date (ISO format)
+ *     responses:
+ *       200:
+ *         description: Revenue analytics data retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       403:
+ *         description: Forbidden - user is not admin or manager
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/revenue')
     .get(adminAuth, async (req, res) => {
         const player = res.locals.user

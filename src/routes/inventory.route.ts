@@ -94,6 +94,39 @@ router.route('/:id')
     })
 
 router.route('/item/:id/consume')
+    /**
+     * @openapi
+     * "/inventory/item/{id}/consume":
+     *   delete:
+     *     tags:
+     *       - Inventory
+     *     summary: Consume queue boost item
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The item ID (should be QUEUE_BOOST)
+     *         required: true
+     *         schema:
+     *           type: string
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               levelID:
+     *                 type: number
+     *               quantity:
+     *                 type: number
+     *     responses:
+     *       200:
+     *         description: Queue boost consumed successfully
+     *       500:
+     *         description: Internal server error
+     */
     .delete(userAuth, async (req, res) => {
         const { user } = res.locals
         const { id } = req.params

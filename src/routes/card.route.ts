@@ -163,6 +163,40 @@ router.route("/:id/content")
     })
 
 router.route("/record/:id/img")
+    /**
+     * @openapi
+     * "/card/record/{id}/img":
+     *   patch:
+     *     tags:
+     *       - Card
+     *     summary: Update record card image
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The ID of the record card
+     *         required: true
+     *         schema:
+     *           type: string
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+     *               - imgURL
+     *             properties:
+     *               imgURL:
+     *                 type: string
+     *                 description: URL of the image
+     *     responses:
+     *       200:
+     *         description: Record card image updated successfully
+     *       500:
+     *         description: Internal server error
+     */
     .patch(userAuth, async (req, res) => {
         const { id } = req.params
         const { user } = res.locals
@@ -178,6 +212,40 @@ router.route("/record/:id/img")
     })
 
 router.route("/record/:id/avatar")
+    /**
+     * @openapi
+     * "/card/record/{id}/avatar":
+     *   patch:
+     *     tags:
+     *       - Card
+     *     summary: Update record card avatar
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The ID of the record card
+     *         required: true
+     *         schema:
+     *           type: string
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+     *               - avatarURL
+     *             properties:
+     *               avatarURL:
+     *                 type: string
+     *                 description: URL of the avatar image
+     *     responses:
+     *       200:
+     *         description: Record card avatar updated successfully
+     *       500:
+     *         description: Internal server error
+     */
     .patch(userAuth, async (req, res) => {
         const { id } = req.params
         const { user } = res.locals

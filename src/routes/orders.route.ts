@@ -151,6 +151,58 @@ router.route('/:id')
     })
 
 router.route('/:id/record-card')
+    /**
+     * @openapi
+     * "/orders/{id}/record-card":
+     *   post:
+     *     tags:
+     *       - Orders
+     *     summary: Create a record card for an existing order
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The order ID
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+ *               - levelID
+ *               - template
+ *               - material
+     *             properties:
+     *               levelID:
+     *                 type: integer
+     *                 description: Level ID for the record card
+     *               template:
+     *                 type: integer
+     *                 description: Template ID
+     *               material:
+     *                 type: string
+     *                 enum: [paper, plastic]
+     *     responses:
+     *       200:
+     *         description: Record card created successfully
+     *         content:
+     *           application/json:
+     *             schema:
+     *               properties:
+     *                 cardID:
+     *                   type: string
+     *       400:
+     *         description: Missing required fields or invalid material
+     *       401:
+     *         description: Unauthorized - order doesn't belong to user
+     *       404:
+     *         description: Record not found or not accepted
+     */
     .post(userAuth, async (req, res) => {
         const { id } = req.params
         const { user } = res.locals
@@ -206,6 +258,58 @@ const PAPER_CARD_PRODUCT_ID = 8
 const PLASTIC_CARD_PRODUCT_ID = 9
 
 router.route('/record-card')
+    /**
+     * @openapi
+     * "/orders/record-card":
+     *   post:
+     *     tags:
+     *       - Orders
+     *     summary: Create a record card with a new order
+     *     security:
+     *       - bearerAuth: []
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+ *               - levelID
+ *               - template
+ *               - material
+ *               - address
+ *               - phone
+ *               - recipientName
+     *             properties:
+     *               levelID:
+     *                 type: integer
+     *               template:
+     *                 type: integer
+     *               material:
+     *                 type: string
+     *                 enum: [paper, plastic]
+     *               address:
+     *                 type: string
+     *               phone:
+     *                 type: string
+     *               recipientName:
+     *                 type: string
+     *     responses:
+     *       200:
+     *         description: Order and record card created successfully
+     *         content:
+     *           application/json:
+     *             schema:
+     *               properties:
+     *                 orderID:
+     *                   type: integer
+     *                 cardID:
+     *                   type: string
+     *       400:
+     *         description: Missing required fields or invalid material
+     *       404:
+     *         description: Record not found or not accepted
+     */
     .post(userAuth, async (req, res) => {
         const { user } = res.locals
         const { levelID, template, material, address, phone, recipientName } = req.body as {

@@ -124,6 +124,19 @@ router.route('/')
     })
 
     .post(getAuthUid, async (req, res) => {
+        /**
+         * @openapi
+         * "/players":
+         *   post:
+         *     tags:
+         *       - Player
+         *     summary: Create a new player account
+         *     responses:
+         *       201:
+         *         description: Player created successfully
+         *       500:
+         *         description: Internal server error
+         */
         const { userId } = res.locals
 
         const { error } = await supabase
@@ -228,6 +241,51 @@ router.route('/:uid')
     })
 
 router.route('/:uid/onboarding')
+    /**
+     * @openapi
+     * "/players/{uid}/onboarding":
+     *   patch:
+     *     tags:
+     *       - Player
+     *     summary: Update player onboarding data
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: uid
+     *         in: path
+     *         description: The UID of the player
+     *         required: true
+     *         schema:
+     *           type: string
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               name:
+     *                 type: string
+     *               province:
+     *                 type: string
+     *               city:
+     *                 type: string
+     *               onboarding_step:
+     *                 type: integer
+     *               onboarding_done:
+     *                 type: boolean
+     *     responses:
+     *       200:
+     *         description: Onboarding data updated successfully
+     *       400:
+     *         description: Invalid input or name cooldown active
+     *       403:
+     *         description: Forbidden - not authorized
+     *       409:
+     *         description: Name already in use
+     *       500:
+     *         description: Internal server error
+     */
     .patch(userAuth, async (req, res) => {
         const { uid } = req.params
         const { user } = res.locals

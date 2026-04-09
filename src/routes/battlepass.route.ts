@@ -883,6 +883,30 @@ router.route('/mappacks')
         }
     })
 
+/**
+ * @openapi
+ * "/battlepass/mappacks/next-locked":
+ *   get:
+ *     tags:
+ *       - Pass
+ *     summary: Get the next locked map pack in the active season
+ *     description: Returns the first locked map pack in the active season's map pack list, useful for showing what the user needs to unlock next.
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 nextLockedMapPack:
+ *                   type: object
+ *                   nullable: true
+ *       404:
+ *         description: No active season
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/mappacks/next-locked')
     .get(async (_req, res) => {
         try {
@@ -1147,6 +1171,37 @@ router.route('/mappack/:mapPackId/claim')
         }
     })
 
+/**
+ * @openapi
+ * "/battlepass/course":
+ *   get:
+ *     tags:
+ *       - Pass
+ *     summary: Get active season's course with entries and user progress
+ *     description: Returns the course for the active season, including all entries (levels/map packs), user progress, and completion status. If user is authenticated, includes progress and completion data.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 course:
+ *                   type: object
+ *                 seasonId:
+ *                   type: integer
+ *                 entries:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       404:
+ *         description: No active course
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/course')
     .get(optionalUserAuth, async (req, res) => {
         const { user, authenticated } = res.locals
@@ -1165,6 +1220,35 @@ router.route('/course')
         }
     })
 
+/**
+ * @openapi
+ * "/battlepass/course/entry/{entryId}/claim":
+ *   post:
+ *     tags:
+ *       - Pass
+ *     summary: Claim XP and item reward for completing a course entry
+ *     description: Claims the reward for a completed course entry. The entry must be completed, and all previous entries in the course must also be completed. Rewards include XP and optionally an item.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: entryId
+ *         in: path
+ *         description: Course Entry ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Reward claimed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       400:
+ *         description: Already claimed, entry not completed, or entry is locked
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/course/entry/:entryId/claim')
     .post(userAuth, async (req, res) => {
         const { user } = res.locals
@@ -1189,6 +1273,49 @@ router.route('/course/entry/:entryId/claim')
         }
     })
 
+/**
+ * @openapi
+ * "/battlepass/courses":
+ *   get:
+ *     tags:
+ *       - Pass
+ *     summary: Get all courses (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       500:
+ *         description: Internal server error
+ *   post:
+ *     tags:
+ *       - Pass
+ *     summary: Create a new course (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Course created successfully
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/courses')
     .get(adminAuth, async (_req, res) => {
         try {
@@ -1209,6 +1336,75 @@ router.route('/courses')
         }
     })
 
+/**
+ * @openapi
+ * "/battlepass/course/{courseId}":
+ *   get:
+ *     tags:
+ *       - Pass
+ *     summary: Get a specific course (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: courseId
+ *         in: path
+ *         description: Course ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *       500:
+ *         description: Internal server error
+ *   patch:
+ *     tags:
+ *       - Pass
+ *     summary: Update a course (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: courseId
+ *         in: path
+ *         description: Course ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Course updated successfully
+ *       500:
+ *         description: Internal server error
+ *   delete:
+ *     tags:
+ *       - Pass
+ *     summary: Delete a course (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: courseId
+ *         in: path
+ *         description: Course ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Course deleted successfully
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/course/:courseId')
     .get(adminAuth, async (req, res) => {
         const { courseId } = req.params
@@ -1241,6 +1437,71 @@ router.route('/course/:courseId')
         }
     })
 
+/**
+ * @openapi
+ * "/battlepass/course/{courseId}/entries":
+ *   get:
+ *     tags:
+ *       - Pass
+ *     summary: Get all entries for a course (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: courseId
+ *         in: path
+ *         description: Course ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       500:
+ *         description: Internal server error
+ *   post:
+ *     tags:
+ *       - Pass
+ *     summary: Create a course entry (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: courseId
+ *         in: path
+ *         description: Course ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [level, mappack]
+ *               refId:
+ *                 type: integer
+ *               sortOrder:
+ *                 type: integer
+ *               rewardItemId:
+ *                 type: integer
+ *                 nullable: true
+ *               rewardQuantity:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Course entry created successfully
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/course/:courseId/entries')
     .get(adminAuth, async (req, res) => {
         const { courseId } = req.params
@@ -1266,6 +1527,65 @@ router.route('/course/:courseId/entries')
         }
     })
 
+/**
+ * @openapi
+ * "/battlepass/course/entry/{entryId}":
+ *   patch:
+ *     tags:
+ *       - Pass
+ *     summary: Update a course entry (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: entryId
+ *         in: path
+ *         description: Course Entry ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [level, mappack]
+ *               refId:
+ *                 type: integer
+ *               sortOrder:
+ *                 type: integer
+ *               rewardItemId:
+ *                 type: integer
+ *                 nullable: true
+ *               rewardQuantity:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Course entry updated successfully
+ *       500:
+ *         description: Internal server error
+ *   delete:
+ *     tags:
+ *       - Pass
+ *     summary: Delete a course entry (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: entryId
+ *         in: path
+ *         description: Course Entry ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Course entry deleted successfully
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/course/entry/:entryId')
     .patch(adminAuth, async (req, res) => {
         const { entryId } = req.params
