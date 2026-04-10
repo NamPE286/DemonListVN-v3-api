@@ -1,85 +1,85 @@
-# Prerequisite
+# API Server
 
-- Docker
-- Bun
-- Supabase CLI
+REST API server built with Express.js, Cloudflare Workers, and Supabase.
 
-# Setup development server
+## Prerequisites
 
-## Setup local database server
+- **Docker** - Required for running Supabase locally
+- **Node.js** (v18+) - Runtime for Cloudflare Workers deployment
+- **Supabase CLI** - For managing local Supabase instance
+
+## Setup Development Server
+
+### 1. Start Supabase (Docker Required)
+
+The API requires a Supabase instance running locally via Docker. Start it with:
 
 ```bash
+# Start Supabase services (PostgreSQL, Auth, Storage, etc. in Docker containers)
 supabase start
+
+# Reset the database to the latest migration
 supabase db reset
 ```
 
-In `Supabase > storage`, create bucket `avatars`, `clanPhotos`, `banners` for storing image and GIF (8mb max) and `songs` for level's song
+> **Note:** `supabase start` uses Docker under the hood to spin up all required services (PostgreSQL, Auth, Storage, Studio, etc.). Make sure Docker is running before executing this command.
 
-## Run REST API server
+After Supabase starts, open the **Supabase Dashboard** (usually at `http://127.0.0.1:54323`) and navigate to **Storage**. Create the following buckets for image storage:
+- `avatars` - User avatar images
+- `clanPhotos` - Clan photo images
+- `banners` - Banner images and GIFs (8MB max)
+- `songs` - Level song audio files
 
-Before running the following command, make sure to create a `.env` file at the project root and define all variable mentioned in `.env.example`.
+### 2. Configure Environment Variables
+
+Create a `.env` file at the project root:
 
 ```bash
-bun install
-bun run dev
+cp .env.example .env
 ```
 
-Local development server is avaliable on `localhost:8080`. Documentation is avaliable at `/docs`.
+Fill in the required environment variables in `.env`:
 
-# Deployment
-## Deploy Supabase server
+```env
+SUPABASE_API_KEY=your_supabase_service_role_key
+SUPABASE_API_URL=http://127.0.0.1:54321
+JWT_SECRET=your_jwt_secret
+```
 
-Follow [this tutorial](https://supabase.com/docs/guides/cli/local-development#deploy-your-project) from Supabase.
+See `.env.example` for all available configuration options and their descriptions.
 
-## Deploy REST API server
+### 3. Install Dependencies and Run
 
-### Deploy with Cloudflare Workers
-
-#### Local Development
-
-1. Install dependencies:
 ```bash
+# Install dependencies using npm
 npm install
+
+# Start the development server
+npm run dev
 ```
 
-2. Create a `.dev.vars` file from the example:
+The API server will be available at `http://localhost:8787`. API documentation (Swagger) is available at `/docs`.
+
+## Useful Commands
+
 ```bash
-cp .dev.vars.example .dev.vars
+# Generate TypeScript types from Supabase schema
+npm run update-types
+
+# Sync database migrations and regenerate types
+npm run sync
+
+# Generate Swagger documentation
+npm run generate-docs
+
+# Generate seed data for database
+npm run generate-seed
 ```
 
-3. Fill in your environment variables in `.dev.vars`
+## Project Structure
 
-4. Run the development server:
-```bash
-npx wrangler dev
-```
-
-The server will be available at `http://localhost:8787`
-
-#### Deploy to Cloudflare
-
-1. Login to Cloudflare:
-```bash
-npx wrangler login
-```
-
-2. Configure your environment variables in Cloudflare Dashboard or use wrangler secrets:
-```bash
-npx wrangler secret put SUPABASE_API_KEY
-npx wrangler secret put SUPABASE_API_URL
-# ... repeat for other secrets
-```
-
-3. Deploy:
-```bash
-npx wrangler deploy
-```
-
-### Deploy with Docker container
-
-#### Steps
-
-- Use service like Azure container app or Google cloud run and deploy this docker container: `ghcr.io/nampe286/dlvn-api-v3-ghcr:latest`.
-- Define all environment variable mentioned in `.env.example`.
-- You are ready to go!
-- Note: If you want to update the API, you have to pull new docker image manually.
+- `src/` - Source code
+- `docs/` - Documentation
+- `.env.example` - Example environment variables
+- `wrangler.jsonc` - Cloudflare Workers configuration
+- `package.json` - Dependencies and scripts
