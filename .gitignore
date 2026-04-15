@@ -167,3 +167,4 @@ dist
 .wrangler/
 test.ts
 .vercel
+.DS_Store
