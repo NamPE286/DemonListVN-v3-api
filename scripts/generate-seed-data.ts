@@ -513,7 +513,7 @@ const TABLE_DEFS: TableDef[] = [
     orderCol: "timestamp",
   },
   {
-    name: "levels_tags",
+    name: "levelsTags",
     columns: ["level_id", "tag_id"],
     orderCol: "level_id",
   },

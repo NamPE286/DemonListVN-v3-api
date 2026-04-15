@@ -504,8 +504,8 @@ INSERT INTO "public"."records" ("userid", "levelid", "progress", "videoLink", "m
   ('00000000-0000-0000-0000-000000000022', 133017131, 100, 'https://www.youtube.com/watch?v=V-Dbl1dHMw4', FALSE, FALSE, FALSE, NULL, NULL, NULL, NULL, '2000 hoi cao', '', 240, NULL, NULL, 1700, 1772945896414, 0, 3, 62, NULL)
 ON CONFLICT DO NOTHING;
 
--- levels_tags (10 rows)
-INSERT INTO "public"."levels_tags" ("level_id", "tag_id") VALUES
+-- levelsTags (10 rows)
+INSERT INTO "public"."levelsTags" ("level_id", "tag_id") VALUES
   (132593458, 21),
   (132593458, 26),
   (132593458, 9),

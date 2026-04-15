@@ -2195,7 +2195,7 @@ export type Database = {
           },
         ]
       }
-      levels_tags: {
+      levelsTags: {
         Row: {
           level_id: number
           tag_id: number

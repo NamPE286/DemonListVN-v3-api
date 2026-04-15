@@ -106,7 +106,7 @@ export async function getOrders(userID: string) {
     // @ts-ignore
     const { data, error } = await supabase
         .from("orders")
-        .select("*, products(*), coupons(*), players!giftTo(*, clans!id(*)), record_cards!orderID(*)")
+        .select("*, products(*), coupons(*), players!giftTo(*, clans!id(*)), recordCards!orderID(*)")
         .eq("userID", userID)
         .order("created_at", { ascending: false })
         .returns<(Tables<"orders"> & { products: Tables<"products"> | null, coupons: Tables<"coupons"> | null, players: (Tables<"players"> & { clans: Tables<"clans"> | null }) | null })[]>()
@@ -306,7 +306,7 @@ export async function addOrderItems(
 export async function getOrder(id: number) {
     const { data, error } = await supabase
         .from("orders")
-        .select("*, orderItems(*, products(*)), products(*), coupons(*), players!giftTo(*, clans!id(*)), ownerPlayer:players!userID(name, clans!id(tag, tagBgColor, tagTextColor)), orderTracking(*), record_cards!orderID(*, levels(*))")
+        .select("*, orderItems(*, products(*)), products(*), coupons(*), players!giftTo(*, clans!id(*)), ownerPlayer:players!userID(name, clans!id(tag, tagBgColor, tagTextColor)), orderTracking(*), recordCards!orderID(*, levels(*))")
         .eq("id", id)
         .single();
 
@@ -329,8 +329,8 @@ export async function getOrder(id: number) {
         });
     }
 
-    if ((data as any).record_cards?.length) {
-        const cards = (data as any).record_cards as { levelID: number; owner: string;[key: string]: any }[]
+    if ((data as any).recordCards?.length) {
+        const cards = (data as any).recordCards as { levelID: number; owner: string;[key: string]: any }[]
         const recordLookups = cards.map(rc =>
             supabase
                 .from('records')

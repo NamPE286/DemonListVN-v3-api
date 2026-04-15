@@ -12,7 +12,7 @@ export async function createRecordCard(
     material: string
 ) {
     const { data, error } = await supabase
-        .from("record_cards" as any)
+        .from("recordCards" as any)
         .insert({
             owner: playerUID,
             orderID,
@@ -32,7 +32,7 @@ export async function createRecordCard(
 
 export async function getRecordCard(id: string) {
     const { data: card, error } = await supabase
-        .from("record_cards" as any)
+        .from("recordCards" as any)
         .select("*, players!owner(uid, name, rating, overallRank, clan, isAvatarGif, supporterUntil, clans!id(tag, tagBgColor, tagTextColor, boostedUntil))")
         .eq('id', id)
         .single()
@@ -57,7 +57,7 @@ export async function getRecordCard(id: string) {
 
 export async function getAllRecordCards() {
     const { data, error } = await supabase
-        .from("record_cards" as any)
+        .from("recordCards" as any)
         .select("*, players!owner(uid, name)")
         .order('created_at', { ascending: false })
 
@@ -84,7 +84,7 @@ export async function getAllRecordCards() {
 
 export async function updateRecordCardImg(id: string, playerUID: string, imgURL: string) {
     const { data: card, error: fetchError } = await supabase
-        .from("record_cards" as any)
+        .from("recordCards" as any)
         .select("owner")
         .eq('id', id)
         .single()
@@ -94,7 +94,7 @@ export async function updateRecordCardImg(id: string, playerUID: string, imgURL:
     }
 
     const { error } = await supabase
-        .from("record_cards" as any)
+        .from("recordCards" as any)
         .update({ img: imgURL })
         .eq('id', id)
 
@@ -105,7 +105,7 @@ export async function updateRecordCardImg(id: string, playerUID: string, imgURL:
 
 export async function updateRecordCardAvatar(id: string, playerUID: string, avatarURL: string) {
     const { data: card, error: fetchError } = await supabase
-        .from("record_cards" as any)
+        .from("recordCards" as any)
         .select("owner")
         .eq('id', id)
         .single()
@@ -115,7 +115,7 @@ export async function updateRecordCardAvatar(id: string, playerUID: string, avat
     }
 
     const { error } = await supabase
-        .from("record_cards" as any)
+        .from("recordCards" as any)
         .update({ avatar: avatarURL })
         .eq('id', id)
 
@@ -126,7 +126,7 @@ export async function updateRecordCardAvatar(id: string, playerUID: string, avat
 
 export async function markRecordCardPrinted(id: string) {
     const { error } = await supabase
-        .from("record_cards" as any)
+        .from("recordCards" as any)
         .update({ printed: true })
         .eq('id', id)
 

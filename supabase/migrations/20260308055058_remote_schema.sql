@@ -2521,13 +2521,13 @@ ALTER SEQUENCE "public"."level_tags_id_seq" OWNED BY "public"."levelTags"."id";
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."levels_tags" (
+CREATE TABLE IF NOT EXISTS "public"."levelsTags" (
     "level_id" bigint NOT NULL,
     "tag_id" integer NOT NULL
 );
 
 
-ALTER TABLE "public"."levels_tags" OWNER TO "postgres";
+ALTER TABLE "public"."levelsTags" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."mapPackLevels" (
@@ -3439,7 +3439,7 @@ ALTER TABLE ONLY "public"."levels"
 
 
 
-ALTER TABLE ONLY "public"."levels_tags"
+ALTER TABLE ONLY "public"."levelsTags"
     ADD CONSTRAINT "levels_tags_pkey" PRIMARY KEY ("level_id", "tag_id");
 
 
@@ -3710,11 +3710,11 @@ CREATE INDEX "idx_levels_main_level_id" ON "public"."levels" USING "btree" ("mai
 
 
 
-CREATE INDEX "idx_levels_tags_level_id" ON "public"."levels_tags" USING "btree" ("level_id");
+CREATE INDEX "idx_levels_tags_level_id" ON "public"."levelsTags" USING "btree" ("level_id");
 
 
 
-CREATE INDEX "idx_levels_tags_tag_id" ON "public"."levels_tags" USING "btree" ("tag_id");
+CREATE INDEX "idx_levels_tags_tag_id" ON "public"."levelsTags" USING "btree" ("tag_id");
 
 
 
@@ -4171,12 +4171,12 @@ ALTER TABLE ONLY "public"."levels"
 
 
 
-ALTER TABLE ONLY "public"."levels_tags"
+ALTER TABLE ONLY "public"."levelsTags"
     ADD CONSTRAINT "levels_tags_level_id_fkey" FOREIGN KEY ("level_id") REFERENCES "public"."levels"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."levels_tags"
+ALTER TABLE ONLY "public"."levelsTags"
     ADD CONSTRAINT "levels_tags_tag_id_fkey" FOREIGN KEY ("tag_id") REFERENCES "public"."levelTags"("id") ON DELETE CASCADE;
 
 
@@ -4586,7 +4586,7 @@ ALTER TABLE "public"."levelTags" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."levels" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."levels_tags" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."levelsTags" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."mapPackLevels" ENABLE ROW LEVEL SECURITY;
@@ -5493,9 +5493,9 @@ GRANT ALL ON SEQUENCE "public"."level_tags_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."levels_tags" TO "anon";
-GRANT ALL ON TABLE "public"."levels_tags" TO "authenticated";
-GRANT ALL ON TABLE "public"."levels_tags" TO "service_role";
+GRANT ALL ON TABLE "public"."levelsTags" TO "anon";
+GRANT ALL ON TABLE "public"."levelsTags" TO "authenticated";
+GRANT ALL ON TABLE "public"."levelsTags" TO "service_role";
 
 
 
