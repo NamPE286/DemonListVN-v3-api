@@ -157,7 +157,7 @@ async function getCustomListRow(listId: number) {
         .single()
 
     if (error || !data) {
-        throw new NotFoundError('Custom list not found')
+        throw new NotFoundError('List not found')
     }
 
     return data
@@ -165,13 +165,13 @@ async function getCustomListRow(listId: number) {
 
 function assertOwner(list: CustomList, userId: string) {
     if (list.owner !== userId) {
-        throw new ForbiddenError('You do not own this custom list')
+        throw new ForbiddenError('You do not own this list')
     }
 }
 
 function assertReadable(list: CustomList, viewerId?: string) {
     if (list.visibility === 'private' && list.owner !== viewerId) {
-        throw new ForbiddenError('This custom list is private')
+        throw new ForbiddenError('This list is private')
     }
 }
 
@@ -220,8 +220,7 @@ async function ensureLevelExists(levelId: number) {
             isPlatformer: gdLevel.length == 5,
             isChallenge: false,
             isNonList: false,
-            videoID: null
-        })
+        } as any)
     }
 }
 
@@ -273,6 +272,41 @@ export async function getOwnCustomLists(ownerId: string) {
     return data || []
 }
 
+export async function browseLists(options: {
+    limit?: number
+    offset?: number
+    search?: string
+}) {
+    const {
+        limit = 24,
+        offset = 0,
+        search = ''
+    } = options
+
+    let query = supabase
+        .from('lists')
+        .select('*', { count: 'exact' })
+        .eq('visibility', 'public')
+
+    if (search.trim().length) {
+        const normalizedSearch = search.trim()
+        query = query.or(`title.ilike.%${normalizedSearch}%,description.ilike.%${normalizedSearch}%`)
+    }
+
+    const { data, error, count } = await query
+        .order('updated_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return {
+        data: data || [],
+        total: count || 0
+    }
+}
+
 export async function getCustomList(listId: number, viewerId?: string) {
     const list = await getCustomListRow(listId)
     assertReadable(list, viewerId)
@@ -307,7 +341,7 @@ export async function createCustomList(ownerId: string, payload: {
         .single()
 
     if (error || !data) {
-        throw new Error(error?.message || 'Failed to create custom list')
+        throw new Error(error?.message || 'Failed to create list')
     }
 
     return {
@@ -389,7 +423,7 @@ export async function addLevelToCustomList(listId: number, ownerId: string, leve
 
     if (error) {
         if (error.code === '23505') {
-            throw new ConflictError('Level already exists in this custom list')
+            throw new ConflictError('Level already exists in this list')
         }
 
         throw new Error(error.message)
@@ -417,7 +451,7 @@ export async function removeLevelFromCustomList(listId: number, ownerId: string,
     }
 
     if (!data) {
-        throw new NotFoundError('Level is not in this custom list')
+        throw new NotFoundError('Level is not in this list')
     }
 
     await syncLevelCount(listId)

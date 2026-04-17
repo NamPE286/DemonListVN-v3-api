@@ -103,7 +103,9 @@ app.use('/homepage', homepageRoute)
 app.use('/ads', adsRoute)
 app.use('/analytics', analyticsRoute)
 app.use('/checkout', checkoutRoute)
+app.use('/lists', listsRoute)
 app.use('/custom-lists', listsRoute)
+app.use('/lists', listsRoute)
 
 app.listen(port, async () => {
     console.log(`Server started on port ${port}`)

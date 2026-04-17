@@ -3,6 +3,7 @@ import optionalAuth from '@src/middleware/optional-user-auth.middleware'
 import userAuth from '@src/middleware/user-auth.middleware'
 import {
     addLevelToCustomList,
+    browseLists,
     ConflictError,
     createCustomList,
     deleteCustomList,
@@ -41,10 +42,11 @@ function sendError(res: express.Response, error: unknown) {
     return false
 }
 
-function parseId(value: string, label: string) {
+function parseId(value: string, label: string, options?: { allowZero?: boolean }) {
     const parsed = Number.parseInt(value, 10)
+    const minimum = options?.allowZero ? 0 : 1
 
-    if (!Number.isInteger(parsed) || parsed <= 0) {
+    if (!Number.isInteger(parsed) || parsed < minimum) {
         throw new ValidationError(`Invalid ${label}`)
     }
 
@@ -66,6 +68,22 @@ router.route('/me')
     })
 
 router.route('/')
+    .get(optionalAuth, async (req, res) => {
+        try {
+            const limit = req.query.limit ? parseId(String(req.query.limit), 'limit') : 24
+            const offset = req.query.offset ? parseId(String(req.query.offset), 'offset', { allowZero: true }) : 0
+            const search = typeof req.query.search === 'string' ? req.query.search : ''
+
+            res.send(await browseLists({ limit, offset, search }))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
     .post(userAuth, async (req, res) => {
         try {
             const list = await createCustomList(res.locals.user.uid, req.body)
