@@ -1052,6 +1052,96 @@ export type Database = {
           },
         ]
       }
+      listLevels: {
+        Row: {
+          addedBy: string
+          created_at: string
+          id: number
+          levelId: number
+          listId: number
+        }
+        Insert: {
+          addedBy: string
+          created_at?: string
+          id?: number
+          levelId: number
+          listId: number
+        }
+        Update: {
+          addedBy?: string
+          created_at?: string
+          id?: number
+          levelId?: number
+          listId?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_levels_added_by_fkey"
+            columns: ["addedBy"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "list_levels_level_id_fkey"
+            columns: ["levelId"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "list_levels_list_id_fkey"
+            columns: ["listId"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lists: {
+        Row: {
+          created_at: string
+          description: string
+          id: number
+          levelCount: number
+          owner: string
+          tags: string[]
+          title: string
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: number
+          levelCount?: number
+          owner: string
+          tags?: string[]
+          title: string
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: number
+          levelCount?: number
+          owner?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lists_owner_fkey"
+            columns: ["owner"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       communityComments: {
         Row: {
           attachedLevel: Json | null
