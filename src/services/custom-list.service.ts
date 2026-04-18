@@ -154,15 +154,15 @@ function sanitizeMinProgress(value: unknown, isPlatformer: boolean) {
     }
 
     if (isPlatformer) {
-        if (minProgress <= 0) {
-            throw new ValidationError('Platformer base time must be greater than 0')
+        if (minProgress < 0) {
+            throw new ValidationError('Platformer base time must be 0 or greater')
         }
 
         return minProgress
     }
 
-    if (minProgress < 1 || minProgress > 100) {
-        throw new ValidationError('Min progress must be between 1 and 100')
+    if (minProgress < 0 || minProgress > 100) {
+        throw new ValidationError('Min progress must be between 0 and 100')
     }
 
     return minProgress
@@ -550,7 +550,8 @@ export async function addLevelToCustomList(listId: number, ownerId: string, leve
     const itemInsert: CustomListLevelInsert = {
         listId,
         levelId,
-        addedBy: ownerId
+        addedBy: ownerId,
+        minProgress: null
     }
 
     const { error } = await supabase
