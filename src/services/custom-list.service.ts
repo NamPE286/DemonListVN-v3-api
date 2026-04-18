@@ -122,12 +122,50 @@ function sanitizeMode(value: unknown) {
     return mode as 'rating' | 'top'
 }
 
+function sanitizeListPlatformer(value: unknown) {
+    if (value == null) {
+        return false
+    }
+
+    if (typeof value !== 'boolean') {
+        throw new ValidationError('isPlatformer must be a boolean')
+    }
+
+    return value
+}
+
 function sanitizeRating(value: unknown) {
     const n = Number(value)
     if (!Number.isInteger(n) || n < 1 || n > 10) {
         throw new ValidationError('Rating must be an integer between 1 and 10')
     }
     return n
+}
+
+function sanitizeMinProgress(value: unknown, isPlatformer: boolean) {
+    if (value == null || value === '') {
+        return null
+    }
+
+    const minProgress = Number(value)
+
+    if (!Number.isInteger(minProgress)) {
+        throw new ValidationError('Min progress must be an integer')
+    }
+
+    if (isPlatformer) {
+        if (minProgress <= 0) {
+            throw new ValidationError('Platformer base time must be greater than 0')
+        }
+
+        return minProgress
+    }
+
+    if (minProgress < 1 || minProgress > 100) {
+        throw new ValidationError('Min progress must be between 1 and 100')
+    }
+
+    return minProgress
 }
 
 function sanitizeTags(value: unknown) {
@@ -202,6 +240,54 @@ function assertReadable(list: CustomList, viewerId?: string) {
     }
 }
 
+function assertLevelTypeMatchesList(list: CustomList, level: { isPlatformer?: boolean | null }) {
+    const levelIsPlatformer = Boolean(level.isPlatformer)
+
+    if (levelIsPlatformer !== list.isPlatformer) {
+        throw new ValidationError(
+            list.isPlatformer
+                ? 'This list only accepts platformer levels'
+                : 'This list only accepts classic levels'
+        )
+    }
+}
+
+async function assertExistingLevelsMatchType(listId: number, isPlatformer: boolean) {
+    const { data: listLevels, error: listLevelsError } = await supabase
+        .from('listLevels')
+        .select('levelId')
+        .eq('listId', listId)
+
+    if (listLevelsError) {
+        throw new Error(listLevelsError.message)
+    }
+
+    const levelIds = [...new Set((listLevels || []).map((entry) => entry.levelId))]
+
+    if (!levelIds.length) {
+        return
+    }
+
+    const { data: levels, error: levelsError } = await supabase
+        .from('levels')
+        .select('id, isPlatformer')
+        .in('id', levelIds)
+
+    if (levelsError) {
+        throw new Error(levelsError.message)
+    }
+
+    const hasMismatch = (levels || []).some((level) => Boolean(level.isPlatformer) !== isPlatformer)
+
+    if (hasMismatch) {
+        throw new ValidationError(
+            isPlatformer
+                ? 'This list already contains classic levels'
+                : 'This list already contains platformer levels'
+        )
+    }
+}
+
 async function syncLevelCount(listId: number) {
     const { count, error: countError } = await supabase
         .from('listLevels')
@@ -256,7 +342,7 @@ async function getCustomListItems(listId: number, mode: string = 'rating') {
 
     const { data: items, error: itemsError } = await supabase
         .from('listLevels')
-        .select('id, created_at, listId, levelId, addedBy, rating, position')
+        .select('id, created_at, listId, levelId, addedBy, rating, position, minProgress')
         .eq('listId', listId)
         .order(isTop ? 'position' : 'rating', { ascending: isTop, nullsFirst: false })
 
@@ -354,6 +440,7 @@ export async function createCustomList(ownerId: string, payload: {
     visibility?: unknown
     tags?: unknown
     mode?: unknown
+    isPlatformer?: unknown
 }) {
     const listInsert: CustomListInsert = {
         owner: ownerId,
@@ -362,6 +449,7 @@ export async function createCustomList(ownerId: string, payload: {
         visibility: sanitizeVisibility(payload.visibility),
         tags: sanitizeTags(payload.tags),
         mode: sanitizeMode(payload.mode),
+        isPlatformer: sanitizeListPlatformer(payload.isPlatformer),
         updated_at: new Date().toISOString()
     }
 
@@ -387,6 +475,7 @@ export async function updateCustomList(listId: number, ownerId: string, payload:
     visibility?: unknown
     tags?: unknown
     mode?: unknown
+    isPlatformer?: unknown
 }) {
     const existing = await getCustomListRow(listId)
     assertOwner(existing, ownerId)
@@ -413,6 +502,16 @@ export async function updateCustomList(listId: number, ownerId: string, payload:
 
     if (payload.mode !== undefined) {
         updates.mode = sanitizeMode(payload.mode)
+    }
+
+    if (payload.isPlatformer !== undefined) {
+        const isPlatformer = sanitizeListPlatformer(payload.isPlatformer)
+
+        if (isPlatformer !== existing.isPlatformer) {
+            await assertExistingLevelsMatchType(listId, isPlatformer)
+        }
+
+        updates.isPlatformer = isPlatformer
     }
 
     const { error } = await supabase
@@ -445,7 +544,8 @@ export async function addLevelToCustomList(listId: number, ownerId: string, leve
     const list = await getCustomListRow(listId)
     assertOwner(list, ownerId)
 
-    await ensureLevelExists(levelId)
+    const level = await ensureLevelExists(levelId)
+    assertLevelTypeMatchesList(list, level)
 
     const itemInsert: CustomListLevelInsert = {
         listId,
@@ -497,6 +597,7 @@ export async function removeLevelFromCustomList(listId: number, ownerId: string,
 
 export async function updateListLevel(listId: number, ownerId: string, levelId: number, patch: {
     rating?: unknown
+    minProgress?: unknown
 }) {
     const list = await getCustomListRow(listId)
     assertOwner(list, ownerId)
@@ -505,6 +606,10 @@ export async function updateListLevel(listId: number, ownerId: string, levelId: 
 
     if (patch.rating !== undefined) {
         updates.rating = sanitizeRating(patch.rating)
+    }
+
+    if (patch.minProgress !== undefined) {
+        updates.minProgress = sanitizeMinProgress(patch.minProgress, list.isPlatformer)
     }
 
     if (!Object.keys(updates).length) {

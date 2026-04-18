@@ -1059,6 +1059,7 @@ export type Database = {
           id: number
           levelId: number
           listId: number
+          minProgress: number | null
           position: number | null
           rating: number
         }
@@ -1068,6 +1069,7 @@ export type Database = {
           id?: number
           levelId: number
           listId: number
+          minProgress?: number | null
           position?: number | null
           rating?: number
         }
@@ -1077,6 +1079,7 @@ export type Database = {
           id?: number
           levelId?: number
           listId?: number
+          minProgress?: number | null
           position?: number | null
           rating?: number
         }
@@ -1109,6 +1112,7 @@ export type Database = {
           created_at: string
           description: string
           id: number
+          isPlatformer: boolean
           levelCount: number
           mode: string
           owner: string
@@ -1121,6 +1125,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: number
+          isPlatformer?: boolean
           levelCount?: number
           mode?: string
           owner: string
@@ -1133,6 +1138,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: number
+          isPlatformer?: boolean
           levelCount?: number
           mode?: string
           owner?: string
