@@ -1059,6 +1059,8 @@ export type Database = {
           id: number
           levelId: number
           listId: number
+          position: number | null
+          rating: number
         }
         Insert: {
           addedBy: string
@@ -1066,6 +1068,8 @@ export type Database = {
           id?: number
           levelId: number
           listId: number
+          position?: number | null
+          rating?: number
         }
         Update: {
           addedBy?: string
@@ -1073,6 +1077,8 @@ export type Database = {
           id?: number
           levelId?: number
           listId?: number
+          position?: number | null
+          rating?: number
         }
         Relationships: [
           {
@@ -1104,6 +1110,7 @@ export type Database = {
           description: string
           id: number
           levelCount: number
+          mode: string
           owner: string
           tags: string[]
           title: string
@@ -1115,6 +1122,7 @@ export type Database = {
           description?: string
           id?: number
           levelCount?: number
+          mode?: string
           owner: string
           tags?: string[]
           title: string
@@ -1126,6 +1134,7 @@ export type Database = {
           description?: string
           id?: number
           levelCount?: number
+          mode?: string
           owner?: string
           tags?: string[]
           title?: string

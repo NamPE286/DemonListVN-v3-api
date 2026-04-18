@@ -12,7 +12,9 @@ import {
     getOwnCustomLists,
     NotFoundError,
     removeLevelFromCustomList,
+    reorderListLevels,
     updateCustomList,
+    updateListLevel,
     ValidationError,
 } from '@src/services/custom-list.service'
 
@@ -158,11 +160,40 @@ router.route('/:id/levels')
     })
 
 router.route('/:id/levels/:levelId')
+    .patch(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            const levelId = parseId(req.params.levelId, 'level ID')
+            res.send(await updateListLevel(listId, res.locals.user.uid, levelId, req.body))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
     .delete(userAuth, async (req, res) => {
         try {
             const listId = parseId(req.params.id, 'list ID')
             const levelId = parseId(req.params.levelId, 'level ID')
             res.send(await removeLevelFromCustomList(listId, res.locals.user.uid, levelId))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/reorder')
+    .patch(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await reorderListLevels(listId, res.locals.user.uid, req.body.levelIds))
         } catch (error) {
             if (sendError(res, error)) {
                 return

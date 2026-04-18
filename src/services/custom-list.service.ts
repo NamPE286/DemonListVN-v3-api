@@ -8,6 +8,7 @@ type CustomListUpdate = TablesUpdate<'lists'>
 type CustomListLevelInsert = TablesInsert<'listLevels'>
 
 const VISIBILITY_VALUES = new Set(['private', 'unlisted', 'public'])
+const MODE_VALUES = new Set(['rating', 'top'])
 
 export class ValidationError extends Error {
     constructor(message: string) {
@@ -101,6 +102,32 @@ function sanitizeVisibility(value: unknown) {
     }
 
     return visibility
+}
+
+function sanitizeMode(value: unknown) {
+    if (value == null) {
+        return 'rating'
+    }
+
+    if (typeof value !== 'string') {
+        throw new ValidationError('Mode must be a string')
+    }
+
+    const mode = value.trim().toLowerCase()
+
+    if (!MODE_VALUES.has(mode)) {
+        throw new ValidationError('Mode must be rating or top')
+    }
+
+    return mode as 'rating' | 'top'
+}
+
+function sanitizeRating(value: unknown) {
+    const n = Number(value)
+    if (!Number.isInteger(n) || n < 1 || n > 10) {
+        throw new ValidationError('Rating must be an integer between 1 and 10')
+    }
+    return n
 }
 
 function sanitizeTags(value: unknown) {
@@ -224,12 +251,14 @@ async function ensureLevelExists(levelId: number) {
     }
 }
 
-async function getCustomListItems(listId: number) {
+async function getCustomListItems(listId: number, mode: string = 'rating') {
+    const isTop = mode === 'top'
+
     const { data: items, error: itemsError } = await supabase
         .from('listLevels')
-        .select('id, created_at, listId, levelId, addedBy')
+        .select('id, created_at, listId, levelId, addedBy, rating, position')
         .eq('listId', listId)
-        .order('created_at', { ascending: true })
+        .order(isTop ? 'position' : 'rating', { ascending: isTop, nullsFirst: false })
 
     if (itemsError) {
         throw new Error(itemsError.message)
@@ -311,7 +340,7 @@ export async function getCustomList(listId: number, viewerId?: string) {
     const list = await getCustomListRow(listId)
     assertReadable(list, viewerId)
 
-    const items = await getCustomListItems(listId)
+    const items = await getCustomListItems(listId, list.mode)
 
     return {
         ...list,
@@ -324,6 +353,7 @@ export async function createCustomList(ownerId: string, payload: {
     description?: unknown
     visibility?: unknown
     tags?: unknown
+    mode?: unknown
 }) {
     const listInsert: CustomListInsert = {
         owner: ownerId,
@@ -331,6 +361,7 @@ export async function createCustomList(ownerId: string, payload: {
         description: sanitizeDescription(payload.description),
         visibility: sanitizeVisibility(payload.visibility),
         tags: sanitizeTags(payload.tags),
+        mode: sanitizeMode(payload.mode),
         updated_at: new Date().toISOString()
     }
 
@@ -355,6 +386,7 @@ export async function updateCustomList(listId: number, ownerId: string, payload:
     description?: unknown
     visibility?: unknown
     tags?: unknown
+    mode?: unknown
 }) {
     const existing = await getCustomListRow(listId)
     assertOwner(existing, ownerId)
@@ -377,6 +409,10 @@ export async function updateCustomList(listId: number, ownerId: string, payload:
 
     if (payload.tags !== undefined) {
         updates.tags = sanitizeTags(payload.tags)
+    }
+
+    if (payload.mode !== undefined) {
+        updates.mode = sanitizeMode(payload.mode)
     }
 
     const { error } = await supabase
@@ -455,6 +491,72 @@ export async function removeLevelFromCustomList(listId: number, ownerId: string,
     }
 
     await syncLevelCount(listId)
+
+    return getCustomList(listId, ownerId)
+}
+
+export async function updateListLevel(listId: number, ownerId: string, levelId: number, patch: {
+    rating?: unknown
+}) {
+    const list = await getCustomListRow(listId)
+    assertOwner(list, ownerId)
+
+    const updates: Record<string, unknown> = {}
+
+    if (patch.rating !== undefined) {
+        updates.rating = sanitizeRating(patch.rating)
+    }
+
+    if (!Object.keys(updates).length) {
+        return getCustomList(listId, ownerId)
+    }
+
+    const { data, error } = await supabase
+        .from('listLevels')
+        .update(updates)
+        .eq('listId', listId)
+        .eq('levelId', levelId)
+        .select('id')
+        .maybeSingle()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    if (!data) {
+        throw new NotFoundError('Level is not in this list')
+    }
+
+    return getCustomList(listId, ownerId)
+}
+
+export async function reorderListLevels(listId: number, ownerId: string, levelIds: unknown) {
+    const list = await getCustomListRow(listId)
+    assertOwner(list, ownerId)
+
+    if (list.mode !== 'top') {
+        throw new ValidationError('Reordering is only available in top mode')
+    }
+
+    if (!Array.isArray(levelIds) || !levelIds.every((id) => Number.isInteger(id) && id > 0)) {
+        throw new ValidationError('levelIds must be an array of positive integers')
+    }
+
+    const updates = (levelIds as number[]).map((levelId, index) =>
+        supabase
+            .from('listLevels')
+            .update({ position: index })
+            .eq('listId', listId)
+            .eq('levelId', levelId)
+    )
+
+    const results = await Promise.all(updates)
+
+    for (const result of results) {
+        if (result.error) {
+            throw new Error(result.error.message)
+        }
+    }
 
     return getCustomList(listId, ownerId)
 }
