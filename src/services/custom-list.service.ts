@@ -1,14 +1,7 @@
 import supabase from '@src/client/supabase'
 import {
-    abs,
-    ceil,
-    floor,
-    max,
-    min,
-    parse,
-    pow,
-    round,
-    sqrt
+    all,
+    create,
 } from 'mathjs'
 import {
     fetchLevelFromGD,
@@ -30,7 +23,22 @@ type CustomListLeaderboardRefreshRow = {
     id: number
     listId: number
     totalPlayers: number
+    totalRecords: number
     lastRefreshedAt: string
+}
+
+type CustomListLeaderboardEntry = {
+    uid: string
+    rank: number
+    score: number
+    completedCount: number
+}
+
+type CustomListLeaderboardRecordEntry = {
+    uid: string
+    levelId: number
+    point: number
+    no: number
 }
 
 const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
@@ -42,75 +50,73 @@ type CustomListWithOwnerData = CustomList & {
 const VISIBILITY_VALUES = new Set(['private', 'unlisted', 'public'])
 const MODE_VALUES = new Set(['rating', 'top'])
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-const WEIGHT_FORMULA_SCOPE_KEYS = new Set(['position', 'levelCount', 'rating', 'minProgress'])
-const WEIGHT_FORMULA_FUNCTIONS = {
-    abs,
-    ceil,
-    floor,
-    max,
-    min,
-    pow,
-    round,
-    sqrt
+const WEIGHT_FORMULA_VALIDATION_SCOPE = {
+    position: 1,
+    levelCount: 1,
+    rating: 1,
+    minProgress: 0,
+    progress: 0
 }
-const WEIGHT_FORMULA_FUNCTION_KEYS = new Set(Object.keys(WEIGHT_FORMULA_FUNCTIONS))
-const OFFICIAL_DL_WEIGHT_FORMULA = 'max(0,1-abs(position-1))/3+max(0,1-abs(position-2))/5+2*max(0,1-abs(position-3))/15+10*min(1,max(0,position-3))*min(1,max(0,26-position))/(3*rating)+2*min(1,max(0,position-25))/(3*rating)'
-const OFFICIAL_CL_WEIGHT_FORMULA = 'max(0,ceil(-pow((position-42.21)/10,3)+30)/100)/12'
-const OFFICIAL_LISTS = {
-    dl: {
-        slug: 'dl',
-        title: 'Classic List',
-        description: 'Official Geometry Dash Việt Nam classic demon list.',
-        mode: 'rating',
-        isPlatformer: false,
-        weightFormula: OFFICIAL_DL_WEIGHT_FORMULA,
-        loadLevels: getDemonListLevels
-    },
-    pl: {
-        slug: 'pl',
-        title: 'Platformer List',
-        description: 'Official Geometry Dash Việt Nam platformer list.',
-        mode: 'top',
-        isPlatformer: true,
-        weightFormula: '1',
-        loadLevels: getPlatformerListLevels
-    },
-    fl: {
-        slug: 'fl',
-        title: 'Featured List',
-        description: 'Official Geometry Dash Việt Nam featured list.',
-        mode: 'top',
-        isPlatformer: false,
-        weightFormula: '1',
-        loadLevels: getFeaturedListLevels
-    },
-    cl: {
-        slug: 'cl',
-        title: 'Challenge List',
-        description: 'Official Geometry Dash Việt Nam challenge list.',
-        mode: 'rating',
-        isPlatformer: false,
-        weightFormula: OFFICIAL_CL_WEIGHT_FORMULA,
-        loadLevels: getChallengeListLevels
-    }
-} as const
+const OFFICIAL_LIST_SLUGS = ['dl', 'pl', 'fl', 'cl'] as const
 
 export type CustomListIdentifier = number | string
 
-type OfficialListSlug = keyof typeof OFFICIAL_LISTS
+type OfficialListSlug = (typeof OFFICIAL_LIST_SLUGS)[number]
+
+function getOfficialListConfig(slug: OfficialListSlug) {
+    switch (slug) {
+        case 'dl':
+            return {
+                slug: 'dl',
+                title: 'Classic List',
+                description: 'Official Geometry Dash Việt Nam classic demon list.',
+                mode: 'rating' as const,
+                isPlatformer: false,
+                weightFormula: 'rating*(max(0,1-abs(position-1))/3+max(0,1-abs(position-2))/5+2*max(0,1-abs(position-3))/15)+10*min(1,max(0,position-3))*min(1,max(0,26-position))/3+2*min(1,max(0,position-25))/3',
+                loadLevels: getDemonListLevels
+            }
+        case 'pl':
+            return {
+                slug: 'pl',
+                title: 'Platformer List',
+                description: 'Official Geometry Dash Việt Nam platformer list.',
+                mode: 'top' as const,
+                isPlatformer: true,
+                weightFormula: '1',
+                loadLevels: getPlatformerListLevels
+            }
+        case 'fl':
+            return {
+                slug: 'fl',
+                title: 'Featured List',
+                description: 'Official Geometry Dash Việt Nam featured list.',
+                mode: 'top' as const,
+                isPlatformer: false,
+                weightFormula: '1',
+                loadLevels: getFeaturedListLevels
+            }
+        case 'cl':
+            return {
+                slug: 'cl',
+                title: 'Challenge List',
+                description: 'Official Geometry Dash Việt Nam challenge list.',
+                mode: 'rating' as const,
+                isPlatformer: false,
+                weightFormula: 'rating*(max(0,ceil(-pow((position-42.21)/10,3)+30)/100)/12)',
+                loadLevels: getChallengeListLevels
+            }
+    }
+}
 
 function isOfficialListSlug(value: string): value is OfficialListSlug {
-    return value in OFFICIAL_LISTS
+    return (OFFICIAL_LIST_SLUGS as readonly string[]).includes(value)
 }
 
 async function getLatestCustomListLeaderboardRefresh(listId: number) {
     const { data, error } = await (supabase as any)
         .from('listLeaderboardRefreshes')
-        .select('id, listId, totalPlayers, lastRefreshedAt')
+        .select('id, listId, totalPlayers, totalRecords, lastRefreshedAt')
         .eq('listId', listId)
-        .order('lastRefreshedAt', { ascending: false })
-        .order('id', { ascending: false })
-        .limit(1)
         .maybeSingle()
 
     if (error) {
@@ -148,42 +154,57 @@ export class ConflictError extends Error {
     }
 }
 
+const WEIGHT_FORMULA_DISABLED_FUNCTIONS = [
+    'import',
+    'createUnit',
+    'reviver',
+    'evaluate',
+    'parse',
+    'simplify',
+    'derivative',
+    'resolve',
+    'parser'
+] as const
+
+const weightFormulaMath = create(all)
+const parseWeightFormulaNode = weightFormulaMath.parse.bind(weightFormulaMath)
+
+weightFormulaMath.import(
+    Object.fromEntries(
+        WEIGHT_FORMULA_DISABLED_FUNCTIONS.map((functionName) => [
+            functionName,
+            () => {
+                throw new ValidationError(`weightFormula function "${functionName}" is disabled`)
+            }
+        ])
+    ),
+    { override: true }
+)
+
+function getWeightFormulaNodeType(node: any) {
+    if (typeof node?.type === 'string') {
+        return node.type
+    }
+
+    if (typeof node?.mathjs === 'string') {
+        return node.mathjs
+    }
+
+    return null
+}
+
+function assertWeightFormulaNodeIsSafe(node: any) {
+    node.traverse((child: any) => {
+        if (getWeightFormulaNodeType(child) === 'FunctionAssignmentNode') {
+            throw new ValidationError('weightFormula custom functions are disabled')
+        }
+    })
+}
+
 function validateWeightFormulaExpression(value: string) {
     try {
-        const node = parse(value)
-
-        node.traverse((child: any) => {
-            if ([
-                'AccessorNode',
-                'ArrayNode',
-                'AssignmentNode',
-                'BlockNode',
-                'ConditionalNode',
-                'FunctionAssignmentNode',
-                'IndexNode',
-                'ObjectNode',
-                'RangeNode'
-            ].includes(child.type)) {
-                throw new ValidationError('weightFormula contains unsupported syntax')
-            }
-
-            if (child.type === 'FunctionNode') {
-                const functionName = child.fn?.name
-
-                if (typeof functionName !== 'string' || !WEIGHT_FORMULA_FUNCTION_KEYS.has(functionName)) {
-                    throw new ValidationError('weightFormula uses an unsupported function')
-                }
-            }
-
-            if (child.type === 'SymbolNode') {
-                const symbolName = child.name
-
-                if (!WEIGHT_FORMULA_SCOPE_KEYS.has(symbolName) && !WEIGHT_FORMULA_FUNCTION_KEYS.has(symbolName)) {
-                    throw new ValidationError('weightFormula uses an unsupported variable')
-                }
-            }
-        })
-
+        const node = parseWeightFormulaNode(value)
+        assertWeightFormulaNodeIsSafe(node)
         return node
     } catch (error) {
         if (error instanceof ValidationError) {
@@ -194,23 +215,47 @@ function validateWeightFormulaExpression(value: string) {
     }
 }
 
+function normalizeWeightFormulaResult(result: unknown): number {
+    if (result && typeof result === 'object' && Array.isArray((result as { entries?: unknown[] }).entries)) {
+        const entries = (result as { entries: unknown[] }).entries
+
+        for (let index = entries.length - 1; index >= 0; index -= 1) {
+            if (entries[index] !== undefined) {
+                return normalizeWeightFormulaResult(entries[index])
+            }
+        }
+    }
+
+    if (typeof result === 'boolean' || typeof result === 'string' || Array.isArray(result) || result == null) {
+        throw new ValidationError('weightFormula must evaluate to a finite number')
+    }
+
+    const normalized = typeof result === 'number' ? result : Number(result)
+
+    if (!Number.isFinite(normalized)) {
+        throw new ValidationError('weightFormula must evaluate to a finite number')
+    }
+
+    return normalized
+}
+
 function evaluateWeightFormulaExpression(value: string, scope: {
     position: number
     levelCount: number
     rating: number
     minProgress: number
+    progress: number
 }) {
     const node = validateWeightFormulaExpression(value)
-    const result = node.compile().evaluate({
-        ...WEIGHT_FORMULA_FUNCTIONS,
-        ...scope
-    })
+    try {
+        return normalizeWeightFormulaResult(node.compile().evaluate({ ...scope }))
+    } catch (error) {
+        if (error instanceof ValidationError) {
+            throw error
+        }
 
-    if (typeof result !== 'number' || !Number.isFinite(result)) {
-        throw new ValidationError('weightFormula must evaluate to a finite number')
+        throw new ValidationError(error instanceof Error ? error.message : 'weightFormula must evaluate to a finite number')
     }
-
-    return result
 }
 
 function sanitizePreviewNumber(value: unknown, label: string, options?: {
@@ -239,13 +284,15 @@ export function previewCustomListWeightFormula(formula: unknown, scope: {
     levelCount?: unknown
     rating?: unknown
     minProgress?: unknown
+    progress?: unknown
 }) {
     const normalizedFormula = sanitizeWeightFormula(formula)
     const normalizedScope = {
         position: sanitizePreviewNumber(scope.position, 'position', { integer: true, min: 1 }),
         levelCount: sanitizePreviewNumber(scope.levelCount, 'levelCount', { integer: true, min: 1 }),
         rating: sanitizePreviewNumber(scope.rating, 'rating', { min: 0 }),
-        minProgress: sanitizePreviewNumber(scope.minProgress, 'minProgress', { min: 0 })
+        minProgress: sanitizePreviewNumber(scope.minProgress, 'minProgress', { min: 0 }),
+        progress: sanitizePreviewNumber(scope.progress, 'progress', { min: 0 })
     }
 
     return {
@@ -437,7 +484,7 @@ function sanitizeWeightFormula(value: unknown) {
         throw new ValidationError('weightFormula must be at most 500 characters')
     }
 
-    validateWeightFormulaExpression(weightFormula)
+    evaluateWeightFormulaExpression(weightFormula, WEIGHT_FORMULA_VALIDATION_SCOPE)
 
     return weightFormula
 }
@@ -612,24 +659,29 @@ function isEligibleRecordForListItem(record: { progress?: number | null } | null
     return itemIsPlatformer ? progress <= minProgress : progress >= minProgress
 }
 
-function getListRecordBaseScore(list: { mode: string; isPlatformer: boolean }, item: any, record: { progress?: number | null }) {
-    if (list.mode === 'top') {
-        return 1
-    }
+function roundCustomListSnapshotValue(value: number, digits: number = 3) {
+    const factor = 10 ** digits
+    const rounded = Math.round(value * factor) / factor
 
-    const rating = Number(item.rating ?? item.level?.rating ?? 0)
+    return Object.is(rounded, -0) ? 0 : rounded
+}
 
-    if (!Number.isFinite(rating) || rating <= 0) {
-        return 0
-    }
+function getCustomListRecordPoint(
+    list: Awaited<ReturnType<typeof getCustomList>>,
+    item: any,
+    position: number,
+    levelCount: number,
+    record: { progress?: number | null }
+) {
+	const recordPoint = evaluateWeightFormulaExpression(list.weightFormula || '1', {
+        position,
+        levelCount,
+        rating: Number(item.rating ?? item.level?.rating ?? 0),
+        minProgress: Number(getEffectiveMinProgress(item) ?? 0),
+        progress: Math.max(0, Number(record.progress) || 0)
+    })
 
-    if (getItemIsPlatformer(item, list.isPlatformer)) {
-        return rating
-    }
-
-    const progress = Math.max(0, Number(record.progress) || 0)
-
-    return rating * (progress / 100)
+	return roundCustomListSnapshotValue(recordPoint)
 }
 
 async function enrichItemsWithViewerEligibleRecords(items: any[], list: { isPlatformer: boolean }, viewerId?: string) {
@@ -697,7 +749,7 @@ async function getOfficialList(slug: OfficialListSlug, viewerId?: string, itemRa
     start?: number
     end?: number
 }) {
-    const config = OFFICIAL_LISTS[slug]
+    const config = getOfficialListConfig(slug)
     const hasItemRange = itemRange?.start !== undefined && itemRange?.end !== undefined
     const rangeStart = hasItemRange ? (itemRange.start ?? 0) : 0
     const rangeEnd = hasItemRange ? (itemRange.end ?? 4999) : 4999
@@ -770,15 +822,19 @@ async function getOfficialListSummary(slug: OfficialListSlug) {
     }
 }
 
-async function calculateCustomListLeaderboardRankings(list: Awaited<ReturnType<typeof getCustomList>>) {
+async function calculateCustomListLeaderboardSnapshot(list: Awaited<ReturnType<typeof getCustomList>>) {
     const items = list.items || []
 
     if (!items.length) {
-        return []
+        return {
+            rankedPlayers: [] as CustomListLeaderboardEntry[],
+            rankedRecords: [] as CustomListLeaderboardRecordEntry[]
+        }
     }
 
     const levelIds = [...new Set(items.map((item: any) => item.levelId))]
     const itemByLevelId = new Map(items.map((item: any, index: number) => [item.levelId, { item, index }]))
+    const isTop = list.mode === 'top'
 
     const { data, error } = await supabase
         .from('records')
@@ -791,12 +847,8 @@ async function calculateCustomListLeaderboardRankings(list: Awaited<ReturnType<t
         throw new Error(error.message)
     }
 
-    const playerScores = new Map<string, {
-        player: any
-        score: number
-        completedCount: number
-        contributions: Map<number, number>
-    }>()
+    // Step 1: Collect best record per (uid, levelId)
+    const bestRecords = new Map<string, { record: any; itemData: { item: any; index: number } }>()
 
     for (const record of (data || []) as any[]) {
         const itemData = itemByLevelId.get(record.levelid)
@@ -809,44 +861,80 @@ async function calculateCustomListLeaderboardRankings(list: Awaited<ReturnType<t
             continue
         }
 
-        const contribution = getListRecordBaseScore(list, itemData.item, record)
-            * evaluateWeightFormulaExpression(list.weightFormula || '1', {
-                position: getNormalizedListPosition(itemData.item, itemData.index, list.id < 0),
-                levelCount: items.length,
-                rating: Number(itemData.item.rating ?? itemData.item.level?.rating ?? 0),
-                minProgress: Number(getEffectiveMinProgress(itemData.item) ?? 0)
-            })
+        const key = `${record.userid}:${record.levelid}`
+        const existing = bestRecords.get(key)
 
-        const existingPlayer = playerScores.get(record.userid)
-
-        if (!existingPlayer) {
-            playerScores.set(record.userid, {
-                player: record.players,
-                score: contribution,
-                completedCount: 1,
-                contributions: new Map([[record.levelid, contribution]])
-            })
-            continue
+        if (!existing || isBetterRecordForListItem(record, existing.record, itemData.item, list.isPlatformer)) {
+            bestRecords.set(key, { record, itemData })
         }
-
-        const previousContribution = existingPlayer.contributions.get(record.levelid)
-
-        if (previousContribution == null) {
-            existingPlayer.completedCount += 1
-            existingPlayer.score += contribution
-            existingPlayer.contributions.set(record.levelid, contribution)
-            continue
-        }
-
-        if (contribution <= previousContribution) {
-            continue
-        }
-
-        existingPlayer.score += contribution - previousContribution
-        existingPlayer.contributions.set(record.levelid, contribution)
     }
 
-    return [...playerScores.values()]
+    // Step 2: Group by uid
+    const recordsByUid = new Map<string, Array<{ record: any; itemData: { item: any; index: number } }>>()
+
+    for (const entry of bestRecords.values()) {
+        const uid = entry.record.userid
+        let group = recordsByUid.get(uid)
+
+        if (!group) {
+            group = []
+            recordsByUid.set(uid, group)
+        }
+
+        group.push(entry)
+    }
+
+    // Step 3: Sort each uid's records by level rating/position, assign no, then evaluate formula
+    const playerScores = new Map<string, {
+        player: any
+        score: number
+        completedCount: number
+    }>()
+    const rankedRecords: CustomListLeaderboardRecordEntry[] = []
+
+    for (const [uid, entries] of recordsByUid) {
+        entries.sort((a, b) => {
+            if (isTop) {
+                const aPos = getNormalizedListPosition(a.itemData.item, a.itemData.index, list.id < 0)
+                const bPos = getNormalizedListPosition(b.itemData.item, b.itemData.index, list.id < 0)
+                return aPos - bPos
+            }
+
+            const aRating = Number(a.itemData.item.rating ?? a.itemData.item.level?.rating ?? 0)
+            const bRating = Number(b.itemData.item.rating ?? b.itemData.item.level?.rating ?? 0)
+            return bRating - aRating
+        })
+
+        let totalScore = 0
+        let player: any = null
+
+        for (let i = 0; i < entries.length; i++) {
+            const { record, itemData } = entries[i]
+            const no = i + 1
+            const recordPoint = getCustomListRecordPoint(list, itemData.item, no, items.length, record)
+
+            rankedRecords.push({
+                uid,
+                levelId: record.levelid,
+                point: recordPoint,
+                no
+            })
+
+            totalScore += recordPoint
+
+            if (!player) {
+                player = record.players
+            }
+        }
+
+        playerScores.set(uid, {
+            player,
+            score: totalScore,
+            completedCount: entries.length
+        })
+    }
+
+    const rankedPlayers = [...playerScores.values()]
         .sort((left, right) => {
             if (right.score !== left.score) {
                 return right.score - left.score
@@ -861,41 +949,96 @@ async function calculateCustomListLeaderboardRankings(list: Awaited<ReturnType<t
         .map((entry, index) => ({
             ...entry.player,
             rank: index + 1,
-            score: Math.round(entry.score * 1000) / 1000,
+            score: roundCustomListSnapshotValue(entry.score),
             completedCount: entry.completedCount
         }))
+
+    return {
+        rankedPlayers,
+        rankedRecords
+    }
 }
 
-async function persistCustomListLeaderboard(listId: number, ranked: Array<{ uid: string; rank: number; score: number; completedCount: number }>) {
+async function persistCustomListLeaderboard(
+    listId: number,
+    rankedPlayers: CustomListLeaderboardEntry[],
+    rankedRecords: CustomListLeaderboardRecordEntry[]
+) {
     const lastRefreshedAt = new Date().toISOString()
 
     const { data: refreshRow, error: refreshError } = await (supabase as any)
         .from('listLeaderboardRefreshes')
-        .insert({
+        .upsert({
             listId,
-            totalPlayers: ranked.length,
+            totalPlayers: rankedPlayers.length,
+            totalRecords: rankedRecords.length,
             lastRefreshedAt
+        }, {
+            onConflict: 'listId'
         })
-        .select('id, listId, totalPlayers, lastRefreshedAt')
+        .select('id, listId, totalPlayers, totalRecords, lastRefreshedAt')
         .single()
 
     if (refreshError || !refreshRow) {
         throw new Error(refreshError?.message || 'Failed to persist leaderboard refresh')
     }
 
-    if (ranked.length) {
-        const { error: entriesError } = await (supabase as any)
+    const [{ error: deleteLeaderboardError }, { error: deleteRecordsError }] = await Promise.all([
+        (supabase as any)
             .from('listLeaderboardEntries')
-            .insert(ranked.map((entry) => ({
-                refreshId: refreshRow.id,
-                uid: entry.uid,
-                rank: entry.rank,
-                score: entry.score,
-                completedCount: entry.completedCount
-            })))
+            .delete()
+            .eq('listId', listId),
+        (supabase as any)
+            .from('listLeaderboardRecordEntries')
+            .delete()
+            .eq('listId', listId)
+    ])
 
-        if (entriesError) {
-            throw new Error(entriesError.message)
+    if (deleteLeaderboardError) {
+        throw new Error(deleteLeaderboardError.message)
+    }
+
+    if (deleteRecordsError) {
+        throw new Error(deleteRecordsError.message)
+    }
+
+    const writes: PromiseLike<{ error: { message: string } | null }>[] = []
+
+    if (rankedPlayers.length) {
+        writes.push(
+            (supabase as any)
+                .from('listLeaderboardEntries')
+                .insert(rankedPlayers.map((entry) => ({
+                    listId,
+                    uid: entry.uid,
+                    rank: entry.rank,
+                    score: entry.score,
+                    completedCount: entry.completedCount
+                })))
+        )
+    }
+
+    if (rankedRecords.length) {
+        writes.push(
+            (supabase as any)
+                .from('listLeaderboardRecordEntries')
+                .insert(rankedRecords.map((entry) => ({
+                    listId,
+                    uid: entry.uid,
+                    levelId: entry.levelId,
+                    point: entry.point,
+                    no: entry.no
+                })))
+        )
+    }
+
+    if (writes.length) {
+        const results = await Promise.all(writes)
+
+        for (const result of results) {
+            if (result.error) {
+                throw new Error(result.error.message)
+            }
         }
     }
 
@@ -1232,15 +1375,14 @@ export async function browseLists(options: {
             .filter((slug): slug is OfficialListSlug => Boolean(slug) && isOfficialListSlug(slug!))
     )
     const syntheticOfficialLists = await Promise.all(
-        Object.keys(OFFICIAL_LISTS)
-            .filter((slug): slug is OfficialListSlug => isOfficialListSlug(slug))
+        OFFICIAL_LIST_SLUGS
             .filter((slug) => !databaseOfficialSlugs.has(slug))
             .filter((slug) => {
                 if (!normalizedSearch.length) {
                     return true
                 }
 
-                const entry = OFFICIAL_LISTS[slug]
+                const entry = getOfficialListConfig(slug)
                 return entry.title.toLowerCase().includes(normalizedSearch)
                     || entry.description.toLowerCase().includes(normalizedSearch)
             })
@@ -1334,7 +1476,7 @@ export async function getCustomListLeaderboard(identifier: CustomListIdentifier,
     const { data: entryRows, error: entriesError } = await (supabase as any)
         .from('listLeaderboardEntries')
         .select('uid, rank, score, completedCount')
-        .eq('refreshId', latestRefresh.id)
+        .eq('listId', list.id)
         .order('rank', { ascending: true })
         .range(start, end)
 
@@ -1391,18 +1533,163 @@ export async function getCustomListLeaderboard(identifier: CustomListIdentifier,
     }
 }
 
+export async function getCustomListRecordPoints(identifier: CustomListIdentifier, options: {
+    start?: number
+    end?: number
+    viewerId?: string
+    uid?: string
+} = {}) {
+    const {
+        start = 0,
+        end = 49,
+        viewerId,
+        uid
+    } = options
+
+    const list = await getCustomList(identifier, viewerId)
+
+    if (list.id <= 0) {
+        return {
+            list,
+            data: [],
+            total: 0,
+            lastRefreshedAt: null
+        }
+    }
+
+    const latestRefresh = await getLatestCustomListLeaderboardRefresh(list.id)
+
+    if (!latestRefresh) {
+        return {
+            list,
+            data: [],
+            total: 0,
+            lastRefreshedAt: null
+        }
+    }
+
+    let entriesQuery = (supabase as any)
+        .from('listLeaderboardRecordEntries')
+        .select('uid, levelId, point, no', { count: 'exact' })
+        .eq('listId', list.id)
+        .order('no', { ascending: true })
+
+    if (uid) {
+        entriesQuery = entriesQuery.eq('uid', uid)
+    }
+
+    const { data: entryRows, error: entriesError, count: entryCount } = await entriesQuery.range(start, end)
+
+    if (entriesError) {
+        throw new Error(entriesError.message)
+    }
+
+    const entries = (entryRows || []) as CustomListLeaderboardRecordEntry[]
+    const itemByLevelId = new Map(list.items.map((item: any, index: number) => [item.levelId, { item, index }]))
+    const uids = [...new Set(entries.map((entry) => entry.uid))]
+    const levelIds = [...new Set(entries.map((entry) => entry.levelId))]
+    const playersByUid = new Map<string, any>()
+    const levelsById = new Map<number, any>()
+    const recordsByKey = new Map<string, { progress: number; timestamp: number | null }>()
+
+    const [playersResult, levelsResult] = await Promise.all([
+        uids.length
+            ? supabase
+                .from('players')
+                .select(`${playerSelect}`)
+                .in('uid', uids)
+            : Promise.resolve({ data: [], error: null }),
+        levelIds.length
+            ? supabase
+                .from('levels')
+                .select('id, name, creator, difficulty, isPlatformer, rating, minProgress')
+                .in('id', levelIds)
+            : Promise.resolve({ data: [], error: null })
+    ])
+
+    if (playersResult.error) {
+        throw new Error(playersResult.error.message)
+    }
+
+    if (levelsResult.error) {
+        throw new Error(levelsResult.error.message)
+    }
+
+    if (entries.length) {
+        const recordFilters = entries
+            .map((entry) => `and(userid.eq.${entry.uid},levelid.eq.${entry.levelId})`)
+            .join(',')
+
+        const { data: recordRows, error: recordsError } = await supabase
+            .from('records')
+            .select('userid, levelid, progress, timestamp')
+            .or(recordFilters)
+
+        if (recordsError) {
+            throw new Error(recordsError.message)
+        }
+
+        for (const record of recordRows || []) {
+            recordsByKey.set(`${record.userid}:${record.levelid}`, {
+                progress: Number(record.progress) || 0,
+                timestamp: Number.isFinite(Number(record.timestamp)) ? Number(record.timestamp) : null
+            })
+        }
+    }
+
+    for (const player of playersResult.data || []) {
+        playersByUid.set(player.uid, player)
+    }
+
+    for (const level of levelsResult.data || []) {
+        levelsById.set(level.id, level)
+    }
+
+    return {
+        list,
+        data: entries.map((entry) => {
+            const recordSnapshot = recordsByKey.get(`${entry.uid}:${entry.levelId}`) || {
+                progress: 0,
+                timestamp: null
+            }
+            const itemData = itemByLevelId.get(entry.levelId)
+
+            return {
+                ...entry,
+                ...recordSnapshot,
+                player: playersByUid.get(entry.uid) || null,
+                level: levelsById.get(entry.levelId) || null,
+                formulaScope: {
+                    position: entry.no,
+                    levelCount: list.items.length,
+                    rating: itemData
+                        ? Number(itemData.item.rating ?? itemData.item.level?.rating ?? 0)
+                        : 0,
+                    minProgress: itemData
+                        ? Number(getEffectiveMinProgress(itemData.item) ?? 0)
+                        : 0,
+                    progress: recordSnapshot.progress
+                }
+            }
+        }),
+        total: entryCount ?? latestRefresh.totalRecords,
+        lastRefreshedAt: latestRefresh.lastRefreshedAt
+    }
+}
+
 export async function refreshCustomListLeaderboard(identifier: CustomListIdentifier, ownerId: string) {
     const resolved = await resolveCustomListIdentifier(identifier)
     const list = await getCustomListRow(resolved.id)
     assertOwner(list, ownerId)
 
     const hydratedList = await getCustomList(list.id, ownerId)
-    const ranked = await calculateCustomListLeaderboardRankings(hydratedList)
-    const refreshRow = await persistCustomListLeaderboard(list.id, ranked as Array<{ uid: string; rank: number; score: number; completedCount: number }>)
+    const { rankedPlayers, rankedRecords } = await calculateCustomListLeaderboardSnapshot(hydratedList)
+    const refreshRow = await persistCustomListLeaderboard(list.id, rankedPlayers, rankedRecords)
 
     return {
         listId: list.id,
         total: refreshRow.totalPlayers,
+        totalRecords: refreshRow.totalRecords,
         lastRefreshedAt: refreshRow.lastRefreshedAt
     }
 }

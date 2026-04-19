@@ -11,6 +11,7 @@ import {
     ForbiddenError,
     getCustomList,
     getCustomListLeaderboard,
+    getCustomListRecordPoints,
     getOwnCustomLists,
     getRandomCustomListLevel,
     refreshCustomListLeaderboard,
@@ -174,7 +175,8 @@ router.route('/formula/preview')
                 position: parseFiniteNumber(req.body?.position, 'position'),
                 levelCount: parseFiniteNumber(req.body?.levelCount, 'levelCount'),
                 rating: parseFiniteNumber(req.body?.rating, 'rating'),
-                minProgress: parseFiniteNumber(req.body?.minProgress, 'minProgress')
+                minProgress: parseFiniteNumber(req.body?.minProgress, 'minProgress'),
+                progress: parseFiniteNumber(req.body?.progress, 'progress')
             }))
         } catch (error) {
             if (sendError(res, error)) {
@@ -194,6 +196,27 @@ router.route('/:id/leaderboard')
             const viewerId = res.locals.authenticated ? res.locals.user.uid : undefined
 
             res.send(await getCustomListLeaderboard(req.params.id, { start, end, viewerId }))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/records')
+    .get(optionalAuth, async (req, res) => {
+        try {
+            const start = req.query.start ? parseId(String(req.query.start), 'start', { allowZero: true }) : 0
+            const end = req.query.end ? parseId(String(req.query.end), 'end', { allowZero: true }) : 49
+            const viewerId = res.locals.authenticated ? res.locals.user.uid : undefined
+            const uid = typeof req.query.uid === 'string' && req.query.uid.trim().length
+                ? req.query.uid.trim()
+                : undefined
+
+            res.send(await getCustomListRecordPoints(req.params.id, { start, end, viewerId, uid }))
         } catch (error) {
             if (sendError(res, error)) {
                 return
