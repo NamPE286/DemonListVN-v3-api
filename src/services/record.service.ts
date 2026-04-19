@@ -384,8 +384,9 @@ export async function submitRecord(recordData: TRecord) {
             }
 
             logs.push('Updating level in database');
+            const levelToUpdate = await getLevel(recordData.levelid!)
             await updateLevel({
-                id: recordData.levelid,
+                ...levelToUpdate,
                 name: apiLevel.name,
                 creator: apiLevel.author,
                 isPlatformer: apiLevel.length == 5

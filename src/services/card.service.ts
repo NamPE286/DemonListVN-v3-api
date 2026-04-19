@@ -41,6 +41,10 @@ export async function getRecordCard(id: string) {
         throw new Error(error.message)
     }
 
+    if (!card) {
+        throw new Error('Record card not found')
+    }
+
     const { data: record, error: recErr } = await supabase
         .from('records')
         .select('*, levels!public_records_levelid_fkey(*)')
@@ -52,7 +56,7 @@ export async function getRecordCard(id: string) {
         throw new Error(recErr.message)
     }
 
-    return { ...card, record }
+    return Object.assign({}, card, { record })
 }
 
 export async function getAllRecordCards() {
