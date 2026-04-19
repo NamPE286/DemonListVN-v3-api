@@ -1,4 +1,5 @@
 import express from 'express'
+import adminAuth from '@src/middleware/admin-auth.middleware'
 import optionalAuth from '@src/middleware/optional-user-auth.middleware'
 import userAuth from '@src/middleware/user-auth.middleware'
 import {
@@ -9,14 +10,18 @@ import {
     deleteCustomList,
     ForbiddenError,
     getCustomList,
+    getCustomListLeaderboard,
     getOwnCustomLists,
+    getRandomCustomListLevel,
     getStarredCustomLists,
     getStarredListsByLevel,
     NotFoundError,
     removeLevelFromCustomList,
     reorderListLevels,
+    resolveCustomListIdentifier,
     toggleCustomListStar,
     updateCustomList,
+    updateCustomListOfficialMetadata,
     updateListLevel,
     ValidationError,
 } from '@src/services/custom-list.service'
@@ -135,12 +140,63 @@ router.route('/levels/:levelId/starred')
         }
     })
 
+router.route('/official/:id')
+    .patch(adminAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await updateCustomListOfficialMetadata(listId, req.body))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/leaderboard')
+    .get(optionalAuth, async (req, res) => {
+        try {
+            const start = req.query.start ? parseId(String(req.query.start), 'start', { allowZero: true }) : 0
+            const end = req.query.end ? parseId(String(req.query.end), 'end', { allowZero: true }) : 49
+            const viewerId = res.locals.authenticated ? res.locals.user.uid : undefined
+
+            res.send(await getCustomListLeaderboard(req.params.id, { start, end, viewerId }))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/random')
+    .get(optionalAuth, async (req, res) => {
+        try {
+            const viewerId = res.locals.authenticated ? res.locals.user.uid : undefined
+            const excludeLevelIds = typeof req.query.exclude === 'string'
+                ? req.query.exclude.split(',').map((value) => Number.parseInt(value, 10)).filter((value) => Number.isInteger(value) && value > 0)
+                : []
+
+            res.send(await getRandomCustomListLevel(req.params.id, { excludeLevelIds, viewerId }))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
 router.route('/:id')
     .get(optionalAuth, async (req, res) => {
         try {
-            const listId = parseId(req.params.id, 'list ID')
             const viewerId = res.locals.authenticated ? res.locals.user.uid : undefined
-            res.send(await getCustomList(listId, viewerId))
+            res.send(await getCustomList(req.params.id, viewerId))
         } catch (error) {
             if (sendError(res, error)) {
                 return
