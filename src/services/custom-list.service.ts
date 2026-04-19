@@ -6,6 +6,13 @@ type CustomList = Tables<'lists'>
 type CustomListInsert = TablesInsert<'lists'>
 type CustomListUpdate = TablesUpdate<'lists'>
 type CustomListLevelInsert = TablesInsert<'listLevels'>
+type CustomListStarInsert = TablesInsert<'listStars'>
+
+const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+
+type CustomListWithOwnerData = CustomList & {
+    ownerData?: any
+}
 
 const VISIBILITY_VALUES = new Set(['private', 'unlisted', 'public'])
 const MODE_VALUES = new Set(['rating', 'top'])
@@ -129,6 +136,18 @@ function sanitizeListPlatformer(value: unknown) {
 
     if (typeof value !== 'boolean') {
         throw new ValidationError('isPlatformer must be a boolean')
+    }
+
+    return value
+}
+
+function sanitizeCommunityEnabled(value: unknown) {
+    if (value == null) {
+        return true
+    }
+
+    if (typeof value !== 'boolean') {
+        throw new ValidationError('communityEnabled must be a boolean')
     }
 
     return value
@@ -311,6 +330,73 @@ async function syncLevelCount(listId: number) {
     }
 }
 
+export async function touchCustomListActivity(listId: number) {
+    const { error } = await supabase
+        .from('lists')
+        .update({
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', listId)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+}
+
+async function getStarSummary(listIds: number[], viewerId?: string) {
+    const counts = new Map<number, number>()
+    const starredIds = new Set<number>()
+
+    if (!listIds.length) {
+        return { counts, starredIds }
+    }
+
+    const { data, error } = await supabase
+        .from('listStars')
+        .select('listId, uid')
+        .in('listId', listIds)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    for (const star of data || []) {
+        counts.set(star.listId, (counts.get(star.listId) || 0) + 1)
+
+        if (viewerId && star.uid === viewerId) {
+            starredIds.add(star.listId)
+        }
+    }
+
+    return { counts, starredIds }
+}
+
+async function enrichListsWithStars<T extends { id: number }>(lists: T[], viewerId?: string) {
+    const { counts, starredIds } = await getStarSummary(lists.map((list) => list.id), viewerId)
+
+    return lists.map((list) => ({
+        ...list,
+        starCount: counts.get(list.id) || 0,
+        starred: starredIds.has(list.id)
+    }))
+}
+
+async function getListWithOwnerData(listId: number) {
+    requireListId(listId)
+
+    const { data, error } = await supabase
+        .from('lists')
+        .select(`*, ownerData:players!lists_owner_fkey(${playerSelect})`)
+        .eq('id', listId)
+        .single()
+
+    if (error || !data) {
+        throw new NotFoundError('List not found')
+    }
+
+    return data as CustomListWithOwnerData
+}
+
 async function ensureLevelExists(levelId: number) {
     requireLevelId(levelId)
 
@@ -376,7 +462,7 @@ async function getCustomListItems(listId: number, mode: string = 'rating') {
 export async function getOwnCustomLists(ownerId: string) {
     const { data, error } = await supabase
         .from('lists')
-        .select('*')
+        .select(`*, ownerData:players!lists_owner_fkey(${playerSelect})`)
         .eq('owner', ownerId)
         .order('updated_at', { ascending: false })
 
@@ -384,23 +470,57 @@ export async function getOwnCustomLists(ownerId: string) {
         throw new Error(error.message)
     }
 
-    return data || []
+    return enrichListsWithStars((data || []) as CustomListWithOwnerData[], ownerId)
+}
+
+export async function getStarredCustomLists(userId: string) {
+    const { data: starredEntries, error: starredError } = await supabase
+        .from('listStars')
+        .select('listId')
+        .eq('uid', userId)
+
+    if (starredError) {
+        throw new Error(starredError.message)
+    }
+
+    const listIds = [...new Set((starredEntries || []).map((entry) => entry.listId))]
+
+    if (!listIds.length) {
+        return []
+    }
+
+    const { data, error } = await supabase
+        .from('lists')
+        .select(`*, ownerData:players!lists_owner_fkey(${playerSelect})`)
+        .in('id', listIds)
+        .order('updated_at', { ascending: false })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    const readableLists = ((data || []) as CustomListWithOwnerData[])
+        .filter((list) => list.visibility !== 'private' || list.owner === userId)
+
+    return enrichListsWithStars(readableLists, userId)
 }
 
 export async function browseLists(options: {
     limit?: number
     offset?: number
     search?: string
+    viewerId?: string
 }) {
     const {
         limit = 24,
         offset = 0,
-        search = ''
+        search = '',
+        viewerId
     } = options
 
     let query = supabase
         .from('lists')
-        .select('*', { count: 'exact' })
+        .select(`*, ownerData:players!lists_owner_fkey(${playerSelect})`, { count: 'exact' })
         .eq('visibility', 'public')
 
     if (search.trim().length) {
@@ -417,21 +537,128 @@ export async function browseLists(options: {
     }
 
     return {
-        data: data || [],
+        data: await enrichListsWithStars((data || []) as CustomListWithOwnerData[], viewerId),
         total: count || 0
     }
 }
 
 export async function getCustomList(listId: number, viewerId?: string) {
-    const list = await getCustomListRow(listId)
+    const list = await getListWithOwnerData(listId)
     assertReadable(list, viewerId)
 
     const items = await getCustomListItems(listId, list.mode)
+    const [{ starCount = 0, starred = false } = { starCount: 0, starred: false }] = await enrichListsWithStars([list], viewerId)
 
     return {
         ...list,
+        starCount,
+        starred,
         items
     }
+}
+
+export async function toggleCustomListStar(listId: number, userId: string) {
+    const list = await getCustomListRow(listId)
+    assertReadable(list, userId)
+
+    const { data: existing, error: existingError } = await supabase
+        .from('listStars')
+        .select('id')
+        .eq('listId', listId)
+        .eq('uid', userId)
+        .maybeSingle()
+
+    if (existingError) {
+        throw new Error(existingError.message)
+    }
+
+    let starred = false
+
+    if (existing) {
+        const { error } = await supabase
+            .from('listStars')
+            .delete()
+            .eq('id', existing.id)
+
+        if (error) {
+            throw new Error(error.message)
+        }
+    } else {
+        const starInsert: CustomListStarInsert = {
+            listId,
+            uid: userId
+        }
+
+        const { error } = await supabase
+            .from('listStars')
+            .insert(starInsert)
+
+        if (error) {
+            if (error.code === '23505') {
+                throw new ConflictError('List already starred')
+            }
+
+            throw new Error(error.message)
+        }
+
+        starred = true
+    }
+
+    await touchCustomListActivity(listId)
+
+    const { counts } = await getStarSummary([listId], userId)
+
+    return {
+        starred,
+        starCount: counts.get(listId) || 0
+    }
+}
+
+export async function getStarredListsByLevel(levelId: number, viewerId?: string) {
+    requireLevelId(levelId)
+
+    const { data: listLevels, error: listLevelsError } = await supabase
+        .from('listLevels')
+        .select('listId, created_at, rating, position, minProgress')
+        .eq('levelId', levelId)
+
+    if (listLevelsError) {
+        throw new Error(listLevelsError.message)
+    }
+
+    const listIds = [...new Set((listLevels || []).map((entry) => entry.listId))]
+    const listItemsById = new Map((listLevels || []).map((entry) => [entry.listId, entry]))
+
+    if (!listIds.length) {
+        return []
+    }
+
+    const { data: lists, error: listsError } = await supabase
+        .from('lists')
+        .select(`*, ownerData:players!lists_owner_fkey(${playerSelect})`)
+        .eq('visibility', 'public')
+        .in('id', listIds)
+        .order('updated_at', { ascending: false })
+
+    if (listsError) {
+        throw new Error(listsError.message)
+    }
+
+    const enriched = await enrichListsWithStars((lists || []) as CustomListWithOwnerData[], viewerId)
+
+    return enriched
+        .filter((list) => list.starCount > 0)
+        .sort((left, right) => {
+            if (right.starCount !== left.starCount) {
+                return right.starCount - left.starCount
+            }
+
+            return new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime()
+        })
+        .map((list) => ({
+            ...list,
+            item: listItemsById.get(list.id) || null
+        }))
 }
 
 export async function createCustomList(ownerId: string, payload: {
@@ -441,6 +668,7 @@ export async function createCustomList(ownerId: string, payload: {
     tags?: unknown
     mode?: unknown
     isPlatformer?: unknown
+    communityEnabled?: unknown
 }) {
     const listInsert: CustomListInsert = {
         owner: ownerId,
@@ -450,6 +678,7 @@ export async function createCustomList(ownerId: string, payload: {
         tags: sanitizeTags(payload.tags),
         mode: sanitizeMode(payload.mode),
         isPlatformer: sanitizeListPlatformer(payload.isPlatformer),
+        communityEnabled: sanitizeCommunityEnabled(payload.communityEnabled),
         updated_at: new Date().toISOString()
     }
 
@@ -476,6 +705,7 @@ export async function updateCustomList(listId: number, ownerId: string, payload:
     tags?: unknown
     mode?: unknown
     isPlatformer?: unknown
+    communityEnabled?: unknown
 }) {
     const existing = await getCustomListRow(listId)
     assertOwner(existing, ownerId)
@@ -512,6 +742,10 @@ export async function updateCustomList(listId: number, ownerId: string, payload:
         }
 
         updates.isPlatformer = isPlatformer
+    }
+
+    if (payload.communityEnabled !== undefined) {
+        updates.communityEnabled = sanitizeCommunityEnabled(payload.communityEnabled)
     }
 
     const { error } = await supabase
@@ -633,6 +867,8 @@ export async function updateListLevel(listId: number, ownerId: string, levelId: 
         throw new NotFoundError('Level is not in this list')
     }
 
+    await touchCustomListActivity(listId)
+
     return getCustomList(listId, ownerId)
 }
 
@@ -663,6 +899,8 @@ export async function reorderListLevels(listId: number, ownerId: string, levelId
             throw new Error(result.error.message)
         }
     }
+
+    await touchCustomListActivity(listId)
 
     return getCustomList(listId, ownerId)
 }

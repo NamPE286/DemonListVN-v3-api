@@ -1107,8 +1107,45 @@ export type Database = {
           },
         ]
       }
+      listStars: {
+        Row: {
+          created_at: string
+          id: number
+          listId: number
+          uid: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          listId: number
+          uid: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          listId?: number
+          uid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_stars_list_id_fkey"
+            columns: ["listId"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "list_stars_uid_fkey"
+            columns: ["uid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       lists: {
         Row: {
+          communityEnabled: boolean
           created_at: string
           description: string
           id: number
@@ -1122,6 +1159,7 @@ export type Database = {
           visibility: string
         }
         Insert: {
+          communityEnabled?: boolean
           created_at?: string
           description?: string
           id?: number
@@ -1135,6 +1173,7 @@ export type Database = {
           visibility?: string
         }
         Update: {
+          communityEnabled?: boolean
           created_at?: string
           description?: string
           id?: number
@@ -1154,6 +1193,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "list_stars_list_id_fkey"
+            columns: ["id"]
+            isOneToOne: false
+            referencedRelation: "listStars"
+            referencedColumns: ["listId"]
           },
         ]
       }
@@ -1282,6 +1328,7 @@ export type Database = {
       }
       communityPosts: {
         Row: {
+          attachedList: Json | null
           attachedLevel: Json | null
           attachedRecord: Json | null
           clanId: number | null
@@ -1304,6 +1351,7 @@ export type Database = {
           viewsCount: number
         }
         Insert: {
+          attachedList?: Json | null
           attachedLevel?: Json | null
           attachedRecord?: Json | null
           clanId?: number | null
@@ -1326,6 +1374,7 @@ export type Database = {
           viewsCount?: number
         }
         Update: {
+          attachedList?: Json | null
           attachedLevel?: Json | null
           attachedRecord?: Json | null
           clanId?: number | null
@@ -3373,6 +3422,7 @@ export type Database = {
           p_user_id?: string
         }
         Returns: {
+          attachedList: Json
           attachedLevel: Json
           attachedRecord: Json
           commentsCount: number

@@ -10,9 +10,12 @@ import {
     ForbiddenError,
     getCustomList,
     getOwnCustomLists,
+    getStarredCustomLists,
+    getStarredListsByLevel,
     NotFoundError,
     removeLevelFromCustomList,
     reorderListLevels,
+    toggleCustomListStar,
     updateCustomList,
     updateListLevel,
     ValidationError,
@@ -69,14 +72,29 @@ router.route('/me')
         }
     })
 
+router.route('/starred')
+    .get(userAuth, async (req, res) => {
+        try {
+            res.send(await getStarredCustomLists(res.locals.user.uid))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
 router.route('/')
     .get(optionalAuth, async (req, res) => {
         try {
             const limit = req.query.limit ? parseId(String(req.query.limit), 'limit') : 24
             const offset = req.query.offset ? parseId(String(req.query.offset), 'offset', { allowZero: true }) : 0
             const search = typeof req.query.search === 'string' ? req.query.search : ''
+            const viewerId = res.locals.authenticated ? res.locals.user.uid : undefined
 
-            res.send(await browseLists({ limit, offset, search }))
+            res.send(await browseLists({ limit, offset, search, viewerId }))
         } catch (error) {
             if (sendError(res, error)) {
                 return
@@ -90,6 +108,23 @@ router.route('/')
         try {
             const list = await createCustomList(res.locals.user.uid, req.body)
             res.status(201).send(list)
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/levels/:levelId/starred')
+    .get(optionalAuth, async (req, res) => {
+        try {
+            const levelId = parseId(req.params.levelId, 'level ID')
+            const viewerId = res.locals.authenticated ? res.locals.user.uid : undefined
+
+            res.send(await getStarredListsByLevel(levelId, viewerId))
         } catch (error) {
             if (sendError(res, error)) {
                 return
@@ -133,6 +168,21 @@ router.route('/:id')
             const listId = parseId(req.params.id, 'list ID')
             await deleteCustomList(listId, res.locals.user.uid)
             res.status(204).end()
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/star')
+    .post(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await toggleCustomListStar(listId, res.locals.user.uid))
         } catch (error) {
             if (sendError(res, error)) {
                 return

@@ -20,6 +20,7 @@ import {
     getUserRecordsForPicker,
     getLevelsForPicker,
     searchPlayers,
+    getPostsByListWithLikeStatus,
     getPostsByLevelWithLikeStatus,
     getCommunityPosts,
     getCommunityPostsCount,
@@ -1468,6 +1469,25 @@ router.route('/levels/:id/posts')
         const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
 
         let posts = await getPostsByLevelWithLikeStatus(levelId, limit, userId)
+
+        const isAdmin = res.locals.authenticated && res.locals.user?.isAdmin
+        if (!isAdmin && posts.length > 0) {
+            const postIds = posts.map((p: any) => p.id)
+            const approvedIds = await getApprovedPostIds(postIds)
+            posts = posts.filter((p: any) => approvedIds.has(p.id))
+        }
+
+        res.json(posts)
+    })
+
+// Get community posts related to a custom list
+router.route('/lists/:id/posts')
+    .get(optionalAuth, async (req, res) => {
+        const listId = parseInt(req.params.id)
+        const limit = parseInt(req.query.limit as string) || 5
+        const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
+
+        let posts = await getPostsByListWithLikeStatus(listId, limit, userId)
 
         const isAdmin = res.locals.authenticated && res.locals.user?.isAdmin
         if (!isAdmin && posts.length > 0) {

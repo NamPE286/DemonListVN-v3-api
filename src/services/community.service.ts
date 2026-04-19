@@ -1,5 +1,6 @@
 import supabase from "@src/client/supabase"
 import { FRONTEND_URL } from '@src/config/url'
+import { touchCustomListActivity } from '@src/services/custom-list.service'
 import { fetchLevelFromGD, retrieveOrCreateLevel } from '@src/services/level.service'
 import { sendNotification } from '@src/services/notification.service'
 import { sendMessageToChannel } from '@src/services/discord.service'
@@ -258,6 +259,7 @@ export async function createCommunityPost(post: {
     type: string,
     imageUrl?: string,
     videoUrl?: string,
+    attachedList?: any,
     attachedRecord?: any,
     attachedLevel?: any,
     isRecommended?: boolean,
@@ -305,6 +307,7 @@ export async function updateCommunityPost(id: number, updates: {
     imageUrl?: string,
     videoUrl?: string,
     pinned?: boolean,
+    attachedList?: any,
     attachedRecord?: any,
     attachedLevel?: any,
     isRecommended?: boolean,
@@ -691,6 +694,36 @@ export async function getPostsByLevel(levelId: number, limit = 5) {
     return data || []
 }
 
+export async function getPostsByList(listId: number, limit = 5) {
+    const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+
+    const { data: list, error: listError } = await supabase
+        .from('lists')
+        .select('visibility, communityEnabled')
+        .eq('id', listId)
+        .maybeSingle()
+
+    if (listError) {
+        throw new Error(listError.message)
+    }
+
+    if (!list || list.visibility === 'private' || list.communityEnabled === false) {
+        return []
+    }
+
+    const { data, error } = await supabase
+        .from('communityPosts')
+        .select(`*, players!uid(${playerSelect}), communityPostsAdmin!inner(moderationStatus, hidden)`)
+        .eq('communityPostsAdmin.hidden', false)
+        .eq('communityPostsAdmin.moderationStatus', 'approved')
+        .or(`attachedList->>id.eq.${listId}`)
+        .order('createdAt', { ascending: false })
+        .limit(limit)
+
+    if (error) throw new Error(error.message)
+    return data || []
+}
+
 /** Admin: get all comments with filtering (like getCommunityPosts but for comments) */
 export async function getAdminComments(options: {
     limit?: number,
@@ -871,6 +904,7 @@ export async function createPostFull(params: {
     type?: string,
     imageUrl?: string,
     videoUrl?: string,
+    attachedList?: any,
     attachedRecord?: any,
     attachedLevel?: any,
     isRecommended?: boolean,
@@ -878,7 +912,7 @@ export async function createPostFull(params: {
     maxParticipants?: number | null,
     clanId?: number | null
 }) {
-    const { uid, isAdmin, title, content, type, imageUrl, videoUrl, attachedRecord, attachedLevel, isRecommended, maxParticipants, clanId } = params
+    const { uid, isAdmin, title, content, type, imageUrl, videoUrl, attachedList, attachedRecord, attachedLevel, isRecommended, maxParticipants, clanId } = params
 
     if (!title) {
         throw new ValidationError('Title is required')
@@ -938,6 +972,38 @@ export async function createPostFull(params: {
         }
     }
 
+    let sanitizedAttachedList = attachedList || undefined
+
+    if (attachedList && attachedList.id) {
+        const { data: list, error: listError } = await supabase
+            .from('lists')
+            .select('id, title, owner, visibility, communityEnabled, isPlatformer, levelCount, mode, ownerData:players!lists_owner_fkey(name)')
+            .eq('id', attachedList.id)
+            .single()
+
+        if (listError || !list) {
+            throw new ValidationError('Attached list was not found')
+        }
+
+        if (list.visibility === 'private') {
+            throw new ValidationError('Private lists cannot be attached to community posts')
+        }
+
+        if (list.communityEnabled === false) {
+            throw new ValidationError('Community posts are disabled for this list')
+        }
+
+        sanitizedAttachedList = {
+            id: list.id,
+            title: list.title,
+            owner: list.owner,
+            ownerName: list.ownerData?.name || null,
+            isPlatformer: list.isPlatformer,
+            levelCount: list.levelCount,
+            mode: list.mode
+        }
+    }
+
     // Run OpenAI moderation check on title + content + image (single API call)
     // Clan posts are auto-approved (moderation skipped)
     let moderationStatus = 'approved'
@@ -965,6 +1031,7 @@ export async function createPostFull(params: {
         type: postType,
         imageUrl,
         videoUrl,
+        attachedList: sanitizedAttachedList,
         attachedRecord: attachedRecord || undefined,
         attachedLevel: attachedLevel || undefined,
         isRecommended: postType === 'review' ? isRecommended : undefined,
@@ -985,6 +1052,10 @@ export async function createPostFull(params: {
     // Apply user tags if provided
     if (params.tagIds && params.tagIds.length > 0) {
         await setPostTags(post.id, params.tagIds, false)
+    }
+
+    if (sanitizedAttachedList?.id) {
+        await touchCustomListActivity(sanitizedAttachedList.id)
     }
 
     // If post is pending moderation, return early (don't send notifications/Discord)
@@ -1372,6 +1443,21 @@ export async function getPostsByUserWithLikeStatus(uid: string, limit: number, o
 /** Get posts by level enriched with user like status */
 export async function getPostsByLevelWithLikeStatus(levelId: number, limit: number, userId?: string) {
     const posts = await getPostsByLevel(levelId, limit)
+
+    let userLikedPostIds: number[] = []
+    if (userId) {
+        const postIds = posts.map((p: any) => p.id)
+        userLikedPostIds = await getUserLikes(userId, postIds)
+    }
+
+    return posts.map((p: any) => ({
+        ...p,
+        liked: userLikedPostIds.includes(p.id)
+    }))
+}
+
+export async function getPostsByListWithLikeStatus(listId: number, limit: number, userId?: string) {
+    const posts = await getPostsByList(listId, limit)
 
     let userLikedPostIds: number[] = []
     if (userId) {
