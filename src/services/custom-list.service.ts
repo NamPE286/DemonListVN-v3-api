@@ -53,6 +53,7 @@ const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const WEIGHT_FORMULA_VALIDATION_SCOPE = {
     position: 1,
     levelCount: 1,
+    top: 1,
     rating: 1,
     minProgress: 0,
     progress: 0
@@ -244,6 +245,7 @@ function normalizeWeightFormulaResult(result: unknown): number {
 function evaluateWeightFormulaExpression(value: string, scope: {
     position: number
     levelCount: number
+    top: number
     rating: number
     minProgress: number
     progress: number
@@ -284,6 +286,7 @@ function sanitizePreviewNumber(value: unknown, label: string, options?: {
 export function previewCustomListWeightFormula(formula: unknown, scope: {
     position?: unknown
     levelCount?: unknown
+    top?: unknown
     rating?: unknown
     minProgress?: unknown
     progress?: unknown
@@ -292,6 +295,7 @@ export function previewCustomListWeightFormula(formula: unknown, scope: {
     const normalizedScope = {
         position: sanitizePreviewNumber(scope.position, 'position', { integer: true, min: 1 }),
         levelCount: sanitizePreviewNumber(scope.levelCount, 'levelCount', { integer: true, min: 1 }),
+        top: sanitizePreviewNumber(scope.top, 'top', { integer: true, min: 1 }),
         rating: sanitizePreviewNumber(scope.rating, 'rating', { min: 0 }),
         minProgress: sanitizePreviewNumber(scope.minProgress, 'minProgress', { min: 0 }),
         progress: sanitizePreviewNumber(scope.progress, 'progress', { min: 0 })
@@ -671,6 +675,7 @@ function roundCustomListSnapshotValue(value: number, digits: number = 3) {
 function getCustomListRecordPoint(
     list: Awaited<ReturnType<typeof getCustomList>>,
     item: any,
+    itemIndex: number,
     position: number,
     levelCount: number,
     record: { progress?: number | null }
@@ -678,6 +683,7 @@ function getCustomListRecordPoint(
 	const recordPoint = evaluateWeightFormulaExpression(list.weightFormula || '1', {
         position,
         levelCount,
+        top: getNormalizedListPosition(item, itemIndex, list.id < 0),
         rating: Number(item.rating ?? item.level?.rating ?? 0),
         minProgress: Number(getEffectiveMinProgress(item) ?? 0),
         progress: Math.max(0, Number(record.progress) || 0)
@@ -977,7 +983,14 @@ async function calculateCustomListLeaderboardSnapshot(list: Awaited<ReturnType<t
         for (let i = 0; i < entries.length; i++) {
             const { record, itemData } = entries[i]
             const no = i + 1
-            const recordPoint = getCustomListRecordPoint(list, itemData.item, no, items.length, record)
+            const recordPoint = getCustomListRecordPoint(
+                list,
+                itemData.item,
+                itemData.index,
+                no,
+                items.length,
+                record
+            )
 
             rankedRecords.push({
                 uid,
@@ -1724,6 +1737,9 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
                 formulaScope: {
                     position: entry.no,
                     levelCount: list.items.length,
+                    top: itemData
+                        ? getNormalizedListPosition(itemData.item, itemData.index, list.id < 0)
+                        : 0,
                     rating: itemData
                         ? Number(itemData.item.rating ?? itemData.item.level?.rating ?? 0)
                         : 0,

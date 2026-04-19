@@ -174,6 +174,7 @@ router.route('/formula/preview')
             res.send(previewCustomListWeightFormula(req.body?.formula, {
                 position: parseFiniteNumber(req.body?.position, 'position'),
                 levelCount: parseFiniteNumber(req.body?.levelCount, 'levelCount'),
+                top: parseFiniteNumber(req.body?.top ?? 1, 'top'),
                 rating: parseFiniteNumber(req.body?.rating, 'rating'),
                 minProgress: parseFiniteNumber(req.body?.minProgress, 'minProgress'),
                 progress: parseFiniteNumber(req.body?.progress, 'progress')
