@@ -85,6 +85,41 @@ $$;
 ALTER FUNCTION "public"."add_event_levels_progress"("updates" "jsonb") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."assert_custom_list_level_platformer_match"("p_list_id" bigint, "p_level_id" bigint) RETURNS "void"
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+    list_is_platformer boolean;
+    level_is_platformer boolean;
+BEGIN
+    SELECT "isPlatformer"
+    INTO list_is_platformer
+    FROM public."lists"
+    WHERE "id" = "p_list_id";
+
+    IF list_is_platformer IS NULL THEN
+        RAISE EXCEPTION 'Custom list % does not exist', "p_list_id";
+    END IF;
+
+    SELECT "isPlatformer"
+    INTO level_is_platformer
+    FROM public."levels"
+    WHERE "id" = "p_level_id";
+
+    IF level_is_platformer IS NULL THEN
+        RAISE EXCEPTION 'Level % does not exist', "p_level_id";
+    END IF;
+
+    IF list_is_platformer <> level_is_platformer THEN
+        RAISE EXCEPTION 'Platformer levels can only be added to platformer lists and classic levels can only be added to classic lists';
+    END IF;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."assert_custom_list_level_platformer_match"("p_list_id" bigint, "p_level_id" bigint) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."auto_hide_reported_content"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -187,7 +222,7 @@ BEGIN
         COUNT(DISTINCT r.levelid) AS record_count
     FROM records r
     INNER JOIN levels l ON r.levelid = l.id
-    INNER JOIN levelsTags lt_map ON l.id = lt_map.level_id
+    INNER JOIN levels_tags lt_map ON l.id = lt_map.level_id
     INNER JOIN level_tags lt ON lt_map.tag_id = lt.id
     WHERE r.userid = player_uid
       AND r."isChecked" = true
@@ -1433,6 +1468,71 @@ $$;
 ALTER FUNCTION "public"."update_supporter_until"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."validate_custom_list_level_platformer_match"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+    PERFORM public."assert_custom_list_level_platformer_match"(NEW."listId", NEW."levelId");
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."validate_custom_list_level_platformer_match"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."validate_custom_list_platformer_update"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+    IF NEW."isPlatformer" IS DISTINCT FROM OLD."isPlatformer"
+        AND EXISTS (
+            SELECT 1
+            FROM public."listLevels" AS "listLevels"
+            INNER JOIN public."levels" AS "levels"
+                ON "levels"."id" = "listLevels"."levelId"
+            WHERE "listLevels"."listId" = NEW."id"
+                AND COALESCE("levels"."isPlatformer", false) <> NEW."isPlatformer"
+        ) THEN
+        RAISE EXCEPTION 'Cannot change custom list % to %, because it already contains levels of the opposite type',
+            NEW."id",
+            CASE WHEN NEW."isPlatformer" THEN 'platformer' ELSE 'classic' END;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."validate_custom_list_platformer_update"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."validate_level_platformer_custom_lists"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+    IF NEW."isPlatformer" IS DISTINCT FROM OLD."isPlatformer"
+        AND EXISTS (
+            SELECT 1
+            FROM public."listLevels" AS "listLevels"
+            INNER JOIN public."lists" AS "lists"
+                ON "lists"."id" = "listLevels"."listId"
+            WHERE "listLevels"."levelId" = NEW."id"
+                AND COALESCE("lists"."isPlatformer", false) <> NEW."isPlatformer"
+        ) THEN
+        RAISE EXCEPTION 'Cannot change level % to %, because it already belongs to custom lists of the opposite type',
+            NEW."id",
+            CASE WHEN NEW."isPlatformer" THEN 'platformer' ELSE 'classic' END;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."validate_level_platformer_custom_lists"() OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."APIKey" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "key" "text" DEFAULT "md5"(("random"())::"text") NOT NULL,
@@ -2105,6 +2205,7 @@ CREATE TABLE IF NOT EXISTS "public"."communityPosts" (
     "maxParticipants" integer,
     "participantsCount" integer DEFAULT 0 NOT NULL,
     "clanId" bigint,
+    "attachedList" "jsonb",
     CONSTRAINT "communityPosts_type_check" CHECK (("type" = ANY (ARRAY['discussion'::"text", 'media'::"text", 'guide'::"text", 'announcement'::"text", 'review'::"text", 'collab'::"text"])))
 );
 
@@ -2439,6 +2540,22 @@ CREATE TABLE IF NOT EXISTS "public"."events" (
 ALTER TABLE "public"."events" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."friendships" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "userId" "uuid" NOT NULL,
+    "friendId" "uuid" NOT NULL,
+    "createdAt" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "friendships_check" CHECK (("userId" <> "friendId"))
+);
+
+
+ALTER TABLE "public"."friendships" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."friendships" IS 'Stores friend relationships between players';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."heatmap" (
     "uid" "uuid" NOT NULL,
     "year" bigint NOT NULL,
@@ -2533,7 +2650,7 @@ CREATE TABLE IF NOT EXISTS "public"."levelSubmissions" (
 ALTER TABLE "public"."levelSubmissions" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."level_tags" (
+CREATE TABLE IF NOT EXISTS "public"."levelTags" (
     "id" integer NOT NULL,
     "name" "text" NOT NULL,
     "color" "text" DEFAULT '#6b7280'::"text" NOT NULL,
@@ -2541,7 +2658,7 @@ CREATE TABLE IF NOT EXISTS "public"."level_tags" (
 );
 
 
-ALTER TABLE "public"."level_tags" OWNER TO "postgres";
+ALTER TABLE "public"."levelTags" OWNER TO "postgres";
 
 
 CREATE SEQUENCE IF NOT EXISTS "public"."level_tags_id_seq"
@@ -2556,7 +2673,7 @@ CREATE SEQUENCE IF NOT EXISTS "public"."level_tags_id_seq"
 ALTER SEQUENCE "public"."level_tags_id_seq" OWNER TO "postgres";
 
 
-ALTER SEQUENCE "public"."level_tags_id_seq" OWNED BY "public"."level_tags"."id";
+ALTER SEQUENCE "public"."level_tags_id_seq" OWNED BY "public"."levelTags"."id";
 
 
 
@@ -2567,6 +2684,94 @@ CREATE TABLE IF NOT EXISTS "public"."levelsTags" (
 
 
 ALTER TABLE "public"."levelsTags" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."listLevels" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "listId" bigint NOT NULL,
+    "levelId" bigint NOT NULL,
+    "addedBy" "uuid" NOT NULL,
+    "rating" integer DEFAULT 5 NOT NULL,
+    "position" integer,
+    "minProgress" integer,
+    CONSTRAINT "listLevels_minProgress_check" CHECK ((("minProgress" IS NULL) OR ("minProgress" >= 0))),
+    CONSTRAINT "listLevels_rating_check" CHECK (("rating" >= 0))
+);
+
+
+ALTER TABLE "public"."listLevels" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."listLevels" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."listLevels_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."listStars" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "listId" bigint NOT NULL,
+    "uid" "uuid" NOT NULL
+);
+
+
+ALTER TABLE "public"."listStars" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."listStars" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."listStars_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."lists" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "owner" "uuid" NOT NULL,
+    "title" "text" NOT NULL,
+    "description" "text" DEFAULT ''::"text" NOT NULL,
+    "visibility" "text" DEFAULT 'private'::"text" NOT NULL,
+    "tags" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "levelCount" bigint DEFAULT '0'::bigint NOT NULL,
+    "mode" "text" DEFAULT 'rating'::"text" NOT NULL,
+    "isPlatformer" boolean DEFAULT false NOT NULL,
+    "communityEnabled" boolean DEFAULT true NOT NULL,
+    "slug" "text",
+    "isOfficial" boolean DEFAULT false NOT NULL,
+    "weightFormula" "text" DEFAULT '1'::"text" NOT NULL,
+    CONSTRAINT "lists_mode_check" CHECK (("mode" = ANY (ARRAY['rating'::"text", 'top'::"text"]))),
+    CONSTRAINT "lists_slug_check" CHECK ((("slug" IS NULL) OR (("length"("slug") >= 1) AND ("length"("slug") <= 100) AND ("slug" ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'::"text")))),
+    CONSTRAINT "lists_title_check" CHECK ((("length"("title") >= 1) AND ("length"("title") <= 100))),
+    CONSTRAINT "lists_visibility_check" CHECK (("visibility" = ANY (ARRAY['private'::"text", 'unlisted'::"text", 'public'::"text"]))),
+    CONSTRAINT "lists_weight_formula_check" CHECK ((("length"("weightFormula") >= 1) AND ("length"("weightFormula") <= 500)))
+);
+
+
+ALTER TABLE "public"."lists" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."lists" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."lists_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."mapPackLevels" (
@@ -3151,7 +3356,7 @@ ALTER TABLE ONLY "public"."communityReports" ALTER COLUMN "id" SET DEFAULT "next
 
 
 
-ALTER TABLE ONLY "public"."level_tags" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."level_tags_id_seq"'::"regclass");
+ALTER TABLE ONLY "public"."levelTags" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."level_tags_id_seq"'::"regclass");
 
 
 
@@ -3459,6 +3664,16 @@ ALTER TABLE ONLY "public"."eventRecords"
 
 
 
+ALTER TABLE ONLY "public"."friendships"
+    ADD CONSTRAINT "friendships_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."friendships"
+    ADD CONSTRAINT "friendships_user_id_friend_id_key" UNIQUE ("userId", "friendId");
+
+
+
 ALTER TABLE ONLY "public"."inventory"
     ADD CONSTRAINT "inventory_id_key" UNIQUE ("id");
 
@@ -3484,12 +3699,12 @@ ALTER TABLE ONLY "public"."levelSubmissions"
 
 
 
-ALTER TABLE ONLY "public"."level_tags"
+ALTER TABLE ONLY "public"."levelTags"
     ADD CONSTRAINT "level_tags_name_key" UNIQUE ("name");
 
 
 
-ALTER TABLE ONLY "public"."level_tags"
+ALTER TABLE ONLY "public"."levelTags"
     ADD CONSTRAINT "level_tags_pkey" PRIMARY KEY ("id");
 
 
@@ -3501,6 +3716,31 @@ ALTER TABLE ONLY "public"."levels"
 
 ALTER TABLE ONLY "public"."levelsTags"
     ADD CONSTRAINT "levels_tags_pkey" PRIMARY KEY ("level_id", "tag_id");
+
+
+
+ALTER TABLE ONLY "public"."listLevels"
+    ADD CONSTRAINT "listLevels_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."listStars"
+    ADD CONSTRAINT "listStars_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."listLevels"
+    ADD CONSTRAINT "list_levels_list_id_level_id_key" UNIQUE ("listId", "levelId");
+
+
+
+ALTER TABLE ONLY "public"."listStars"
+    ADD CONSTRAINT "list_stars_list_id_uid_key" UNIQUE ("listId", "uid");
+
+
+
+ALTER TABLE ONLY "public"."lists"
+    ADD CONSTRAINT "lists_pkey" PRIMARY KEY ("id");
 
 
 
@@ -3667,6 +3907,10 @@ CREATE INDEX "battlePassXPLogs_userID_idx" ON "public"."battlePassXPLogs" USING 
 
 
 
+CREATE INDEX "community_posts_attached_list_id_idx" ON "public"."communityPosts" USING "btree" ((("attachedList" ->> 'id'::"text")));
+
+
+
 CREATE INDEX "idx_community_comments_admin_hidden" ON "public"."communityCommentsAdmin" USING "btree" ("hidden");
 
 
@@ -3771,6 +4015,14 @@ CREATE INDEX "idx_community_reports_resolved" ON "public"."communityReports" USI
 
 
 
+CREATE INDEX "idx_friendships_friend" ON "public"."friendships" USING "btree" ("friendId");
+
+
+
+CREATE INDEX "idx_friendships_user" ON "public"."friendships" USING "btree" ("userId");
+
+
+
 CREATE INDEX "idx_levels_main_level_id" ON "public"."levels" USING "btree" ("main_level_id");
 
 
@@ -3784,6 +4036,38 @@ CREATE INDEX "idx_levels_tags_tag_id" ON "public"."levelsTags" USING "btree" ("t
 
 
 CREATE INDEX "idx_records_variant_id" ON "public"."records" USING "btree" ("variant_id");
+
+
+
+CREATE INDEX "list_levels_level_id_idx" ON "public"."listLevels" USING "btree" ("levelId");
+
+
+
+CREATE INDEX "list_levels_list_id_idx" ON "public"."listLevels" USING "btree" ("listId");
+
+
+
+CREATE INDEX "list_stars_list_id_idx" ON "public"."listStars" USING "btree" ("listId");
+
+
+
+CREATE INDEX "list_stars_uid_idx" ON "public"."listStars" USING "btree" ("uid");
+
+
+
+CREATE INDEX "lists_is_official_idx" ON "public"."lists" USING "btree" ("isOfficial", "updated_at" DESC);
+
+
+
+CREATE INDEX "lists_owner_idx" ON "public"."lists" USING "btree" ("owner");
+
+
+
+CREATE UNIQUE INDEX "lists_slug_key" ON "public"."lists" USING "btree" ("slug") WHERE ("slug" IS NOT NULL);
+
+
+
+CREATE INDEX "lists_visibility_idx" ON "public"."lists" USING "btree" ("visibility");
 
 
 
@@ -3808,6 +4092,18 @@ CREATE OR REPLACE TRIGGER "community_post_views_count_trigger" AFTER INSERT ON "
 
 
 CREATE OR REPLACE TRIGGER "trigger_refresh_wiki_tree" AFTER INSERT OR DELETE OR UPDATE OR TRUNCATE ON "public"."wiki" FOR EACH STATEMENT EXECUTE FUNCTION "public"."refresh_wiki_tree"();
+
+
+
+CREATE OR REPLACE TRIGGER "validate_custom_list_level_platformer_match" BEFORE INSERT OR UPDATE OF "listId", "levelId" ON "public"."listLevels" FOR EACH ROW EXECUTE FUNCTION "public"."validate_custom_list_level_platformer_match"();
+
+
+
+CREATE OR REPLACE TRIGGER "validate_custom_list_platformer_update" BEFORE UPDATE OF "isPlatformer" ON "public"."lists" FOR EACH ROW EXECUTE FUNCTION "public"."validate_custom_list_platformer_update"();
+
+
+
+CREATE OR REPLACE TRIGGER "validate_level_platformer_custom_lists" BEFORE UPDATE OF "isPlatformer" ON "public"."levels" FOR EACH ROW EXECUTE FUNCTION "public"."validate_level_platformer_custom_lists"();
 
 
 
@@ -4201,6 +4497,16 @@ ALTER TABLE ONLY "public"."eventRecords"
 
 
 
+ALTER TABLE ONLY "public"."friendships"
+    ADD CONSTRAINT "friendships_friend_id_fkey" FOREIGN KEY ("friendId") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."friendships"
+    ADD CONSTRAINT "friendships_user_id_fkey" FOREIGN KEY ("userId") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."inventory"
     ADD CONSTRAINT "inventory_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "public"."items"("id");
 
@@ -4242,7 +4548,37 @@ ALTER TABLE ONLY "public"."levelsTags"
 
 
 ALTER TABLE ONLY "public"."levelsTags"
-    ADD CONSTRAINT "levels_tags_tag_id_fkey" FOREIGN KEY ("tag_id") REFERENCES "public"."level_tags"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "levels_tags_tag_id_fkey" FOREIGN KEY ("tag_id") REFERENCES "public"."levelTags"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."listLevels"
+    ADD CONSTRAINT "list_levels_added_by_fkey" FOREIGN KEY ("addedBy") REFERENCES "public"."players"("uid");
+
+
+
+ALTER TABLE ONLY "public"."listLevels"
+    ADD CONSTRAINT "list_levels_level_id_fkey" FOREIGN KEY ("levelId") REFERENCES "public"."levels"("id");
+
+
+
+ALTER TABLE ONLY "public"."listLevels"
+    ADD CONSTRAINT "list_levels_list_id_fkey" FOREIGN KEY ("listId") REFERENCES "public"."lists"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."listStars"
+    ADD CONSTRAINT "list_stars_list_id_fkey" FOREIGN KEY ("listId") REFERENCES "public"."lists"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."listStars"
+    ADD CONSTRAINT "list_stars_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."lists"
+    ADD CONSTRAINT "lists_owner_fkey" FOREIGN KEY ("owner") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
 
 
 
@@ -4639,6 +4975,9 @@ ALTER TABLE "public"."eventRecords" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."events" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."friendships" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."heatmap" ENABLE ROW LEVEL SECURITY;
 
 
@@ -4660,13 +4999,22 @@ ALTER TABLE "public"."levelGDStates" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."levelSubmissions" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."level_tags" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."levelTags" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."levels" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."levelsTags" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."listLevels" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."listStars" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."lists" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."mapPackLevels" ENABLE ROW LEVEL SECURITY;
@@ -4927,6 +5275,12 @@ GRANT ALL ON FUNCTION "public"."add_event_levels_progress"("updates" "jsonb") TO
 
 
 
+GRANT ALL ON FUNCTION "public"."assert_custom_list_level_platformer_match"("p_list_id" bigint, "p_level_id" bigint) TO "anon";
+GRANT ALL ON FUNCTION "public"."assert_custom_list_level_platformer_match"("p_list_id" bigint, "p_level_id" bigint) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."assert_custom_list_level_platformer_match"("p_list_id" bigint, "p_level_id" bigint) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."auto_hide_reported_content"() TO "anon";
 GRANT ALL ON FUNCTION "public"."auto_hide_reported_content"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."auto_hide_reported_content"() TO "service_role";
@@ -5050,6 +5404,24 @@ GRANT ALL ON FUNCTION "public"."update_rank"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."update_supporter_until"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_supporter_until"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_supporter_until"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."validate_custom_list_level_platformer_match"() TO "anon";
+GRANT ALL ON FUNCTION "public"."validate_custom_list_level_platformer_match"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."validate_custom_list_level_platformer_match"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."validate_custom_list_platformer_update"() TO "anon";
+GRANT ALL ON FUNCTION "public"."validate_custom_list_platformer_update"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."validate_custom_list_platformer_update"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."validate_level_platformer_custom_lists"() TO "anon";
+GRANT ALL ON FUNCTION "public"."validate_level_platformer_custom_lists"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."validate_level_platformer_custom_lists"() TO "service_role";
 
 
 
@@ -5522,6 +5894,12 @@ GRANT ALL ON TABLE "public"."events" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."friendships" TO "anon";
+GRANT ALL ON TABLE "public"."friendships" TO "authenticated";
+GRANT ALL ON TABLE "public"."friendships" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."heatmap" TO "anon";
 GRANT ALL ON TABLE "public"."heatmap" TO "authenticated";
 GRANT ALL ON TABLE "public"."heatmap" TO "service_role";
@@ -5570,9 +5948,9 @@ GRANT ALL ON TABLE "public"."levelSubmissions" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."level_tags" TO "anon";
-GRANT ALL ON TABLE "public"."level_tags" TO "authenticated";
-GRANT ALL ON TABLE "public"."level_tags" TO "service_role";
+GRANT ALL ON TABLE "public"."levelTags" TO "anon";
+GRANT ALL ON TABLE "public"."levelTags" TO "authenticated";
+GRANT ALL ON TABLE "public"."levelTags" TO "service_role";
 
 
 
@@ -5585,6 +5963,42 @@ GRANT ALL ON SEQUENCE "public"."level_tags_id_seq" TO "service_role";
 GRANT ALL ON TABLE "public"."levelsTags" TO "anon";
 GRANT ALL ON TABLE "public"."levelsTags" TO "authenticated";
 GRANT ALL ON TABLE "public"."levelsTags" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."listLevels" TO "anon";
+GRANT ALL ON TABLE "public"."listLevels" TO "authenticated";
+GRANT ALL ON TABLE "public"."listLevels" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."listLevels_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."listLevels_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."listLevels_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."listStars" TO "anon";
+GRANT ALL ON TABLE "public"."listStars" TO "authenticated";
+GRANT ALL ON TABLE "public"."listStars" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."listStars_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."listStars_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."listStars_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."lists" TO "anon";
+GRANT ALL ON TABLE "public"."lists" TO "authenticated";
+GRANT ALL ON TABLE "public"."lists" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."lists_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."lists_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."lists_id_seq" TO "service_role";
 
 
 

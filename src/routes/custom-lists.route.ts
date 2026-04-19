@@ -13,9 +13,11 @@ import {
     getCustomListLeaderboard,
     getOwnCustomLists,
     getRandomCustomListLevel,
+    refreshCustomListLeaderboard,
     getStarredCustomLists,
     getStarredListsByLevel,
     NotFoundError,
+    previewCustomListWeightFormula,
     removeLevelFromCustomList,
     reorderListLevels,
     resolveCustomListIdentifier,
@@ -57,6 +59,16 @@ function parseId(value: string, label: string, options?: { allowZero?: boolean }
     const minimum = options?.allowZero ? 0 : 1
 
     if (!Number.isInteger(parsed) || parsed < minimum) {
+        throw new ValidationError(`Invalid ${label}`)
+    }
+
+    return parsed
+}
+
+function parseFiniteNumber(value: unknown, label: string) {
+    const parsed = typeof value === 'number' ? value : Number(value)
+
+    if (!Number.isFinite(parsed)) {
         throw new ValidationError(`Invalid ${label}`)
     }
 
@@ -155,6 +167,25 @@ router.route('/official/:id')
         }
     })
 
+router.route('/formula/preview')
+    .post(async (req, res) => {
+        try {
+            res.send(previewCustomListWeightFormula(req.body?.formula, {
+                position: parseFiniteNumber(req.body?.position, 'position'),
+                levelCount: parseFiniteNumber(req.body?.levelCount, 'levelCount'),
+                rating: parseFiniteNumber(req.body?.rating, 'rating'),
+                minProgress: parseFiniteNumber(req.body?.minProgress, 'minProgress')
+            }))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
 router.route('/:id/leaderboard')
     .get(optionalAuth, async (req, res) => {
         try {
@@ -163,6 +194,20 @@ router.route('/:id/leaderboard')
             const viewerId = res.locals.authenticated ? res.locals.user.uid : undefined
 
             res.send(await getCustomListLeaderboard(req.params.id, { start, end, viewerId }))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/leaderboard/refresh')
+    .post(userAuth, async (req, res) => {
+        try {
+            res.send(await refreshCustomListLeaderboard(req.params.id, res.locals.user.uid))
         } catch (error) {
             if (sendError(res, error)) {
                 return
@@ -196,7 +241,19 @@ router.route('/:id')
     .get(optionalAuth, async (req, res) => {
         try {
             const viewerId = res.locals.authenticated ? res.locals.user.uid : undefined
-            res.send(await getCustomList(req.params.id, viewerId))
+            const hasItemRange = req.query.start !== undefined || req.query.end !== undefined
+            const itemsStart = hasItemRange
+                ? (req.query.start ? parseId(String(req.query.start), 'start', { allowZero: true }) : 0)
+                : undefined
+            const itemsEnd = hasItemRange
+                ? (req.query.end ? parseId(String(req.query.end), 'end', { allowZero: true }) : (itemsStart ?? 0) + 49)
+                : undefined
+
+            if (itemsStart !== undefined && itemsEnd !== undefined && itemsEnd < itemsStart) {
+                throw new ValidationError('Invalid item range')
+            }
+
+            res.send(await getCustomList(req.params.id, viewerId, { itemsStart, itemsEnd }))
         } catch (error) {
             if (sendError(res, error)) {
                 return

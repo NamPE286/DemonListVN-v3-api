@@ -26,6 +26,12 @@ type CustomListInsert = TablesInsert<'lists'>
 type CustomListUpdate = TablesUpdate<'lists'>
 type CustomListLevelInsert = TablesInsert<'listLevels'>
 type CustomListStarInsert = TablesInsert<'listStars'>
+type CustomListLeaderboardRefreshRow = {
+    id: number
+    listId: number
+    totalPlayers: number
+    lastRefreshedAt: string
+}
 
 const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
@@ -48,13 +54,16 @@ const WEIGHT_FORMULA_FUNCTIONS = {
     sqrt
 }
 const WEIGHT_FORMULA_FUNCTION_KEYS = new Set(Object.keys(WEIGHT_FORMULA_FUNCTIONS))
+const OFFICIAL_DL_WEIGHT_FORMULA = 'max(0,1-abs(position-1))/3+max(0,1-abs(position-2))/5+2*max(0,1-abs(position-3))/15+10*min(1,max(0,position-3))*min(1,max(0,26-position))/(3*rating)+2*min(1,max(0,position-25))/(3*rating)'
+const OFFICIAL_CL_WEIGHT_FORMULA = 'max(0,ceil(-pow((position-42.21)/10,3)+30)/100)/12'
 const OFFICIAL_LISTS = {
     dl: {
         slug: 'dl',
         title: 'Classic List',
         description: 'Official Geometry Dash Việt Nam classic demon list.',
-        mode: 'top',
+        mode: 'rating',
         isPlatformer: false,
+        weightFormula: OFFICIAL_DL_WEIGHT_FORMULA,
         loadLevels: getDemonListLevels
     },
     pl: {
@@ -63,6 +72,7 @@ const OFFICIAL_LISTS = {
         description: 'Official Geometry Dash Việt Nam platformer list.',
         mode: 'top',
         isPlatformer: true,
+        weightFormula: '1',
         loadLevels: getPlatformerListLevels
     },
     fl: {
@@ -71,14 +81,16 @@ const OFFICIAL_LISTS = {
         description: 'Official Geometry Dash Việt Nam featured list.',
         mode: 'top',
         isPlatformer: false,
+        weightFormula: '1',
         loadLevels: getFeaturedListLevels
     },
     cl: {
         slug: 'cl',
         title: 'Challenge List',
         description: 'Official Geometry Dash Việt Nam challenge list.',
-        mode: 'top',
+        mode: 'rating',
         isPlatformer: false,
+        weightFormula: OFFICIAL_CL_WEIGHT_FORMULA,
         loadLevels: getChallengeListLevels
     }
 } as const
@@ -89,6 +101,23 @@ type OfficialListSlug = keyof typeof OFFICIAL_LISTS
 
 function isOfficialListSlug(value: string): value is OfficialListSlug {
     return value in OFFICIAL_LISTS
+}
+
+async function getLatestCustomListLeaderboardRefresh(listId: number) {
+    const { data, error } = await (supabase as any)
+        .from('listLeaderboardRefreshes')
+        .select('id, listId, totalPlayers, lastRefreshedAt')
+        .eq('listId', listId)
+        .order('lastRefreshedAt', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return (data || null) as CustomListLeaderboardRefreshRow | null
 }
 
 export class ValidationError extends Error {
@@ -182,6 +211,48 @@ function evaluateWeightFormulaExpression(value: string, scope: {
     }
 
     return result
+}
+
+function sanitizePreviewNumber(value: unknown, label: string, options?: {
+    integer?: boolean
+    min?: number
+}) {
+    const parsed = typeof value === 'number' ? value : Number(value)
+
+    if (!Number.isFinite(parsed)) {
+        throw new ValidationError(`${label} must be a finite number`)
+    }
+
+    if (options?.integer && !Number.isInteger(parsed)) {
+        throw new ValidationError(`${label} must be an integer`)
+    }
+
+    if (options?.min !== undefined && parsed < options.min) {
+        throw new ValidationError(`${label} must be at least ${options.min}`)
+    }
+
+    return parsed
+}
+
+export function previewCustomListWeightFormula(formula: unknown, scope: {
+    position?: unknown
+    levelCount?: unknown
+    rating?: unknown
+    minProgress?: unknown
+}) {
+    const normalizedFormula = sanitizeWeightFormula(formula)
+    const normalizedScope = {
+        position: sanitizePreviewNumber(scope.position, 'position', { integer: true, min: 1 }),
+        levelCount: sanitizePreviewNumber(scope.levelCount, 'levelCount', { integer: true, min: 1 }),
+        rating: sanitizePreviewNumber(scope.rating, 'rating', { min: 0 }),
+        minProgress: sanitizePreviewNumber(scope.minProgress, 'minProgress', { min: 0 })
+    }
+
+    return {
+        formula: normalizedFormula,
+        input: normalizedScope,
+        output: evaluateWeightFormulaExpression(normalizedFormula, normalizedScope)
+    }
 }
 
 async function ensureUniqueListSlug(slug: string, excludeListId?: number) {
@@ -495,6 +566,31 @@ function getItemIsPlatformer(item: any, fallbackIsPlatformer: boolean) {
     return Boolean(item.level?.isPlatformer ?? fallbackIsPlatformer)
 }
 
+function isBetterRecordForListItem(candidate: { progress?: number | null } | null | undefined, existing: { progress?: number | null } | null | undefined, item: any, isPlatformer: boolean) {
+    if (!candidate) {
+        return false
+    }
+
+    if (!existing) {
+        return true
+    }
+
+    const candidateProgress = Number(candidate.progress)
+    const existingProgress = Number(existing.progress)
+
+    if (!Number.isFinite(candidateProgress)) {
+        return false
+    }
+
+    if (!Number.isFinite(existingProgress)) {
+        return true
+    }
+
+    return getItemIsPlatformer(item, isPlatformer)
+        ? candidateProgress < existingProgress
+        : candidateProgress > existingProgress
+}
+
 function isEligibleRecordForListItem(record: { progress?: number | null } | null | undefined, item: any, isPlatformer: boolean) {
     if (!record) {
         return false
@@ -542,6 +638,7 @@ async function enrichItemsWithViewerEligibleRecords(items: any[], list: { isPlat
     }
 
     const levelIds = [...new Set(items.map((item) => item.levelId))]
+    const itemsByLevelId = new Map(items.map((item) => [item.levelId, item]))
 
     if (!levelIds.length) {
         return items
@@ -557,7 +654,21 @@ async function enrichItemsWithViewerEligibleRecords(items: any[], list: { isPlat
         throw new Error(error.message)
     }
 
-    const recordsByLevelId = new Map((data || []).map((record) => [record.levelid, record]))
+    const recordsByLevelId = new Map<number, any>()
+
+    for (const record of data || []) {
+        const item = itemsByLevelId.get(record.levelid)
+
+        if (!item) {
+            continue
+        }
+
+        const existingRecord = recordsByLevelId.get(record.levelid)
+
+        if (isBetterRecordForListItem(record, existingRecord, item, list.isPlatformer)) {
+            recordsByLevelId.set(record.levelid, record)
+        }
+    }
 
     return items.map((item) => {
         const record = recordsByLevelId.get(item.levelId)
@@ -582,9 +693,21 @@ async function enrichItemsWithViewerEligibleRecords(items: any[], list: { isPlat
     })
 }
 
-async function getOfficialList(slug: OfficialListSlug, viewerId?: string) {
+async function getOfficialList(slug: OfficialListSlug, viewerId?: string, itemRange?: {
+    start?: number
+    end?: number
+}) {
     const config = OFFICIAL_LISTS[slug]
-    const levels = await config.loadLevels({ start: 0, end: 4999, uid: viewerId || '' })
+    const hasItemRange = itemRange?.start !== undefined && itemRange?.end !== undefined
+    const rangeStart = hasItemRange ? (itemRange.start ?? 0) : 0
+    const rangeEnd = hasItemRange ? (itemRange.end ?? 4999) : 4999
+    const [levels, totalLevels] = hasItemRange
+        ? await Promise.all([
+            config.loadLevels({ start: rangeStart, end: rangeEnd, uid: viewerId || '' }),
+            config.loadLevels({ start: 0, end: 4999, uid: '' }).then((entries) => entries.length)
+        ])
+        : [await config.loadLevels({ start: 0, end: 4999, uid: viewerId || '' }), undefined]
+    const levelCount = totalLevels ?? levels.length
 
     const list = {
         id: -1,
@@ -594,12 +717,13 @@ async function getOfficialList(slug: OfficialListSlug, viewerId?: string) {
         description: config.description,
         visibility: 'public',
         tags: ['official'],
-        levelCount: levels.length,
+        levelCount,
         isPlatformer: config.isPlatformer,
         isOfficial: true,
         communityEnabled: false,
         mode: config.mode,
-        weightFormula: '1',
+        weightFormula: config.weightFormula,
+        lastRefreshedAt: null,
         updated_at: new Date().toISOString(),
         starCount: 0,
         starred: false,
@@ -610,7 +734,7 @@ async function getOfficialList(slug: OfficialListSlug, viewerId?: string) {
             levelId: level.id,
             addedBy: '',
             rating: level.rating ?? 1,
-            position: level.flTop ?? level.dlTop ?? index,
+            position: level.flTop ?? level.dlTop ?? (rangeStart + index),
             minProgress: level.minProgress ?? null,
             level
         }))
@@ -639,10 +763,143 @@ async function getOfficialListSummary(slug: OfficialListSlug) {
         communityEnabled: list.communityEnabled,
         mode: list.mode,
         weightFormula: list.weightFormula,
+        lastRefreshedAt: list.lastRefreshedAt,
         updated_at: list.updated_at,
         starCount: 0,
         starred: false
     }
+}
+
+async function calculateCustomListLeaderboardRankings(list: Awaited<ReturnType<typeof getCustomList>>) {
+    const items = list.items || []
+
+    if (!items.length) {
+        return []
+    }
+
+    const levelIds = [...new Set(items.map((item: any) => item.levelId))]
+    const itemByLevelId = new Map(items.map((item: any, index: number) => [item.levelId, { item, index }]))
+
+    const { data, error } = await supabase
+        .from('records')
+        .select(`userid, levelid, progress, isChecked, timestamp, players!userid!inner(${playerSelect})`)
+        .eq('isChecked', true)
+        .eq('players.isHidden', false)
+        .in('levelid', levelIds)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    const playerScores = new Map<string, {
+        player: any
+        score: number
+        completedCount: number
+        contributions: Map<number, number>
+    }>()
+
+    for (const record of (data || []) as any[]) {
+        const itemData = itemByLevelId.get(record.levelid)
+
+        if (!itemData) {
+            continue
+        }
+
+        if (!isEligibleRecordForListItem(record, itemData.item, list.isPlatformer)) {
+            continue
+        }
+
+        const contribution = getListRecordBaseScore(list, itemData.item, record)
+            * evaluateWeightFormulaExpression(list.weightFormula || '1', {
+                position: getNormalizedListPosition(itemData.item, itemData.index, list.id < 0),
+                levelCount: items.length,
+                rating: Number(itemData.item.rating ?? itemData.item.level?.rating ?? 0),
+                minProgress: Number(getEffectiveMinProgress(itemData.item) ?? 0)
+            })
+
+        const existingPlayer = playerScores.get(record.userid)
+
+        if (!existingPlayer) {
+            playerScores.set(record.userid, {
+                player: record.players,
+                score: contribution,
+                completedCount: 1,
+                contributions: new Map([[record.levelid, contribution]])
+            })
+            continue
+        }
+
+        const previousContribution = existingPlayer.contributions.get(record.levelid)
+
+        if (previousContribution == null) {
+            existingPlayer.completedCount += 1
+            existingPlayer.score += contribution
+            existingPlayer.contributions.set(record.levelid, contribution)
+            continue
+        }
+
+        if (contribution <= previousContribution) {
+            continue
+        }
+
+        existingPlayer.score += contribution - previousContribution
+        existingPlayer.contributions.set(record.levelid, contribution)
+    }
+
+    return [...playerScores.values()]
+        .sort((left, right) => {
+            if (right.score !== left.score) {
+                return right.score - left.score
+            }
+
+            if (right.completedCount !== left.completedCount) {
+                return right.completedCount - left.completedCount
+            }
+
+            return String(left.player?.name || '').localeCompare(String(right.player?.name || ''))
+        })
+        .map((entry, index) => ({
+            ...entry.player,
+            rank: index + 1,
+            score: Math.round(entry.score * 1000) / 1000,
+            completedCount: entry.completedCount
+        }))
+}
+
+async function persistCustomListLeaderboard(listId: number, ranked: Array<{ uid: string; rank: number; score: number; completedCount: number }>) {
+    const lastRefreshedAt = new Date().toISOString()
+
+    const { data: refreshRow, error: refreshError } = await (supabase as any)
+        .from('listLeaderboardRefreshes')
+        .insert({
+            listId,
+            totalPlayers: ranked.length,
+            lastRefreshedAt
+        })
+        .select('id, listId, totalPlayers, lastRefreshedAt')
+        .single()
+
+    if (refreshError || !refreshRow) {
+        throw new Error(refreshError?.message || 'Failed to persist leaderboard refresh')
+    }
+
+    if (ranked.length) {
+        const { error: entriesError } = await (supabase as any)
+            .from('listLeaderboardEntries')
+            .insert(ranked.map((entry) => ({
+                refreshId: refreshRow.id,
+                uid: entry.uid,
+                rank: entry.rank,
+                score: entry.score,
+                completedCount: entry.completedCount
+            })))
+
+        if (entriesError) {
+            throw new Error(entriesError.message)
+        }
+    }
+
+    return refreshRow as CustomListLeaderboardRefreshRow
 }
 
 export async function resolveCustomListIdentifier(identifier: CustomListIdentifier) {
@@ -666,10 +923,6 @@ export async function resolveCustomListIdentifier(identifier: CustomListIdentifi
 }
 
 function assertOwner(list: CustomList, userId: string) {
-    if (list.isOfficial) {
-        throw new ForbiddenError('Official lists can only be managed by admins')
-    }
-
     if (list.owner !== userId) {
         throw new ForbiddenError('You do not own this list')
     }
@@ -846,14 +1099,23 @@ async function ensureLevelExists(levelId: number) {
     }
 }
 
-async function getCustomListItems(listId: number, mode: string = 'rating') {
+async function getCustomListItems(listId: number, mode: string = 'rating', itemRange?: {
+    start?: number
+    end?: number
+}) {
     const isTop = mode === 'top'
 
-    const { data: items, error: itemsError } = await supabase
+    let itemsQuery = supabase
         .from('listLevels')
         .select('id, created_at, listId, levelId, addedBy, rating, position, minProgress')
         .eq('listId', listId)
         .order(isTop ? 'position' : 'rating', { ascending: isTop, nullsFirst: false })
+
+    if (itemRange?.start !== undefined && itemRange?.end !== undefined) {
+        itemsQuery = itemsQuery.range(itemRange.start, itemRange.end)
+    }
+
+    const { data: items, error: itemsError } = await itemsQuery
 
     if (itemsError) {
         throw new Error(itemsError.message)
@@ -992,23 +1254,35 @@ export async function browseLists(options: {
     }
 }
 
-export async function getCustomList(listId: CustomListIdentifier, viewerId?: string) {
+export async function getCustomList(listId: CustomListIdentifier, viewerId?: string, options: {
+    itemsStart?: number
+    itemsEnd?: number
+} = {}) {
+    const itemRange = options.itemsStart !== undefined && options.itemsEnd !== undefined
+        ? {
+            start: options.itemsStart,
+            end: options.itemsEnd
+        }
+        : undefined
+
     try {
         const resolved = await resolveCustomListIdentifier(listId)
         const list = await getListWithOwnerData(resolved.id)
         assertReadable(list, viewerId)
 
         const items = await enrichItemsWithViewerEligibleRecords(
-            await getCustomListItems(list.id, list.mode),
+            await getCustomListItems(list.id, list.mode, itemRange),
             list,
             viewerId
         )
         const [{ starCount = 0, starred = false } = { starCount: 0, starred: false }] = await enrichListsWithStars([list], viewerId)
+        const latestRefresh = await getLatestCustomListLeaderboardRefresh(list.id)
 
         return {
             ...list,
             starCount,
             starred,
+            lastRefreshedAt: latestRefresh?.lastRefreshedAt ?? null,
             items
         }
     } catch (error) {
@@ -1016,7 +1290,7 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: str
             const normalizedIdentifier = listId.trim().toLowerCase()
 
             if (isOfficialListSlug(normalizedIdentifier)) {
-                return getOfficialList(normalizedIdentifier, viewerId)
+                return getOfficialList(normalizedIdentifier, viewerId, itemRange)
             }
         }
 
@@ -1036,103 +1310,100 @@ export async function getCustomListLeaderboard(identifier: CustomListIdentifier,
     } = options
 
     const list = await getCustomList(identifier, viewerId)
-    const items = list.items || []
 
-    if (!items.length) {
+    if (list.id <= 0) {
         return {
             list,
             data: [],
-            total: 0
+            total: 0,
+            lastRefreshedAt: null
         }
     }
 
-    const levelIds = [...new Set(items.map((item: any) => item.levelId))]
-    const itemByLevelId = new Map(items.map((item: any, index: number) => [item.levelId, { item, index }]))
+    const latestRefresh = await getLatestCustomListLeaderboardRefresh(list.id)
 
-    const { data, error } = await supabase
-        .from('records')
-        .select(`userid, levelid, progress, isChecked, timestamp, players!userid!inner(${playerSelect})`)
-        .eq('isChecked', true)
-        .eq('players.isHidden', false)
-        .in('levelid', levelIds)
-
-    if (error) {
-        throw new Error(error.message)
+    if (!latestRefresh) {
+        return {
+            list,
+            data: [],
+            total: 0,
+            lastRefreshedAt: null
+        }
     }
 
-    const playerScores = new Map<string, {
-        player: any
+    const { data: entryRows, error: entriesError } = await (supabase as any)
+        .from('listLeaderboardEntries')
+        .select('uid, rank, score, completedCount')
+        .eq('refreshId', latestRefresh.id)
+        .order('rank', { ascending: true })
+        .range(start, end)
+
+    if (entriesError) {
+        throw new Error(entriesError.message)
+    }
+
+    const entries = (entryRows || []) as Array<{
+        uid: string
+        rank: number
         score: number
         completedCount: number
-        contributions: Map<number, number>
-    }>()
+    }>
+    const uids = [...new Set(entries.map((entry) => entry.uid))]
+    const playersByUid = new Map<string, any>()
 
-    for (const record of (data || []) as any[]) {
-        const itemData = itemByLevelId.get(record.levelid)
+    if (uids.length) {
+        const { data: players, error: playersError } = await supabase
+            .from('players')
+            .select(`${playerSelect}`)
+            .in('uid', uids)
 
-        if (!itemData) {
-            continue
+        if (playersError) {
+            throw new Error(playersError.message)
         }
 
-        if (!isEligibleRecordForListItem(record, itemData.item, list.isPlatformer)) {
-            continue
+        for (const player of players || []) {
+            playersByUid.set(player.uid, player)
         }
-
-        const contribution = getListRecordBaseScore(list, itemData.item, record)
-            * evaluateWeightFormulaExpression(list.weightFormula || '1', {
-                position: getNormalizedListPosition(itemData.item, itemData.index, list.id < 0),
-                levelCount: items.length,
-                rating: Number(itemData.item.rating ?? itemData.item.level?.rating ?? 0),
-                minProgress: Number(getEffectiveMinProgress(itemData.item) ?? 0)
-            })
-
-        const existingPlayer = playerScores.get(record.userid)
-
-        if (!existingPlayer) {
-            playerScores.set(record.userid, {
-                player: record.players,
-                score: contribution,
-                completedCount: 1,
-                contributions: new Map([[record.levelid, contribution]])
-            })
-            continue
-        }
-
-        const previousContribution = existingPlayer.contributions.get(record.levelid)
-
-        if (previousContribution != null) {
-            existingPlayer.score -= previousContribution
-        } else {
-            existingPlayer.completedCount += 1
-        }
-
-        existingPlayer.score += contribution
-        existingPlayer.contributions.set(record.levelid, contribution)
     }
 
-    const ranked = [...playerScores.values()]
-        .sort((left, right) => {
-            if (right.score !== left.score) {
-                return right.score - left.score
+    const persistedLeaderboard = entries
+        .map((entry) => {
+            const player = playersByUid.get(entry.uid)
+
+            if (!player) {
+                return null
             }
 
-            if (right.completedCount !== left.completedCount) {
-                return right.completedCount - left.completedCount
+            return {
+                ...player,
+                rank: entry.rank,
+                score: entry.score,
+                completedCount: entry.completedCount
             }
-
-            return String(left.player?.name || '').localeCompare(String(right.player?.name || ''))
         })
-        .map((entry, index) => ({
-            ...entry.player,
-            rank: index + 1,
-            score: Math.round(entry.score * 1000) / 1000,
-            completedCount: entry.completedCount
-        }))
+        .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
 
     return {
         list,
-        data: ranked.slice(start, end + 1),
-        total: ranked.length
+        data: persistedLeaderboard,
+        total: latestRefresh.totalPlayers,
+        lastRefreshedAt: latestRefresh.lastRefreshedAt
+    }
+}
+
+export async function refreshCustomListLeaderboard(identifier: CustomListIdentifier, ownerId: string) {
+    const resolved = await resolveCustomListIdentifier(identifier)
+    const list = await getCustomListRow(resolved.id)
+    assertOwner(list, ownerId)
+
+    const hydratedList = await getCustomList(list.id, ownerId)
+    const ranked = await calculateCustomListLeaderboardRankings(hydratedList)
+    const refreshRow = await persistCustomListLeaderboard(list.id, ranked as Array<{ uid: string; rank: number; score: number; completedCount: number }>)
+
+    return {
+        listId: list.id,
+        total: refreshRow.totalPlayers,
+        lastRefreshedAt: refreshRow.lastRefreshedAt
     }
 }
 
@@ -1438,6 +1709,10 @@ export async function updateCustomListOfficialMetadata(listId: number, payload: 
 export async function deleteCustomList(listId: number, ownerId: string) {
     const existing = await getCustomListRow(listId)
     assertOwner(existing, ownerId)
+
+    if (existing.isOfficial) {
+        throw new ForbiddenError('Official lists cannot be deleted')
+    }
 
     const { error } = await supabase
         .from('lists')
