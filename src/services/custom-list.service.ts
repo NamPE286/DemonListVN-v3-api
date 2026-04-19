@@ -55,6 +55,8 @@ const WEIGHT_FORMULA_VALIDATION_SCOPE = {
     levelCount: 1,
     top: 1,
     rating: 1,
+    time: 0,
+    baseTime: 0,
     minProgress: 0,
     progress: 0
 }
@@ -247,6 +249,8 @@ function evaluateWeightFormulaExpression(value: string, scope: {
     levelCount: number
     top: number
     rating: number
+    time: number
+    baseTime: number
     minProgress: number
     progress: number
 }) {
@@ -288,17 +292,23 @@ export function previewCustomListWeightFormula(formula: unknown, scope: {
     levelCount?: unknown
     top?: unknown
     rating?: unknown
+    time?: unknown
+    baseTime?: unknown
     minProgress?: unknown
     progress?: unknown
 }) {
     const normalizedFormula = sanitizeWeightFormula(formula)
+    const normalizedTime = sanitizePreviewNumber(scope.time ?? scope.progress, 'time', { min: 0 })
+    const normalizedBaseTime = sanitizePreviewNumber(scope.baseTime ?? scope.minProgress, 'baseTime', { min: 0 })
     const normalizedScope = {
         position: sanitizePreviewNumber(scope.position, 'position', { integer: true, min: 1 }),
         levelCount: sanitizePreviewNumber(scope.levelCount, 'levelCount', { integer: true, min: 1 }),
         top: sanitizePreviewNumber(scope.top, 'top', { integer: true, min: 1 }),
         rating: sanitizePreviewNumber(scope.rating, 'rating', { min: 0 }),
-        minProgress: sanitizePreviewNumber(scope.minProgress, 'minProgress', { min: 0 }),
-        progress: sanitizePreviewNumber(scope.progress, 'progress', { min: 0 })
+        time: normalizedTime,
+        baseTime: normalizedBaseTime,
+        minProgress: normalizedBaseTime,
+        progress: normalizedTime
     }
 
     return {
@@ -680,13 +690,17 @@ function getCustomListRecordPoint(
     levelCount: number,
     record: { progress?: number | null }
 ) {
+	const progress = Math.max(0, Number(record.progress) || 0)
+	const minProgress = Number(getEffectiveMinProgress(item) ?? 0)
 	const recordPoint = evaluateWeightFormulaExpression(list.weightFormula || '1', {
         position,
         levelCount,
         top: getNormalizedListPosition(item, itemIndex, list.id < 0),
         rating: Number(item.rating ?? item.level?.rating ?? 0),
-        minProgress: Number(getEffectiveMinProgress(item) ?? 0),
-        progress: Math.max(0, Number(record.progress) || 0)
+		time: progress,
+		baseTime: minProgress,
+        minProgress,
+        progress
     })
 
 	return roundCustomListSnapshotValue(recordPoint)

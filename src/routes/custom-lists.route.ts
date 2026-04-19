@@ -176,8 +176,10 @@ router.route('/formula/preview')
                 levelCount: parseFiniteNumber(req.body?.levelCount, 'levelCount'),
                 top: parseFiniteNumber(req.body?.top ?? 1, 'top'),
                 rating: parseFiniteNumber(req.body?.rating, 'rating'),
-                minProgress: parseFiniteNumber(req.body?.minProgress, 'minProgress'),
-                progress: parseFiniteNumber(req.body?.progress, 'progress')
+                time: parseFiniteNumber(req.body?.time ?? req.body?.progress, 'time'),
+                baseTime: parseFiniteNumber(req.body?.baseTime ?? req.body?.minProgress, 'baseTime'),
+                minProgress: parseFiniteNumber(req.body?.minProgress ?? req.body?.baseTime, 'minProgress'),
+                progress: parseFiniteNumber(req.body?.progress ?? req.body?.time, 'progress')
             }))
         } catch (error) {
             if (sendError(res, error)) {
