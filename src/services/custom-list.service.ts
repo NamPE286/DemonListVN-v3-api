@@ -58,6 +58,8 @@ const WEIGHT_FORMULA_VALIDATION_SCOPE = {
     progress: 0
 }
 const OFFICIAL_LIST_SLUGS = ['dl', 'pl', 'fl', 'cl'] as const
+const CUSTOM_LIST_LEADERBOARD_RECORD_PAGE_SIZE = 1000
+const CUSTOM_LIST_LEADERBOARD_PLAYER_BATCH_SIZE = 500
 
 export type CustomListIdentifier = number | string
 
@@ -822,6 +824,72 @@ async function getOfficialListSummary(slug: OfficialListSlug) {
     }
 }
 
+async function fetchCustomListLeaderboardSourceRecords(levelIds: number[]) {
+    if (!levelIds.length) {
+        return [] as any[]
+    }
+
+    const rows: any[] = []
+
+    // Supabase caps uncapped select queries at 1000 rows, so page until the filtered result set is exhausted.
+    for (let start = 0; ; start += CUSTOM_LIST_LEADERBOARD_RECORD_PAGE_SIZE) {
+        const end = start + CUSTOM_LIST_LEADERBOARD_RECORD_PAGE_SIZE - 1
+        const { data, error } = await supabase
+            .from('records')
+            .select('userid, levelid, progress, timestamp, players!userid!inner(uid)')
+            .eq('isChecked', true)
+            .eq('players.isHidden', false)
+            .in('levelid', levelIds)
+            .order('userid', { ascending: true })
+            .order('levelid', { ascending: true })
+            .range(start, end)
+
+        if (error) {
+            throw new Error(error.message)
+        }
+
+        if (!data?.length) {
+            break
+        }
+
+        rows.push(...data)
+
+        if (data.length < CUSTOM_LIST_LEADERBOARD_RECORD_PAGE_SIZE) {
+            break
+        }
+    }
+
+    return rows
+}
+
+async function fetchCustomListLeaderboardPlayers(uids: string[]) {
+    const playersByUid = new Map<string, any>()
+
+    for (let start = 0; start < uids.length; start += CUSTOM_LIST_LEADERBOARD_PLAYER_BATCH_SIZE) {
+        const uidBatch = uids.slice(start, start + CUSTOM_LIST_LEADERBOARD_PLAYER_BATCH_SIZE)
+
+        if (!uidBatch.length) {
+            continue
+        }
+
+        const { data, error } = await supabase
+            .from('players')
+            .select(playerSelect)
+            .eq('isHidden', false)
+            .in('uid', uidBatch)
+
+        if (error) {
+            throw new Error(error.message)
+        }
+
+        for (const player of data || []) {
+            playersByUid.set(player.uid, player)
+        }
+    }
+
+    return playersByUid
+}
+
 async function calculateCustomListLeaderboardSnapshot(list: Awaited<ReturnType<typeof getCustomList>>) {
     const items = list.items || []
 
@@ -836,16 +904,7 @@ async function calculateCustomListLeaderboardSnapshot(list: Awaited<ReturnType<t
     const itemByLevelId = new Map(items.map((item: any, index: number) => [item.levelId, { item, index }]))
     const isTop = list.mode === 'top'
 
-    const { data, error } = await supabase
-        .from('records')
-        .select(`userid, levelid, progress, isChecked, timestamp, players!userid!inner(${playerSelect})`)
-        .eq('isChecked', true)
-        .eq('players.isHidden', false)
-        .in('levelid', levelIds)
-
-    if (error) {
-        throw new Error(error.message)
-    }
+    const data = await fetchCustomListLeaderboardSourceRecords(levelIds)
 
     // Step 1: Collect best record per (uid, levelId)
     const bestRecords = new Map<string, { record: any; itemData: { item: any; index: number } }>()
@@ -892,7 +951,15 @@ async function calculateCustomListLeaderboardSnapshot(list: Awaited<ReturnType<t
     }>()
     const rankedRecords: CustomListLeaderboardRecordEntry[] = []
 
+    const playersByUid = await fetchCustomListLeaderboardPlayers([...recordsByUid.keys()])
+
     for (const [uid, entries] of recordsByUid) {
+        const player = playersByUid.get(uid)
+
+        if (!player) {
+            continue
+        }
+
         entries.sort((a, b) => {
             if (isTop) {
                 const aPos = getNormalizedListPosition(a.itemData.item, a.itemData.index, list.id < 0)
@@ -906,7 +973,6 @@ async function calculateCustomListLeaderboardSnapshot(list: Awaited<ReturnType<t
         })
 
         let totalScore = 0
-        let player: any = null
 
         for (let i = 0; i < entries.length; i++) {
             const { record, itemData } = entries[i]
@@ -921,10 +987,6 @@ async function calculateCustomListLeaderboardSnapshot(list: Awaited<ReturnType<t
             })
 
             totalScore += recordPoint
-
-            if (!player) {
-                player = record.players
-            }
         }
 
         playerScores.set(uid, {
