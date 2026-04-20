@@ -41,6 +41,12 @@ type CustomListLeaderboardRecordEntry = {
     no: number
 }
 
+type CustomListActor = string | {
+    uid: string
+    isAdmin?: boolean | null
+    isManager?: boolean | null
+} | undefined
+
 const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
 type CustomListWithOwnerData = CustomList & {
@@ -476,6 +482,14 @@ function sanitizeOfficial(value: unknown) {
 
     if (typeof value !== 'boolean') {
         throw new ValidationError('isOfficial must be a boolean')
+    }
+
+    return value
+}
+
+function sanitizeListBanState(value: unknown) {
+    if (typeof value !== 'boolean') {
+        throw new ValidationError('isBanned must be a boolean')
     }
 
     return value
@@ -1179,14 +1193,50 @@ export async function resolveCustomListIdentifier(identifier: CustomListIdentifi
     return getCustomListBySlug(sanitizeSlug(trimmed) as string)
 }
 
-function assertOwner(list: CustomList, userId: string) {
-    if (list.owner !== userId) {
+function getActorUid(actor: CustomListActor) {
+    return typeof actor === 'string' ? actor : actor?.uid
+}
+
+function canModerateList(actor: CustomListActor) {
+    return Boolean(actor && typeof actor !== 'string' && (actor.isAdmin || actor.isManager))
+}
+
+function isListOwner(list: Pick<CustomList, 'owner'>, actor: CustomListActor) {
+    const actorUid = getActorUid(actor)
+
+    return Boolean(actorUid && list.owner === actorUid)
+}
+
+function getRequiredActorUid(actor: CustomListActor) {
+    const actorUid = getActorUid(actor)
+
+    if (!actorUid) {
+        throw new ForbiddenError('Authentication required')
+    }
+
+    return actorUid
+}
+
+function assertOwnerEditable(list: CustomList, actor: CustomListActor) {
+    if (!isListOwner(list, actor)) {
         throw new ForbiddenError('You do not own this list')
+    }
+
+    if (list.isBanned) {
+        throw new ForbiddenError('This list has been banned and cannot be edited by the owner')
     }
 }
 
-function assertReadable(list: CustomList, viewerId?: string) {
-    if (list.visibility === 'private' && list.owner !== viewerId) {
+function assertCanEditList(list: CustomList, actor: CustomListActor) {
+    if (canModerateList(actor)) {
+        return
+    }
+
+    assertOwnerEditable(list, actor)
+}
+
+function assertReadable(list: CustomList, actor?: CustomListActor) {
+    if (list.visibility === 'private' && !isListOwner(list, actor) && !canModerateList(actor)) {
         throw new ForbiddenError('This list is private')
     }
 }
@@ -1510,10 +1560,11 @@ export async function browseLists(options: {
     }
 }
 
-export async function getCustomList(listId: CustomListIdentifier, viewerId?: string, options: {
+export async function getCustomList(listId: CustomListIdentifier, viewerId?: CustomListActor, options: {
     itemsStart?: number
     itemsEnd?: number
 } = {}) {
+    const actorUid = getActorUid(viewerId)
     const itemRange = options.itemsStart !== undefined && options.itemsEnd !== undefined
         ? {
             start: options.itemsStart,
@@ -1529,9 +1580,9 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: str
         const items = await enrichItemsWithViewerEligibleRecords(
             await getCustomListItems(list.id, list.mode, itemRange),
             list,
-            viewerId
+            actorUid
         )
-        const [{ starCount = 0, starred = false } = { starCount: 0, starred: false }] = await enrichListsWithStars([list], viewerId)
+        const [{ starCount = 0, starred = false } = { starCount: 0, starred: false }] = await enrichListsWithStars([list], actorUid)
         const latestRefresh = await getLatestCustomListLeaderboardRefresh(list.id)
 
         return {
@@ -1546,7 +1597,7 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: str
             const normalizedIdentifier = listId.trim().toLowerCase()
 
             if (isOfficialListSlug(normalizedIdentifier)) {
-                return getOfficialList(normalizedIdentifier, viewerId, itemRange)
+                return getOfficialList(normalizedIdentifier, actorUid, itemRange)
             }
         }
 
@@ -1557,7 +1608,7 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: str
 export async function getCustomListLeaderboard(identifier: CustomListIdentifier, options: {
     start?: number
     end?: number
-    viewerId?: string
+    viewerId?: CustomListActor
 } = {}) {
     const {
         start = 0,
@@ -1650,7 +1701,7 @@ export async function getCustomListLeaderboard(identifier: CustomListIdentifier,
 export async function getCustomListRecordPoints(identifier: CustomListIdentifier, options: {
     start?: number
     end?: number
-    viewerId?: string
+    viewerId?: CustomListActor
     uid?: string
 } = {}) {
     const {
@@ -1794,12 +1845,12 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
     }
 }
 
-export async function refreshCustomListLeaderboard(identifier: CustomListIdentifier, ownerId: string) {
+export async function refreshCustomListLeaderboard(identifier: CustomListIdentifier, actor: CustomListActor) {
     const resolved = await resolveCustomListIdentifier(identifier)
     const list = await getCustomListRow(resolved.id)
-    assertOwner(list, ownerId)
+    assertCanEditList(list, actor)
 
-    const hydratedList = await getCustomList(list.id, ownerId)
+    const hydratedList = await getCustomList(list.id, actor)
     const { rankedPlayers, rankedRecords } = await calculateCustomListLeaderboardSnapshot(hydratedList)
     const refreshRow = await persistCustomListLeaderboard(list.id, rankedPlayers, rankedRecords)
 
@@ -1813,7 +1864,7 @@ export async function refreshCustomListLeaderboard(identifier: CustomListIdentif
 
 export async function getRandomCustomListLevel(identifier: CustomListIdentifier, options: {
     excludeLevelIds?: number[]
-    viewerId?: string
+    viewerId?: CustomListActor
 } = {}) {
     const {
         excludeLevelIds = [],
@@ -1991,7 +2042,7 @@ export async function createCustomList(ownerId: string, payload: {
     }
 }
 
-export async function updateCustomList(listId: number, ownerId: string, payload: {
+export async function updateCustomList(listId: number, ownerId: CustomListActor, payload: {
     title?: unknown
     description?: unknown
     visibility?: unknown
@@ -2003,7 +2054,7 @@ export async function updateCustomList(listId: number, ownerId: string, payload:
     weightFormula?: unknown
 }) {
     const existing = await getCustomListRow(listId)
-    assertOwner(existing, ownerId)
+    assertCanEditList(existing, ownerId)
 
     const updates: CustomListUpdate = {
         updated_at: new Date().toISOString()
@@ -2018,7 +2069,13 @@ export async function updateCustomList(listId: number, ownerId: string, payload:
     }
 
     if (payload.visibility !== undefined) {
-        updates.visibility = sanitizeVisibility(payload.visibility)
+        const visibility = sanitizeVisibility(payload.visibility)
+
+        if (existing.isBanned && visibility !== 'private') {
+            throw new ValidationError('Banned lists must remain private')
+        }
+
+        updates.visibility = visibility
     }
 
     if (payload.tags !== undefined) {
@@ -2069,6 +2126,39 @@ export async function updateCustomList(listId: number, ownerId: string, payload:
     return getCustomList(listId, ownerId)
 }
 
+export async function setCustomListBanState(listId: number, actor: CustomListActor, value: unknown) {
+    const existing = await getCustomListRow(listId)
+
+    if (!canModerateList(actor)) {
+        throw new ForbiddenError('Only managers can ban custom lists')
+    }
+
+    if (existing.isOfficial) {
+        throw new ForbiddenError('Official lists cannot be banned')
+    }
+
+    const isBanned = sanitizeListBanState(value)
+    const updates: CustomListUpdate = {
+        isBanned,
+        updated_at: new Date().toISOString()
+    }
+
+    if (isBanned) {
+        updates.visibility = 'private'
+    }
+
+    const { error } = await supabase
+        .from('lists')
+        .update(updates)
+        .eq('id', listId)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return getCustomList(listId, actor)
+}
+
 export async function updateCustomListOfficialMetadata(listId: number, payload: {
     isOfficial?: unknown
     slug?: unknown
@@ -2110,9 +2200,9 @@ export async function updateCustomListOfficialMetadata(listId: number, payload: 
     return getCustomList(existing.id)
 }
 
-export async function deleteCustomList(listId: number, ownerId: string) {
+export async function deleteCustomList(listId: number, ownerId: CustomListActor) {
     const existing = await getCustomListRow(listId)
-    assertOwner(existing, ownerId)
+    assertOwnerEditable(existing, ownerId)
 
     if (existing.isOfficial) {
         throw new ForbiddenError('Official lists cannot be deleted')
@@ -2128,9 +2218,10 @@ export async function deleteCustomList(listId: number, ownerId: string) {
     }
 }
 
-export async function addLevelToCustomList(listId: number, ownerId: string, levelId: number) {
+export async function addLevelToCustomList(listId: number, ownerId: CustomListActor, levelId: number) {
     const list = await getCustomListRow(listId)
-    assertOwner(list, ownerId)
+    const actorUid = getRequiredActorUid(ownerId)
+    assertCanEditList(list, ownerId)
 
     const level = await ensureLevelExists(levelId)
     assertLevelTypeMatchesList(list, level)
@@ -2138,7 +2229,7 @@ export async function addLevelToCustomList(listId: number, ownerId: string, leve
     const itemInsert: CustomListLevelInsert = {
         listId,
         levelId,
-        addedBy: ownerId,
+        addedBy: actorUid,
         minProgress: null
     }
 
@@ -2159,9 +2250,9 @@ export async function addLevelToCustomList(listId: number, ownerId: string, leve
     return getCustomList(listId, ownerId)
 }
 
-export async function removeLevelFromCustomList(listId: number, ownerId: string, levelId: number) {
+export async function removeLevelFromCustomList(listId: number, ownerId: CustomListActor, levelId: number) {
     const list = await getCustomListRow(listId)
-    assertOwner(list, ownerId)
+    assertCanEditList(list, ownerId)
 
     const { data, error } = await supabase
         .from('listLevels')
@@ -2184,12 +2275,12 @@ export async function removeLevelFromCustomList(listId: number, ownerId: string,
     return getCustomList(listId, ownerId)
 }
 
-export async function updateListLevel(listId: number, ownerId: string, levelId: number, patch: {
+export async function updateListLevel(listId: number, ownerId: CustomListActor, levelId: number, patch: {
     rating?: unknown
     minProgress?: unknown
 }) {
     const list = await getCustomListRow(listId)
-    assertOwner(list, ownerId)
+    assertCanEditList(list, ownerId)
 
     const updates: Record<string, unknown> = {}
 
@@ -2226,9 +2317,9 @@ export async function updateListLevel(listId: number, ownerId: string, levelId: 
     return getCustomList(listId, ownerId)
 }
 
-export async function reorderListLevels(listId: number, ownerId: string, levelIds: unknown) {
+export async function reorderListLevels(listId: number, ownerId: CustomListActor, levelIds: unknown) {
     const list = await getCustomListRow(listId)
-    assertOwner(list, ownerId)
+    assertCanEditList(list, ownerId)
 
     if (list.mode !== 'top') {
         throw new ValidationError('Reordering is only available in top mode')

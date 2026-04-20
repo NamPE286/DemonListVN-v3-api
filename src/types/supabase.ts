@@ -1149,6 +1149,7 @@ export type Database = {
           created_at: string
           description: string
           id: number
+          isBanned: boolean
           isPlatformer: boolean
           isOfficial: boolean
           levelCount: number
@@ -1166,6 +1167,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: number
+          isBanned?: boolean
           isPlatformer?: boolean
           isOfficial?: boolean
           levelCount?: number
@@ -1183,6 +1185,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: number
+          isBanned?: boolean
           isPlatformer?: boolean
           isOfficial?: boolean
           levelCount?: number
