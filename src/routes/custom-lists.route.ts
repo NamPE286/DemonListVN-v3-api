@@ -19,7 +19,6 @@ import {
     getStarredCustomLists,
     getStarredListsByLevel,
     NotFoundError,
-    previewCustomListWeightFormula,
     removeLevelFromCustomList,
     reorderListLevels,
     resolveCustomListIdentifier,
@@ -62,16 +61,6 @@ function parseId(value: string, label: string, options?: { allowZero?: boolean }
     const minimum = options?.allowZero ? 0 : 1
 
     if (!Number.isInteger(parsed) || parsed < minimum) {
-        throw new ValidationError(`Invalid ${label}`)
-    }
-
-    return parsed
-}
-
-function parseFiniteNumber(value: unknown, label: string) {
-    const parsed = typeof value === 'number' ? value : Number(value)
-
-    if (!Number.isFinite(parsed)) {
         throw new ValidationError(`Invalid ${label}`)
     }
 
@@ -160,29 +149,6 @@ router.route('/official/:id')
         try {
             const listId = parseId(req.params.id, 'list ID')
             res.send(await updateCustomListOfficialMetadata(listId, req.body))
-        } catch (error) {
-            if (sendError(res, error)) {
-                return
-            }
-
-            console.error(error)
-            res.status(500).send()
-        }
-    })
-
-router.route('/formula/preview')
-    .post(async (req, res) => {
-        try {
-            res.send(previewCustomListWeightFormula(req.body?.formula, {
-                position: parseFiniteNumber(req.body?.position, 'position'),
-                levelCount: parseFiniteNumber(req.body?.levelCount, 'levelCount'),
-                top: parseFiniteNumber(req.body?.top ?? 1, 'top'),
-                rating: parseFiniteNumber(req.body?.rating, 'rating'),
-                time: parseFiniteNumber(req.body?.time ?? req.body?.progress, 'time'),
-                baseTime: parseFiniteNumber(req.body?.baseTime ?? req.body?.minProgress, 'baseTime'),
-                minProgress: parseFiniteNumber(req.body?.minProgress ?? req.body?.baseTime, 'minProgress'),
-                progress: parseFiniteNumber(req.body?.progress ?? req.body?.time, 'progress')
-            }))
         } catch (error) {
             if (sendError(res, error)) {
                 return

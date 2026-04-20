@@ -272,58 +272,6 @@ function evaluateWeightFormulaExpression(value: string, scope: {
     }
 }
 
-function sanitizePreviewNumber(value: unknown, label: string, options?: {
-    integer?: boolean
-    min?: number
-}) {
-    const parsed = typeof value === 'number' ? value : Number(value)
-
-    if (!Number.isFinite(parsed)) {
-        throw new ValidationError(`${label} must be a finite number`)
-    }
-
-    if (options?.integer && !Number.isInteger(parsed)) {
-        throw new ValidationError(`${label} must be an integer`)
-    }
-
-    if (options?.min !== undefined && parsed < options.min) {
-        throw new ValidationError(`${label} must be at least ${options.min}`)
-    }
-
-    return parsed
-}
-
-export function previewCustomListWeightFormula(formula: unknown, scope: {
-    position?: unknown
-    levelCount?: unknown
-    top?: unknown
-    rating?: unknown
-    time?: unknown
-    baseTime?: unknown
-    minProgress?: unknown
-    progress?: unknown
-}) {
-    const normalizedFormula = sanitizeWeightFormula(formula)
-    const normalizedTime = sanitizePreviewNumber(scope.time ?? scope.progress, 'time', { min: 0 })
-    const normalizedBaseTime = sanitizePreviewNumber(scope.baseTime ?? scope.minProgress, 'baseTime', { min: 0 })
-    const normalizedScope = {
-        position: sanitizePreviewNumber(scope.position, 'position', { integer: true, min: 1 }),
-        levelCount: sanitizePreviewNumber(scope.levelCount, 'levelCount', { integer: true, min: 1 }),
-        top: sanitizePreviewNumber(scope.top, 'top', { integer: true, min: 1 }),
-        rating: sanitizePreviewNumber(scope.rating, 'rating', { min: 0 }),
-        time: normalizedTime,
-        baseTime: normalizedBaseTime,
-        minProgress: normalizedBaseTime,
-        progress: normalizedTime
-    }
-
-    return {
-        formula: normalizedFormula,
-        input: normalizedScope,
-        output: evaluateWeightFormulaExpression(normalizedFormula, normalizedScope)
-    }
-}
-
 async function ensureUniqueListSlug(slug: string, excludeListId?: number) {
     let query = supabase
         .from('lists')
