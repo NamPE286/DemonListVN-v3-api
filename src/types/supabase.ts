@@ -1149,42 +1149,54 @@ export type Database = {
           created_at: string
           description: string
           id: number
+          isBanned: boolean
           isPlatformer: boolean
+          isOfficial: boolean
           levelCount: number
           mode: string
           owner: string
+          slug: string | null
           tags: string[]
           title: string
           updated_at: string
           visibility: string
+          weightFormula: string
         }
         Insert: {
           communityEnabled?: boolean
           created_at?: string
           description?: string
           id?: number
+          isBanned?: boolean
           isPlatformer?: boolean
+          isOfficial?: boolean
           levelCount?: number
           mode?: string
           owner: string
+          slug?: string | null
           tags?: string[]
           title: string
           updated_at?: string
           visibility?: string
+          weightFormula?: string
         }
         Update: {
           communityEnabled?: boolean
           created_at?: string
           description?: string
           id?: number
+          isBanned?: boolean
           isPlatformer?: boolean
+          isOfficial?: boolean
           levelCount?: number
           mode?: string
           owner?: string
+          slug?: string | null
           tags?: string[]
           title?: string
           updated_at?: string
           visibility?: string
+          weightFormula?: string
         }
         Relationships: [
           {

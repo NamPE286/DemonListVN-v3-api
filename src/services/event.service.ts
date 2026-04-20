@@ -340,6 +340,7 @@ export async function getEventSubmissions(eventID: number, userID: string) {
 export async function get_event_leaderboard(eventID: number, ignoreFreeze: boolean) {
     const event = await getEvent(eventID)
     const levels = await getEventLevels(eventID)
+    // @ts-ignore
     const { data, error } = await supabase
         .from("eventProofs")
         .select("userid, eventID, diff, players!inner(*, clans!id(*), eventRecords(*, eventLevels(*)))")

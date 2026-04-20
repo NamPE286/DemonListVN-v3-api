@@ -1,4 +1,6 @@
 import express from 'express'
+import adminAuth from '@src/middleware/admin-auth.middleware'
+import managerAuth from '@src/middleware/manager-auth.middleware'
 import optionalAuth from '@src/middleware/optional-user-auth.middleware'
 import userAuth from '@src/middleware/user-auth.middleware'
 import {
@@ -9,14 +11,21 @@ import {
     deleteCustomList,
     ForbiddenError,
     getCustomList,
+    getCustomListLeaderboard,
+    getCustomListRecordPoints,
     getOwnCustomLists,
+    getRandomCustomListLevel,
+    refreshCustomListLeaderboard,
     getStarredCustomLists,
     getStarredListsByLevel,
     NotFoundError,
     removeLevelFromCustomList,
     reorderListLevels,
+    resolveCustomListIdentifier,
+    setCustomListBanState,
     toggleCustomListStar,
     updateCustomList,
+    updateCustomListOfficialMetadata,
     updateListLevel,
     ValidationError,
 } from '@src/services/custom-list.service'
@@ -135,12 +144,110 @@ router.route('/levels/:levelId/starred')
         }
     })
 
+router.route('/official/:id')
+    .patch(adminAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await updateCustomListOfficialMetadata(listId, req.body))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/leaderboard')
+    .get(optionalAuth, async (req, res) => {
+        try {
+            const start = req.query.start ? parseId(String(req.query.start), 'start', { allowZero: true }) : 0
+            const end = req.query.end ? parseId(String(req.query.end), 'end', { allowZero: true }) : 49
+            const viewerId = res.locals.authenticated ? res.locals.user : undefined
+
+            res.send(await getCustomListLeaderboard(req.params.id, { start, end, viewerId }))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/records')
+    .get(optionalAuth, async (req, res) => {
+        try {
+            const start = req.query.start ? parseId(String(req.query.start), 'start', { allowZero: true }) : 0
+            const end = req.query.end ? parseId(String(req.query.end), 'end', { allowZero: true }) : 49
+            const viewerId = res.locals.authenticated ? res.locals.user : undefined
+            const uid = typeof req.query.uid === 'string' && req.query.uid.trim().length
+                ? req.query.uid.trim()
+                : undefined
+
+            res.send(await getCustomListRecordPoints(req.params.id, { start, end, viewerId, uid }))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/leaderboard/refresh')
+    .post(userAuth, async (req, res) => {
+        try {
+            res.send(await refreshCustomListLeaderboard(req.params.id, res.locals.user))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/random')
+    .get(optionalAuth, async (req, res) => {
+        try {
+            const viewerId = res.locals.authenticated ? res.locals.user : undefined
+            const excludeLevelIds = typeof req.query.exclude === 'string'
+                ? req.query.exclude.split(',').map((value) => Number.parseInt(value, 10)).filter((value) => Number.isInteger(value) && value > 0)
+                : []
+
+            res.send(await getRandomCustomListLevel(req.params.id, { excludeLevelIds, viewerId }))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
 router.route('/:id')
     .get(optionalAuth, async (req, res) => {
         try {
-            const listId = parseId(req.params.id, 'list ID')
-            const viewerId = res.locals.authenticated ? res.locals.user.uid : undefined
-            res.send(await getCustomList(listId, viewerId))
+            const viewerId = res.locals.authenticated ? res.locals.user : undefined
+            const hasItemRange = req.query.start !== undefined || req.query.end !== undefined
+            const itemsStart = hasItemRange
+                ? (req.query.start ? parseId(String(req.query.start), 'start', { allowZero: true }) : 0)
+                : undefined
+            const itemsEnd = hasItemRange
+                ? (req.query.end ? parseId(String(req.query.end), 'end', { allowZero: true }) : (itemsStart ?? 0) + 49)
+                : undefined
+
+            if (itemsStart !== undefined && itemsEnd !== undefined && itemsEnd < itemsStart) {
+                throw new ValidationError('Invalid item range')
+            }
+
+            res.send(await getCustomList(req.params.id, viewerId, { itemsStart, itemsEnd }))
         } catch (error) {
             if (sendError(res, error)) {
                 return
@@ -153,7 +260,7 @@ router.route('/:id')
     .patch(userAuth, async (req, res) => {
         try {
             const listId = parseId(req.params.id, 'list ID')
-            res.send(await updateCustomList(listId, res.locals.user.uid, req.body))
+            res.send(await updateCustomList(listId, res.locals.user, req.body))
         } catch (error) {
             if (sendError(res, error)) {
                 return
@@ -166,8 +273,23 @@ router.route('/:id')
     .delete(userAuth, async (req, res) => {
         try {
             const listId = parseId(req.params.id, 'list ID')
-            await deleteCustomList(listId, res.locals.user.uid)
+            await deleteCustomList(listId, res.locals.user)
             res.status(204).end()
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/ban')
+    .patch(managerAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await setCustomListBanState(listId, res.locals.user, req.body?.isBanned))
         } catch (error) {
             if (sendError(res, error)) {
                 return
@@ -198,7 +320,7 @@ router.route('/:id/levels')
         try {
             const listId = parseId(req.params.id, 'list ID')
             const levelId = parseId(String(req.body.levelId), 'level ID')
-            res.status(201).send(await addLevelToCustomList(listId, res.locals.user.uid, levelId))
+            res.status(201).send(await addLevelToCustomList(listId, res.locals.user, levelId))
         } catch (error) {
             if (sendError(res, error)) {
                 return
@@ -214,7 +336,7 @@ router.route('/:id/levels/:levelId')
         try {
             const listId = parseId(req.params.id, 'list ID')
             const levelId = parseId(req.params.levelId, 'level ID')
-            res.send(await updateListLevel(listId, res.locals.user.uid, levelId, req.body))
+            res.send(await updateListLevel(listId, res.locals.user, levelId, req.body))
         } catch (error) {
             if (sendError(res, error)) {
                 return
@@ -228,7 +350,7 @@ router.route('/:id/levels/:levelId')
         try {
             const listId = parseId(req.params.id, 'list ID')
             const levelId = parseId(req.params.levelId, 'level ID')
-            res.send(await removeLevelFromCustomList(listId, res.locals.user.uid, levelId))
+            res.send(await removeLevelFromCustomList(listId, res.locals.user, levelId))
         } catch (error) {
             if (sendError(res, error)) {
                 return
@@ -243,7 +365,7 @@ router.route('/:id/reorder')
     .patch(userAuth, async (req, res) => {
         try {
             const listId = parseId(req.params.id, 'list ID')
-            res.send(await reorderListLevels(listId, res.locals.user.uid, req.body.levelIds))
+            res.send(await reorderListLevels(listId, res.locals.user, req.body.levelIds))
         } catch (error) {
             if (sendError(res, error)) {
                 return
