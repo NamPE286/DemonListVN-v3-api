@@ -654,7 +654,14 @@ function isBetterRecordForListItem(candidate: { progress?: number | null } | nul
         : candidateProgress > existingProgress
 }
 
-function isEligibleRecordForListItem(record: { progress?: number | null } | null | undefined, item: any, isPlatformer: boolean) {
+function isEligibleRecordForListItem(
+    record: { progress?: number | null } | null | undefined,
+    item: any,
+    isPlatformer: boolean,
+    options?: {
+        ignorePlatformerMinProgress?: boolean
+    }
+) {
     if (!record) {
         return false
     }
@@ -667,6 +674,10 @@ function isEligibleRecordForListItem(record: { progress?: number | null } | null
 
     const minProgress = getEffectiveMinProgress(item)
     const itemIsPlatformer = getItemIsPlatformer(item, isPlatformer)
+
+    if (itemIsPlatformer && options?.ignorePlatformerMinProgress) {
+        return true
+    }
 
     if (minProgress == null) {
         return true
@@ -718,29 +729,41 @@ async function enrichItemsWithViewerEligibleRecords(items: any[], list: { isPlat
         return items
     }
 
-    const { data, error } = await supabase
-        .from('records')
-        .select('levelid, progress, isChecked')
-        .eq('userid', viewerId)
-        .in('levelid', levelIds)
-
-    if (error) {
-        throw new Error(error.message)
-    }
-
     const recordsByLevelId = new Map<number, any>()
 
-    for (const record of data || []) {
-        const item = itemsByLevelId.get(record.levelid)
+    for (let start = 0; ; start += CUSTOM_LIST_LEADERBOARD_RECORD_PAGE_SIZE) {
+        const end = start + CUSTOM_LIST_LEADERBOARD_RECORD_PAGE_SIZE - 1
+        const { data, error } = await supabase
+            .from('records')
+            .select('levelid, progress, isChecked')
+            .eq('userid', viewerId)
+            .in('levelid', levelIds)
+            .range(start, end)
 
-        if (!item) {
-            continue
+        if (error) {
+            throw new Error(error.message)
         }
 
-        const existingRecord = recordsByLevelId.get(record.levelid)
+        if (!data?.length) {
+            break
+        }
 
-        if (isBetterRecordForListItem(record, existingRecord, item, list.isPlatformer)) {
-            recordsByLevelId.set(record.levelid, record)
+        for (const record of data) {
+            const item = itemsByLevelId.get(record.levelid)
+
+            if (!item) {
+                continue
+            }
+
+            const existingRecord = recordsByLevelId.get(record.levelid)
+
+            if (isBetterRecordForListItem(record, existingRecord, item, list.isPlatformer)) {
+                recordsByLevelId.set(record.levelid, record)
+            }
+        }
+
+        if (data.length < CUSTOM_LIST_LEADERBOARD_RECORD_PAGE_SIZE) {
+            break
         }
     }
 
@@ -936,7 +959,9 @@ async function calculateCustomListLeaderboardSnapshot(list: Awaited<ReturnType<t
             continue
         }
 
-        if (!isEligibleRecordForListItem(record, itemData.item, list.isPlatformer)) {
+        if (!isEligibleRecordForListItem(record, itemData.item, list.isPlatformer, {
+            ignorePlatformerMinProgress: list.isPlatformer
+        })) {
             continue
         }
 
