@@ -1155,6 +1155,7 @@ export type Database = {
           levelCount: number
           mode: string
           owner: string
+          rankBadges: Json
           slug: string | null
           tags: string[]
           title: string
@@ -1173,6 +1174,7 @@ export type Database = {
           levelCount?: number
           mode?: string
           owner: string
+          rankBadges?: Json
           slug?: string | null
           tags?: string[]
           title: string
@@ -1191,6 +1193,7 @@ export type Database = {
           levelCount?: number
           mode?: string
           owner?: string
+          rankBadges?: Json
           slug?: string | null
           tags?: string[]
           title?: string

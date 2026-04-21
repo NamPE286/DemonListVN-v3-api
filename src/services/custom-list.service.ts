@@ -41,6 +41,14 @@ type CustomListLeaderboardRecordEntry = {
     no: number
 }
 
+type CustomListRankBadge = {
+    name: string
+    shorthand: string
+    color: string
+    minRating: number | null
+    minTop: number | null
+}
+
 type CustomListActor = string | {
     uid: string
     isAdmin?: boolean | null
@@ -69,6 +77,7 @@ const WEIGHT_FORMULA_VALIDATION_SCOPE = {
 const OFFICIAL_LIST_SLUGS = ['dl', 'pl', 'fl', 'cl'] as const
 const CUSTOM_LIST_LEADERBOARD_RECORD_PAGE_SIZE = 1000
 const CUSTOM_LIST_LEADERBOARD_PLAYER_BATCH_SIZE = 500
+const CUSTOM_LIST_RANK_BADGE_LIMIT = 20
 
 export type CustomListIdentifier = number | string
 
@@ -467,6 +476,145 @@ function sanitizeWeightFormula(value: unknown) {
     return weightFormula
 }
 
+function sanitizeRankBadgeName(value: unknown) {
+    if (typeof value !== 'string') {
+        throw new ValidationError('Rank badge name must be a string')
+    }
+
+    const name = value.trim()
+
+    if (!name.length) {
+        throw new ValidationError('Rank badge name is required')
+    }
+
+    if (name.length > 30) {
+        throw new ValidationError('Rank badge name must be at most 30 characters')
+    }
+
+    return name
+}
+
+function sanitizeRankBadgeShorthand(value: unknown, fallback: string) {
+    if (value == null || value === '') {
+        return fallback
+    }
+
+    if (typeof value !== 'string') {
+        throw new ValidationError('Rank badge shorthand must be a string')
+    }
+
+    const shorthand = value.trim()
+
+    if (!shorthand.length) {
+        return fallback
+    }
+
+    if (shorthand.length > 20) {
+        throw new ValidationError('Rank badge shorthand must be at most 20 characters')
+    }
+
+    return shorthand
+}
+
+function sanitizeRankBadgeColor(value: unknown) {
+    if (typeof value !== 'string') {
+        throw new ValidationError('Rank badge color must be a string')
+    }
+
+    const color = value.trim()
+
+    if (!color.length) {
+        throw new ValidationError('Rank badge color is required')
+    }
+
+    if (color.length > 120) {
+        throw new ValidationError('Rank badge color must be at most 120 characters')
+    }
+
+    return color
+}
+
+function sanitizeRankBadgeMinRating(value: unknown) {
+    if (value == null || value === '') {
+        return null
+    }
+
+    const rating = Number(value)
+
+    if (!Number.isFinite(rating) || rating < 0) {
+        throw new ValidationError('Rank badge minimum rating must be 0 or greater')
+    }
+
+    return rating
+}
+
+function sanitizeRankBadgeMinTop(value: unknown) {
+    if (value == null || value === '') {
+        return null
+    }
+
+    const top = Number(value)
+
+    if (!Number.isInteger(top) || top < 1) {
+        throw new ValidationError('Rank badge minimum top must be a positive integer')
+    }
+
+    return top
+}
+
+function sanitizeRankBadges(value: unknown): CustomListRankBadge[] {
+    if (value == null) {
+        return []
+    }
+
+    if (!Array.isArray(value)) {
+        throw new ValidationError('rankBadges must be an array')
+    }
+
+    if (value.length > CUSTOM_LIST_RANK_BADGE_LIMIT) {
+        throw new ValidationError(`rankBadges can contain at most ${CUSTOM_LIST_RANK_BADGE_LIMIT} badges`)
+    }
+
+    return value.map((entry) => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+            throw new ValidationError('Each rank badge must be an object')
+        }
+
+        const badge = entry as {
+            name?: unknown
+            shorthand?: unknown
+            color?: unknown
+            minRating?: unknown
+            minTop?: unknown
+        }
+
+        const name = sanitizeRankBadgeName(badge.name)
+
+        const minRating = sanitizeRankBadgeMinRating(badge.minRating)
+        const minTop = sanitizeRankBadgeMinTop(badge.minTop)
+
+        if (minRating == null && minTop == null) {
+            throw new ValidationError('Each rank badge must define a minimum rating, a minimum top, or both')
+        }
+
+        return {
+            name,
+            shorthand: sanitizeRankBadgeShorthand(badge.shorthand, name),
+            color: sanitizeRankBadgeColor(badge.color),
+            minRating,
+            minTop
+        }
+    })
+}
+
+function normalizeRankBadges(value: unknown): CustomListRankBadge[] {
+    try {
+        return sanitizeRankBadges(value)
+    } catch {
+        return []
+    }
+}
+
 function sanitizeRating(value: unknown) {
     const n = Number(value)
     if (!Number.isInteger(n) || n < 1 || n > 10) {
@@ -781,6 +929,7 @@ async function getOfficialList(slug: OfficialListSlug, viewerId?: string, itemRa
         isOfficial: true,
         communityEnabled: false,
         mode: config.mode,
+        rankBadges: [],
         weightFormula: config.weightFormula,
         lastRefreshedAt: null,
         updated_at: new Date().toISOString(),
@@ -821,6 +970,7 @@ async function getOfficialListSummary(slug: OfficialListSlug) {
         isOfficial: list.isOfficial,
         communityEnabled: list.communityEnabled,
         mode: list.mode,
+        rankBadges: [],
         weightFormula: list.weightFormula,
         lastRefreshedAt: list.lastRefreshedAt,
         updated_at: list.updated_at,
@@ -1535,6 +1685,7 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: Cus
 
         return {
             ...list,
+            rankBadges: normalizeRankBadges(list.rankBadges),
             starCount,
             starred,
             lastRefreshedAt: latestRefresh?.lastRefreshedAt ?? null,
@@ -1929,8 +2080,12 @@ export async function getStarredListsByLevel(levelId: number, viewerId?: string)
     const enriched = await enrichListsWithStars((lists || []) as CustomListWithOwnerData[], viewerId)
 
     return enriched
-        .filter((list) => list.starCount > 0)
+        .filter((list) => list.isOfficial || list.starCount > 0)
         .sort((left, right) => {
+            if (left.isOfficial !== right.isOfficial) {
+                return left.isOfficial ? -1 : 1
+            }
+
             if (right.starCount !== left.starCount) {
                 return right.starCount - left.starCount
             }
@@ -1939,6 +2094,7 @@ export async function getStarredListsByLevel(levelId: number, viewerId?: string)
         })
         .map((list) => ({
             ...list,
+            rankBadges: normalizeRankBadges(list.rankBadges),
             item: listItemsById.get(list.id) || null
         }))
 }
@@ -1954,6 +2110,7 @@ export async function createCustomList(ownerId: string, payload: {
     slug?: unknown
     isOfficial?: unknown
     weightFormula?: unknown
+    rankBadges?: unknown
 }) {
     const listInsert: CustomListInsert = {
         owner: ownerId,
@@ -1966,6 +2123,7 @@ export async function createCustomList(ownerId: string, payload: {
         communityEnabled: sanitizeCommunityEnabled(payload.communityEnabled),
         slug: sanitizeSlug(payload.slug),
         isOfficial: false,
+        rankBadges: sanitizeRankBadges(payload.rankBadges),
         weightFormula: sanitizeWeightFormula(payload.weightFormula),
         updated_at: new Date().toISOString()
     }
@@ -2000,6 +2158,7 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
     communityEnabled?: unknown
     slug?: unknown
     weightFormula?: unknown
+    rankBadges?: unknown
 }) {
     const existing = await getCustomListRow(listId)
     assertCanEditList(existing, ownerId)
@@ -2060,6 +2219,10 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
 
     if (payload.weightFormula !== undefined) {
         updates.weightFormula = sanitizeWeightFormula(payload.weightFormula)
+    }
+
+    if (payload.rankBadges !== undefined) {
+        updates.rankBadges = sanitizeRankBadges(payload.rankBadges)
     }
 
     const { error } = await supabase
