@@ -9406,6 +9406,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           "List"
         ],
         "summary": "Get all records of the Demon List",
+        "deprecated": true,
         "parameters": [
           {
             "name": "start",
@@ -9530,6 +9531,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           "List"
         ],
         "summary": "Get all records of the Platformer List",
+        "deprecated": true,
         "parameters": [
           {
             "name": "start",
@@ -9654,6 +9656,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           "List"
         ],
         "summary": "Get all records of the Demon List",
+        "deprecated": true,
         "parameters": [
           {
             "name": "start",
@@ -9768,6 +9771,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           "List"
         ],
         "summary": "Get all records of the Demon List",
+        "deprecated": true,
         "parameters": [
           {
             "name": "start",
@@ -9818,6 +9822,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           "List"
         ],
         "summary": "Get all records of the Featured List",
+        "deprecated": true,
         "parameters": [
           {
             "name": "start",
@@ -9868,6 +9873,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           "List"
         ],
         "summary": "Get all levels of the Challenge List",
+        "deprecated": true,
         "parameters": [
           {
             "name": "start",
@@ -9991,6 +9997,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           "List"
         ],
         "summary": "Get all records of the Challenge List",
+        "deprecated": true,
         "parameters": [
           {
             "name": "start",
@@ -10041,6 +10048,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           "List"
         ],
         "summary": "Get a random level from a list",
+        "deprecated": true,
         "parameters": [
           {
             "name": "list",

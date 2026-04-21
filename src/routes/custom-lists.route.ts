@@ -1,5 +1,6 @@
 import express from 'express'
 import adminAuth from '@src/middleware/admin-auth.middleware'
+import { publicReadCache } from '@src/middleware/cache-control.middleware'
 import managerAuth from '@src/middleware/manager-auth.middleware'
 import optionalAuth from '@src/middleware/optional-user-auth.middleware'
 import userAuth from '@src/middleware/user-auth.middleware'
@@ -96,7 +97,7 @@ router.route('/starred')
     })
 
 router.route('/')
-    .get(optionalAuth, async (req, res) => {
+    .get(optionalAuth, publicReadCache, async (req, res) => {
         try {
             const limit = req.query.limit ? parseId(String(req.query.limit), 'limit') : 24
             const offset = req.query.offset ? parseId(String(req.query.offset), 'offset', { allowZero: true }) : 0
@@ -128,7 +129,7 @@ router.route('/')
     })
 
 router.route('/levels/:levelId/starred')
-    .get(optionalAuth, async (req, res) => {
+    .get(optionalAuth, publicReadCache, async (req, res) => {
         try {
             const levelId = parseId(req.params.levelId, 'level ID')
             const viewerId = res.locals.authenticated ? res.locals.user.uid : undefined
@@ -160,7 +161,7 @@ router.route('/official/:id')
     })
 
 router.route('/:id/leaderboard')
-    .get(optionalAuth, async (req, res) => {
+    .get(optionalAuth, publicReadCache, async (req, res) => {
         try {
             const start = req.query.start ? parseId(String(req.query.start), 'start', { allowZero: true }) : 0
             const end = req.query.end ? parseId(String(req.query.end), 'end', { allowZero: true }) : 49
@@ -178,7 +179,7 @@ router.route('/:id/leaderboard')
     })
 
 router.route('/:id/records')
-    .get(optionalAuth, async (req, res) => {
+    .get(optionalAuth, publicReadCache, async (req, res) => {
         try {
             const start = req.query.start ? parseId(String(req.query.start), 'start', { allowZero: true }) : 0
             const end = req.query.end ? parseId(String(req.query.end), 'end', { allowZero: true }) : 49
@@ -213,7 +214,7 @@ router.route('/:id/leaderboard/refresh')
     })
 
 router.route('/:id/random')
-    .get(optionalAuth, async (req, res) => {
+    .get(optionalAuth, publicReadCache, async (req, res) => {
         try {
             const viewerId = res.locals.authenticated ? res.locals.user : undefined
             const excludeLevelIds = typeof req.query.exclude === 'string'
@@ -232,7 +233,7 @@ router.route('/:id/random')
     })
 
 router.route('/:id')
-    .get(optionalAuth, async (req, res) => {
+    .get(optionalAuth, publicReadCache, async (req, res) => {
         try {
             const viewerId = res.locals.authenticated ? res.locals.user : undefined
             const hasItemRange = req.query.start !== undefined || req.query.end !== undefined

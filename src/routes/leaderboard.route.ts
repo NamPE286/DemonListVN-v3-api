@@ -1,12 +1,10 @@
 import express from 'express'
+import { publicReadCache } from '@src/middleware/cache-control.middleware'
 import { getDemonListLeaderboard, getFeaturedListLeaderboard, getPlatformerListLeaderboard, getChallengeListLeaderboard } from '@src/services/player.service'
 
 const router = express.Router()
 
-router.use((req, res, next) => {
-    res.set('Cache-Control', 'public, s-maxage=180, max-age=180')
-    next()
-})
+router.use(publicReadCache)
 
 router.route('/dl')
     /**

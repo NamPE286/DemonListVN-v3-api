@@ -3,6 +3,11 @@ import cors from 'cors'
 import swaggerDocs from '@src/utils/swagger.ts'
 import { version } from '../package.json'
 import { httpServerHandler } from 'cloudflare:node';
+import {
+    createWorkerCacheKey,
+    isWorkerEdgeCacheable,
+    isWorkerResponseCacheable
+} from '@src/middleware/cache-control.middleware'
 
 import listRoute from './routes/list.route'
 import mergeAccountRoute from './routes/merge-account.route'
@@ -113,4 +118,31 @@ app.listen(port, async () => {
     await swaggerDocs(app, port)
 })
 
-export default httpServerHandler({ port: port });
+const workerHandler = httpServerHandler({ port: port })
+
+export default {
+    async fetch(request, env, ctx) {
+        if (!workerHandler.fetch) {
+            return new Response('Worker handler is not configured', { status: 500 })
+        }
+
+        if (!isWorkerEdgeCacheable(request)) {
+            return workerHandler.fetch(request, env, ctx)
+        }
+
+        const cacheKey = createWorkerCacheKey(request)
+        const cachedResponse = await caches.default.match(cacheKey)
+
+        if (cachedResponse) {
+            return cachedResponse
+        }
+
+        const response = await workerHandler.fetch(request, env, ctx)
+
+        if (isWorkerResponseCacheable(response)) {
+            ctx.waitUntil(caches.default.put(cacheKey, response.clone()))
+        }
+
+        return response
+    }
+}
