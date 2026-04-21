@@ -6,6 +6,7 @@ import optionalAuth from '@src/middleware/optional-user-auth.middleware'
 import userAuth from '@src/middleware/user-auth.middleware'
 import {
     addLevelToCustomList,
+    addCustomListMember,
     browseLists,
     ConflictError,
     createCustomList,
@@ -20,12 +21,16 @@ import {
     getStarredCustomLists,
     getStarredListsByLevel,
     NotFoundError,
+    removeCustomListMember,
     removeLevelFromCustomList,
     reorderListLevels,
     resolveCustomListIdentifier,
     setCustomListBanState,
+    transferCustomListOwnership,
     toggleCustomListStar,
     updateCustomList,
+    updateCustomListCollaborationSettings,
+    updateCustomListMemberRole,
     updateCustomListOfficialMetadata,
     updateListLevel,
     ValidationError,
@@ -296,6 +301,79 @@ router.route('/:id/ban')
         try {
             const listId = parseId(req.params.id, 'list ID')
             res.send(await setCustomListBanState(listId, res.locals.user, req.body?.isBanned))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/collaboration')
+    .patch(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await updateCustomListCollaborationSettings(listId, res.locals.user, req.body))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/ownership')
+    .post(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await transferCustomListOwnership(listId, res.locals.user, req.body?.uid))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/members')
+    .post(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.status(201).send(await addCustomListMember(listId, res.locals.user, req.body))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/members/:uid')
+    .patch(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await updateCustomListMemberRole(listId, res.locals.user, req.params.uid, req.body?.role))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+    .delete(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await removeCustomListMember(listId, res.locals.user, req.params.uid))
         } catch (error) {
             if (sendError(res, error)) {
                 return

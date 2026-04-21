@@ -17,7 +17,12 @@ import type { Tables, TablesInsert, TablesUpdate } from '@src/types/supabase'
 type CustomList = Tables<'lists'>
 type CustomListInsert = TablesInsert<'lists'>
 type CustomListUpdate = TablesUpdate<'lists'>
+type CustomListAuditLog = Tables<'listAuditLogs'>
+type CustomListAuditLogInsert = TablesInsert<'listAuditLogs'>
 type CustomListLevelInsert = TablesInsert<'listLevels'>
+type CustomListMember = Tables<'listMembers'>
+type CustomListMemberInsert = TablesInsert<'listMembers'>
+type CustomListMemberUpdate = TablesUpdate<'listMembers'>
 type CustomListStarInsert = TablesInsert<'listStars'>
 type CustomListLeaderboardRefreshRow = {
     id: number
@@ -49,6 +54,38 @@ type CustomListRankBadge = {
     minTop: number | null
 }
 
+type CustomListMemberRole = 'admin' | 'helper'
+
+type CustomListResolvedRole = 'viewer' | 'owner' | 'admin' | 'helper' | 'moderator'
+
+type CustomListPermissions = {
+    canEditSettings: boolean
+    canEditLevels: boolean
+    canDelete: boolean
+    canBan: boolean
+    canManageMembers: boolean
+    canConfigureCollaboration: boolean
+    canTransferOwnership: boolean
+    canViewMembers: boolean
+    canViewAudit: boolean
+}
+
+type CustomListAccessContext = {
+    actorUid: string | null
+    isModerator: boolean
+    isOwner: boolean
+    memberRole: CustomListMemberRole | null
+}
+
+type CustomListMemberWithPlayerData = CustomListMember & {
+    playerData?: any
+}
+
+type CustomListAuditLogWithPlayerData = CustomListAuditLog & {
+    actorData?: any
+    targetData?: any
+}
+
 type CustomListActor = string | {
     uid: string
     isAdmin?: boolean | null
@@ -59,6 +96,10 @@ const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
 type CustomListWithOwnerData = CustomList & {
     ownerData?: any
+    currentUserRole?: CustomListResolvedRole
+    permissions?: CustomListPermissions
+    members?: CustomListMemberWithPlayerData[]
+    auditLog?: CustomListAuditLogWithPlayerData[]
 }
 
 const VISIBILITY_VALUES = new Set(['private', 'unlisted', 'public'])
@@ -79,6 +120,8 @@ const OFFICIAL_LIST_SLUGS = ['dl', 'pl', 'fl', 'cl'] as const
 const CUSTOM_LIST_LEADERBOARD_RECORD_PAGE_SIZE = 1000
 const CUSTOM_LIST_LEADERBOARD_PLAYER_BATCH_SIZE = 500
 const CUSTOM_LIST_RANK_BADGE_LIMIT = 20
+const CUSTOM_LIST_AUDIT_LOG_LIMIT = 50
+const CUSTOM_LIST_MEMBER_ROLE_VALUES = new Set<CustomListMemberRole>(['admin', 'helper'])
 
 export type CustomListIdentifier = number | string
 
@@ -788,6 +831,169 @@ async function getCustomListBySlug(slug: string) {
     return data
 }
 
+function sanitizeActorUid(value: unknown, label: string) {
+    if (typeof value !== 'string' || !value.trim().length) {
+        throw new ValidationError(`Invalid ${label}`)
+    }
+
+    return value.trim()
+}
+
+function sanitizeCustomListMemberRole(value: unknown): CustomListMemberRole {
+    if (typeof value !== 'string') {
+        throw new ValidationError('role must be either "admin" or "helper"')
+    }
+
+    const normalized = value.trim().toLowerCase()
+
+    if (!CUSTOM_LIST_MEMBER_ROLE_VALUES.has(normalized as CustomListMemberRole)) {
+        throw new ValidationError('role must be either "admin" or "helper"')
+    }
+
+    return normalized as CustomListMemberRole
+}
+
+function sanitizeAdminsCanManageHelpers(value: unknown) {
+    if (typeof value !== 'boolean') {
+        throw new ValidationError('adminsCanManageHelpers must be a boolean')
+    }
+
+    return value
+}
+
+async function getPlayersByUid(uids: string[]) {
+    const uniqueUids = [...new Set(uids.filter(Boolean))]
+
+    if (!uniqueUids.length) {
+        return new Map<string, any>()
+    }
+
+    const { data, error } = await supabase
+        .from('players')
+        .select(playerSelect)
+        .in('uid', uniqueUids)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return new Map<string, any>(((data || []) as any[]).map((player) => [player.uid, player]))
+}
+
+async function ensurePlayerExists(uid: string) {
+    const players = await getPlayersByUid([uid])
+    const player = players.get(uid)
+
+    if (!player) {
+        throw new NotFoundError('Player not found')
+    }
+
+    return player
+}
+
+async function getCustomListMembership(listId: number, uid?: string | null) {
+    if (!uid) {
+        return null
+    }
+
+    const { data, error } = await supabase
+        .from('listMembers')
+        .select('*')
+        .eq('listId', listId)
+        .eq('uid', uid)
+        .maybeSingle()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return (data || null) as CustomListMember | null
+}
+
+async function getCustomListMembers(listId: number) {
+    const { data, error } = await supabase
+        .from('listMembers')
+        .select('*')
+        .eq('listId', listId)
+        .order('role', { ascending: true })
+        .order('created_at', { ascending: true })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    const members = (data || []) as CustomListMember[]
+
+    if (!members.length) {
+        return [] as CustomListMemberWithPlayerData[]
+    }
+
+    const playersByUid = await getPlayersByUid(members.map((member) => member.uid))
+
+    return members.map((member) => ({
+        ...member,
+        playerData: playersByUid.get(member.uid) || null
+    }))
+}
+
+async function getCustomListAuditLog(listId: number, limit: number = CUSTOM_LIST_AUDIT_LOG_LIMIT) {
+    const { data, error } = await supabase
+        .from('listAuditLogs')
+        .select('*')
+        .eq('listId', listId)
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    const entries = (data || []) as CustomListAuditLog[]
+
+    if (!entries.length) {
+        return [] as CustomListAuditLogWithPlayerData[]
+    }
+
+    const playersByUid = await getPlayersByUid(
+        entries
+            .flatMap((entry) => [entry.actorUid, entry.targetUid])
+            .filter((uid): uid is string => Boolean(uid))
+    )
+
+    return entries.map((entry) => ({
+        ...entry,
+        actorData: entry.actorUid ? playersByUid.get(entry.actorUid) || null : null,
+        targetData: entry.targetUid ? playersByUid.get(entry.targetUid) || null : null
+    }))
+}
+
+async function appendCustomListAuditLog(listId: number, entry: {
+    actorUid?: string | null
+    action: string
+    targetUid?: string | null
+    metadata?: Record<string, unknown>
+}) {
+    const insert: CustomListAuditLogInsert = {
+        listId,
+        actorUid: entry.actorUid ?? null,
+        action: entry.action,
+        targetUid: entry.targetUid ?? null,
+        metadata: (entry.metadata || {}) as any
+    }
+
+    const { error } = await supabase
+        .from('listAuditLogs')
+        .insert(insert)
+
+    if (error) {
+        console.error('Failed to append custom list audit log', {
+            listId,
+            action: entry.action,
+            error: error.message
+        })
+    }
+}
+
 function getEffectiveMinProgress(item: any) {
     return item.minProgress ?? item.level?.minProgress ?? null
 }
@@ -1375,6 +1581,116 @@ function canModerateList(actor: CustomListActor) {
     return Boolean(actor && typeof actor !== 'string' && (actor.isAdmin || actor.isManager))
 }
 
+async function getCustomListAccess(list: Pick<CustomList, 'id' | 'owner' | 'adminsCanManageHelpers' | 'isBanned'>, actor: CustomListActor) {
+    const actorUid = getActorUid(actor) ?? null
+    const isModerator = canModerateList(actor)
+    const isOwner = Boolean(actorUid && list.owner === actorUid)
+    let memberRole: CustomListMemberRole | null = null
+
+    if (!isOwner && actorUid) {
+        const membership = await getCustomListMembership(list.id, actorUid)
+
+        if (membership?.role === 'admin' || membership?.role === 'helper') {
+            memberRole = membership.role
+        }
+    }
+
+    return {
+        actorUid,
+        isModerator,
+        isOwner,
+        memberRole
+    } satisfies CustomListAccessContext
+}
+
+function resolveCustomListRole(access: CustomListAccessContext): CustomListResolvedRole {
+    if (access.isOwner) {
+        return 'owner'
+    }
+
+    if (access.isModerator) {
+        return 'moderator'
+    }
+
+    return access.memberRole || 'viewer'
+}
+
+function canReadPrivateList(access: CustomListAccessContext) {
+    return access.isOwner || access.isModerator || access.memberRole !== null
+}
+
+function canEditCustomListSettings(list: Pick<CustomList, 'isBanned'>, access: CustomListAccessContext) {
+    if (access.isModerator) {
+        return true
+    }
+
+    if (list.isBanned) {
+        return false
+    }
+
+    return access.isOwner || access.memberRole === 'admin'
+}
+
+function canEditCustomListLevels(list: Pick<CustomList, 'isBanned'>, access: CustomListAccessContext) {
+    if (access.isModerator) {
+        return true
+    }
+
+    if (list.isBanned) {
+        return false
+    }
+
+    return access.isOwner || access.memberRole === 'admin' || access.memberRole === 'helper'
+}
+
+function canConfigureCustomListCollaboration(list: Pick<CustomList, 'isBanned'>, access: CustomListAccessContext) {
+    return access.isOwner && !list.isBanned
+}
+
+function canManageCustomListMembers(list: Pick<CustomList, 'isBanned' | 'adminsCanManageHelpers'>, access: CustomListAccessContext) {
+    if (list.isBanned) {
+        return false
+    }
+
+    if (access.isOwner) {
+        return true
+    }
+
+    return access.memberRole === 'admin' && Boolean(list.adminsCanManageHelpers)
+}
+
+function canTransferCustomListOwnership(list: Pick<CustomList, 'isBanned'>, access: CustomListAccessContext) {
+    return access.isOwner && !list.isBanned
+}
+
+function canViewCustomListMembers(access: CustomListAccessContext) {
+    return access.isOwner || access.isModerator || access.memberRole === 'admin'
+}
+
+function canViewCustomListAudit(access: CustomListAccessContext) {
+    return access.isOwner || access.isModerator || access.memberRole !== null
+}
+
+function getCustomListPermissions(list: Pick<CustomList, 'isBanned' | 'isOfficial' | 'adminsCanManageHelpers'>, access: CustomListAccessContext): CustomListPermissions {
+    return {
+        canEditSettings: canEditCustomListSettings(list, access),
+        canEditLevels: canEditCustomListLevels(list, access),
+        canDelete: access.isOwner && !list.isBanned && !list.isOfficial,
+        canBan: access.isModerator && !list.isOfficial,
+        canManageMembers: canManageCustomListMembers(list, access),
+        canConfigureCollaboration: canConfigureCustomListCollaboration(list, access),
+        canTransferOwnership: canTransferCustomListOwnership(list, access),
+        canViewMembers: canViewCustomListMembers(access),
+        canViewAudit: canViewCustomListAudit(access)
+    }
+}
+
+function getCustomListBannedEditMessage(access: CustomListAccessContext) {
+    return access.isOwner
+        ? 'This list has been banned and cannot be edited by the owner'
+        : 'This list has been banned and cannot be edited'
+}
+
 function isListOwner(list: Pick<CustomList, 'owner'>, actor: CustomListActor) {
     const actorUid = getActorUid(actor)
 
@@ -1391,28 +1707,101 @@ function getRequiredActorUid(actor: CustomListActor) {
     return actorUid
 }
 
-function assertOwnerEditable(list: CustomList, actor: CustomListActor) {
-    if (!isListOwner(list, actor)) {
+async function assertOwnerEditable(list: CustomList, actor: CustomListActor) {
+    const access = await getCustomListAccess(list, actor)
+
+    if (!access.isOwner) {
         throw new ForbiddenError('You do not own this list')
     }
 
     if (list.isBanned) {
         throw new ForbiddenError('This list has been banned and cannot be edited by the owner')
     }
+
+    return access
 }
 
-function assertCanEditList(list: CustomList, actor: CustomListActor) {
-    if (canModerateList(actor)) {
-        return
+async function assertCanEditList(list: CustomList, actor: CustomListActor) {
+    const access = await getCustomListAccess(list, actor)
+
+    if (canEditCustomListSettings(list, access)) {
+        return access
     }
 
-    assertOwnerEditable(list, actor)
+    if (list.isBanned && (access.isOwner || access.memberRole)) {
+        throw new ForbiddenError(getCustomListBannedEditMessage(access))
+    }
+
+    throw new ForbiddenError('You do not have permission to edit this list')
 }
 
-function assertReadable(list: CustomList, actor?: CustomListActor) {
-    if (list.visibility === 'private' && !isListOwner(list, actor) && !canModerateList(actor)) {
+async function assertCanEditListLevels(list: CustomList, actor: CustomListActor) {
+    const access = await getCustomListAccess(list, actor)
+
+    if (canEditCustomListLevels(list, access)) {
+        return access
+    }
+
+    if (list.isBanned && (access.isOwner || access.memberRole)) {
+        throw new ForbiddenError(getCustomListBannedEditMessage(access))
+    }
+
+    throw new ForbiddenError('You do not have permission to modify levels on this list')
+}
+
+async function assertReadable(list: CustomList, actor?: CustomListActor) {
+    const access = await getCustomListAccess(list, actor)
+
+    if (list.visibility === 'private' && !canReadPrivateList(access)) {
         throw new ForbiddenError('This list is private')
     }
+
+    return access
+}
+
+async function assertCanManageListMembers(list: CustomList, actor: CustomListActor, options: {
+    targetRole?: CustomListMemberRole
+    targetMember?: CustomListMember | null
+} = {}) {
+    const access = await getCustomListAccess(list, actor)
+
+    if (canConfigureCustomListCollaboration(list, access)) {
+        return access
+    }
+
+    if (list.isBanned && (access.isOwner || access.memberRole)) {
+        throw new ForbiddenError('This list has been banned and collaborators cannot be changed')
+    }
+
+    if (!canManageCustomListMembers(list, access)) {
+        throw new ForbiddenError('You do not have permission to manage collaborators for this list')
+    }
+
+    if (access.memberRole === 'admin' && !access.isOwner) {
+        if (options.targetRole && options.targetRole !== 'helper') {
+            throw new ForbiddenError('Only the owner can assign admin access')
+        }
+
+        if (options.targetMember && options.targetMember.role !== 'helper') {
+            throw new ForbiddenError('Only the owner can manage admin collaborators')
+        }
+    }
+
+    return access
+}
+
+async function assertCanTransferListOwnership(list: CustomList, actor: CustomListActor) {
+    const access = await getCustomListAccess(list, actor)
+
+    if (canTransferCustomListOwnership(list, access)) {
+        return access
+    }
+
+    if (list.isBanned && access.isOwner) {
+        throw new ForbiddenError('This list has been banned and ownership cannot be transferred')
+    }
+
+    throw new ForbiddenError('Only the owner can transfer ownership')
 }
 
 function assertLevelTypeMatchesList(list: CustomList, level: { isPlatformer?: boolean | null }) {
@@ -1627,17 +2016,80 @@ async function getCustomListItems(listId: number, mode: string = 'rating', itemR
 }
 
 export async function getOwnCustomLists(ownerId: string) {
-    const { data, error } = await supabase
-        .from('lists')
-        .select(`*, ownerData:players!lists_owner_fkey(${playerSelect})`)
-        .eq('owner', ownerId)
-        .order('updated_at', { ascending: false })
+    const [{ data: ownedLists, error: ownedError }, { data: memberships, error: membershipsError }] = await Promise.all([
+        supabase
+            .from('lists')
+            .select(`*, ownerData:players!lists_owner_fkey(${playerSelect})`)
+            .eq('owner', ownerId)
+            .order('updated_at', { ascending: false }),
+        supabase
+            .from('listMembers')
+            .select('listId, role')
+            .eq('uid', ownerId)
+    ])
 
-    if (error) {
-        throw new Error(error.message)
+    if (ownedError) {
+        throw new Error(ownedError.message)
     }
 
-    return enrichListsWithStars((data || []) as CustomListWithOwnerData[], ownerId)
+    if (membershipsError) {
+        throw new Error(membershipsError.message)
+    }
+
+    const owned = (ownedLists || []) as CustomListWithOwnerData[]
+    const membershipEntries = (memberships || []) as Array<Pick<CustomListMember, 'listId' | 'role'>>
+    const ownedIds = new Set(owned.map((list) => list.id))
+    const collaboratorListIds = membershipEntries
+        .map((entry) => entry.listId)
+        .filter((listId) => !ownedIds.has(listId))
+    let collaboratorLists: CustomListWithOwnerData[] = []
+
+    if (collaboratorListIds.length) {
+        const { data, error } = await supabase
+            .from('lists')
+            .select(`*, ownerData:players!lists_owner_fkey(${playerSelect})`)
+            .in('id', collaboratorListIds)
+
+        if (error) {
+            throw new Error(error.message)
+        }
+
+        collaboratorLists = (data || []) as CustomListWithOwnerData[]
+    }
+
+    const allListsById = new Map<number, CustomListWithOwnerData>()
+
+    for (const list of [...owned, ...collaboratorLists]) {
+        allListsById.set(list.id, list)
+    }
+
+    const membershipRolesByListId = new Map<number, CustomListMemberRole>()
+
+    for (const entry of membershipEntries) {
+        if (entry.role === 'admin' || entry.role === 'helper') {
+            membershipRolesByListId.set(entry.listId, entry.role)
+        }
+    }
+
+    const enriched = await enrichListsWithStars([...allListsById.values()], ownerId)
+
+    return enriched
+        .map((list) => {
+            const access: CustomListAccessContext = {
+                actorUid: ownerId,
+                isModerator: false,
+                isOwner: list.owner === ownerId,
+                memberRole: list.owner === ownerId ? null : membershipRolesByListId.get(list.id) || null
+            }
+
+            return {
+                ...list,
+                rankBadges: normalizeRankBadges((list as any).rankBadges),
+                currentUserRole: resolveCustomListRole(access),
+                permissions: getCustomListPermissions(list as CustomList, access)
+            }
+        })
+        .sort((left, right) => new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime())
 }
 
 export async function getStarredCustomLists(userId: string) {
@@ -1763,15 +2215,19 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: Cus
     try {
         const resolved = await resolveCustomListIdentifier(listId)
         const list = await getListWithOwnerData(resolved.id)
-        assertReadable(list, viewerId)
-
-        const items = await enrichItemsWithViewerEligibleRecords(
-            await getCustomListItems(list.id, list.mode, itemRange),
-            list,
-            actorUid
-        )
-        const [{ starCount = 0, starred = false } = { starCount: 0, starred: false }] = await enrichListsWithStars([list], actorUid)
-        const latestRefresh = await getLatestCustomListLeaderboardRefresh(list.id)
+        const access = await assertReadable(list, viewerId)
+        const permissions = getCustomListPermissions(list, access)
+        const [items, [{ starCount = 0, starred = false } = { starCount: 0, starred: false }], latestRefresh, members, auditLog] = await Promise.all([
+            enrichItemsWithViewerEligibleRecords(
+                await getCustomListItems(list.id, list.mode, itemRange),
+                list,
+                actorUid
+            ),
+            enrichListsWithStars([list], actorUid),
+            getLatestCustomListLeaderboardRefresh(list.id),
+            permissions.canViewMembers ? getCustomListMembers(list.id) : Promise.resolve([] as CustomListMemberWithPlayerData[]),
+            permissions.canViewAudit ? getCustomListAuditLog(list.id) : Promise.resolve([] as CustomListAuditLogWithPlayerData[])
+        ])
 
         return {
             ...list,
@@ -1779,6 +2235,10 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: Cus
             starCount,
             starred,
             lastRefreshedAt: latestRefresh?.lastRefreshedAt ?? null,
+            currentUserRole: resolveCustomListRole(access),
+            permissions,
+            members,
+            auditLog,
             items
         }
     } catch (error) {
@@ -1799,7 +2259,7 @@ async function getCustomListSummary(identifier: CustomListIdentifier, viewerId?:
 
     try {
         const resolved = await resolveCustomListIdentifier(identifier)
-        assertReadable(resolved, viewerId)
+        const access = await assertReadable(resolved, viewerId)
 
         const list = await getListWithOwnerData(resolved.id)
         const [[{ starCount = 0, starred = false } = { starCount: 0, starred: false }], latestRefresh] = await Promise.all([
@@ -1812,7 +2272,9 @@ async function getCustomListSummary(identifier: CustomListIdentifier, viewerId?:
             rankBadges: normalizeRankBadges(list.rankBadges),
             starCount,
             starred,
-            lastRefreshedAt: latestRefresh?.lastRefreshedAt ?? null
+            lastRefreshedAt: latestRefresh?.lastRefreshedAt ?? null,
+            currentUserRole: resolveCustomListRole(access),
+            permissions: getCustomListPermissions(list, access)
         }
     } catch (error) {
         if (error instanceof NotFoundError && typeof identifier === 'string') {
@@ -2070,11 +2532,20 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
 export async function refreshCustomListLeaderboard(identifier: CustomListIdentifier, actor: CustomListActor) {
     const resolved = await resolveCustomListIdentifier(identifier)
     const list = await getCustomListRow(resolved.id)
-    assertCanEditList(list, actor)
+    const access = await assertCanEditList(list, actor)
 
     const hydratedList = await getCustomList(list.id, actor)
     const { rankedPlayers, rankedRecords } = await calculateCustomListLeaderboardSnapshot(hydratedList)
     const refreshRow = await persistCustomListLeaderboard(list.id, rankedPlayers, rankedRecords)
+
+    await appendCustomListAuditLog(list.id, {
+        actorUid: access.actorUid,
+        action: 'leaderboard_refreshed',
+        metadata: {
+            totalPlayers: refreshRow.totalPlayers,
+            totalRecords: refreshRow.totalRecords
+        }
+    })
 
     return {
         listId: list.id,
@@ -2115,7 +2586,7 @@ export async function getRandomCustomListLevel(identifier: CustomListIdentifier,
 
 export async function toggleCustomListStar(listId: number, userId: string) {
     const list = await getCustomListRow(listId)
-    assertReadable(list, userId)
+    await assertReadable(list, userId)
 
     const { data: existing, error: existingError } = await supabase
         .from('listStars')
@@ -2275,10 +2746,18 @@ export async function createCustomList(ownerId: string, payload: {
         throw new Error(error?.message || 'Failed to create list')
     }
 
-    return {
-        ...data,
-        items: []
-    }
+    await appendCustomListAuditLog(data.id, {
+        actorUid: ownerId,
+        action: 'list_created',
+        metadata: {
+            title: data.title,
+            visibility: data.visibility,
+            mode: data.mode,
+            isPlatformer: data.isPlatformer
+        }
+    })
+
+    return getCustomList(data.id, ownerId)
 }
 
 export async function updateCustomList(listId: number, ownerId: CustomListActor, payload: {
@@ -2299,7 +2778,7 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
     rankBadges?: unknown
 }) {
     const existing = await getCustomListRow(listId)
-    assertCanEditList(existing, ownerId)
+    const access = await assertCanEditList(existing, ownerId)
 
     const updates: CustomListUpdate = {
         updated_at: new Date().toISOString()
@@ -2392,11 +2871,24 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
         throw new Error(error.message)
     }
 
+    const changedFields = Object.keys(updates).filter((field) => field !== 'updated_at')
+
+    if (changedFields.length) {
+        await appendCustomListAuditLog(listId, {
+            actorUid: access.actorUid,
+            action: 'list_updated',
+            metadata: {
+                fields: changedFields
+            }
+        })
+    }
+
     return getCustomList(listId, ownerId)
 }
 
 export async function setCustomListBanState(listId: number, actor: CustomListActor, value: unknown) {
     const existing = await getCustomListRow(listId)
+    const actorUid = getActorUid(actor)
 
     if (!canModerateList(actor)) {
         throw new ForbiddenError('Only managers can ban custom lists')
@@ -2424,6 +2916,261 @@ export async function setCustomListBanState(listId: number, actor: CustomListAct
     if (error) {
         throw new Error(error.message)
     }
+
+    await appendCustomListAuditLog(listId, {
+        actorUid,
+        action: 'ban_state_updated',
+        metadata: {
+            isBanned
+        }
+    })
+
+    return getCustomList(listId, actor)
+}
+
+export async function updateCustomListCollaborationSettings(listId: number, actor: CustomListActor, payload: {
+    adminsCanManageHelpers?: unknown
+}) {
+    const list = await getCustomListRow(listId)
+    const access = await assertOwnerEditable(list, actor)
+    const updates: CustomListUpdate = {
+        updated_at: new Date().toISOString()
+    }
+
+    if (payload.adminsCanManageHelpers !== undefined) {
+        updates.adminsCanManageHelpers = sanitizeAdminsCanManageHelpers(payload.adminsCanManageHelpers)
+    }
+
+    const changedFields = Object.keys(updates).filter((field) => field !== 'updated_at')
+
+    if (!changedFields.length) {
+        return getCustomList(listId, actor)
+    }
+
+    const { error } = await supabase
+        .from('lists')
+        .update(updates)
+        .eq('id', listId)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    await appendCustomListAuditLog(listId, {
+        actorUid: access.actorUid,
+        action: 'collaboration_settings_updated',
+        metadata: {
+            adminsCanManageHelpers: updates.adminsCanManageHelpers
+        }
+    })
+
+    return getCustomList(listId, actor)
+}
+
+export async function addCustomListMember(listId: number, actor: CustomListActor, payload: {
+    uid?: unknown
+    role?: unknown
+}) {
+    const list = await getCustomListRow(listId)
+    const uid = sanitizeActorUid(payload.uid, 'member uid')
+    const role = sanitizeCustomListMemberRole(payload.role)
+    const access = await assertCanManageListMembers(list, actor, { targetRole: role })
+
+    if (uid === list.owner) {
+        throw new ValidationError('The owner cannot be added as a collaborator')
+    }
+
+    await ensurePlayerExists(uid)
+
+    const existingMember = await getCustomListMembership(listId, uid)
+
+    if (existingMember) {
+        throw new ConflictError('This player is already a collaborator on this list')
+    }
+
+    const memberInsert: CustomListMemberInsert = {
+        listId,
+        uid,
+        role,
+        addedBy: getRequiredActorUid(actor),
+        updated_at: new Date().toISOString()
+    }
+
+    const { error } = await supabase
+        .from('listMembers')
+        .insert(memberInsert)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    await touchCustomListActivity(listId)
+    await appendCustomListAuditLog(listId, {
+        actorUid: access.actorUid,
+        action: 'member_added',
+        targetUid: uid,
+        metadata: {
+            role
+        }
+    })
+
+    return getCustomList(listId, actor)
+}
+
+export async function updateCustomListMemberRole(listId: number, actor: CustomListActor, memberUid: unknown, roleValue: unknown) {
+    const list = await getCustomListRow(listId)
+    const uid = sanitizeActorUid(memberUid, 'member uid')
+    const role = sanitizeCustomListMemberRole(roleValue)
+
+    if (uid === list.owner) {
+        throw new ValidationError('The owner role can only be changed through ownership transfer')
+    }
+
+    const existingMember = await getCustomListMembership(listId, uid)
+
+    if (!existingMember) {
+        throw new NotFoundError('Collaborator not found')
+    }
+
+    const access = await assertCanManageListMembers(list, actor, {
+        targetRole: role,
+        targetMember: existingMember
+    })
+
+    if (existingMember.role === role) {
+        return getCustomList(listId, actor)
+    }
+
+    const updates: CustomListMemberUpdate = {
+        role,
+        updated_at: new Date().toISOString()
+    }
+
+    const { error } = await supabase
+        .from('listMembers')
+        .update(updates)
+        .eq('listId', listId)
+        .eq('uid', uid)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    await touchCustomListActivity(listId)
+    await appendCustomListAuditLog(listId, {
+        actorUid: access.actorUid,
+        action: 'member_role_updated',
+        targetUid: uid,
+        metadata: {
+            fromRole: existingMember.role,
+            toRole: role
+        }
+    })
+
+    return getCustomList(listId, actor)
+}
+
+export async function removeCustomListMember(listId: number, actor: CustomListActor, memberUid: unknown) {
+    const list = await getCustomListRow(listId)
+    const uid = sanitizeActorUid(memberUid, 'member uid')
+
+    if (uid === list.owner) {
+        throw new ValidationError('The owner cannot be removed as a collaborator')
+    }
+
+    const existingMember = await getCustomListMembership(listId, uid)
+
+    if (!existingMember) {
+        throw new NotFoundError('Collaborator not found')
+    }
+
+    const access = await assertCanManageListMembers(list, actor, {
+        targetMember: existingMember
+    })
+
+    const { error } = await supabase
+        .from('listMembers')
+        .delete()
+        .eq('listId', listId)
+        .eq('uid', uid)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    await touchCustomListActivity(listId)
+    await appendCustomListAuditLog(listId, {
+        actorUid: access.actorUid,
+        action: 'member_removed',
+        targetUid: uid,
+        metadata: {
+            role: existingMember.role
+        }
+    })
+
+    return getCustomList(listId, actor)
+}
+
+export async function transferCustomListOwnership(listId: number, actor: CustomListActor, targetUidValue: unknown) {
+    const list = await getCustomListRow(listId)
+    const access = await assertCanTransferListOwnership(list, actor)
+    const targetUid = sanitizeActorUid(targetUidValue, 'owner uid')
+
+    if (targetUid === list.owner) {
+        throw new ValidationError('This player already owns the list')
+    }
+
+    await ensurePlayerExists(targetUid)
+
+    const now = new Date().toISOString()
+    const previousOwnerUid = list.owner
+
+    const { error: removeTargetMembershipError } = await supabase
+        .from('listMembers')
+        .delete()
+        .eq('listId', listId)
+        .eq('uid', targetUid)
+
+    if (removeTargetMembershipError) {
+        throw new Error(removeTargetMembershipError.message)
+    }
+
+    const { error: updateOwnerError } = await supabase
+        .from('lists')
+        .update({
+            owner: targetUid,
+            updated_at: now
+        })
+        .eq('id', listId)
+
+    if (updateOwnerError) {
+        throw new Error(updateOwnerError.message)
+    }
+
+    const previousOwnerMembership: CustomListMemberInsert = {
+        listId,
+        uid: previousOwnerUid,
+        role: 'admin',
+        addedBy: previousOwnerUid,
+        updated_at: now
+    }
+
+    const { error: upsertMembershipError } = await supabase
+        .from('listMembers')
+        .upsert(previousOwnerMembership, { onConflict: 'listId,uid' })
+
+    if (upsertMembershipError) {
+        throw new Error(upsertMembershipError.message)
+    }
+
+    await appendCustomListAuditLog(listId, {
+        actorUid: access.actorUid,
+        action: 'ownership_transferred',
+        targetUid,
+        metadata: {
+            previousOwnerUid
+        }
+    })
 
     return getCustomList(listId, actor)
 }
@@ -2471,7 +3218,7 @@ export async function updateCustomListOfficialMetadata(listId: number, payload: 
 
 export async function deleteCustomList(listId: number, ownerId: CustomListActor) {
     const existing = await getCustomListRow(listId)
-    assertOwnerEditable(existing, ownerId)
+    await assertOwnerEditable(existing, ownerId)
 
     if (existing.isOfficial) {
         throw new ForbiddenError('Official lists cannot be deleted')
@@ -2490,7 +3237,7 @@ export async function deleteCustomList(listId: number, ownerId: CustomListActor)
 export async function addLevelToCustomList(listId: number, ownerId: CustomListActor, levelId: number) {
     const list = await getCustomListRow(listId)
     const actorUid = getRequiredActorUid(ownerId)
-    assertCanEditList(list, ownerId)
+    const access = await assertCanEditListLevels(list, ownerId)
 
     const level = await ensureLevelExists(levelId)
     assertLevelTypeMatchesList(list, level)
@@ -2515,13 +3262,20 @@ export async function addLevelToCustomList(listId: number, ownerId: CustomListAc
     }
 
     await syncLevelCount(listId)
+    await appendCustomListAuditLog(listId, {
+        actorUid: access.actorUid,
+        action: 'level_added',
+        metadata: {
+            levelId
+        }
+    })
 
     return getCustomList(listId, ownerId)
 }
 
 export async function removeLevelFromCustomList(listId: number, ownerId: CustomListActor, levelId: number) {
     const list = await getCustomListRow(listId)
-    assertCanEditList(list, ownerId)
+    const access = await assertCanEditListLevels(list, ownerId)
 
     const { data, error } = await supabase
         .from('listLevels')
@@ -2540,6 +3294,13 @@ export async function removeLevelFromCustomList(listId: number, ownerId: CustomL
     }
 
     await syncLevelCount(listId)
+    await appendCustomListAuditLog(listId, {
+        actorUid: access.actorUid,
+        action: 'level_removed',
+        metadata: {
+            levelId
+        }
+    })
 
     return getCustomList(listId, ownerId)
 }
@@ -2549,7 +3310,7 @@ export async function updateListLevel(listId: number, ownerId: CustomListActor, 
     minProgress?: unknown
 }) {
     const list = await getCustomListRow(listId)
-    assertCanEditList(list, ownerId)
+    const access = await assertCanEditListLevels(list, ownerId)
 
     const updates: Record<string, unknown> = {}
 
@@ -2582,13 +3343,21 @@ export async function updateListLevel(listId: number, ownerId: CustomListActor, 
     }
 
     await touchCustomListActivity(listId)
+    await appendCustomListAuditLog(listId, {
+        actorUid: access.actorUid,
+        action: 'level_updated',
+        metadata: {
+            levelId,
+            fields: Object.keys(updates)
+        }
+    })
 
     return getCustomList(listId, ownerId)
 }
 
 export async function reorderListLevels(listId: number, ownerId: CustomListActor, levelIds: unknown) {
     const list = await getCustomListRow(listId)
-    assertCanEditList(list, ownerId)
+    const access = await assertCanEditListLevels(list, ownerId)
 
     if (list.mode !== 'top') {
         throw new ValidationError('Reordering is only available in top mode')
@@ -2615,6 +3384,13 @@ export async function reorderListLevels(listId: number, ownerId: CustomListActor
     }
 
     await touchCustomListActivity(listId)
+    await appendCustomListAuditLog(listId, {
+        actorUid: access.actorUid,
+        action: 'levels_reordered',
+        metadata: {
+            levelIds
+        }
+    })
 
     return getCustomList(listId, ownerId)
 }

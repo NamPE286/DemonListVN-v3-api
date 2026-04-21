@@ -1107,6 +1107,110 @@ export type Database = {
           },
         ]
       }
+      listAuditLogs: {
+        Row: {
+          action: string
+          actorUid: string | null
+          created_at: string
+          id: number
+          listId: number
+          metadata: Json
+          targetUid: string | null
+        }
+        Insert: {
+          action: string
+          actorUid?: string | null
+          created_at?: string
+          id?: number
+          listId: number
+          metadata?: Json
+          targetUid?: string | null
+        }
+        Update: {
+          action?: string
+          actorUid?: string | null
+          created_at?: string
+          id?: number
+          listId?: number
+          metadata?: Json
+          targetUid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_audit_logs_actor_uid_fkey"
+            columns: ["actorUid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "list_audit_logs_list_id_fkey"
+            columns: ["listId"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "list_audit_logs_target_uid_fkey"
+            columns: ["targetUid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      listMembers: {
+        Row: {
+          addedBy: string
+          created_at: string
+          id: number
+          listId: number
+          role: string
+          uid: string
+          updated_at: string
+        }
+        Insert: {
+          addedBy: string
+          created_at?: string
+          id?: number
+          listId: number
+          role: string
+          uid: string
+          updated_at?: string
+        }
+        Update: {
+          addedBy?: string
+          created_at?: string
+          id?: number
+          listId?: number
+          role?: string
+          uid?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_members_added_by_fkey"
+            columns: ["addedBy"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "list_members_list_id_fkey"
+            columns: ["listId"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "list_members_uid_fkey"
+            columns: ["uid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       listStars: {
         Row: {
           created_at: string
@@ -1145,6 +1249,7 @@ export type Database = {
       }
       lists: {
         Row: {
+          adminsCanManageHelpers: boolean
           backgroundColor: string | null
           bannerUrl: string | null
           borderColor: string | null
@@ -1169,6 +1274,7 @@ export type Database = {
           weightFormula: string
         }
         Insert: {
+          adminsCanManageHelpers?: boolean
           backgroundColor?: string | null
           bannerUrl?: string | null
           borderColor?: string | null
@@ -1193,6 +1299,7 @@ export type Database = {
           weightFormula?: string
         }
         Update: {
+          adminsCanManageHelpers?: boolean
           backgroundColor?: string | null
           bannerUrl?: string | null
           borderColor?: string | null
