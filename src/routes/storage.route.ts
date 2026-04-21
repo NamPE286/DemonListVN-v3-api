@@ -28,6 +28,10 @@ function validate(path: string, user: Player) {
         return;
     }
 
+    if (path.startsWith('custom-lists/') && path.split('/')[1] === String(user.uid)) {
+        return;
+    }
+
     // Users can upload their own record-card images using their UID as path prefix
     if (path.startsWith('record-cards/') && path.split('/')[1].startsWith(String(user.uid))) {
         return;
