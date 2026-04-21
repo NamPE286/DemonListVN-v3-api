@@ -1163,6 +1163,7 @@ export type Database = {
           slug: string | null
           tags: string[]
           title: string
+          topEnabled: boolean
           updated_at: string
           visibility: string
           weightFormula: string
@@ -1186,6 +1187,7 @@ export type Database = {
           slug?: string | null
           tags?: string[]
           title: string
+          topEnabled?: boolean
           updated_at?: string
           visibility?: string
           weightFormula?: string
@@ -1209,6 +1211,7 @@ export type Database = {
           slug?: string | null
           tags?: string[]
           title?: string
+          topEnabled?: boolean
           updated_at?: string
           visibility?: string
           weightFormula?: string

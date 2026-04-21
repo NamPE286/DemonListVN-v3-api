@@ -485,6 +485,18 @@ function sanitizeCommunityEnabled(value: unknown) {
     return value
 }
 
+function sanitizeTopEnabled(value: unknown) {
+    if (value == null) {
+        return true
+    }
+
+    if (typeof value !== 'boolean') {
+        throw new ValidationError('topEnabled must be a boolean')
+    }
+
+    return value
+}
+
 function sanitizeOfficial(value: unknown) {
     if (value == null) {
         return false
@@ -985,6 +997,7 @@ async function getOfficialList(slug: OfficialListSlug, viewerId?: string, itemRa
         isOfficial: true,
         communityEnabled: false,
         logoUrl: null,
+        topEnabled: config.mode === 'top',
         mode: config.mode,
         rankBadges: [],
         weightFormula: config.weightFormula,
@@ -1031,6 +1044,7 @@ async function getOfficialListSummary(slug: OfficialListSlug) {
         isOfficial: true,
         communityEnabled: false,
         logoUrl: null,
+        topEnabled: config.mode === 'top',
         mode: config.mode,
         rankBadges: [],
         weightFormula: config.weightFormula,
@@ -2220,6 +2234,7 @@ export async function createCustomList(ownerId: string, payload: {
     isPlatformer?: unknown
     communityEnabled?: unknown
     logoUrl?: unknown
+    topEnabled?: unknown
     slug?: unknown
     isOfficial?: unknown
     weightFormula?: unknown
@@ -2238,6 +2253,7 @@ export async function createCustomList(ownerId: string, payload: {
         isPlatformer: sanitizeListPlatformer(payload.isPlatformer),
         communityEnabled: sanitizeCommunityEnabled(payload.communityEnabled),
         logoUrl: sanitizeThemeUrl(payload.logoUrl, 'logoUrl'),
+        topEnabled: sanitizeTopEnabled(payload.topEnabled),
         slug: sanitizeSlug(payload.slug),
         isOfficial: false,
         rankBadges: sanitizeRankBadges(payload.rankBadges),
@@ -2277,6 +2293,7 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
     isPlatformer?: unknown
     communityEnabled?: unknown
     logoUrl?: unknown
+    topEnabled?: unknown
     slug?: unknown
     weightFormula?: unknown
     rankBadges?: unknown
@@ -2342,6 +2359,10 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
 
     if (payload.logoUrl !== undefined) {
         updates.logoUrl = sanitizeThemeUrl(payload.logoUrl, 'logoUrl')
+    }
+
+    if (payload.topEnabled !== undefined) {
+        updates.topEnabled = sanitizeTopEnabled(payload.topEnabled)
     }
 
     if (payload.slug !== undefined) {
