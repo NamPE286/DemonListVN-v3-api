@@ -64,6 +64,7 @@ type CustomListWithOwnerData = CustomList & {
 const VISIBILITY_VALUES = new Set(['private', 'unlisted', 'public'])
 const MODE_VALUES = new Set(['rating', 'top'])
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 const WEIGHT_FORMULA_VALIDATION_SCOPE = {
     position: 1,
     levelCount: 1,
@@ -370,6 +371,58 @@ function sanitizeDescription(value: unknown) {
     }
 
     return description
+}
+
+function sanitizeThemeColor(value: unknown, fieldName: string) {
+    if (value == null || value === '') {
+        return null
+    }
+
+    if (typeof value !== 'string') {
+        throw new ValidationError(`${fieldName} must be a string`)
+    }
+
+    const color = value.trim()
+
+    if (!HEX_COLOR_PATTERN.test(color)) {
+        throw new ValidationError(`${fieldName} must be a valid hex color`)
+    }
+
+    return color.toLowerCase()
+}
+
+function sanitizeThemeUrl(value: unknown, fieldName: string) {
+    if (value == null || value === '') {
+        return null
+    }
+
+    if (typeof value !== 'string') {
+        throw new ValidationError(`${fieldName} must be a string`)
+    }
+
+    const url = value.trim()
+
+    if (!url.length) {
+        return null
+    }
+
+    if (url.length > 500) {
+        throw new ValidationError(`${fieldName} must be at most 500 characters`)
+    }
+
+    let parsed: URL
+
+    try {
+        parsed = new URL(url)
+    } catch {
+        throw new ValidationError(`${fieldName} must be a valid URL`)
+    }
+
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new ValidationError(`${fieldName} must use http or https`)
+    }
+
+    return parsed.toString()
 }
 
 function sanitizeVisibility(value: unknown) {
@@ -922,12 +975,16 @@ async function getOfficialList(slug: OfficialListSlug, viewerId?: string, itemRa
         owner: '',
         title: config.title,
         description: config.description,
+        backgroundColor: null,
+        bannerUrl: null,
+        borderColor: null,
         visibility: 'public',
         tags: ['official'],
         levelCount,
         isPlatformer: config.isPlatformer,
         isOfficial: true,
         communityEnabled: false,
+        logoUrl: null,
         mode: config.mode,
         rankBadges: [],
         weightFormula: config.weightFormula,
@@ -955,25 +1012,30 @@ async function getOfficialList(slug: OfficialListSlug, viewerId?: string, itemRa
 }
 
 async function getOfficialListSummary(slug: OfficialListSlug) {
-    const list = await getOfficialList(slug)
+    const config = getOfficialListConfig(slug)
+    const levels = await config.loadLevels({ start: 0, end: 4999, uid: '' })
 
     return {
-        id: list.id,
-        slug: list.slug,
-        owner: list.owner,
-        title: list.title,
-        description: list.description,
-        visibility: list.visibility,
-        tags: list.tags,
-        levelCount: list.levelCount,
-        isPlatformer: list.isPlatformer,
-        isOfficial: list.isOfficial,
-        communityEnabled: list.communityEnabled,
-        mode: list.mode,
+        id: -1,
+        slug: config.slug,
+        owner: '',
+        title: config.title,
+        description: config.description,
+        backgroundColor: null,
+        bannerUrl: null,
+        borderColor: null,
+        visibility: 'public',
+        tags: ['official'],
+        levelCount: levels.length,
+        isPlatformer: config.isPlatformer,
+        isOfficial: true,
+        communityEnabled: false,
+        logoUrl: null,
+        mode: config.mode,
         rankBadges: [],
-        weightFormula: list.weightFormula,
-        lastRefreshedAt: list.lastRefreshedAt,
-        updated_at: list.updated_at,
+        weightFormula: config.weightFormula,
+        lastRefreshedAt: null,
+        updated_at: new Date().toISOString(),
         starCount: 0,
         starred: false
     }
@@ -1602,12 +1664,14 @@ export async function browseLists(options: {
     offset?: number
     search?: string
     viewerId?: string
+    kind?: 'custom' | 'official'
 }) {
     const {
         limit = 24,
         offset = 0,
         search = '',
-        viewerId
+        viewerId,
+        kind
     } = options
 
     const normalizedSearch = search.trim().toLowerCase()
@@ -1616,6 +1680,12 @@ export async function browseLists(options: {
         .from('lists')
         .select(`*, ownerData:players!lists_owner_fkey(${playerSelect})`, { count: 'exact' })
         .eq('visibility', 'public')
+
+    if (kind === 'custom') {
+        query = query.eq('isOfficial', false)
+    } else if (kind === 'official') {
+        query = query.eq('isOfficial', true)
+    }
 
     if (normalizedSearch.length) {
         query = query.or(`title.ilike.%${normalizedSearch}%,description.ilike.%${normalizedSearch}%`)
@@ -1637,20 +1707,26 @@ export async function browseLists(options: {
             .filter((slug): slug is OfficialListSlug => Boolean(slug) && isOfficialListSlug(slug!))
     )
     const syntheticOfficialLists = await Promise.all(
-        OFFICIAL_LIST_SLUGS
-            .filter((slug) => !databaseOfficialSlugs.has(slug))
-            .filter((slug) => {
-                if (!normalizedSearch.length) {
-                    return true
-                }
+        kind === 'custom'
+            ? []
+            : OFFICIAL_LIST_SLUGS
+                .filter((slug) => !databaseOfficialSlugs.has(slug))
+                .filter((slug) => {
+                    if (!normalizedSearch.length) {
+                        return true
+                    }
 
-                const entry = getOfficialListConfig(slug)
-                return entry.title.toLowerCase().includes(normalizedSearch)
-                    || entry.description.toLowerCase().includes(normalizedSearch)
-            })
-            .map((slug) => getOfficialListSummary(slug))
+                    const entry = getOfficialListConfig(slug)
+                    return entry.title.toLowerCase().includes(normalizedSearch)
+                        || entry.description.toLowerCase().includes(normalizedSearch)
+                })
+                .map((slug) => getOfficialListSummary(slug))
     )
-    const combinedLists = [...syntheticOfficialLists, ...databaseLists]
+    const combinedLists = kind === 'official'
+        ? [...syntheticOfficialLists, ...databaseLists]
+        : kind === 'custom'
+            ? databaseLists
+            : [...syntheticOfficialLists, ...databaseLists]
 
     return {
         data: combinedLists.slice(offset, offset + limit),
@@ -1704,6 +1780,39 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: Cus
     }
 }
 
+async function getCustomListSummary(identifier: CustomListIdentifier, viewerId?: CustomListActor) {
+    const actorUid = getActorUid(viewerId)
+
+    try {
+        const resolved = await resolveCustomListIdentifier(identifier)
+        assertReadable(resolved, viewerId)
+
+        const list = await getListWithOwnerData(resolved.id)
+        const [[{ starCount = 0, starred = false } = { starCount: 0, starred: false }], latestRefresh] = await Promise.all([
+            enrichListsWithStars([list], actorUid),
+            getLatestCustomListLeaderboardRefresh(list.id)
+        ])
+
+        return {
+            ...list,
+            rankBadges: normalizeRankBadges(list.rankBadges),
+            starCount,
+            starred,
+            lastRefreshedAt: latestRefresh?.lastRefreshedAt ?? null
+        }
+    } catch (error) {
+        if (error instanceof NotFoundError && typeof identifier === 'string') {
+            const normalizedIdentifier = identifier.trim().toLowerCase()
+
+            if (isOfficialListSlug(normalizedIdentifier)) {
+                return getOfficialListSummary(normalizedIdentifier)
+            }
+        }
+
+        throw error
+    }
+}
+
 export async function getCustomListLeaderboard(identifier: CustomListIdentifier, options: {
     start?: number
     end?: number
@@ -1715,7 +1824,7 @@ export async function getCustomListLeaderboard(identifier: CustomListIdentifier,
         viewerId
     } = options
 
-    const list = await getCustomList(identifier, viewerId)
+    const list = await getCustomListSummary(identifier, viewerId)
 
     if (list.id <= 0) {
         return {
@@ -2102,11 +2211,15 @@ export async function getStarredListsByLevel(levelId: number, viewerId?: string)
 export async function createCustomList(ownerId: string, payload: {
     title: unknown
     description?: unknown
+    backgroundColor?: unknown
+    bannerUrl?: unknown
+    borderColor?: unknown
     visibility?: unknown
     tags?: unknown
     mode?: unknown
     isPlatformer?: unknown
     communityEnabled?: unknown
+    logoUrl?: unknown
     slug?: unknown
     isOfficial?: unknown
     weightFormula?: unknown
@@ -2116,11 +2229,15 @@ export async function createCustomList(ownerId: string, payload: {
         owner: ownerId,
         title: sanitizeTitle(payload.title),
         description: sanitizeDescription(payload.description),
+        backgroundColor: sanitizeThemeColor(payload.backgroundColor, 'backgroundColor'),
+        bannerUrl: sanitizeThemeUrl(payload.bannerUrl, 'bannerUrl'),
+        borderColor: sanitizeThemeColor(payload.borderColor, 'borderColor'),
         visibility: sanitizeVisibility(payload.visibility),
         tags: sanitizeTags(payload.tags),
         mode: sanitizeMode(payload.mode),
         isPlatformer: sanitizeListPlatformer(payload.isPlatformer),
         communityEnabled: sanitizeCommunityEnabled(payload.communityEnabled),
+        logoUrl: sanitizeThemeUrl(payload.logoUrl, 'logoUrl'),
         slug: sanitizeSlug(payload.slug),
         isOfficial: false,
         rankBadges: sanitizeRankBadges(payload.rankBadges),
@@ -2151,11 +2268,15 @@ export async function createCustomList(ownerId: string, payload: {
 export async function updateCustomList(listId: number, ownerId: CustomListActor, payload: {
     title?: unknown
     description?: unknown
+    backgroundColor?: unknown
+    bannerUrl?: unknown
+    borderColor?: unknown
     visibility?: unknown
     tags?: unknown
     mode?: unknown
     isPlatformer?: unknown
     communityEnabled?: unknown
+    logoUrl?: unknown
     slug?: unknown
     weightFormula?: unknown
     rankBadges?: unknown
@@ -2173,6 +2294,18 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
 
     if (payload.description !== undefined) {
         updates.description = sanitizeDescription(payload.description)
+    }
+
+    if (payload.backgroundColor !== undefined) {
+        updates.backgroundColor = sanitizeThemeColor(payload.backgroundColor, 'backgroundColor')
+    }
+
+    if (payload.bannerUrl !== undefined) {
+        updates.bannerUrl = sanitizeThemeUrl(payload.bannerUrl, 'bannerUrl')
+    }
+
+    if (payload.borderColor !== undefined) {
+        updates.borderColor = sanitizeThemeColor(payload.borderColor, 'borderColor')
     }
 
     if (payload.visibility !== undefined) {
@@ -2205,6 +2338,10 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
 
     if (payload.communityEnabled !== undefined) {
         updates.communityEnabled = sanitizeCommunityEnabled(payload.communityEnabled)
+    }
+
+    if (payload.logoUrl !== undefined) {
+        updates.logoUrl = sanitizeThemeUrl(payload.logoUrl, 'logoUrl')
     }
 
     if (payload.slug !== undefined) {

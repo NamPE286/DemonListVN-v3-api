@@ -1145,6 +1145,9 @@ export type Database = {
       }
       lists: {
         Row: {
+          backgroundColor: string | null
+          bannerUrl: string | null
+          borderColor: string | null
           communityEnabled: boolean
           created_at: string
           description: string
@@ -1156,6 +1159,7 @@ export type Database = {
           mode: string
           owner: string
           rankBadges: Json
+          logoUrl: string | null
           slug: string | null
           tags: string[]
           title: string
@@ -1164,6 +1168,9 @@ export type Database = {
           weightFormula: string
         }
         Insert: {
+          backgroundColor?: string | null
+          bannerUrl?: string | null
+          borderColor?: string | null
           communityEnabled?: boolean
           created_at?: string
           description?: string
@@ -1175,6 +1182,7 @@ export type Database = {
           mode?: string
           owner: string
           rankBadges?: Json
+          logoUrl?: string | null
           slug?: string | null
           tags?: string[]
           title: string
@@ -1183,6 +1191,9 @@ export type Database = {
           weightFormula?: string
         }
         Update: {
+          backgroundColor?: string | null
+          bannerUrl?: string | null
+          borderColor?: string | null
           communityEnabled?: boolean
           created_at?: string
           description?: string
@@ -1194,6 +1205,7 @@ export type Database = {
           mode?: string
           owner?: string
           rankBadges?: Json
+          logoUrl?: string | null
           slug?: string | null
           tags?: string[]
           title?: string
