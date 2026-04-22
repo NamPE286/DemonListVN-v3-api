@@ -1,5 +1,5 @@
 import supabase from "@src/client/supabase";
-import { getLevel, fetchLevelFromGD, updateLevel } from "@src/services/level.service";
+import { getLevel, fetchLevelFromGD, retrieveOrCreateLevel } from "@src/services/level.service";
 import { getPlayer } from "@src/services/player.service";
 import { approved } from "@src/services/pointercrate.service";
 import { addInventoryItem } from "@src/services/inventory.service";
@@ -383,15 +383,17 @@ export async function submitRecord(recordData: TRecord) {
                 }
             }
 
-            logs.push('Updating level in database');
-            const levelToUpdate = await getLevel(recordData.levelid!)
-            await updateLevel({
-                ...levelToUpdate,
+            logs.push('Creating level in database from GD payload');
+            await retrieveOrCreateLevel({
+                id: recordData.levelid!,
                 name: apiLevel.name,
                 creator: apiLevel.author,
-                isPlatformer: apiLevel.length == 5
+                difficulty: apiLevel.difficulty ?? null,
+                isPlatformer: apiLevel.length == 5,
+                isChallenge: false,
+                isNonList: false
             })
-            logs.push('Level updated successfully');
+            logs.push('Level created successfully');
         }
 
         // Check if the submitted level is a variant of another level

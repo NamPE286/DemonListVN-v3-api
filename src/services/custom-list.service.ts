@@ -2987,6 +2987,289 @@ export async function getStarredListsByLevel(levelId: number, viewerId?: string)
         }))
 }
 
+function getOfficialLevelListEntries(level: {
+    created_at?: string | null
+    rating?: number | null
+    flPt?: number | null
+    dlTop?: number | null
+    flTop?: number | null
+    minProgress?: number | null
+    isChallenge?: boolean | null
+    isPlatformer?: boolean | null
+}) {
+    const createdAt = level.created_at || new Date().toISOString()
+    const updatedAt = createdAt
+    const entries: any[] = []
+
+    if (level.dlTop != null) {
+        if (level.isChallenge) {
+            const config = getOfficialListConfig('cl')
+            entries.push({
+                id: -3,
+                slug: config.slug,
+                owner: '',
+                title: config.title,
+                description: config.description,
+                backgroundColor: null,
+                bannerUrl: null,
+                borderColor: null,
+                visibility: 'public',
+                tags: ['official'],
+                levelCount: 0,
+                isPlatformer: false,
+                isOfficial: true,
+                communityEnabled: false,
+                faviconUrl: null,
+                logoUrl: null,
+                topEnabled: false,
+                itemSort: 'mode_default',
+                mode: config.mode,
+                rankBadges: [],
+                weightFormula: config.weightFormula,
+                lastRefreshedAt: null,
+                updated_at: updatedAt,
+                starCount: 0,
+                starred: false,
+                ownerData: null,
+                item: {
+                    created_at: createdAt,
+                    rating: level.rating ?? null,
+                    position: level.dlTop,
+                    minProgress: level.minProgress ?? null,
+                    videoID: null
+                }
+            })
+        } else if (level.isPlatformer) {
+            const config = getOfficialListConfig('pl')
+            entries.push({
+                id: -2,
+                slug: config.slug,
+                owner: '',
+                title: config.title,
+                description: config.description,
+                backgroundColor: null,
+                bannerUrl: null,
+                borderColor: null,
+                visibility: 'public',
+                tags: ['official'],
+                levelCount: 0,
+                isPlatformer: true,
+                isOfficial: true,
+                communityEnabled: false,
+                faviconUrl: null,
+                logoUrl: null,
+                topEnabled: true,
+                itemSort: 'mode_default',
+                mode: config.mode,
+                rankBadges: [],
+                weightFormula: config.weightFormula,
+                lastRefreshedAt: null,
+                updated_at: updatedAt,
+                starCount: 0,
+                starred: false,
+                ownerData: null,
+                item: {
+                    created_at: createdAt,
+                    rating: level.rating ?? null,
+                    position: level.dlTop,
+                    minProgress: level.minProgress ?? null,
+                    videoID: null
+                }
+            })
+        } else {
+            const config = getOfficialListConfig('dl')
+            entries.push({
+                id: -1,
+                slug: config.slug,
+                owner: '',
+                title: config.title,
+                description: config.description,
+                backgroundColor: null,
+                bannerUrl: null,
+                borderColor: null,
+                visibility: 'public',
+                tags: ['official'],
+                levelCount: 0,
+                isPlatformer: false,
+                isOfficial: true,
+                communityEnabled: false,
+                faviconUrl: null,
+                logoUrl: null,
+                topEnabled: false,
+                itemSort: 'mode_default',
+                mode: config.mode,
+                rankBadges: [],
+                weightFormula: config.weightFormula,
+                lastRefreshedAt: null,
+                updated_at: updatedAt,
+                starCount: 0,
+                starred: false,
+                ownerData: null,
+                item: {
+                    created_at: createdAt,
+                    rating: level.rating ?? null,
+                    position: level.dlTop,
+                    minProgress: level.minProgress ?? null,
+                    videoID: null
+                }
+            })
+        }
+    }
+
+    if (level.flTop != null) {
+        const config = getOfficialListConfig('fl')
+        entries.push({
+            id: -4,
+            slug: config.slug,
+            owner: '',
+            title: config.title,
+            description: config.description,
+            backgroundColor: null,
+            bannerUrl: null,
+            borderColor: null,
+            visibility: 'public',
+            tags: ['official'],
+            levelCount: 0,
+            isPlatformer: Boolean(level.isPlatformer),
+            isOfficial: true,
+            communityEnabled: false,
+            faviconUrl: null,
+            logoUrl: null,
+            topEnabled: true,
+            itemSort: 'mode_default',
+            mode: config.mode,
+            rankBadges: [],
+            weightFormula: config.weightFormula,
+            lastRefreshedAt: null,
+            updated_at: updatedAt,
+            starCount: 0,
+            starred: false,
+            ownerData: null,
+            item: {
+                created_at: createdAt,
+                rating: level.flPt ?? null,
+                position: level.flTop,
+                minProgress: level.minProgress ?? null,
+                videoID: null
+            }
+        })
+    }
+
+    return entries
+}
+
+function mergeLevelListSummaries(officialLists: any[], remoteLists: any[]) {
+    const remoteByKey = new Map(remoteLists.map((list) => [list.slug || String(list.id), list]))
+    const mergedOfficial = officialLists.map((officialList) => {
+        const key = officialList.slug || String(officialList.id)
+        const remoteList = remoteByKey.get(key)
+
+        if (!remoteList) {
+            return officialList
+        }
+
+        return {
+            ...officialList,
+            ...remoteList,
+            item: remoteList.item ?? officialList.item
+        }
+    })
+
+    const seen = new Set(mergedOfficial.map((list) => list.slug || String(list.id)))
+    const merged = [...mergedOfficial]
+
+    for (const list of remoteLists) {
+        const key = list.slug || String(list.id)
+
+        if (seen.has(key)) {
+            continue
+        }
+
+        seen.add(key)
+        merged.push(list)
+    }
+
+    return merged
+}
+
+export async function getEligibleListsByLevel(levelId: number, progress?: number | null, viewerId?: string) {
+    requireLevelId(levelId)
+
+    const hasCandidateProgress = progress !== undefined && progress !== null
+    const candidateProgress = hasCandidateProgress ? Number(progress) : null
+
+    if (candidateProgress !== null && (!Number.isFinite(candidateProgress) || candidateProgress < 0)) {
+        throw new ValidationError('Invalid progress')
+    }
+
+    const candidateRecord = candidateProgress == null ? null : { progress: candidateProgress }
+
+    const [levelResult, listLevelsResult] = await Promise.all([
+        supabase
+            .from('levels')
+            .select('id, created_at, rating, flPt, dlTop, flTop, minProgress, isChallenge, isPlatformer')
+            .eq('id', levelId)
+            .maybeSingle(),
+        supabase
+            .from('listLevels')
+            .select('listId, created_at, rating, position, minProgress, videoID')
+            .eq('levelId', levelId)
+    ])
+
+    if (levelResult.error) {
+        throw new Error(levelResult.error.message)
+    }
+
+    if (listLevelsResult.error) {
+        throw new Error(listLevelsResult.error.message)
+    }
+
+    const officialLists = levelResult.data
+        ? getOfficialLevelListEntries(levelResult.data)
+            .map((list) => ({
+                ...list,
+                eligible: candidateRecord
+                    ? isEligibleRecordForListItem(candidateRecord, list.item, list.isPlatformer)
+                    : null
+            }))
+        : []
+
+    const listLevels = listLevelsResult.data || []
+    const listIds = [...new Set(listLevels.map((entry) => entry.listId))]
+
+    if (!listIds.length) {
+        return officialLists
+    }
+
+    const listItemsById = new Map(listLevels.map((entry) => [entry.listId, entry]))
+    const { data: lists, error: listsError } = await supabase
+        .from('lists')
+        .select(`*, ownerData:players!lists_owner_fkey(${playerSelect})`)
+        .eq('visibility', 'public')
+        .in('id', listIds)
+        .order('updated_at', { ascending: false })
+
+    if (listsError) {
+        throw new Error(listsError.message)
+    }
+
+    const remoteLists = (await enrichListsWithStars((lists || []) as CustomListWithOwnerData[], viewerId))
+        .map((list) => {
+            const item = listItemsById.get(list.id) || null
+
+            return {
+                ...list,
+                rankBadges: normalizeRankBadges((list as any).rankBadges),
+                item,
+                eligible: item && candidateRecord
+                    ? isEligibleRecordForListItem(candidateRecord, item, list.isPlatformer)
+                    : null
+            }
+        })
+
+    return mergeLevelListSummaries(officialLists, remoteLists)
+}
+
 export async function createCustomList(ownerId: string, payload: {
     title: unknown
     description?: unknown

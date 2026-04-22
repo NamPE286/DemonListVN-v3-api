@@ -15,6 +15,7 @@ import {
     ForbiddenError,
     getCustomList,
     getCustomListLeaderboard,
+    getEligibleListsByLevel,
     getCustomListRecordPoints,
     getOwnCustomLists,
     getRandomCustomListLevel,
@@ -147,6 +148,31 @@ router.route('/levels/:levelId/starred')
             const viewerId = res.locals.authenticated ? res.locals.user.uid : undefined
 
             res.send(await getStarredListsByLevel(levelId, viewerId))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/levels/:levelId/eligible')
+    .get(optionalAuth, publicReadCache, async (req, res) => {
+        try {
+            const levelId = parseId(req.params.levelId, 'level ID')
+            const rawProgress = req.query.progress
+            const progress = rawProgress === undefined || rawProgress === null || rawProgress === ''
+                ? null
+                : Number(rawProgress)
+            const viewerId = res.locals.authenticated ? res.locals.user.uid : undefined
+
+            if (progress !== null && (!Number.isFinite(progress) || progress < 0)) {
+                throw new ValidationError('Invalid progress')
+            }
+
+            res.send(await getEligibleListsByLevel(levelId, progress, viewerId))
         } catch (error) {
             if (sendError(res, error)) {
                 return
