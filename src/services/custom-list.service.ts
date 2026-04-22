@@ -2503,15 +2503,15 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: Cus
             end: options.itemsEnd
         }
         : undefined
-    const effectiveItemSort = options.itemSort !== undefined
-        ? sanitizeCustomListItemSort(options.itemSort)
-        : 'mode_default'
 
     try {
         const resolved = await resolveCustomListIdentifier(listId)
         const list = await getListWithOwnerData(resolved.id)
         const access = await assertReadable(list, viewerId)
         const permissions = getCustomListPermissions(list, access)
+        const effectiveItemSort = options.itemSort !== undefined
+            ? sanitizeCustomListItemSort(options.itemSort)
+            : (CUSTOM_LIST_ITEM_SORT_VALUES.has(list.itemSort) ? list.itemSort as 'mode_default' | 'created_at' : 'mode_default')
         const [items, [{ starCount = 0, starred = false } = { starCount: 0, starred: false }], latestRefresh, members, auditLog] = await Promise.all([
             enrichItemsWithViewerEligibleRecords(
                 await getCustomListItems(list.id, list.mode, itemRange, effectiveItemSort),
@@ -3075,6 +3075,7 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
     slug?: unknown
     weightFormula?: unknown
     rankBadges?: unknown
+    itemSort?: unknown
 }) {
     const existing = await getCustomListRow(listId)
     const access = await assertCanEditList(existing, ownerId)
@@ -3161,6 +3162,10 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
 
     if (payload.rankBadges !== undefined) {
         pendingUpdates.rankBadges = sanitizeRankBadges(payload.rankBadges)
+    }
+
+    if (payload.itemSort !== undefined) {
+        pendingUpdates.itemSort = sanitizeCustomListItemSort(payload.itemSort)
     }
 
     const changedEntries = (Object.entries(pendingUpdates) as Array<[string, unknown]>)
