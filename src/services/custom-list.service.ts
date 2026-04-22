@@ -12,6 +12,7 @@ import {
     getPlatformerListLevels,
     retrieveOrCreateLevel
 } from '@src/services/level.service'
+import { sendNotification } from '@src/services/notification.service'
 import getVideoId from 'get-video-id'
 import type { Tables, TablesInsert, TablesUpdate } from '@src/types/supabase'
 import { buildFullTextSearchParams, normalizeFullTextSearchQuery } from '@src/utils/full-text-search'
@@ -21,7 +22,14 @@ type CustomListInsert = TablesInsert<'lists'>
 type CustomListUpdate = TablesUpdate<'lists'>
 type CustomListAuditLog = Tables<'listAuditLogs'>
 type CustomListAuditLogInsert = TablesInsert<'listAuditLogs'>
-type CustomListLevelInsert = TablesInsert<'listLevels'>
+type CustomListLevelRow = Tables<'listLevels'> & {
+    accepted: boolean
+    submissionComment?: string | null
+}
+type CustomListLevelInsert = TablesInsert<'listLevels'> & {
+    accepted?: boolean
+    submissionComment?: string | null
+}
 type CustomListMember = Tables<'listMembers'>
 type CustomListMemberInsert = TablesInsert<'listMembers'>
 type CustomListMemberUpdate = TablesUpdate<'listMembers'>
@@ -63,6 +71,7 @@ type CustomListResolvedRole = 'viewer' | 'owner' | 'admin' | 'helper' | 'moderat
 type CustomListPermissions = {
     canEditSettings: boolean
     canEditLevels: boolean
+    canReviewSubmissions: boolean
     canDelete: boolean
     canBan: boolean
     canManageMembers: boolean
@@ -107,6 +116,11 @@ type CustomListWithOwnerData = CustomList & {
     permissions?: CustomListPermissions
     members?: CustomListMemberWithPlayerData[]
     auditLog?: CustomListAuditLogWithPlayerData[]
+}
+
+type CustomListSubmission = CustomListLevelRow & {
+    level?: any
+    submitterData?: any
 }
 
 const VISIBILITY_VALUES = new Set(['private', 'unlisted', 'public'])
@@ -1154,6 +1168,7 @@ async function ensureStoredTopPositions(listId: number) {
         .from('listLevels')
         .select('id, position, created_at')
         .eq('listId', listId)
+        .eq('accepted', true)
         .order('position', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: true })
         .order('id', { ascending: true })
@@ -1201,6 +1216,7 @@ async function ensureStoredRatingPositions(listId: number) {
         .from('listLevels')
         .select('id, rating, position, created_at')
         .eq('listId', listId)
+        .eq('accepted', true)
         .order('rating', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: true })
         .order('id', { ascending: true })
@@ -1895,6 +1911,14 @@ function canEditCustomListLevels(list: Pick<CustomList, 'isBanned'>, access: Cus
     return access.isOwner || access.memberRole === 'admin' || access.memberRole === 'helper'
 }
 
+function canReviewCustomListSubmissions(list: Pick<CustomList, 'isOfficial'>, access: CustomListAccessContext) {
+    if (list.isOfficial) {
+        return false
+    }
+
+    return access.isModerator || access.isOwner || access.memberRole === 'admin'
+}
+
 function canConfigureCustomListCollaboration(list: Pick<CustomList, 'isBanned'>, access: CustomListAccessContext) {
     return access.isOwner && !list.isBanned
 }
@@ -1927,6 +1951,7 @@ function getCustomListPermissions(list: Pick<CustomList, 'isBanned' | 'isOfficia
     return {
         canEditSettings: canEditCustomListSettings(list, access),
         canEditLevels: canEditCustomListLevels(list, access),
+        canReviewSubmissions: canReviewCustomListSubmissions(list, access),
         canDelete: access.isOwner && !list.isBanned && !list.isOfficial,
         canBan: access.isModerator && !list.isOfficial,
         canManageMembers: canManageCustomListMembers(list, access),
@@ -2109,6 +2134,7 @@ async function syncLevelCount(listId: number) {
         .from('listLevels')
         .select('id', { count: 'exact', head: true })
         .eq('listId', listId)
+        .eq('accepted', true)
 
     if (countError) {
         throw new Error(countError.message)
@@ -2245,8 +2271,9 @@ async function getCustomListItems(listId: number, mode: string = 'rating', itemR
 
     let itemsQuery = supabase
         .from('listLevels')
-        .select('id, created_at, listId, levelId, addedBy, rating, position, minProgress, videoID')
+        .select('id, created_at, listId, levelId, addedBy, rating, position, minProgress, videoID, accepted, submissionComment')
         .eq('listId', listId)
+        .eq('accepted', true)
 
     if (itemSort === 'created_at') {
         itemsQuery = itemsQuery
@@ -2300,6 +2327,620 @@ async function getCustomListItems(listId: number, mode: string = 'rating', itemR
                 : null
         }
     })
+}
+
+function sanitizeSubmissionComment(value: unknown) {
+    if (value == null) {
+        return null
+    }
+
+    if (typeof value !== 'string') {
+        throw new ValidationError('comment must be a string')
+    }
+
+    const trimmed = value.trim()
+
+    if (!trimmed.length) {
+        return null
+    }
+
+    if (trimmed.length > 1000) {
+        throw new ValidationError('comment must be at most 1000 characters')
+    }
+
+    return trimmed
+}
+
+function sanitizeSubmissionPosition(value: unknown) {
+    if (value == null || value === '') {
+        return null
+    }
+
+    const position = Number(value)
+
+    if (!Number.isInteger(position) || position < 1) {
+        throw new ValidationError('position must be a positive integer')
+    }
+
+    return position
+}
+
+async function getCustomListSubmissionQueue(listId: number, actor: CustomListActor) {
+    const list = await getCustomListRow(listId)
+    const access = await getCustomListAccess(list, actor)
+
+    if (!canReviewCustomListSubmissions(list, access)) {
+        throw new ForbiddenError('You do not have permission to review submissions on this list')
+    }
+
+    const { data: submissions, error } = await supabase
+        .from('listLevels')
+        .select('id, created_at, listId, levelId, addedBy, rating, position, minProgress, videoID, accepted, submissionComment')
+        .eq('listId', listId)
+        .eq('accepted', false)
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    const entries = (submissions || []) as CustomListSubmission[]
+
+    if (!entries.length) {
+        return [] as CustomListSubmission[]
+    }
+
+    const levelIds = [...new Set(entries.map((entry) => entry.levelId))]
+    const submitterUids = [...new Set(entries.map((entry) => entry.addedBy).filter(Boolean))]
+
+    const [levelsResult, submittersByUid] = await Promise.all([
+        supabase
+            .from('levels')
+            .select('id, name, creator, difficulty, isPlatformer, rating, minProgress, videoID')
+            .in('id', levelIds),
+        getPlayersByUid(submitterUids)
+    ])
+
+    if (levelsResult.error) {
+        throw new Error(levelsResult.error.message)
+    }
+
+    const levelsById = new Map((levelsResult.data || []).map((level) => [level.id, level]))
+
+    return entries.map((entry) => ({
+        ...entry,
+        level: levelsById.get(entry.levelId) || null,
+        submitterData: submittersByUid.get(entry.addedBy) || null
+    }))
+}
+
+export async function getCustomListSubmissionQueueById(listId: number, actor: CustomListActor) {
+    return getCustomListSubmissionQueue(listId, actor)
+}
+
+async function shiftAcceptedTopPositions(listId: number, startPosition: number) {
+    const { data, error } = await supabase
+        .from('listLevels')
+        .select('id, position, created_at')
+        .eq('listId', listId)
+        .eq('accepted', true)
+        .gte('position', startPosition)
+        .order('position', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    const rows = (data || []) as Array<{ id: number; position: number | null }>
+
+    for (const row of rows) {
+        const nextPosition = Number(row.position) + 1
+
+        const { error: updateError } = await supabase
+            .from('listLevels')
+            .update({ position: nextPosition })
+            .eq('id', row.id)
+
+        if (updateError) {
+            throw new Error(updateError.message)
+        }
+    }
+}
+
+function sanitizeSubmissionReviewPayload(list: CustomList, payload: {
+    accept?: unknown
+    rating?: unknown
+    minProgress?: unknown
+    position?: unknown
+    top?: unknown
+    videoID?: unknown
+    videoId?: unknown
+}) {
+    const accept = Boolean(payload.accept)
+    const videoInput = payload.videoID !== undefined ? payload.videoID : payload.videoId
+    const positionInput = payload.position !== undefined ? payload.position : payload.top
+
+    if (!accept) {
+        return {
+            accept: false,
+            rating: null as number | null,
+            minProgress: null as number | null,
+            position: null as number | null,
+            videoID: videoInput !== undefined ? sanitizeCustomListVideoId(videoInput) : null
+        }
+    }
+
+    if (list.mode === 'top') {
+        return {
+            accept: true,
+            rating: payload.rating !== undefined ? sanitizeRating(payload.rating) : 5,
+            minProgress: sanitizeMinProgress(payload.minProgress, list.isPlatformer),
+            position: sanitizeSubmissionPosition(positionInput),
+            videoID: videoInput !== undefined ? sanitizeCustomListVideoId(videoInput) : null
+        }
+    }
+
+    return {
+        accept: true,
+        rating: sanitizeRating(payload.rating),
+        minProgress: sanitizeMinProgress(payload.minProgress, list.isPlatformer),
+        position: null as number | null,
+        videoID: videoInput !== undefined ? sanitizeCustomListVideoId(videoInput) : null
+    }
+}
+
+export async function submitLevelToCustomList(listId: number, actor: CustomListActor, payload: {
+    levelId?: unknown
+    videoID?: unknown
+    videoLink?: unknown
+    comment?: unknown
+}) {
+    const list = await getCustomListRow(listId)
+    const actorUid = getRequiredActorUid(actor)
+
+    if (list.isOfficial) {
+        throw new ForbiddenError('Official lists do not accept public submissions')
+    }
+
+    const levelId = Number(payload.levelId)
+    requireLevelId(levelId)
+    const level = await ensureLevelExists(levelId)
+    assertLevelTypeMatchesList(list, level)
+
+    const { data: existingSubmission, error: existingError } = await supabase
+        .from('listLevels')
+        .select('id, accepted')
+        .eq('listId', listId)
+        .eq('levelId', levelId)
+        .maybeSingle()
+
+    if (existingError) {
+        throw new Error(existingError.message)
+    }
+
+    if (existingSubmission) {
+        throw new ConflictError('Level already exists in this list')
+    }
+
+    const videoInput = payload.videoID !== undefined ? payload.videoID : payload.videoLink
+    const submissionVideoID = sanitizeCustomListVideoId(videoInput)
+    const submissionComment = sanitizeSubmissionComment(payload.comment)
+
+    const itemInsert: CustomListLevelInsert = {
+        listId,
+        levelId,
+        addedBy: actorUid,
+        accepted: false,
+        rating: 5,
+        minProgress: null,
+        position: null,
+        videoID: submissionVideoID,
+        submissionComment: submissionComment ?? null
+    }
+
+    const { error: insertError } = await supabase
+        .from('listLevels')
+        .insert(itemInsert)
+
+    if (insertError) {
+        throw new Error(insertError.message)
+    }
+
+    await touchCustomListActivity(listId)
+
+    await appendCustomListAuditLog(listId, {
+        actorUid,
+        action: 'level_submitted',
+        metadata: {
+            levelId,
+            levelName: level.name,
+            creator: level.creator,
+            videoID: submissionVideoID,
+            comment: submissionComment
+        }
+    })
+
+    return {
+        levelId,
+        levelName: level.name,
+        creator: level.creator,
+        videoID: submissionVideoID,
+        comment: submissionComment
+    }
+}
+
+export async function reviewCustomListSubmission(listId: number, actor: CustomListActor, levelId: number, payload: {
+    accept?: unknown
+    rating?: unknown
+    minProgress?: unknown
+    position?: unknown
+    top?: unknown
+    videoID?: unknown
+    videoId?: unknown
+}) {
+    const list = await getCustomListRow(listId)
+    const access = await getCustomListAccess(list, actor)
+
+    if (!canReviewCustomListSubmissions(list, access)) {
+        throw new ForbiddenError('You do not have permission to review submissions on this list')
+    }
+
+    const submissionLevelId = Number(levelId)
+    requireLevelId(submissionLevelId)
+    const submission = await supabase
+        .from('listLevels')
+        .select('id, created_at, listId, levelId, addedBy, rating, position, minProgress, videoID, accepted, submissionComment')
+        .eq('listId', listId)
+        .eq('levelId', submissionLevelId)
+        .eq('accepted', false)
+        .maybeSingle()
+
+    if (submission.error) {
+        throw new Error(submission.error.message)
+    }
+
+    const currentSubmission = submission.data as CustomListSubmission | null
+
+    if (!currentSubmission) {
+        throw new NotFoundError('Submission not found')
+    }
+
+    const reviewPayload = sanitizeSubmissionReviewPayload(list, payload)
+
+    if (!reviewPayload.accept) {
+        const { error: deleteError } = await supabase
+            .from('listLevels')
+            .delete()
+            .eq('id', currentSubmission.id)
+
+        if (deleteError) {
+            throw new Error(deleteError.message)
+        }
+
+        await appendCustomListAuditLog(listId, {
+            actorUid: access.actorUid,
+            action: 'level_removed',
+            metadata: {
+                levelId: currentSubmission.levelId,
+                levelItemId: currentSubmission.id,
+                levelName: currentSubmission.level?.name ?? null,
+                creator: currentSubmission.level?.creator ?? null,
+                submittedBy: currentSubmission.addedBy ?? null,
+                position: null,
+                previousState: {
+                    rating: currentSubmission.rating,
+                    minProgress: currentSubmission.minProgress,
+                    videoID: currentSubmission.videoID,
+                    createdAt: currentSubmission.created_at,
+                    position: currentSubmission.position
+                }
+            }
+        })
+
+        await touchCustomListActivity(listId)
+
+        if (currentSubmission.addedBy) {
+            await sendNotification({
+                to: currentSubmission.addedBy,
+                status: 2,
+                content: `Level ${currentSubmission.level?.name || currentSubmission.levelId} (${currentSubmission.levelId}) bạn gửi vào list ${list.title} đã bị từ chối.`,
+                redirect: `/lists/${listId}`
+            })
+        }
+
+        return getCustomList(listId, actor)
+    }
+
+    const updates: Record<string, unknown> = {
+        accepted: true,
+        submissionComment: currentSubmission.submissionComment ?? null
+    }
+
+    if (reviewPayload.videoID !== null) {
+        updates.videoID = reviewPayload.videoID
+    }
+
+    if (list.mode === 'top') {
+        const currentTopCountResult = await supabase
+            .from('listLevels')
+            .select('id', { count: 'exact', head: true })
+            .eq('listId', listId)
+            .eq('accepted', true)
+
+        if (currentTopCountResult.error) {
+            throw new Error(currentTopCountResult.error.message)
+        }
+
+        const desiredPosition = reviewPayload.position ?? ((currentTopCountResult.count ?? 0) + 1)
+        const nextPosition = Math.min(desiredPosition, (currentTopCountResult.count ?? 0) + 1)
+
+        await shiftAcceptedTopPositions(listId, nextPosition)
+
+        updates.position = nextPosition
+        updates.rating = reviewPayload.rating ?? currentSubmission.rating ?? 5
+        updates.minProgress = reviewPayload.minProgress
+    } else {
+        updates.rating = reviewPayload.rating
+        updates.minProgress = reviewPayload.minProgress
+        updates.position = null
+    }
+
+    const { error: updateError } = await supabase
+        .from('listLevels')
+        .update(updates)
+        .eq('id', currentSubmission.id)
+
+    if (updateError) {
+        throw new Error(updateError.message)
+    }
+
+    await syncLevelCount(listId)
+    await touchCustomListActivity(listId)
+
+    await appendCustomListAuditLog(listId, {
+        actorUid: access.actorUid,
+        action: 'level_added',
+        metadata: {
+            levelId: currentSubmission.levelId,
+            levelItemId: currentSubmission.id,
+            levelName: currentSubmission.level?.name ?? null,
+            creator: currentSubmission.level?.creator ?? null,
+            submittedBy: currentSubmission.addedBy ?? null,
+            nextState: {
+                rating: updates.rating,
+                minProgress: updates.minProgress,
+                videoID: updates.videoID ?? currentSubmission.videoID ?? null,
+                createdAt: currentSubmission.created_at,
+                position: updates.position
+            }
+        }
+    })
+
+    if (currentSubmission.addedBy) {
+        await sendNotification({
+            to: currentSubmission.addedBy,
+            status: 1,
+            content: `Level ${currentSubmission.level?.name || currentSubmission.levelId} (${currentSubmission.levelId}) bạn gửi vào list ${list.title} đã được chấp nhận.`,
+            redirect: `/lists/${listId}`
+        })
+    }
+
+    return getCustomList(listId, actor)
+}
+
+export async function batchSaveCustomListLevels(listId: number, actor: CustomListActor, payload: {
+    creates?: unknown
+    updates?: unknown
+    deletes?: unknown
+    auditEntries?: unknown
+}) {
+    const list = await getCustomListRow(listId)
+    const access = await assertCanEditListLevels(list, actor)
+    const actorUid = access.actorUid ?? getRequiredActorUid(actor)
+
+    const createInputs = Array.isArray(payload.creates) ? payload.creates : []
+    const updateInputs = Array.isArray(payload.updates) ? payload.updates : []
+    const deleteInputs = Array.isArray(payload.deletes) ? payload.deletes : []
+    const auditEntries = Array.isArray(payload.auditEntries) ? payload.auditEntries : []
+
+    const deleteLevelIds = deleteInputs
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0)
+
+    const createLevelIds = createInputs
+        .map((value) => Number((value as any)?.levelId))
+        .filter((value) => Number.isInteger(value) && value > 0)
+
+    const updateLevelIds = updateInputs
+        .map((value) => Number((value as any)?.levelId))
+        .filter((value) => Number.isInteger(value) && value > 0)
+
+    if (!createLevelIds.length && !updateLevelIds.length && !deleteLevelIds.length && !auditEntries.length) {
+        return getCustomList(listId, actor)
+    }
+
+    const affectedLevelIds = [...new Set([...createLevelIds, ...updateLevelIds, ...deleteLevelIds])]
+    const { data: existingLevels, error: existingLevelsError } = await supabase
+        .from('levels')
+        .select('id, isPlatformer')
+        .in('id', affectedLevelIds)
+
+    if (existingLevelsError) {
+        throw new Error(existingLevelsError.message)
+    }
+
+    const levelsById = new Map((existingLevels || []).map((level) => [level.id, level]))
+
+    for (const levelId of [...createLevelIds, ...updateLevelIds]) {
+        const level = levelsById.get(levelId) || await ensureLevelExists(levelId)
+        assertLevelTypeMatchesList(list, level)
+    }
+
+    if (list.mode === 'top') {
+        await ensureStoredTopPositions(listId)
+    } else {
+        await ensureStoredRatingPositions(listId)
+    }
+
+    if (deleteLevelIds.length) {
+        const { error: deleteError } = await supabase
+            .from('listLevels')
+            .delete()
+            .eq('listId', listId)
+            .eq('accepted', true)
+            .in('levelId', deleteLevelIds)
+
+        if (deleteError) {
+            throw new Error(deleteError.message)
+        }
+    }
+
+    if (createInputs.length) {
+        const existingItemsResult = await supabase
+            .from('listLevels')
+            .select('levelId')
+            .eq('listId', listId)
+            .in('levelId', createLevelIds)
+
+        if (existingItemsResult.error) {
+            throw new Error(existingItemsResult.error.message)
+        }
+
+        const existingLevelIds = new Set((existingItemsResult.data || []).map((item) => item.levelId))
+        const createRows: CustomListLevelInsert[] = []
+
+        for (const rawInput of createInputs) {
+            const levelId = Number((rawInput as any)?.levelId)
+
+            if (!Number.isInteger(levelId) || levelId <= 0) {
+                throw new ValidationError('Invalid level ID in batch create payload')
+            }
+
+            if (existingLevelIds.has(levelId)) {
+                throw new ConflictError('Level already exists in this list')
+            }
+
+            const levelInput = rawInput as {
+                createdAt?: unknown
+                rating?: unknown
+                minProgress?: unknown
+                videoID?: unknown
+                videoId?: unknown
+                position?: unknown
+                top?: unknown
+            }
+
+            const positionInput = levelInput.position !== undefined ? levelInput.position : levelInput.top
+            const videoInput = levelInput.videoID !== undefined ? levelInput.videoID : levelInput.videoId
+            const nextRow: CustomListLevelInsert = {
+                listId,
+                levelId,
+                addedBy: actorUid,
+                accepted: true,
+                rating: Number.isFinite(Number(levelInput.rating)) ? Number(levelInput.rating) : 5,
+                minProgress: levelInput.minProgress === undefined ? null : sanitizeMinProgress(levelInput.minProgress, list.isPlatformer),
+                position: sanitizeSubmissionPosition(positionInput),
+                videoID: videoInput === undefined ? null : sanitizeCustomListVideoId(videoInput)
+            }
+
+            if (levelInput.createdAt !== undefined) {
+                nextRow.created_at = sanitizeListLevelCreatedAt(levelInput.createdAt)
+            }
+
+            createRows.push(nextRow)
+        }
+
+        const { error: insertError } = await supabase
+            .from('listLevels')
+            .insert(createRows)
+
+        if (insertError) {
+            throw new Error(insertError.message)
+        }
+    }
+
+    if (updateInputs.length) {
+        for (const rawInput of updateInputs) {
+            const levelId = Number((rawInput as any)?.levelId)
+
+            if (!Number.isInteger(levelId) || levelId <= 0) {
+                throw new ValidationError('Invalid level ID in batch update payload')
+            }
+
+            const patch = rawInput as {
+                rating?: unknown
+                minProgress?: unknown
+                videoID?: unknown
+                videoId?: unknown
+                createdAt?: unknown
+                created_at?: unknown
+            }
+
+            const updates: Record<string, unknown> = {}
+
+            if (patch.rating !== undefined) {
+                updates.rating = sanitizeRating(patch.rating)
+            }
+
+            if (patch.minProgress !== undefined) {
+                updates.minProgress = sanitizeMinProgress(patch.minProgress, list.isPlatformer)
+            }
+
+            const nextVideoID = patch.videoID !== undefined ? patch.videoID : patch.videoId
+
+            if (nextVideoID !== undefined) {
+                updates.videoID = sanitizeCustomListVideoId(nextVideoID)
+            }
+
+            const nextCreatedAt = patch.createdAt !== undefined ? patch.createdAt : patch.created_at
+
+            if (nextCreatedAt !== undefined) {
+                updates.created_at = sanitizeListLevelCreatedAt(nextCreatedAt)
+            }
+
+            if (!Object.keys(updates).length) {
+                continue
+            }
+
+            const { data, error } = await supabase
+                .from('listLevels')
+                .update(updates)
+                .eq('listId', listId)
+                .eq('levelId', levelId)
+                .eq('accepted', true)
+                .select('id')
+                .maybeSingle()
+
+            if (error) {
+                throw new Error(error.message)
+            }
+
+            if (!data) {
+                throw new NotFoundError('Level is not in this list')
+            }
+        }
+    }
+
+    for (const entry of auditEntries as Array<{ actorUid?: string | null; action?: string; targetUid?: string | null; metadata?: Record<string, unknown> }>) {
+        if (!entry?.action) {
+            continue
+        }
+
+        await appendCustomListAuditLog(listId, {
+            actorUid: entry.actorUid ?? actorUid,
+            action: entry.action,
+            targetUid: entry.targetUid ?? null,
+            metadata: entry.metadata || {}
+        })
+    }
+
+    await syncLevelCount(listId)
+    await touchCustomListActivity(listId)
+
+    return getCustomList(listId, actor)
 }
 
 export async function getOwnCustomLists(ownerId: string) {
@@ -2942,6 +3583,7 @@ export async function getStarredListsByLevel(levelId: number, viewerId?: string)
         .from('listLevels')
         .select('listId, created_at, rating, position, minProgress')
         .eq('levelId', levelId)
+        .eq('accepted', true)
 
     if (listLevelsError) {
         throw new Error(listLevelsError.message)
@@ -3214,6 +3856,7 @@ export async function getEligibleListsByLevel(levelId: number, progress?: number
             .from('listLevels')
             .select('listId, created_at, rating, position, minProgress, videoID')
             .eq('levelId', levelId)
+            .eq('accepted', true)
     ])
 
     if (levelResult.error) {
@@ -3854,7 +4497,8 @@ export async function addLevelToCustomList(listId: number, ownerId: CustomListAc
         listId,
         levelId,
         addedBy: actorUid,
-        minProgress: null
+        minProgress: null,
+        accepted: true
     }
 
     if (list.mode === 'top') {
@@ -3993,7 +4637,8 @@ export async function batchAddExistingLevelsToCustomList(listId: number, ownerId
             listId,
             levelId: levelInput.levelId,
             addedBy: actorUid,
-            minProgress: null
+            minProgress: null,
+            accepted: true
         }
 
         if (list.mode === 'top') {
@@ -4047,6 +4692,7 @@ export async function removeLevelFromCustomList(listId: number, ownerId: CustomL
         .delete()
         .eq('listId', listId)
         .eq('levelId', levelId)
+        .eq('accepted', true)
         .select('id')
         .maybeSingle()
 
@@ -4116,6 +4762,7 @@ export async function updateListLevel(listId: number, ownerId: CustomListActor, 
         .update(updates)
         .eq('listId', listId)
         .eq('levelId', levelId)
+        .eq('accepted', true)
         .select('id')
         .maybeSingle()
 
@@ -4158,6 +4805,7 @@ export async function reorderListLevels(listId: number, ownerId: CustomListActor
             .update({ position: index + 1 })
             .eq('listId', listId)
             .eq('levelId', levelId)
+            .eq('accepted', true)
     )
 
     const results = await Promise.all(updates)

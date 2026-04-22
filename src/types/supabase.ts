@@ -2508,33 +2508,39 @@ export type Database = {
       listLevels: {
         Row: {
           addedBy: string
+          accepted: boolean
           created_at: string
           id: number
           levelId: number
           listId: number
           minProgress: number | null
+          submissionComment: string | null
           position: number | null
           rating: number
           videoID: string | null
         }
         Insert: {
           addedBy: string
+          accepted?: boolean
           created_at?: string
           id?: number
           levelId: number
           listId: number
           minProgress?: number | null
+          submissionComment?: string | null
           position?: number | null
           rating?: number
           videoID?: string | null
         }
         Update: {
           addedBy?: string
+          accepted?: boolean
           created_at?: string
           id?: number
           levelId?: number
           listId?: number
           minProgress?: number | null
+          submissionComment?: string | null
           position?: number | null
           rating?: number
           videoID?: string | null

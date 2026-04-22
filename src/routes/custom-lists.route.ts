@@ -7,6 +7,7 @@ import userAuth from '@src/middleware/user-auth.middleware'
 import {
     addLevelToCustomList,
     batchAddExistingLevelsToCustomList,
+    batchSaveCustomListLevels,
     addCustomListMember,
     browseLists,
     ConflictError,
@@ -17,6 +18,7 @@ import {
     getCustomListLeaderboard,
     getEligibleListsByLevel,
     getCustomListRecordPoints,
+    getCustomListSubmissionQueueById,
     getOwnCustomLists,
     getRandomCustomListLevel,
     refreshCustomListLeaderboard,
@@ -27,6 +29,8 @@ import {
     removeLevelFromCustomList,
     reorderListLevels,
     resolveCustomListIdentifier,
+    reviewCustomListSubmission,
+    submitLevelToCustomList,
     setCustomListBanState,
     transferCustomListOwnership,
     toggleCustomListStar,
@@ -449,11 +453,68 @@ router.route('/:id/levels')
         }
     })
 
+router.route('/:id/submissions')
+    .get(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await getCustomListSubmissionQueueById(listId, res.locals.user))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+    .post(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.status(201).send(await submitLevelToCustomList(listId, res.locals.user, req.body || {}))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/submissions/:levelId')
+    .patch(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            const levelId = parseId(req.params.levelId, 'level ID')
+            res.send(await reviewCustomListSubmission(listId, res.locals.user, levelId, req.body || {}))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
 router.route('/:id/levels/batch')
     .post(userAuth, async (req, res) => {
         try {
             const listId = parseId(req.params.id, 'list ID')
             res.send(await batchAddExistingLevelsToCustomList(listId, res.locals.user, req.body?.levelInputs))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+    .patch(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await batchSaveCustomListLevels(listId, res.locals.user, req.body || {}))
         } catch (error) {
             if (sendError(res, error)) {
                 return
