@@ -9,6 +9,7 @@ import { s3 } from '@src/client/s3'
 import { DiscordChannel } from "@src/const/discord-channel-const"
 import { moderateContent } from '@src/services/moderation.service'
 import logger from "@src/utils/logger"
+import { normalizeFullTextSearchQuery } from '@src/utils/full-text-search'
 import type { Json } from '@src/types/supabase'
 
 // ---- Custom error classes for business logic errors ----
@@ -65,6 +66,7 @@ export async function getCommunityPosts(options: {
         hidden,
         moderationStatus
     } = options
+    const normalizedSearch = normalizeFullTextSearchQuery(search)
 
     // Pre-filter: get post IDs that have the matching tag
     let tagFilteredIds: number[] | null = null
@@ -118,8 +120,8 @@ export async function getCommunityPosts(options: {
     }
 
     // Full-text search using the fts column
-    if (search) {
-        query = query.textSearch('fts', search, { type: 'websearch' })
+    if (normalizedSearch.length) {
+        query = query.textSearch('fts', normalizedSearch, { type: 'websearch' })
     }
 
     if (pinFirst) {
@@ -144,6 +146,8 @@ export async function getCommunityPosts(options: {
 }
 
 export async function getCommunityPostsCount(type?: string, search?: string, hidden?: boolean, moderationStatus?: string, tagId?: number, clanId?: number | null) {
+    const normalizedSearch = normalizeFullTextSearchQuery(search)
+
     // Pre-filter: get post IDs that have the matching tag
     let tagFilteredIds: number[] | null = null
     if (tagId) {
@@ -191,8 +195,8 @@ export async function getCommunityPostsCount(type?: string, search?: string, hid
         }
     }
 
-    if (search) {
-        query = query.textSearch('fts', search, { type: 'websearch' })
+    if (normalizedSearch.length) {
+        query = query.textSearch('fts', normalizedSearch, { type: 'websearch' })
     }
 
     const { count, error } = await query
@@ -651,13 +655,15 @@ export async function getUserRecordsForPicker(uid: string) {
 }
 
 export async function getLevelsForPicker(search?: string, limit = 20) {
+    const normalizedSearch = normalizeFullTextSearchQuery(search)
+
     let query = supabase
         .from('levels')
         .select('id, name, creator, difficulty, isPlatformer, rating')
         .eq('accepted', true)
 
-    if (search) {
-        query = query.ilike('name', `%${search}%`)
+    if (normalizedSearch.length) {
+        query = query.textSearch('nameFts', normalizedSearch, { type: 'websearch' })
     }
 
     query = query.order('dlTop', { ascending: true }).limit(limit)
@@ -668,10 +674,16 @@ export async function getLevelsForPicker(search?: string, limit = 20) {
 }
 
 export async function searchPlayers(query: string, limit = 10) {
+    const normalizedQuery = normalizeFullTextSearchQuery(query)
+
+    if (!normalizedQuery.length) {
+        return []
+    }
+
     const { data, error } = await supabase
         .from('players')
         .select('*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)')
-        .ilike('name', `%${query}%`)
+        .textSearch('nameFts', normalizedQuery, { type: 'websearch' })
         .limit(limit)
 
     if (error) throw new Error(error.message)
@@ -740,6 +752,7 @@ export async function getAdminComments(options: {
         hidden,
         moderationStatus
     } = options
+    const normalizedSearch = normalizeFullTextSearchQuery(search)
 
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
@@ -765,8 +778,8 @@ export async function getAdminComments(options: {
     }
 
     // Search in comment content
-    if (search) {
-        query = query.ilike('content', `%${search}%`)
+    if (normalizedSearch.length) {
+        query = query.textSearch('fts', normalizedSearch, { type: 'websearch' })
     }
 
     query = query
@@ -787,6 +800,7 @@ export async function getAdminCommentsCount(options: {
     postId?: number
 }) {
     const { search, hidden, moderationStatus } = options
+    const normalizedSearch = normalizeFullTextSearchQuery(search)
 
     let query = supabase
         .from('communityComments')
@@ -806,8 +820,8 @@ export async function getAdminCommentsCount(options: {
         query = query.eq('postId', options.postId)
     }
 
-    if (search) {
-        query = query.ilike('content', `%${search}%`)
+    if (normalizedSearch.length) {
+        query = query.textSearch('fts', normalizedSearch, { type: 'websearch' })
     }
 
     const { count, error } = await query

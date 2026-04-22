@@ -4,6 +4,7 @@ import { addChangelog } from '@src/services/changelog.service'
 import { refreshDailyLevelProgress, refreshWeeklyLevelProgress, getActiveseason, getSeasonLevelByType, addSeasonLevel, updateSeasonLevel } from '@src/services/battlepass.service'
 import type { TLevel } from "@src/types"
 import type { TablesInsert } from "@src/types/supabase"
+import { normalizeFullTextSearchQuery } from '@src/utils/full-text-search'
 
 export async function fetchLevels(list: string) {
     let query = supabase
@@ -43,6 +44,9 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
         ascending = (ascending == 'true')
     }
 
+    const normalizedNameSearch = normalizeFullTextSearchQuery(nameSearch)
+    const normalizedCreatorSearch = normalizeFullTextSearchQuery(creatorSearch)
+
     // Pre-filter: get level IDs that have matching tags
     let tagFilteredIds: number[] | null = null
     if (tagIds && tagIds.trim() !== '') {
@@ -79,11 +83,11 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
     if (ratingMax !== null && ratingMax !== '') {
         query = query.lte('rating', ratingMax)
     }
-    if (nameSearch && nameSearch.trim() !== '') {
-        query = query.ilike('name', `%${nameSearch}%`)
+    if (normalizedNameSearch.length) {
+        query = query.textSearch('nameFts', normalizedNameSearch, { type: 'websearch' })
     }
-    if (creatorSearch && creatorSearch.trim() !== '') {
-        query = query.ilike('creator', `%${creatorSearch}%`)
+    if (normalizedCreatorSearch.length) {
+        query = query.textSearch('creatorFts', normalizedCreatorSearch, { type: 'websearch' })
     }
 
     // Filter by tag IDs: only include levels that have at least one matching tag
@@ -144,6 +148,9 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
         ascending = (ascending == 'true')
     }
 
+    const normalizedNameSearch = normalizeFullTextSearchQuery(nameSearch)
+    const normalizedCreatorSearch = normalizeFullTextSearchQuery(creatorSearch)
+
     // Pre-filter: get level IDs that have matching tags
     let tagFilteredIds: number[] | null = null
     if (tagIds && tagIds.trim() !== '') {
@@ -180,11 +187,11 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
     if (ratingMax !== null && ratingMax !== '') {
         query = query.lte('rating', ratingMax)
     }
-    if (nameSearch && nameSearch.trim() !== '') {
-        query = query.ilike('name', `%${nameSearch}%`)
+    if (normalizedNameSearch.length) {
+        query = query.textSearch('nameFts', normalizedNameSearch, { type: 'websearch' })
     }
-    if (creatorSearch && creatorSearch.trim() !== '') {
-        query = query.ilike('creator', `%${creatorSearch}%`)
+    if (normalizedCreatorSearch.length) {
+        query = query.textSearch('creatorFts', normalizedCreatorSearch, { type: 'websearch' })
     }
 
     // Filter by tag IDs: only include levels that have at least one matching tag
@@ -245,6 +252,9 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
         ascending = (ascending == 'true')
     }
 
+    const normalizedNameSearch = normalizeFullTextSearchQuery(nameSearch)
+    const normalizedCreatorSearch = normalizeFullTextSearchQuery(creatorSearch)
+
     // Pre-filter: get level IDs that have matching tags
     let tagFilteredIds: number[] | null = null
     if (tagIds && tagIds.trim() !== '') {
@@ -279,11 +289,11 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
     if (ratingMax !== null && ratingMax !== '') {
         query = query.lte('flPt', ratingMax)
     }
-    if (nameSearch && nameSearch.trim() !== '') {
-        query = query.ilike('name', `%${nameSearch}%`)
+    if (normalizedNameSearch.length) {
+        query = query.textSearch('nameFts', normalizedNameSearch, { type: 'websearch' })
     }
-    if (creatorSearch && creatorSearch.trim() !== '') {
-        query = query.ilike('creator', `%${creatorSearch}%`)
+    if (normalizedCreatorSearch.length) {
+        query = query.textSearch('creatorFts', normalizedCreatorSearch, { type: 'websearch' })
     }
 
     // Filter by tag IDs: only include levels that have at least one matching tag
@@ -345,6 +355,9 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
         ascending = (ascending == 'true')
     }
 
+    const normalizedNameSearch = normalizeFullTextSearchQuery(nameSearch)
+    const normalizedCreatorSearch = normalizeFullTextSearchQuery(creatorSearch)
+
     // Pre-filter: get level IDs that have matching tags
     let tagFilteredIds: number[] | null = null
     if (tagIds && tagIds.trim() !== '') {
@@ -380,11 +393,11 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
     if (ratingMax !== null && ratingMax !== '') {
         query = query.lte('rating', ratingMax)
     }
-    if (nameSearch && nameSearch.trim() !== '') {
-        query = query.ilike('name', `%${nameSearch}%`)
+    if (normalizedNameSearch.length) {
+        query = query.textSearch('nameFts', normalizedNameSearch, { type: 'websearch' })
     }
-    if (creatorSearch && creatorSearch.trim() !== '') {
-        query = query.ilike('creator', `%${creatorSearch}%`)
+    if (normalizedCreatorSearch.length) {
+        query = query.textSearch('creatorFts', normalizedCreatorSearch, { type: 'websearch' })
     }
 
     // Filter by tag IDs: only include levels that have at least one matching tag

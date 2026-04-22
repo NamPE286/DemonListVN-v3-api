@@ -13,6 +13,7 @@ import {
     retrieveOrCreateLevel
 } from '@src/services/level.service'
 import type { Tables, TablesInsert, TablesUpdate } from '@src/types/supabase'
+import { normalizeFullTextSearchQuery } from '@src/utils/full-text-search'
 
 type CustomList = Tables<'lists'>
 type CustomListInsert = TablesInsert<'lists'>
@@ -2140,7 +2141,8 @@ export async function browseLists(options: {
         kind
     } = options
 
-    const normalizedSearch = search.trim().toLowerCase()
+    const normalizedSearch = normalizeFullTextSearchQuery(search)
+    const normalizedSyntheticSearch = normalizedSearch.toLowerCase()
 
     let query = supabase
         .from('lists')
@@ -2154,7 +2156,7 @@ export async function browseLists(options: {
     }
 
     if (normalizedSearch.length) {
-        query = query.or(`title.ilike.%${normalizedSearch}%,description.ilike.%${normalizedSearch}%`)
+        query = query.textSearch('fts', normalizedSearch, { type: 'websearch' })
     }
 
     const { data, error, count } = await query
@@ -2178,13 +2180,13 @@ export async function browseLists(options: {
             : OFFICIAL_LIST_SLUGS
                 .filter((slug) => !databaseOfficialSlugs.has(slug))
                 .filter((slug) => {
-                    if (!normalizedSearch.length) {
+                    if (!normalizedSyntheticSearch.length) {
                         return true
                     }
 
                     const entry = getOfficialListConfig(slug)
-                    return entry.title.toLowerCase().includes(normalizedSearch)
-                        || entry.description.toLowerCase().includes(normalizedSearch)
+                    return entry.title.toLowerCase().includes(normalizedSyntheticSearch)
+                        || entry.description.toLowerCase().includes(normalizedSyntheticSearch)
                 })
                 .map((slug) => getOfficialListSummary(slug))
     )

@@ -1,5 +1,6 @@
 import supabase from "@src/client/supabase";
 import type { Tables } from "@src/types/supabase";
+import { normalizeFullTextSearchQuery } from '@src/utils/full-text-search'
 
 export const EVENT_SELECT_STR = 'id, created_at, start, end, title, description, imgUrl, exp, redirect, minExp, isSupporterOnly, isContest, hidden, isExternal, isRanked'
 
@@ -107,13 +108,15 @@ export async function deleteEventLevel(eventID: number, levelID: number) {
 }
 
 export async function getEvents(filter: EventFilter) {
+    const normalizedSearch = normalizeFullTextSearchQuery(filter.search)
+
     let query = supabase
         .from('events')
         .select(EVENT_SELECT_STR)
         .eq('hidden', false)
 
-    if (filter.search) {
-        query = query.ilike('title', `%${filter.search}%`)
+    if (normalizedSearch.length) {
+        query = query.textSearch('titleFts', normalizedSearch, { type: 'websearch' })
     }
 
     if (filter.eventType === 'contest') {

@@ -1,14 +1,21 @@
 import supabase from "@src/client/supabase";
+import { normalizeFullTextSearchQuery } from '@src/utils/full-text-search'
 
 function isNumeric(value: string) {
     return /^-?\d+$/.test(value);
 }
 
 async function searchPlayersByName(query: string, includeHidden = false, limit = 5) {
+    const normalizedQuery = normalizeFullTextSearchQuery(query)
+
+    if (!normalizedQuery.length) {
+        return []
+    }
+
     let request = supabase
         .from('players')
         .select('*')
-        .ilike('name', `%${query}%`)
+        .textSearch('nameFts', normalizedQuery, { type: 'websearch' })
 
     if (!includeHidden) {
         request = request.eq('isHidden', false)
@@ -62,10 +69,16 @@ export const search = {
             return data;
         }
 
+        const normalizedQuery = normalizeFullTextSearchQuery(query)
+
+        if (!normalizedQuery.length) {
+            return []
+        }
+
         const { data, error } = await supabase
             .from('levels')
             .select('*')
-            .ilike('name', `%${query}%`)
+            .textSearch('nameFts', normalizedQuery, { type: 'websearch' })
             .limit(limit)
 
         if (error) {

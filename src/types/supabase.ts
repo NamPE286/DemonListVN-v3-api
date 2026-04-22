@@ -999,6 +999,7 @@ export type Database = {
           memberLimit: number
           mode: string
           name: string
+          nameFts: unknown
           owner: string
           rank: number | null
           rating: number
@@ -1017,6 +1018,7 @@ export type Database = {
           memberLimit?: number
           mode?: string
           name: string
+          nameFts?: unknown
           owner?: string
           rank?: number | null
           rating?: number
@@ -1035,6 +1037,7 @@ export type Database = {
           memberLimit?: number
           mode?: string
           name?: string
+          nameFts?: unknown
           owner?: string
           rank?: number | null
           rating?: number
@@ -1256,6 +1259,7 @@ export type Database = {
           communityEnabled: boolean
           created_at: string
           description: string
+          fts: unknown
           id: number
           isBanned: boolean
           isPlatformer: boolean
@@ -1281,6 +1285,7 @@ export type Database = {
           communityEnabled?: boolean
           created_at?: string
           description?: string
+          fts?: unknown
           id?: number
           isBanned?: boolean
           isPlatformer?: boolean
@@ -1306,6 +1311,7 @@ export type Database = {
           communityEnabled?: boolean
           created_at?: string
           description?: string
+          fts?: unknown
           id?: number
           isBanned?: boolean
           isPlatformer?: boolean
@@ -1345,6 +1351,7 @@ export type Database = {
           attachedLevel: Json | null
           content: string
           createdAt: string
+          fts: unknown
           hidden: boolean
           id: number
           likesCount: number
@@ -1355,6 +1362,7 @@ export type Database = {
           attachedLevel?: Json | null
           content: string
           createdAt?: string
+          fts?: unknown
           hidden?: boolean
           id?: number
           likesCount?: number
@@ -1365,6 +1373,7 @@ export type Database = {
           attachedLevel?: Json | null
           content?: string
           createdAt?: string
+          fts?: unknown
           hidden?: boolean
           id?: number
           likesCount?: number
@@ -2138,6 +2147,7 @@ export type Database = {
           redirect: string | null
           start: string
           title: string
+          titleFts: unknown
           type: string
         }
         Insert: {
@@ -2162,6 +2172,7 @@ export type Database = {
           redirect?: string | null
           start?: string
           title: string
+          titleFts?: unknown
           type?: string
         }
         Update: {
@@ -2186,6 +2197,7 @@ export type Database = {
           redirect?: string | null
           start?: string
           title?: string
+          titleFts?: unknown
           type?: string
         }
         Relationships: []
@@ -2273,6 +2285,7 @@ export type Database = {
           description: string | null
           id: number
           name: string
+          nameFts: unknown
           productId: number | null
           quantity: number
           rarity: number
@@ -2285,6 +2298,7 @@ export type Database = {
           description?: string | null
           id?: number
           name?: string
+          nameFts?: unknown
           productId?: number | null
           quantity?: number
           rarity?: number
@@ -2297,6 +2311,7 @@ export type Database = {
           description?: string | null
           id?: number
           name?: string
+          nameFts?: unknown
           productId?: number | null
           quantity?: number
           rarity?: number
@@ -2413,6 +2428,7 @@ export type Database = {
           accepted: boolean
           created_at: string
           creator: string | null
+          creatorFts: unknown
           creatorId: string | null
           difficulty: string | null
           dlTop: number | null
@@ -2426,6 +2442,7 @@ export type Database = {
           main_level_id: number | null
           minProgress: number | null
           name: string | null
+          nameFts: unknown
           rating: number | null
           videoID: string | null
         }
@@ -2433,6 +2450,7 @@ export type Database = {
           accepted?: boolean
           created_at?: string
           creator?: string | null
+          creatorFts?: unknown
           creatorId?: string | null
           difficulty?: string | null
           dlTop?: number | null
@@ -2446,6 +2464,7 @@ export type Database = {
           main_level_id?: number | null
           minProgress?: number | null
           name?: string | null
+          nameFts?: unknown
           rating?: number | null
           videoID?: string | null
         }
@@ -2453,6 +2472,7 @@ export type Database = {
           accepted?: boolean
           created_at?: string
           creator?: string | null
+          creatorFts?: unknown
           creatorId?: string | null
           difficulty?: string | null
           dlTop?: number | null
@@ -2466,6 +2486,7 @@ export type Database = {
           main_level_id?: number | null
           minProgress?: number | null
           name?: string | null
+          nameFts?: unknown
           rating?: number | null
           videoID?: string | null
         }
@@ -2713,6 +2734,7 @@ export type Database = {
           productID: number | null
           quantity: number | null
           recipientName: string | null
+          recipientNameFts: unknown
           state: string
           targetClanID: number | null
           userID: string
@@ -2734,6 +2756,7 @@ export type Database = {
           productID?: number | null
           quantity?: number | null
           recipientName?: string | null
+          recipientNameFts?: unknown
           state: string
           targetClanID?: number | null
           userID: string
@@ -2755,6 +2778,7 @@ export type Database = {
           productID?: number | null
           quantity?: number | null
           recipientName?: string | null
+          recipientNameFts?: unknown
           state?: string
           targetClanID?: number | null
           userID?: string
@@ -2930,6 +2954,7 @@ export type Database = {
           isTrusted: boolean
           matchCount: number
           name: string | null
+          nameFts: unknown
           nameLocked: boolean
           overallRank: number | null
           overviewData: Json | null
@@ -2979,6 +3004,7 @@ export type Database = {
           isTrusted?: boolean
           matchCount?: number
           name?: string | null
+          nameFts?: unknown
           nameLocked?: boolean
           overallRank?: number | null
           overviewData?: Json | null
@@ -3028,6 +3054,7 @@ export type Database = {
           isTrusted?: boolean
           matchCount?: number
           name?: string | null
+          nameFts?: unknown
           nameLocked?: boolean
           overallRank?: number | null
           overviewData?: Json | null

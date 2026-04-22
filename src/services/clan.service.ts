@@ -3,16 +3,19 @@ import type { Database } from '@src/types/supabase'
 import { sendNotification } from '@src/services/notification.service'
 import { getPlayer, updatePlayer } from '@src/services/player.service'
 import type { TClan, TClanInvitation } from '@src/types'
+import { normalizeFullTextSearchQuery } from '@src/utils/full-text-search'
 
 type Clan = Database['public']['Tables']['clans']['Update']
 
 export async function getClans({ start = 0, end = 50, sortBy = 'boostedUntil', ascending = 'false', searchQuery = '' } = {}) {
+    const normalizedSearchQuery = normalizeFullTextSearchQuery(searchQuery)
+
     let query = supabase
         .from('clans')
         .select('*, players!owner(*, clans!id(*))')
 
-    if (searchQuery.length) {
-        query = query.ilike('name', `%${searchQuery}%`)
+    if (normalizedSearchQuery.length) {
+        query = query.textSearch('nameFts', normalizedSearchQuery, { type: 'websearch' })
     }
 
     query = query

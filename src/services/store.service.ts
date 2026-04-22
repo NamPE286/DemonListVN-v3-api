@@ -8,6 +8,7 @@ import { sepay } from "@src/client/sepay";
 import type { SepayWebhookOrder } from "@src/types/sepay-webhook";
 import { getClan, extendClanBoost } from "@src/services/clan.service";
 import { getPlayer, extendPlayerSupporter } from "@src/services/player.service";
+import { mergeUniqueById, normalizeFullTextSearchQuery } from '@src/utils/full-text-search'
 
 interface Item {
     id: number;
@@ -459,28 +460,64 @@ export async function handlePayment(id: number, sepayOrderData: SepayWebhookOrde
 }
 
 export async function getAllOrders(filters: { state?: string, paymentMethod?: string, search?: string }) {
-    let query = supabase
-        .from("orders")
-        .select("*, orderTracking(*), products(*), orderItems(*, products(*))")
+    const normalizedSearch = normalizeFullTextSearchQuery(filters.search)
 
-    if (filters.state) {
-        query = query.eq('state', filters.state)
-    }
+    const createQuery = () => {
+        let query = supabase
+            .from("orders")
+            .select("*, orderTracking(*), products(*), orderItems(*, products(*))")
 
-    if (filters.paymentMethod) {
-        query = query.eq('paymentMethod', filters.paymentMethod)
-    }
-
-    if (filters.search) {
-        const searchNum = parseInt(filters.search)
-        if (!isNaN(searchNum)) {
-            query = query.or(`recipientName.ilike.%${filters.search}%,id.eq.${searchNum}`)
-        } else {
-            query = query.ilike('recipientName', `%${filters.search}%`)
+        if (filters.state) {
+            query = query.eq('state', filters.state)
         }
+
+        if (filters.paymentMethod) {
+            query = query.eq('paymentMethod', filters.paymentMethod)
+        }
+
+        return query
     }
 
-    const { data, error } = await query
+    if (normalizedSearch.length) {
+        const searchNum = parseInt(normalizedSearch)
+
+        if (!isNaN(searchNum)) {
+            const [{ data: idData, error: idError }, { data: recipientData, error: recipientError }] = await Promise.all([
+                createQuery()
+                    .eq('id', searchNum)
+                    .order("created_at", { ascending: false })
+                    .order("created_at", { referencedTable: "orderTracking", ascending: false }),
+                createQuery()
+                    .textSearch('recipientNameFts', normalizedSearch, { type: 'websearch' })
+                    .order("created_at", { ascending: false })
+                    .order("created_at", { referencedTable: "orderTracking", ascending: false })
+            ])
+
+            if (idError) {
+                throw new Error(idError.message)
+            }
+
+            if (recipientError) {
+                throw new Error(recipientError.message)
+            }
+
+            return mergeUniqueById(idData, recipientData)
+                .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
+        }
+
+        const { data, error } = await createQuery()
+            .textSearch('recipientNameFts', normalizedSearch, { type: 'websearch' })
+            .order("created_at", { ascending: false })
+            .order("created_at", { referencedTable: "orderTracking", ascending: false })
+
+        if (error) {
+            throw new Error(error.message)
+        }
+
+        return data
+    }
+
+    const { data, error } = await createQuery()
         .order("created_at", { ascending: false })
         .order("created_at", { referencedTable: "orderTracking", ascending: false })
 
