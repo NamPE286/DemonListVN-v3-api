@@ -1065,6 +1065,7 @@ export type Database = {
           minProgress: number | null
           position: number | null
           rating: number
+          videoID: string | null
         }
         Insert: {
           addedBy: string
@@ -1075,6 +1076,7 @@ export type Database = {
           minProgress?: number | null
           position?: number | null
           rating?: number
+          videoID?: string | null
         }
         Update: {
           addedBy?: string
@@ -1085,6 +1087,7 @@ export type Database = {
           minProgress?: number | null
           position?: number | null
           rating?: number
+          videoID?: string | null
         }
         Relationships: [
           {

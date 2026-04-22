@@ -12,6 +12,7 @@ import {
     getPlatformerListLevels,
     retrieveOrCreateLevel
 } from '@src/services/level.service'
+import getVideoId from 'get-video-id'
 import type { Tables, TablesInsert, TablesUpdate } from '@src/types/supabase'
 import { buildFullTextSearchParams, normalizeFullTextSearchQuery } from '@src/utils/full-text-search'
 
@@ -758,6 +759,34 @@ function sanitizeMinProgress(value: unknown, isPlatformer: boolean) {
     return minProgress
 }
 
+function sanitizeCustomListVideoId(value: unknown) {
+    if (value == null || value === '') {
+        return null
+    }
+
+    if (typeof value !== 'string') {
+        throw new ValidationError('Video ID must be a string')
+    }
+
+    const trimmed = value.trim()
+
+    if (!trimmed.length) {
+        return null
+    }
+
+    if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
+        return trimmed
+    }
+
+    const parsedVideo = getVideoId(trimmed)
+
+    if (parsedVideo?.id) {
+        return parsedVideo.id
+    }
+
+    throw new ValidationError('Video ID must be a valid YouTube video ID or URL')
+}
+
 function sanitizeTags(value: unknown) {
     if (value == null) {
         return []
@@ -997,6 +1026,10 @@ async function appendCustomListAuditLog(listId: number, entry: {
 
 function getEffectiveMinProgress(item: any) {
     return item.minProgress ?? item.level?.minProgress ?? null
+}
+
+function getEffectiveVideoID(item: any) {
+    return item.videoID ?? item.level?.videoID ?? null
 }
 
 function getNormalizedListPosition(item: any, index: number, isSyntheticOfficialList: boolean) {
@@ -1980,7 +2013,7 @@ async function getCustomListItems(listId: number, mode: string = 'rating', itemR
 
     let itemsQuery = supabase
         .from('listLevels')
-        .select('id, created_at, listId, levelId, addedBy, rating, position, minProgress')
+        .select('id, created_at, listId, levelId, addedBy, rating, position, minProgress, videoID')
         .eq('listId', listId)
         .order(isTop ? 'position' : 'rating', { ascending: isTop, nullsFirst: false })
 
@@ -2012,10 +2045,19 @@ async function getCustomListItems(listId: number, mode: string = 'rating', itemR
 
     const levelsById = new Map((levels || []).map((level) => [level.id, level]))
 
-    return (items || []).map((item) => ({
-        ...item,
-        level: levelsById.get(item.levelId) ?? null
-    }))
+    return (items || []).map((item) => {
+        const level = levelsById.get(item.levelId) ?? null
+
+        return {
+            ...item,
+            level: level
+                ? {
+                    ...level,
+                    videoID: item.videoID ?? level.videoID ?? null
+                }
+                : null
+        }
+    })
 }
 
 export async function getOwnCustomLists(ownerId: string) {
@@ -2577,6 +2619,7 @@ export async function getRandomCustomListLevel(identifier: CustomListIdentifier,
         .filter((item: any, index: number) => item.level && !excludedLevelIds.has(item.levelId))
         .map((item: any, index: number) => ({
             ...item.level,
+            videoID: getEffectiveVideoID(item),
             rating: item.rating ?? item.level.rating ?? null,
             minProgress: getEffectiveMinProgress(item),
             listPosition: getNormalizedListPosition(item, index, list.id < 0)
@@ -3322,6 +3365,8 @@ export async function removeLevelFromCustomList(listId: number, ownerId: CustomL
 export async function updateListLevel(listId: number, ownerId: CustomListActor, levelId: number, patch: {
     rating?: unknown
     minProgress?: unknown
+    videoID?: unknown
+    videoId?: unknown
 }) {
     const list = await getCustomListRow(listId)
     const access = await assertCanEditListLevels(list, ownerId)
@@ -3334,6 +3379,12 @@ export async function updateListLevel(listId: number, ownerId: CustomListActor, 
 
     if (patch.minProgress !== undefined) {
         updates.minProgress = sanitizeMinProgress(patch.minProgress, list.isPlatformer)
+    }
+
+    const nextVideoID = patch.videoID !== undefined ? patch.videoID : patch.videoId
+
+    if (nextVideoID !== undefined) {
+        updates.videoID = sanitizeCustomListVideoId(nextVideoID)
     }
 
     if (!Object.keys(updates).length) {
