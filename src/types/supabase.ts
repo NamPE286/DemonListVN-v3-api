@@ -2637,6 +2637,7 @@ export type Database = {
           isOfficial: boolean
           isPlatformer: boolean
           itemSort: string
+          levelSubmissionEnabled: boolean
           levelCount: number
           logoUrl: string | null
           mode: string
@@ -2665,6 +2666,7 @@ export type Database = {
           isOfficial?: boolean
           isPlatformer?: boolean
           itemSort?: string
+          levelSubmissionEnabled?: boolean
           levelCount?: number
           logoUrl?: string | null
           mode?: string
@@ -2693,6 +2695,7 @@ export type Database = {
           isOfficial?: boolean
           isPlatformer?: boolean
           itemSort?: string
+          levelSubmissionEnabled?: boolean
           levelCount?: number
           logoUrl?: string | null
           mode?: string
@@ -4013,4 +4016,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

@@ -562,6 +562,18 @@ function sanitizeTopEnabled(value: unknown) {
     return value
 }
 
+function sanitizeLevelSubmissionEnabled(value: unknown) {
+    if (value == null) {
+        return false
+    }
+
+    if (typeof value !== 'boolean') {
+        throw new ValidationError('levelSubmissionEnabled must be a boolean')
+    }
+
+    return value
+}
+
 function sanitizeCustomListItemSort(value: unknown) {
     if (value == null) {
         return 'mode_default'
@@ -1466,6 +1478,7 @@ async function getOfficialList(slug: OfficialListSlug, viewerId?: string, itemRa
         isPlatformer: config.isPlatformer,
         isOfficial: true,
         communityEnabled: false,
+        levelSubmissionEnabled: false,
         faviconUrl: null,
         logoUrl: null,
         topEnabled: config.mode === 'top',
@@ -1515,6 +1528,7 @@ async function getOfficialListSummary(slug: OfficialListSlug) {
         isPlatformer: config.isPlatformer,
         isOfficial: true,
         communityEnabled: false,
+        levelSubmissionEnabled: false,
         faviconUrl: null,
         logoUrl: null,
         topEnabled: config.mode === 'top',
@@ -1913,7 +1927,7 @@ function canEditCustomListLevels(list: Pick<CustomList, 'isBanned'>, access: Cus
 
 function canReviewCustomListSubmissions(list: Pick<CustomList, 'isOfficial'>, access: CustomListAccessContext) {
     if (list.isOfficial) {
-        return false
+        return access.isModerator
     }
 
     return access.isModerator || access.isOwner || access.memberRole === 'admin'
@@ -2501,8 +2515,8 @@ export async function submitLevelToCustomList(listId: number, actor: CustomListA
     const list = await getCustomListRow(listId)
     const actorUid = getRequiredActorUid(actor)
 
-    if (list.isOfficial) {
-        throw new ForbiddenError('Official lists do not accept public submissions')
+    if (!list.levelSubmissionEnabled) {
+        throw new ForbiddenError('This list does not accept level submissions')
     }
 
     const levelId = Number(payload.levelId)
@@ -3661,6 +3675,7 @@ function getOfficialLevelListEntries(level: {
                 isPlatformer: false,
                 isOfficial: true,
                 communityEnabled: false,
+                levelSubmissionEnabled: false,
                 faviconUrl: null,
                 logoUrl: null,
                 topEnabled: false,
@@ -3698,6 +3713,7 @@ function getOfficialLevelListEntries(level: {
                 isPlatformer: true,
                 isOfficial: true,
                 communityEnabled: false,
+                levelSubmissionEnabled: false,
                 faviconUrl: null,
                 logoUrl: null,
                 topEnabled: true,
@@ -3735,6 +3751,7 @@ function getOfficialLevelListEntries(level: {
                 isPlatformer: false,
                 isOfficial: true,
                 communityEnabled: false,
+                levelSubmissionEnabled: false,
                 faviconUrl: null,
                 logoUrl: null,
                 topEnabled: false,
@@ -3775,6 +3792,7 @@ function getOfficialLevelListEntries(level: {
             isPlatformer: Boolean(level.isPlatformer),
             isOfficial: true,
             communityEnabled: false,
+            levelSubmissionEnabled: false,
             faviconUrl: null,
             logoUrl: null,
             topEnabled: true,
@@ -3927,6 +3945,7 @@ export async function createCustomList(ownerId: string, payload: {
     faviconUrl?: unknown
     logoUrl?: unknown
     topEnabled?: unknown
+    levelSubmissionEnabled?: unknown
     slug?: unknown
     isOfficial?: unknown
     weightFormula?: unknown
@@ -3948,6 +3967,7 @@ export async function createCustomList(ownerId: string, payload: {
         faviconUrl: sanitizeThemeUrl(payload.faviconUrl, 'faviconUrl'),
         logoUrl: sanitizeThemeUrl(payload.logoUrl, 'logoUrl'),
         topEnabled: sanitizeTopEnabled(payload.topEnabled),
+        levelSubmissionEnabled: sanitizeLevelSubmissionEnabled(payload.levelSubmissionEnabled),
         itemSort: sanitizeCustomListItemSort(payload.itemSort),
         slug: sanitizeSlug(payload.slug),
         isOfficial: false,
@@ -3998,6 +4018,7 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
     faviconUrl?: unknown
     logoUrl?: unknown
     topEnabled?: unknown
+    levelSubmissionEnabled?: unknown
     slug?: unknown
     weightFormula?: unknown
     rankBadges?: unknown
@@ -4070,6 +4091,10 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
 
     if (payload.topEnabled !== undefined) {
         pendingUpdates.topEnabled = sanitizeTopEnabled(payload.topEnabled)
+    }
+
+    if (payload.levelSubmissionEnabled !== undefined) {
+        pendingUpdates.levelSubmissionEnabled = sanitizeLevelSubmissionEnabled(payload.levelSubmissionEnabled)
     }
 
     if (payload.slug !== undefined) {
