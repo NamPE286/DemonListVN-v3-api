@@ -147,11 +147,12 @@ router.route('/posts')
         const sortBy = (req.query.sortBy as string) || 'createdAt'
         const ascending = req.query.ascending === 'true'
         const search = req.query.search as string | undefined
+        const searchType = req.query.searchType as string | undefined
         const tagId = req.query.tagId ? parseInt(req.query.tagId as string) : undefined
         const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
 
         const result = await getPostsWithLikeStatus(
-            { type, limit, offset, sortBy, ascending, search, tagId, clanId: null },
+            { type, limit, offset, sortBy, ascending, search, searchType, tagId, clanId: null },
             userId
         )
 
@@ -938,8 +939,9 @@ router.route('/levels/search')
      */
     .get(optionalAuth, async (req, res) => {
         const search = req.query.q as string | undefined
+        const searchType = req.query.searchType as string | undefined
         const limit = parseInt(req.query.limit as string) || 20
-        const levels = await getLevelsForPicker(search, limit)
+        const levels = await getLevelsForPicker(search, limit, searchType)
         res.json(levels)
     })
 
@@ -1115,13 +1117,14 @@ router.route('/admin/comments')
         const limit = parseInt(req.query.limit as string) || 50
         const offset = parseInt(req.query.offset as string) || 0
         const search = req.query.search as string | undefined
+        const searchType = req.query.searchType as string | undefined
         const hidden = req.query.hidden === 'true' ? true : req.query.hidden === 'false' ? false : undefined
         const moderationStatus = req.query.moderationStatus as string | undefined
         const postId = req.query.postId ? parseInt(req.query.postId as string) : undefined
 
         const [comments, total] = await Promise.all([
-            getAdminComments({ limit, offset, search, hidden, moderationStatus, postId }),
-            getAdminCommentsCount({ search, hidden, moderationStatus, postId })
+            getAdminComments({ limit, offset, search, searchType, hidden, moderationStatus, postId }),
+            getAdminCommentsCount({ search, searchType, hidden, moderationStatus, postId })
         ])
 
         res.json({ data: comments, total })
@@ -1431,11 +1434,12 @@ router.route('/players/search')
      */
     .get(optionalAuth, async (req, res) => {
         const q = req.query.q as string
+        const searchType = req.query.searchType as string | undefined
         if (!q || q.length < 1) {
             res.json([])
             return
         }
-        const players = await searchPlayers(q, 8)
+        const players = await searchPlayers(q, 8, searchType)
         res.json(players)
     })
 

@@ -13,7 +13,7 @@ import {
     retrieveOrCreateLevel
 } from '@src/services/level.service'
 import type { Tables, TablesInsert, TablesUpdate } from '@src/types/supabase'
-import { normalizeFullTextSearchQuery } from '@src/utils/full-text-search'
+import { buildFullTextSearchParams, normalizeFullTextSearchQuery } from '@src/utils/full-text-search'
 
 type CustomList = Tables<'lists'>
 type CustomListInsert = TablesInsert<'lists'>
@@ -2130,6 +2130,7 @@ export async function browseLists(options: {
     limit?: number
     offset?: number
     search?: string
+    searchType?: string
     viewerId?: string
     kind?: 'custom' | 'official'
 }) {
@@ -2137,10 +2138,12 @@ export async function browseLists(options: {
         limit = 24,
         offset = 0,
         search = '',
+        searchType,
         viewerId,
         kind
     } = options
 
+    const searchParams = buildFullTextSearchParams(search, searchType)
     const normalizedSearch = normalizeFullTextSearchQuery(search)
     const normalizedSyntheticSearch = normalizedSearch.toLowerCase()
 
@@ -2155,8 +2158,8 @@ export async function browseLists(options: {
         query = query.eq('isOfficial', true)
     }
 
-    if (normalizedSearch.length) {
-        query = query.textSearch('fts', normalizedSearch, { type: 'websearch' })
+    if (searchParams) {
+        query = query.textSearch('fts', searchParams.query, searchParams.options)
     }
 
     const { data, error, count } = await query

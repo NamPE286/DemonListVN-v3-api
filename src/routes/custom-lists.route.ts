@@ -107,6 +107,7 @@ router.route('/')
             const limit = req.query.limit ? parseId(String(req.query.limit), 'limit') : 24
             const offset = req.query.offset ? parseId(String(req.query.offset), 'offset', { allowZero: true }) : 0
             const search = typeof req.query.search === 'string' ? req.query.search : ''
+            const searchType = typeof req.query.searchType === 'string' ? req.query.searchType : undefined
             const kind = req.query.kind === 'official'
                 ? 'official'
                 : req.query.kind === 'custom'
@@ -114,7 +115,7 @@ router.route('/')
                     : undefined
             const viewerId = res.locals.authenticated ? res.locals.user.uid : undefined
 
-            res.send(await browseLists({ limit, offset, search, viewerId, kind }))
+            res.send(await browseLists({ limit, offset, search, searchType, viewerId, kind }))
         } catch (error) {
             if (sendError(res, error)) {
                 return

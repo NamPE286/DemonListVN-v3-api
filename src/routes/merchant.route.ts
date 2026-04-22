@@ -47,10 +47,10 @@ const VALID_STATES = ['PENDING', 'PAID', 'CANCELLED', 'EXPIRED']
 router.route('/orders/all')
     .get(managerAuth, async (req, res) => {
         try {
-            const { state, paymentMethod, search } = req.query as {
-                state?: string, paymentMethod?: string, search?: string
+            const { state, paymentMethod, search, searchType } = req.query as {
+                state?: string, paymentMethod?: string, search?: string, searchType?: string
             }
-            const data = await getAllOrders({ state, paymentMethod, search })
+            const data = await getAllOrders({ state, paymentMethod, search, searchType })
             res.send(data)
         } catch (error) {
             console.error(error)

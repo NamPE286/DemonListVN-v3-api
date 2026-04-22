@@ -8,7 +8,7 @@ import { sepay } from "@src/client/sepay";
 import type { SepayWebhookOrder } from "@src/types/sepay-webhook";
 import { getClan, extendClanBoost } from "@src/services/clan.service";
 import { getPlayer, extendPlayerSupporter } from "@src/services/player.service";
-import { mergeUniqueById, normalizeFullTextSearchQuery } from '@src/utils/full-text-search'
+import { buildFullTextSearchParams, mergeUniqueById } from '@src/utils/full-text-search'
 
 interface Item {
     id: number;
@@ -459,8 +459,8 @@ export async function handlePayment(id: number, sepayOrderData: SepayWebhookOrde
     await post(buyer, recipient, order)
 }
 
-export async function getAllOrders(filters: { state?: string, paymentMethod?: string, search?: string }) {
-    const normalizedSearch = normalizeFullTextSearchQuery(filters.search)
+export async function getAllOrders(filters: { state?: string, paymentMethod?: string, search?: string, searchType?: string }) {
+    const searchParams = buildFullTextSearchParams(filters.search, filters.searchType)
 
     const createQuery = () => {
         let query = supabase
@@ -478,8 +478,8 @@ export async function getAllOrders(filters: { state?: string, paymentMethod?: st
         return query
     }
 
-    if (normalizedSearch.length) {
-        const searchNum = parseInt(normalizedSearch)
+    if (searchParams) {
+        const searchNum = parseInt(filters.search || '')
 
         if (!isNaN(searchNum)) {
             const [{ data: idData, error: idError }, { data: recipientData, error: recipientError }] = await Promise.all([
@@ -488,7 +488,7 @@ export async function getAllOrders(filters: { state?: string, paymentMethod?: st
                     .order("created_at", { ascending: false })
                     .order("created_at", { referencedTable: "orderTracking", ascending: false }),
                 createQuery()
-                    .textSearch('recipientNameFts', normalizedSearch, { type: 'websearch' })
+                    .textSearch('recipientNameFts', searchParams.query, searchParams.options)
                     .order("created_at", { ascending: false })
                     .order("created_at", { referencedTable: "orderTracking", ascending: false })
             ])
@@ -506,7 +506,7 @@ export async function getAllOrders(filters: { state?: string, paymentMethod?: st
         }
 
         const { data, error } = await createQuery()
-            .textSearch('recipientNameFts', normalizedSearch, { type: 'websearch' })
+            .textSearch('recipientNameFts', searchParams.query, searchParams.options)
             .order("created_at", { ascending: false })
             .order("created_at", { referencedTable: "orderTracking", ascending: false })
 

@@ -1,5 +1,5 @@
 import supabase from "@src/client/supabase";
-import { mergeUniqueById, normalizeFullTextSearchQuery } from '@src/utils/full-text-search'
+import { buildFullTextSearchParams, mergeUniqueById } from '@src/utils/full-text-search'
 
 export async function getCase(id: number) {
     const { data, error } = await supabase
@@ -28,26 +28,26 @@ export async function getItem(id: number) {
     return data;
 }
 
-export async function searchItems(query: string) {
-    const normalizedQuery = normalizeFullTextSearchQuery(query)
+export async function searchItems(query: string, searchType?: string) {
+    const searchParams = buildFullTextSearchParams(query, searchType)
 
-    if (!normalizedQuery.length) {
+    if (!searchParams) {
         return []
     }
 
-    const isNumeric = !isNaN(Number(normalizedQuery))
+    const isNumeric = !isNaN(Number(query))
 
     if (isNumeric) {
         const [{ data: idData, error: idError }, { data: nameData, error: nameError }] = await Promise.all([
             supabase
                 .from('items')
                 .select('*')
-                .eq('id', Number(normalizedQuery))
+                .eq('id', Number(query))
                 .limit(50),
             supabase
                 .from('items')
                 .select('*')
-                .textSearch('nameFts', normalizedQuery, { type: 'websearch' })
+                .textSearch('nameFts', searchParams.query, searchParams.options)
                 .order('id', { ascending: true })
                 .limit(50)
         ])
@@ -68,7 +68,7 @@ export async function searchItems(query: string) {
     const { data, error } = await supabase
         .from('items')
         .select('*')
-        .textSearch('nameFts', normalizedQuery, { type: 'websearch' })
+        .textSearch('nameFts', searchParams.query, searchParams.options)
         .order('id', { ascending: true })
         .limit(50)
 

@@ -960,11 +960,12 @@ router.route('/:id/community/posts')
         const sortBy = (req.query.sortBy as string) || 'createdAt'
         const ascending = req.query.ascending === 'true'
         const search = req.query.search as string | undefined
+        const searchType = req.query.searchType as string | undefined
         const tagId = req.query.tagId ? parseInt(req.query.tagId as string) : undefined
         const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
 
         const result = await getPostsWithLikeStatus(
-            { type, limit, offset, sortBy, ascending, search, tagId, clanId },
+            { type, limit, offset, sortBy, ascending, search, searchType, tagId, clanId },
             userId
         )
 
@@ -1204,11 +1205,12 @@ router.route('/:id/community/posts/:postId/tags')
 router.route('/:id/community/players/search')
     .get(optionalAuth, clanCommunityAccess(false), async (req, res) => {
         const q = req.query.q as string
+        const searchType = req.query.searchType as string | undefined
         if (!q || q.length < 1) {
             res.json([])
             return
         }
-        const players = await searchPlayers(q, 8)
+        const players = await searchPlayers(q, 8, searchType)
         res.json(players)
     })
 

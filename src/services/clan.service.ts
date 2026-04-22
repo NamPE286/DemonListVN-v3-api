@@ -3,19 +3,19 @@ import type { Database } from '@src/types/supabase'
 import { sendNotification } from '@src/services/notification.service'
 import { getPlayer, updatePlayer } from '@src/services/player.service'
 import type { TClan, TClanInvitation } from '@src/types'
-import { normalizeFullTextSearchQuery } from '@src/utils/full-text-search'
+import { buildFullTextSearchParams } from '@src/utils/full-text-search'
 
 type Clan = Database['public']['Tables']['clans']['Update']
 
-export async function getClans({ start = 0, end = 50, sortBy = 'boostedUntil', ascending = 'false', searchQuery = '' } = {}) {
-    const normalizedSearchQuery = normalizeFullTextSearchQuery(searchQuery)
+export async function getClans({ start = 0, end = 50, sortBy = 'boostedUntil', ascending = 'false', searchQuery = '', searchType }: { start?: number, end?: number, sortBy?: string, ascending?: string, searchQuery?: string, searchType?: string } = {}) {
+    const searchParams = buildFullTextSearchParams(searchQuery, searchType)
 
     let query = supabase
         .from('clans')
         .select('*, players!owner(*, clans!id(*))')
 
-    if (normalizedSearchQuery.length) {
-        query = query.textSearch('nameFts', normalizedSearchQuery, { type: 'websearch' })
+    if (searchParams) {
+        query = query.textSearch('nameFts', searchParams.query, searchParams.options)
     }
 
     query = query

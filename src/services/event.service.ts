@@ -1,11 +1,12 @@
 import supabase from "@src/client/supabase";
 import type { Tables } from "@src/types/supabase";
-import { normalizeFullTextSearchQuery } from '@src/utils/full-text-search'
+import { buildFullTextSearchParams } from '@src/utils/full-text-search'
 
 export const EVENT_SELECT_STR = 'id, created_at, start, end, title, description, imgUrl, exp, redirect, minExp, isSupporterOnly, isContest, hidden, isExternal, isRanked'
 
 interface EventFilter {
     search: string;
+    searchType?: string;
     eventType: 'all' | 'contest' | 'nonContest';
     contestType: 'all' | 'ranked' | 'unranked'; // all if eventType == 'all' or 'nonContest'
     start: string;
@@ -108,15 +109,15 @@ export async function deleteEventLevel(eventID: number, levelID: number) {
 }
 
 export async function getEvents(filter: EventFilter) {
-    const normalizedSearch = normalizeFullTextSearchQuery(filter.search)
+    const searchParams = buildFullTextSearchParams(filter.search, filter.searchType)
 
     let query = supabase
         .from('events')
         .select(EVENT_SELECT_STR)
         .eq('hidden', false)
 
-    if (normalizedSearch.length) {
-        query = query.textSearch('titleFts', normalizedSearch, { type: 'websearch' })
+    if (searchParams) {
+        query = query.textSearch('titleFts', searchParams.query, searchParams.options)
     }
 
     if (filter.eventType === 'contest') {

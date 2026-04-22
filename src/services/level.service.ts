@@ -4,7 +4,7 @@ import { addChangelog } from '@src/services/changelog.service'
 import { refreshDailyLevelProgress, refreshWeeklyLevelProgress, getActiveseason, getSeasonLevelByType, addSeasonLevel, updateSeasonLevel } from '@src/services/battlepass.service'
 import type { TLevel } from "@src/types"
 import type { TablesInsert } from "@src/types/supabase"
-import { normalizeFullTextSearchQuery } from '@src/utils/full-text-search'
+import { buildFullTextSearchParams } from '@src/utils/full-text-search'
 
 export async function fetchLevels(list: string) {
     let query = supabase
@@ -39,13 +39,13 @@ function convertToIDArray(levels: TLevel[]) {
     return res
 }
 
-export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '' } = {}) {
+export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '', searchType }: { start?: number, end?: number, sortBy?: string, ascending?: boolean | string, uid?: string, topStart?: number | string | null, topEnd?: number | string | null, ratingMin?: number | string | null, ratingMax?: number | string | null, nameSearch?: string, creatorSearch?: string, tagIds?: string, searchType?: string } = {}) {
     if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
 
-    const normalizedNameSearch = normalizeFullTextSearchQuery(nameSearch)
-    const normalizedCreatorSearch = normalizeFullTextSearchQuery(creatorSearch)
+    const nameSearchParams = buildFullTextSearchParams(nameSearch, searchType)
+    const creatorSearchParams = buildFullTextSearchParams(creatorSearch, searchType)
 
     // Pre-filter: get level IDs that have matching tags
     let tagFilteredIds: number[] | null = null
@@ -83,11 +83,11 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
     if (ratingMax !== null && ratingMax !== '') {
         query = query.lte('rating', ratingMax)
     }
-    if (normalizedNameSearch.length) {
-        query = query.textSearch('nameFts', normalizedNameSearch, { type: 'websearch' })
+    if (nameSearchParams) {
+        query = query.textSearch('nameFts', nameSearchParams.query, nameSearchParams.options)
     }
-    if (normalizedCreatorSearch.length) {
-        query = query.textSearch('creatorFts', normalizedCreatorSearch, { type: 'websearch' })
+    if (creatorSearchParams) {
+        query = query.textSearch('creatorFts', creatorSearchParams.query, creatorSearchParams.options)
     }
 
     // Filter by tag IDs: only include levels that have at least one matching tag
@@ -143,13 +143,13 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
     return res
 }
 
-export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '' } = {}) {
+export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '', searchType }: { start?: number, end?: number, sortBy?: string, ascending?: boolean | string, uid?: string, topStart?: number | string | null, topEnd?: number | string | null, ratingMin?: number | string | null, ratingMax?: number | string | null, nameSearch?: string, creatorSearch?: string, tagIds?: string, searchType?: string } = {}) {
     if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
 
-    const normalizedNameSearch = normalizeFullTextSearchQuery(nameSearch)
-    const normalizedCreatorSearch = normalizeFullTextSearchQuery(creatorSearch)
+    const nameSearchParams = buildFullTextSearchParams(nameSearch, searchType)
+    const creatorSearchParams = buildFullTextSearchParams(creatorSearch, searchType)
 
     // Pre-filter: get level IDs that have matching tags
     let tagFilteredIds: number[] | null = null
@@ -187,11 +187,11 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
     if (ratingMax !== null && ratingMax !== '') {
         query = query.lte('rating', ratingMax)
     }
-    if (normalizedNameSearch.length) {
-        query = query.textSearch('nameFts', normalizedNameSearch, { type: 'websearch' })
+    if (nameSearchParams) {
+        query = query.textSearch('nameFts', nameSearchParams.query, nameSearchParams.options)
     }
-    if (normalizedCreatorSearch.length) {
-        query = query.textSearch('creatorFts', normalizedCreatorSearch, { type: 'websearch' })
+    if (creatorSearchParams) {
+        query = query.textSearch('creatorFts', creatorSearchParams.query, creatorSearchParams.options)
     }
 
     // Filter by tag IDs: only include levels that have at least one matching tag
@@ -247,13 +247,13 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
     return res
 }
 
-export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '' } = {}) {
+export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '', searchType }: { start?: number, end?: number, sortBy?: string, ascending?: boolean | string, uid?: string, topStart?: number | string | null, topEnd?: number | string | null, ratingMin?: number | string | null, ratingMax?: number | string | null, nameSearch?: string, creatorSearch?: string, tagIds?: string, searchType?: string } = {}) {
     if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
 
-    const normalizedNameSearch = normalizeFullTextSearchQuery(nameSearch)
-    const normalizedCreatorSearch = normalizeFullTextSearchQuery(creatorSearch)
+    const nameSearchParams = buildFullTextSearchParams(nameSearch, searchType)
+    const creatorSearchParams = buildFullTextSearchParams(creatorSearch, searchType)
 
     // Pre-filter: get level IDs that have matching tags
     let tagFilteredIds: number[] | null = null
@@ -289,11 +289,11 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
     if (ratingMax !== null && ratingMax !== '') {
         query = query.lte('flPt', ratingMax)
     }
-    if (normalizedNameSearch.length) {
-        query = query.textSearch('nameFts', normalizedNameSearch, { type: 'websearch' })
+    if (nameSearchParams) {
+        query = query.textSearch('nameFts', nameSearchParams.query, nameSearchParams.options)
     }
-    if (normalizedCreatorSearch.length) {
-        query = query.textSearch('creatorFts', normalizedCreatorSearch, { type: 'websearch' })
+    if (creatorSearchParams) {
+        query = query.textSearch('creatorFts', creatorSearchParams.query, creatorSearchParams.options)
     }
 
     // Filter by tag IDs: only include levels that have at least one matching tag
@@ -350,13 +350,13 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
     return res
 }
 
-export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '' } = {}) {
+export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '', searchType }: { start?: number, end?: number, sortBy?: string, ascending?: boolean | string, uid?: string, topStart?: number | string | null, topEnd?: number | string | null, ratingMin?: number | string | null, ratingMax?: number | string | null, nameSearch?: string, creatorSearch?: string, tagIds?: string, searchType?: string } = {}) {
     if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
 
-    const normalizedNameSearch = normalizeFullTextSearchQuery(nameSearch)
-    const normalizedCreatorSearch = normalizeFullTextSearchQuery(creatorSearch)
+    const nameSearchParams = buildFullTextSearchParams(nameSearch, searchType)
+    const creatorSearchParams = buildFullTextSearchParams(creatorSearch, searchType)
 
     // Pre-filter: get level IDs that have matching tags
     let tagFilteredIds: number[] | null = null
@@ -393,11 +393,11 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
     if (ratingMax !== null && ratingMax !== '') {
         query = query.lte('rating', ratingMax)
     }
-    if (normalizedNameSearch.length) {
-        query = query.textSearch('nameFts', normalizedNameSearch, { type: 'websearch' })
+    if (nameSearchParams) {
+        query = query.textSearch('nameFts', nameSearchParams.query, nameSearchParams.options)
     }
-    if (normalizedCreatorSearch.length) {
-        query = query.textSearch('creatorFts', normalizedCreatorSearch, { type: 'websearch' })
+    if (creatorSearchParams) {
+        query = query.textSearch('creatorFts', creatorSearchParams.query, creatorSearchParams.options)
     }
 
     // Filter by tag IDs: only include levels that have at least one matching tag

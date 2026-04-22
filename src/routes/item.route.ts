@@ -32,6 +32,7 @@ const router = express.Router()
 router.route('/search')
     .get(adminAuth, async (req, res) => {
         const { q } = req.query
+        const searchType = typeof req.query.searchType === 'string' ? req.query.searchType : undefined
 
         if (!q || typeof q !== 'string') {
             res.status(400).send({ message: 'Query parameter q is required' })
@@ -39,7 +40,7 @@ router.route('/search')
         }
 
         try {
-            const items = await searchItems(q)
+            const items = await searchItems(q, searchType)
             res.send(items)
         } catch (err) {
             console.error(err)
