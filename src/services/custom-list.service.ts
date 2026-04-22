@@ -812,8 +812,8 @@ function normalizeRankBadges(value: unknown): CustomListRankBadge[] {
 
 function sanitizeRating(value: unknown) {
     const n = Number(value)
-    if (!Number.isInteger(n) || n < 0) {
-        throw new ValidationError('Rating must be an integer greater than or equal to 0')
+    if (!Number.isFinite(n) || n < 0) {
+        throw new ValidationError('Rating must be a number greater than or equal to 0')
     }
     return n
 }
@@ -1141,12 +1141,12 @@ function getEffectiveVideoID(item: any) {
     return item.videoID ?? item.level?.videoID ?? null
 }
 
-function getNormalizedListPosition(item: any, index: number, isSyntheticOfficialList: boolean) {
+function getNormalizedListPosition(item: any, index: number, _isSyntheticOfficialList: boolean) {
     if (item.position == null) {
         return index + 1
     }
 
-    return isSyntheticOfficialList ? Number(item.position) : Number(item.position) + 1
+    return Number(item.position)
 }
 
 async function ensureStoredTopPositions(listId: number) {
@@ -1171,9 +1171,67 @@ async function ensureStoredTopPositions(listId: number) {
     const updates = items
         .map((item, index) => ({
             id: item.id,
-            position: index,
-            shouldUpdate: Number(item.position) !== index
+            position: index + 1,
+            shouldUpdate: Number(item.position) !== index + 1
         }))
+        .filter((item) => item.shouldUpdate)
+
+    if (!updates.length) {
+        return
+    }
+
+    const results = await Promise.all(
+        updates.map((item) =>
+            supabase
+                .from('listLevels')
+                .update({ position: item.position })
+                .eq('id', item.id)
+        )
+    )
+
+    for (const result of results) {
+        if (result.error) {
+            throw new Error(result.error.message)
+        }
+    }
+}
+
+async function ensureStoredRatingPositions(listId: number) {
+    const { data, error } = await supabase
+        .from('listLevels')
+        .select('id, rating, position, created_at')
+        .eq('listId', listId)
+        .order('rating', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    const items = data || []
+
+    if (!items.length) {
+        return
+    }
+
+    let pos = 1
+    let prevRating: number | null = null
+
+    const updates = items
+        .map((item, index) => {
+            if (index === 0) {
+                pos = 1
+            } else if (Number(item.rating) !== prevRating) {
+                pos++
+            }
+            prevRating = Number(item.rating)
+            return {
+                id: item.id,
+                position: pos,
+                shouldUpdate: Number(item.position) !== pos
+            }
+        })
         .filter((item) => item.shouldUpdate)
 
     if (!updates.length) {
@@ -2181,6 +2239,8 @@ async function getCustomListItems(listId: number, mode: string = 'rating', itemR
 
     if (isTop) {
         await ensureStoredTopPositions(listId)
+    } else {
+        await ensureStoredRatingPositions(listId)
     }
 
     let itemsQuery = supabase
@@ -2772,6 +2832,8 @@ export async function refreshCustomListLeaderboard(identifier: CustomListIdentif
 
     if (list.mode === 'top') {
         await ensureStoredTopPositions(list.id)
+    } else {
+        await ensureStoredRatingPositions(list.id)
     }
 
     const hydratedList = await getCustomList(list.id, actor)
@@ -3519,7 +3581,7 @@ export async function addLevelToCustomList(listId: number, ownerId: CustomListAc
             throw new Error(countError.message)
         }
 
-        itemInsert.position = count ?? 0
+        itemInsert.position = (count ?? 0) + 1
     }
 
     if (options.createdAt !== undefined) {
@@ -3635,7 +3697,7 @@ export async function batchAddExistingLevelsToCustomList(listId: number, ownerId
             throw new Error(countError.message)
         }
 
-        nextPosition = count ?? 0
+        nextPosition = (count ?? 0) + 1
     }
 
     const itemInserts: CustomListLevelInsert[] = insertInputs.map((levelInput, index) => {
@@ -3805,7 +3867,7 @@ export async function reorderListLevels(listId: number, ownerId: CustomListActor
     const updates = (levelIds as number[]).map((levelId, index) =>
         supabase
             .from('listLevels')
-            .update({ position: index })
+            .update({ position: index + 1 })
             .eq('listId', listId)
             .eq('levelId', levelId)
     )
