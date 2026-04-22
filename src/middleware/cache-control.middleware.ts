@@ -22,6 +22,14 @@ function hasUidQuery(query: ExpressRequest['query'] | URLSearchParams) {
 	return typeof value === 'string' && value.trim().length > 0
 }
 
+function hasSubmitGateQuery(query: ExpressRequest['query'] | URLSearchParams) {
+	if (query instanceof URLSearchParams) {
+		return query.has('submitGate')
+	}
+
+	return query.submitGate !== undefined
+}
+
 function setPublicCacheHeaders(res: ExpressResponse) {
 	res.vary('Authorization')
 	res.set('Cache-Control', PUBLIC_CACHE_CONTROL)
@@ -42,7 +50,7 @@ export function publicReadCache(req: ExpressRequest, res: ExpressResponse, next:
 		return
 	}
 
-	if (res.locals.authenticated || hasUidQuery(req.query)) {
+	if (res.locals.authenticated || hasUidQuery(req.query) || hasSubmitGateQuery(req.query)) {
 		setNoStoreHeaders(res)
 		next()
 		return
@@ -66,6 +74,7 @@ export function isWorkerEdgeCacheable(request: Request) {
 		&& EDGE_CACHEABLE_PREFIXES.some((prefix) => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`))
 		&& !request.headers.has('authorization')
 		&& !hasUidQuery(url.searchParams)
+		&& !hasSubmitGateQuery(url.searchParams)
 }
 
 export function createWorkerCacheKey(request: Request) {
