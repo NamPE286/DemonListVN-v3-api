@@ -6,6 +6,7 @@ import optionalAuth from '@src/middleware/optional-user-auth.middleware'
 import userAuth from '@src/middleware/user-auth.middleware'
 import {
     addLevelToCustomList,
+    batchAddExistingLevelsToCustomList,
     addCustomListMember,
     browseLists,
     ConflictError,
@@ -259,7 +260,11 @@ router.route('/:id')
                 throw new ValidationError('Invalid item range')
             }
 
-            res.send(await getCustomList(req.params.id, viewerId, { itemsStart, itemsEnd }))
+            res.send(await getCustomList(req.params.id, viewerId, {
+                itemsStart,
+                itemsEnd,
+                itemSort: req.query.itemSort
+            }))
         } catch (error) {
             if (sendError(res, error)) {
                 return
@@ -408,6 +413,21 @@ router.route('/:id/levels')
             res.status(201).send(await addLevelToCustomList(listId, res.locals.user, levelId, {
                 createdAt: req.body?.createdAt ?? req.body?.created_at
             }))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/levels/batch')
+    .post(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await batchAddExistingLevelsToCustomList(listId, res.locals.user, req.body?.levelInputs))
         } catch (error) {
             if (sendError(res, error)) {
                 return

@@ -94,6 +94,11 @@ type CustomListActor = string | {
     isManager?: boolean | null
 } | undefined
 
+type BatchCustomListLevelInput = {
+    levelId: number
+    createdAt?: string
+}
+
 const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
 type CustomListWithOwnerData = CustomList & {
@@ -581,6 +586,47 @@ function sanitizeListLevelCreatedAt(value: unknown) {
     return parsed.toISOString()
 }
 
+function sanitizeBatchCustomListLevelInputs(value: unknown) {
+    if (!Array.isArray(value)) {
+        throw new ValidationError('levelInputs must be an array')
+    }
+
+    const levelInputs: BatchCustomListLevelInput[] = []
+    const seenLevelIds = new Set<number>()
+
+    for (const entry of value) {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+            throw new ValidationError('Each level input must be an object')
+        }
+
+        const rawEntry = entry as {
+            levelId?: unknown
+            createdAt?: unknown
+            created_at?: unknown
+        }
+        const levelId = Number.parseInt(String(rawEntry.levelId ?? ''), 10)
+
+        requireLevelId(levelId)
+
+        if (seenLevelIds.has(levelId)) {
+            continue
+        }
+
+        seenLevelIds.add(levelId)
+
+        const levelInput: BatchCustomListLevelInput = { levelId }
+        const rawCreatedAt = rawEntry.createdAt ?? rawEntry.created_at
+
+        if (rawCreatedAt !== undefined) {
+            levelInput.createdAt = sanitizeListLevelCreatedAt(rawCreatedAt)
+        }
+
+        levelInputs.push(levelInput)
+    }
+
+    return levelInputs
+}
+
 function sanitizeOfficial(value: unknown) {
     if (value == null) {
         return false
@@ -1061,6 +1107,30 @@ async function appendCustomListAuditLog(listId: number, entry: {
             error: error.message
         })
     }
+}
+
+function normalizeCustomListAuditValue(value: unknown): unknown {
+    if (value == null) {
+        return null
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((entry) => normalizeCustomListAuditValue(entry))
+    }
+
+    if (typeof value === 'object') {
+        return Object.fromEntries(
+            Object.entries(value as Record<string, unknown>)
+                .sort(([left], [right]) => left.localeCompare(right))
+                .map(([key, entryValue]) => [key, normalizeCustomListAuditValue(entryValue)])
+        )
+    }
+
+    return value
+}
+
+function areCustomListValuesEqual(left: unknown, right: unknown) {
+    return JSON.stringify(normalizeCustomListAuditValue(left)) === JSON.stringify(normalizeCustomListAuditValue(right))
 }
 
 function getEffectiveMinProgress(item: any) {
@@ -2360,6 +2430,7 @@ export async function browseLists(options: {
 export async function getCustomList(listId: CustomListIdentifier, viewerId?: CustomListActor, options: {
     itemsStart?: number
     itemsEnd?: number
+    itemSort?: unknown
 } = {}) {
     const actorUid = getActorUid(viewerId)
     const itemRange = options.itemsStart !== undefined && options.itemsEnd !== undefined
@@ -2368,6 +2439,9 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: Cus
             end: options.itemsEnd
         }
         : undefined
+    const effectiveItemSort = options.itemSort !== undefined
+        ? sanitizeCustomListItemSort(options.itemSort)
+        : 'mode_default'
 
     try {
         const resolved = await resolveCustomListIdentifier(listId)
@@ -2376,7 +2450,7 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: Cus
         const permissions = getCustomListPermissions(list, access)
         const [items, [{ starCount = 0, starred = false } = { starCount: 0, starred: false }], latestRefresh, members, auditLog] = await Promise.all([
             enrichItemsWithViewerEligibleRecords(
-                await getCustomListItems(list.id, list.mode, itemRange, list.itemSort || 'mode_default'),
+                await getCustomListItems(list.id, list.mode, itemRange, effectiveItemSort),
                 list,
                 actorUid
             ),
@@ -2388,6 +2462,7 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: Cus
 
         return {
             ...list,
+            itemSort: effectiveItemSort,
             rankBadges: normalizeRankBadges(list.rankBadges),
             starCount,
             starred,
@@ -2689,7 +2764,7 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
 export async function refreshCustomListLeaderboard(identifier: CustomListIdentifier, actor: CustomListActor) {
     const resolved = await resolveCustomListIdentifier(identifier)
     const list = await getCustomListRow(resolved.id)
-    const access = await assertCanEditList(list, actor)
+    await assertCanEditList(list, actor)
 
     if (list.mode === 'top') {
         await ensureStoredTopPositions(list.id)
@@ -2698,15 +2773,6 @@ export async function refreshCustomListLeaderboard(identifier: CustomListIdentif
     const hydratedList = await getCustomList(list.id, actor)
     const { rankedPlayers, rankedRecords } = await calculateCustomListLeaderboardSnapshot(hydratedList)
     const refreshRow = await persistCustomListLeaderboard(list.id, rankedPlayers, rankedRecords)
-
-    await appendCustomListAuditLog(list.id, {
-        actorUid: access.actorUid,
-        action: 'leaderboard_refreshed',
-        metadata: {
-            totalPlayers: refreshRow.totalPlayers,
-            totalRecords: refreshRow.totalRecords
-        }
-    })
 
     return {
         listId: list.id,
@@ -2943,33 +3009,30 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
     slug?: unknown
     weightFormula?: unknown
     rankBadges?: unknown
-    itemSort?: unknown
 }) {
     const existing = await getCustomListRow(listId)
     const access = await assertCanEditList(existing, ownerId)
-
-    const updates: CustomListUpdate = {
-        updated_at: new Date().toISOString()
-    }
+    const pendingUpdates: Partial<CustomListUpdate> = {}
+    const existingValues = existing as Record<string, unknown>
 
     if (payload.title !== undefined) {
-        updates.title = sanitizeTitle(payload.title)
+        pendingUpdates.title = sanitizeTitle(payload.title)
     }
 
     if (payload.description !== undefined) {
-        updates.description = sanitizeDescription(payload.description)
+        pendingUpdates.description = sanitizeDescription(payload.description)
     }
 
     if (payload.backgroundColor !== undefined) {
-        updates.backgroundColor = sanitizeThemeColor(payload.backgroundColor, 'backgroundColor')
+        pendingUpdates.backgroundColor = sanitizeThemeColor(payload.backgroundColor, 'backgroundColor')
     }
 
     if (payload.bannerUrl !== undefined) {
-        updates.bannerUrl = sanitizeThemeUrl(payload.bannerUrl, 'bannerUrl')
+        pendingUpdates.bannerUrl = sanitizeThemeUrl(payload.bannerUrl, 'bannerUrl')
     }
 
     if (payload.borderColor !== undefined) {
-        updates.borderColor = sanitizeThemeColor(payload.borderColor, 'borderColor')
+        pendingUpdates.borderColor = sanitizeThemeColor(payload.borderColor, 'borderColor')
     }
 
     if (payload.visibility !== undefined) {
@@ -2979,15 +3042,15 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
             throw new ValidationError('Banned lists must remain private')
         }
 
-        updates.visibility = visibility
+        pendingUpdates.visibility = visibility
     }
 
     if (payload.tags !== undefined) {
-        updates.tags = sanitizeTags(payload.tags)
+        pendingUpdates.tags = sanitizeTags(payload.tags)
     }
 
     if (payload.mode !== undefined) {
-        updates.mode = sanitizeMode(payload.mode)
+        pendingUpdates.mode = sanitizeMode(payload.mode)
     }
 
     if (payload.isPlatformer !== undefined) {
@@ -2997,27 +3060,23 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
             await assertExistingLevelsMatchType(listId, isPlatformer)
         }
 
-        updates.isPlatformer = isPlatformer
+        pendingUpdates.isPlatformer = isPlatformer
     }
 
     if (payload.communityEnabled !== undefined) {
-        updates.communityEnabled = sanitizeCommunityEnabled(payload.communityEnabled)
+        pendingUpdates.communityEnabled = sanitizeCommunityEnabled(payload.communityEnabled)
     }
 
     if (payload.faviconUrl !== undefined) {
-        updates.faviconUrl = sanitizeThemeUrl(payload.faviconUrl, 'faviconUrl')
+        pendingUpdates.faviconUrl = sanitizeThemeUrl(payload.faviconUrl, 'faviconUrl')
     }
 
     if (payload.logoUrl !== undefined) {
-        updates.logoUrl = sanitizeThemeUrl(payload.logoUrl, 'logoUrl')
+        pendingUpdates.logoUrl = sanitizeThemeUrl(payload.logoUrl, 'logoUrl')
     }
 
     if (payload.topEnabled !== undefined) {
-        updates.topEnabled = sanitizeTopEnabled(payload.topEnabled)
-    }
-
-    if (payload.itemSort !== undefined) {
-        updates.itemSort = sanitizeCustomListItemSort(payload.itemSort)
+        pendingUpdates.topEnabled = sanitizeTopEnabled(payload.topEnabled)
     }
 
     if (payload.slug !== undefined) {
@@ -3027,15 +3086,35 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
             await ensureUniqueListSlug(slug, listId)
         }
 
-        updates.slug = slug
+        pendingUpdates.slug = slug
     }
 
     if (payload.weightFormula !== undefined) {
-        updates.weightFormula = sanitizeWeightFormula(payload.weightFormula)
+        pendingUpdates.weightFormula = sanitizeWeightFormula(payload.weightFormula)
     }
 
     if (payload.rankBadges !== undefined) {
-        updates.rankBadges = sanitizeRankBadges(payload.rankBadges)
+        pendingUpdates.rankBadges = sanitizeRankBadges(payload.rankBadges)
+    }
+
+    const changedEntries = (Object.entries(pendingUpdates) as Array<[string, unknown]>)
+        .filter(([field, nextValue]) => !areCustomListValuesEqual(existingValues[field], nextValue))
+
+    if (!changedEntries.length) {
+        return getCustomList(listId, ownerId)
+    }
+
+    const updates: CustomListUpdate = {
+        updated_at: new Date().toISOString()
+    }
+    const changes: Record<string, { old: unknown; new: unknown }> = {}
+
+    for (const [field, nextValue] of changedEntries) {
+        ;(updates as Record<string, unknown>)[field] = nextValue
+        changes[field] = {
+            old: normalizeCustomListAuditValue(existingValues[field]),
+            new: normalizeCustomListAuditValue(nextValue)
+        }
     }
 
     const { error } = await supabase
@@ -3047,17 +3126,14 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
         throw new Error(error.message)
     }
 
-    const changedFields = Object.keys(updates).filter((field) => field !== 'updated_at')
-
-    if (changedFields.length) {
-        await appendCustomListAuditLog(listId, {
-            actorUid: access.actorUid,
-            action: 'list_updated',
-            metadata: {
-                fields: changedFields
-            }
-        })
-    }
+    await appendCustomListAuditLog(listId, {
+        actorUid: access.actorUid,
+        action: 'list_updated',
+        metadata: {
+            fields: changedEntries.map(([field]) => field),
+            changes
+        }
+    })
 
     return getCustomList(listId, ownerId)
 }
@@ -3468,6 +3544,144 @@ export async function addLevelToCustomList(listId: number, ownerId: CustomListAc
     })
 
     return getCustomList(listId, ownerId)
+}
+
+export async function batchAddExistingLevelsToCustomList(listId: number, ownerId: CustomListActor, levelInputsInput: unknown) {
+    const list = await getCustomListRow(listId)
+    const actorUid = getRequiredActorUid(ownerId)
+    const access = await assertCanEditListLevels(list, ownerId)
+    const levelInputs = sanitizeBatchCustomListLevelInputs(levelInputsInput)
+
+    if (!levelInputs.length) {
+        return {
+            added: 0,
+            missingLevelIds: [] as number[],
+            list: await getCustomList(listId, ownerId)
+        }
+    }
+
+    const levelIds = levelInputs.map((levelInput) => levelInput.levelId)
+    const { data: levels, error: levelsError } = await supabase
+        .from('levels')
+        .select('id, isPlatformer')
+        .in('id', levelIds)
+
+    if (levelsError) {
+        throw new Error(levelsError.message)
+    }
+
+    const levelsById = new Map((levels || []).map((level) => [level.id, level]))
+    const missingLevelIds = levelIds.filter((levelId) => !levelsById.has(levelId))
+
+    for (const levelInput of levelInputs) {
+        const level = levelsById.get(levelInput.levelId)
+
+        if (!level) {
+            continue
+        }
+
+        assertLevelTypeMatchesList(list, level)
+    }
+
+    const availableLevelIds = levelIds.filter((levelId) => levelsById.has(levelId))
+
+    if (!availableLevelIds.length) {
+        return {
+            added: 0,
+            missingLevelIds,
+            list: await getCustomList(listId, ownerId)
+        }
+    }
+
+    const { data: existingItems, error: existingItemsError } = await supabase
+        .from('listLevels')
+        .select('levelId')
+        .eq('listId', listId)
+        .in('levelId', availableLevelIds)
+
+    if (existingItemsError) {
+        throw new Error(existingItemsError.message)
+    }
+
+    const existingLevelIds = new Set((existingItems || []).map((item) => item.levelId))
+    const insertInputs = levelInputs.filter((levelInput) => (
+        levelsById.has(levelInput.levelId)
+        && !existingLevelIds.has(levelInput.levelId)
+    ))
+
+    if (!insertInputs.length) {
+        return {
+            added: 0,
+            missingLevelIds,
+            list: await getCustomList(listId, ownerId)
+        }
+    }
+
+    let nextPosition = 0
+
+    if (list.mode === 'top') {
+        await ensureStoredTopPositions(listId)
+
+        const { count, error: countError } = await supabase
+            .from('listLevels')
+            .select('id', { count: 'exact', head: true })
+            .eq('listId', listId)
+
+        if (countError) {
+            throw new Error(countError.message)
+        }
+
+        nextPosition = count ?? 0
+    }
+
+    const itemInserts: CustomListLevelInsert[] = insertInputs.map((levelInput, index) => {
+        const itemInsert: CustomListLevelInsert = {
+            listId,
+            levelId: levelInput.levelId,
+            addedBy: actorUid,
+            minProgress: null
+        }
+
+        if (list.mode === 'top') {
+            itemInsert.position = nextPosition + index
+        }
+
+        if (levelInput.createdAt) {
+            itemInsert.created_at = levelInput.createdAt
+        }
+
+        return itemInsert
+    })
+
+    const { error: insertError } = await supabase
+        .from('listLevels')
+        .insert(itemInserts)
+
+    if (insertError) {
+        if (insertError.code === '23505') {
+            throw new ConflictError('One or more levels already exist in this list')
+        }
+
+        throw new Error(insertError.message)
+    }
+
+    await syncLevelCount(listId)
+
+    for (const levelInput of insertInputs) {
+        await appendCustomListAuditLog(listId, {
+            actorUid: access.actorUid,
+            action: 'level_added',
+            metadata: {
+                levelId: levelInput.levelId
+            }
+        })
+    }
+
+    return {
+        added: insertInputs.length,
+        missingLevelIds,
+        list: await getCustomList(listId, ownerId)
+    }
 }
 
 export async function removeLevelFromCustomList(listId: number, ownerId: CustomListActor, levelId: number) {
