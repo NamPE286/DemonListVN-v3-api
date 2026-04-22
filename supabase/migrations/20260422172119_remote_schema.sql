@@ -2933,6 +2933,8 @@ CREATE TABLE IF NOT EXISTS "public"."lists" (
     "adminsCanManageHelpers" boolean DEFAULT false NOT NULL,
     "fts" "tsvector" GENERATED ALWAYS AS (("setweight"("to_tsvector"('"simple"'::"regconfig", COALESCE("title", ''::"text")), 'A'::"char") || "setweight"("to_tsvector"('"simple"'::"regconfig", COALESCE("description", ''::"text")), 'B'::"char"))) STORED,
     "faviconUrl" "text",
+    "itemSort" "text" DEFAULT 'mode_default'::"text" NOT NULL,
+    CONSTRAINT "lists_item_sort_check" CHECK (("itemSort" = ANY (ARRAY['mode_default'::"text", 'created_at'::"text"]))),
     CONSTRAINT "lists_mode_check" CHECK (("mode" = ANY (ARRAY['rating'::"text", 'top'::"text"]))),
     CONSTRAINT "lists_slug_check" CHECK ((("slug" IS NULL) OR (("length"("slug") >= 1) AND ("length"("slug") <= 100) AND ("slug" ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'::"text")))),
     CONSTRAINT "lists_title_check" CHECK ((("length"("title") >= 1) AND ("length"("title") <= 100))),
