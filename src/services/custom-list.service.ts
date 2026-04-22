@@ -812,8 +812,8 @@ function normalizeRankBadges(value: unknown): CustomListRankBadge[] {
 
 function sanitizeRating(value: unknown) {
     const n = Number(value)
-    if (!Number.isInteger(n) || n < 1 || n > 10) {
-        throw new ValidationError('Rating must be an integer between 1 and 10')
+    if (!Number.isInteger(n) || n < 0) {
+        throw new ValidationError('Rating must be an integer greater than or equal to 0')
     }
     return n
 }
