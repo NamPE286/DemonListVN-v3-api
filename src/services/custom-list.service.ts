@@ -2179,6 +2179,10 @@ async function getCustomListItems(listId: number, mode: string = 'rating', itemR
 }, itemSort: string = 'mode_default') {
     const isTop = mode === 'top'
 
+    if (isTop) {
+        await ensureStoredTopPositions(listId)
+    }
+
     let itemsQuery = supabase
         .from('listLevels')
         .select('id, created_at, listId, levelId, addedBy, rating, position, minProgress, videoID')

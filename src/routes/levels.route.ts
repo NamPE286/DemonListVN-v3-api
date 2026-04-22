@@ -3,7 +3,7 @@ import type { NextFunction, Response, Request } from 'express'
 import adminAuth from '@src/middleware/admin-auth.middleware'
 import { getLevelDeathCount } from '@src/services/death-count.service'
 import { getLevelRecords } from '@src/services/record.service'
-import { updateLevel, getLevel, fetchLevelFromGD, deleteLevel, refreshLevel, getLevelTags, createLevelTag, deleteLevelTag, updateLevelTag, setLevelTags, getLevelTagsForLevel, addLevelVariant, removeLevelVariant, getLevelVariants, retrieveOrCreateLevel } from '@src/services/level.service'
+import { updateLevel, getLevel, fetchLevelFromGD, deleteLevel, refreshLevel, getLevelTags, createLevelTag, deleteLevelTag, updateLevelTag, setLevelTags, getLevelTagsForLevel, addLevelVariant, removeLevelVariant, getLevelVariants, retrieveOrCreateLevel, crawlLevel, crawlLevels } from '@src/services/level.service'
 import userAuth from '@src/middleware/user-auth.middleware'
 import supabase from '@src/client/supabase'
 import { getEventLevelsSafe } from '@src/services/event.service'
@@ -23,6 +23,42 @@ function checkID(req: Request, res: Response, next: NextFunction) {
     }
 
     next()
+}
+
+function parseForcedQuery(value: unknown) {
+    if (typeof value !== 'string') {
+        return false
+    }
+
+    const normalizedValue = value.trim().toLowerCase()
+    return normalizedValue === '1' || normalizedValue === 'true' || normalizedValue === 'yes'
+}
+
+function parseBatchCrawlIds(value: unknown) {
+    if (typeof value !== 'string') {
+        return null
+    }
+
+    const rawEntries = value
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+
+    if (!rawEntries.length) {
+        return null
+    }
+
+    const ids = rawEntries.map((entry) => Number.parseInt(entry, 10))
+
+    if (ids.some((id) => !Number.isInteger(id) || id <= 0)) {
+        return null
+    }
+
+    if (!ids.length) {
+        return null
+    }
+
+    return [...new Set(ids)]
 }
 
 // Get all level tags
@@ -200,6 +236,37 @@ router.route('/refresh')
         }
 
         res.send()
+    })
+
+router.route('/crawl')
+    .post(userAuth, async (req: Request, res: Response) => {
+        const levelIds = parseBatchCrawlIds(req.query.ids)
+
+        if (!levelIds) {
+            res.status(400).json({ error: 'Query parameter ids must be a comma-separated list of positive integers' })
+            return
+        }
+
+        const forced = parseForcedQuery(req.query.forced)
+
+        if (forced && !res.locals.user?.isAdmin) {
+            res.status(403).json({ error: 'Forced crawl is only available for admins' })
+            return
+        }
+
+        try {
+            const results = await crawlLevels(levelIds, { forced })
+            res.send({
+                forced,
+                results,
+                crawled: results.filter((result) => result.status === 'crawled').length,
+                skipped: results.filter((result) => result.status === 'skipped').length,
+                notFound: results.filter((result) => result.status === 'not_found').length
+            })
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
     })
 
 router.route('/')
@@ -453,6 +520,29 @@ router.route('/:id')
         } catch (err) {
             console.error(err)
             res.status(500).send()
+        }
+    })
+
+router.route('/:id/crawl')
+    .post([userAuth, checkID], async (req: Request, res: Response) => {
+        const levelId = parseInt(req.params.id)
+        const forced = parseForcedQuery(req.query.forced)
+
+        if (forced && !res.locals.user?.isAdmin) {
+            res.status(403).json({ error: 'Forced crawl is only available for admins' })
+            return
+        }
+
+        try {
+            const result = await crawlLevel(levelId, { forced })
+            res.send({
+                ...result.level,
+                crawlStatus: result.status,
+                forced
+            })
+        } catch (err) {
+            console.error(err)
+            res.status(404).json({ error: 'Level not found on the official Geometry Dash server' })
         }
     })
 

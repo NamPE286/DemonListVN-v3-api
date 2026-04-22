@@ -467,6 +467,20 @@ export async function getLevel(levelId: number) {
     return data
 }
 
+export async function getLevelMaybe(levelId: number) {
+    const { data, error } = await supabase
+        .from('levels')
+        .select('*, creatorData:players!creatorId(*, clans!id(*))')
+        .eq('id', levelId)
+        .maybeSingle()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data || null
+}
+
 export async function fetchLevelFromGD(levelId: number) {
     // Use our custom GD API service
     return await getGJLevels21(levelId);
@@ -532,6 +546,87 @@ export async function retrieveOrCreateLevel(payload: TablesInsert<'levels'>): Pr
     }
 
     return ins.data!
+}
+
+function buildCrawledLevelPayload(gdLevel: Awaited<ReturnType<typeof fetchLevelFromGD>>): TablesInsert<'levels'> {
+    return {
+        id: gdLevel.id,
+        name: gdLevel.name,
+        creator: gdLevel.author,
+        difficulty: gdLevel.difficulty ?? null,
+        isPlatformer: gdLevel.length === 5,
+        isChallenge: false,
+        isNonList: false
+    } as TablesInsert<'levels'>
+}
+
+async function upsertCrawledLevel(payload: TablesInsert<'levels'>) {
+    const { error } = await supabase
+        .from('levels')
+        .upsert(payload as any)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return await getLevel(payload.id!)
+}
+
+export async function crawlLevel(levelId: number, options: {
+    forced?: boolean
+} = {}) {
+    const forced = Boolean(options.forced)
+
+    if (!forced) {
+        const existingLevel = await getLevelMaybe(levelId)
+
+        if (existingLevel) {
+            return {
+                level: existingLevel,
+                status: 'skipped' as const
+            }
+        }
+    }
+
+    const gdLevel = await fetchLevelFromGD(levelId)
+    const level = forced
+        ? await upsertCrawledLevel(buildCrawledLevelPayload(gdLevel))
+        : await retrieveOrCreateLevel(buildCrawledLevelPayload(gdLevel))
+
+    return {
+        level,
+        status: 'crawled' as const
+    }
+}
+
+export async function crawlLevels(levelIds: number[], options: {
+    forced?: boolean
+} = {}) {
+    const results: Array<{
+        id: number
+        status: 'skipped' | 'crawled' | 'not_found'
+        level?: TLevel
+        error?: string
+    }> = []
+
+    for (const levelId of levelIds) {
+        try {
+            const result = await crawlLevel(levelId, options)
+            results.push({
+                id: levelId,
+                status: result.status,
+                level: result.level
+            })
+        } catch (error) {
+            results.push({
+                id: levelId,
+                status: 'not_found',
+                error: error instanceof Error ? error.message : 'Failed to crawl level'
+            })
+        }
+    }
+
+    return results
 }
 
 export async function refreshLevel() {
