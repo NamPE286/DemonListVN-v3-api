@@ -1259,6 +1259,7 @@ export type Database = {
           communityEnabled: boolean
           created_at: string
           description: string
+          faviconUrl: string | null
           fts: unknown
           id: number
           isBanned: boolean
@@ -1285,6 +1286,7 @@ export type Database = {
           communityEnabled?: boolean
           created_at?: string
           description?: string
+          faviconUrl?: string | null
           fts?: unknown
           id?: number
           isBanned?: boolean
@@ -1311,6 +1313,7 @@ export type Database = {
           communityEnabled?: boolean
           created_at?: string
           description?: string
+          faviconUrl?: string | null
           fts?: unknown
           id?: number
           isBanned?: boolean

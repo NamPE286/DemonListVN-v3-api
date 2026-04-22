@@ -1203,6 +1203,7 @@ async function getOfficialList(slug: OfficialListSlug, viewerId?: string, itemRa
         isPlatformer: config.isPlatformer,
         isOfficial: true,
         communityEnabled: false,
+        faviconUrl: null,
         logoUrl: null,
         topEnabled: config.mode === 'top',
         mode: config.mode,
@@ -1250,6 +1251,7 @@ async function getOfficialListSummary(slug: OfficialListSlug) {
         isPlatformer: config.isPlatformer,
         isOfficial: true,
         communityEnabled: false,
+        faviconUrl: null,
         logoUrl: null,
         topEnabled: config.mode === 'top',
         mode: config.mode,
@@ -2709,6 +2711,7 @@ export async function createCustomList(ownerId: string, payload: {
     mode?: unknown
     isPlatformer?: unknown
     communityEnabled?: unknown
+    faviconUrl?: unknown
     logoUrl?: unknown
     topEnabled?: unknown
     slug?: unknown
@@ -2728,6 +2731,7 @@ export async function createCustomList(ownerId: string, payload: {
         mode: sanitizeMode(payload.mode),
         isPlatformer: sanitizeListPlatformer(payload.isPlatformer),
         communityEnabled: sanitizeCommunityEnabled(payload.communityEnabled),
+        faviconUrl: sanitizeThemeUrl(payload.faviconUrl, 'faviconUrl'),
         logoUrl: sanitizeThemeUrl(payload.logoUrl, 'logoUrl'),
         topEnabled: sanitizeTopEnabled(payload.topEnabled),
         slug: sanitizeSlug(payload.slug),
@@ -2776,6 +2780,7 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
     mode?: unknown
     isPlatformer?: unknown
     communityEnabled?: unknown
+    faviconUrl?: unknown
     logoUrl?: unknown
     topEnabled?: unknown
     slug?: unknown
@@ -2839,6 +2844,10 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
 
     if (payload.communityEnabled !== undefined) {
         updates.communityEnabled = sanitizeCommunityEnabled(payload.communityEnabled)
+    }
+
+    if (payload.faviconUrl !== undefined) {
+        updates.faviconUrl = sanitizeThemeUrl(payload.faviconUrl, 'faviconUrl')
     }
 
     if (payload.logoUrl !== undefined) {
