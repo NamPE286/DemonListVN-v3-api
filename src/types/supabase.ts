@@ -1265,6 +1265,7 @@ export type Database = {
           faviconUrl: string | null
           fts: unknown
           id: number
+          itemSort: string
           isBanned: boolean
           isPlatformer: boolean
           isOfficial: boolean
@@ -1292,6 +1293,7 @@ export type Database = {
           faviconUrl?: string | null
           fts?: unknown
           id?: number
+          itemSort?: string
           isBanned?: boolean
           isPlatformer?: boolean
           isOfficial?: boolean
@@ -1319,6 +1321,7 @@ export type Database = {
           faviconUrl?: string | null
           fts?: unknown
           id?: number
+          itemSort?: string
           isBanned?: boolean
           isPlatformer?: boolean
           isOfficial?: boolean

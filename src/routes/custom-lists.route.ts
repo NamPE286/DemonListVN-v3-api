@@ -405,7 +405,9 @@ router.route('/:id/levels')
         try {
             const listId = parseId(req.params.id, 'list ID')
             const levelId = parseId(String(req.body.levelId), 'level ID')
-            res.status(201).send(await addLevelToCustomList(listId, res.locals.user, levelId))
+            res.status(201).send(await addLevelToCustomList(listId, res.locals.user, levelId, {
+                createdAt: req.body?.createdAt ?? req.body?.created_at
+            }))
         } catch (error) {
             if (sendError(res, error)) {
                 return

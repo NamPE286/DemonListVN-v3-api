@@ -106,6 +106,7 @@ type CustomListWithOwnerData = CustomList & {
 
 const VISIBILITY_VALUES = new Set(['private', 'unlisted', 'public'])
 const MODE_VALUES = new Set(['rating', 'top'])
+const CUSTOM_LIST_ITEM_SORT_VALUES = new Set(['mode_default', 'created_at'])
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 const WEIGHT_FORMULA_VALIDATION_SCOPE = {
@@ -540,6 +541,44 @@ function sanitizeTopEnabled(value: unknown) {
     }
 
     return value
+}
+
+function sanitizeCustomListItemSort(value: unknown) {
+    if (value == null) {
+        return 'mode_default'
+    }
+
+    if (typeof value !== 'string') {
+        throw new ValidationError('itemSort must be a string')
+    }
+
+    const itemSort = value.trim().toLowerCase()
+
+    if (!CUSTOM_LIST_ITEM_SORT_VALUES.has(itemSort)) {
+        throw new ValidationError('itemSort must be mode_default or created_at')
+    }
+
+    return itemSort as 'mode_default' | 'created_at'
+}
+
+function sanitizeListLevelCreatedAt(value: unknown) {
+    if (typeof value !== 'string') {
+        throw new ValidationError('createdAt must be a string')
+    }
+
+    const createdAt = value.trim()
+
+    if (!createdAt.length) {
+        throw new ValidationError('createdAt is required')
+    }
+
+    const parsed = new Date(createdAt)
+
+    if (Number.isNaN(parsed.getTime())) {
+        throw new ValidationError('createdAt must be a valid date')
+    }
+
+    return parsed.toISOString()
 }
 
 function sanitizeOfficial(value: unknown) {
@@ -1040,6 +1079,53 @@ function getNormalizedListPosition(item: any, index: number, isSyntheticOfficial
     return isSyntheticOfficialList ? Number(item.position) : Number(item.position) + 1
 }
 
+async function ensureStoredTopPositions(listId: number) {
+    const { data, error } = await supabase
+        .from('listLevels')
+        .select('id, position, created_at')
+        .eq('listId', listId)
+        .order('position', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    const items = data || []
+
+    if (!items.length) {
+        return
+    }
+
+    const updates = items
+        .map((item, index) => ({
+            id: item.id,
+            position: index,
+            shouldUpdate: Number(item.position) !== index
+        }))
+        .filter((item) => item.shouldUpdate)
+
+    if (!updates.length) {
+        return
+    }
+
+    const results = await Promise.all(
+        updates.map((item) =>
+            supabase
+                .from('listLevels')
+                .update({ position: item.position })
+                .eq('id', item.id)
+        )
+    )
+
+    for (const result of results) {
+        if (result.error) {
+            throw new Error(result.error.message)
+        }
+    }
+}
+
 function getItemIsPlatformer(item: any, fallbackIsPlatformer: boolean) {
     return Boolean(item.level?.isPlatformer ?? fallbackIsPlatformer)
 }
@@ -1239,6 +1325,7 @@ async function getOfficialList(slug: OfficialListSlug, viewerId?: string, itemRa
         faviconUrl: null,
         logoUrl: null,
         topEnabled: config.mode === 'top',
+        itemSort: 'mode_default',
         mode: config.mode,
         rankBadges: [],
         weightFormula: config.weightFormula,
@@ -1287,6 +1374,7 @@ async function getOfficialListSummary(slug: OfficialListSlug) {
         faviconUrl: null,
         logoUrl: null,
         topEnabled: config.mode === 'top',
+        itemSort: 'mode_default',
         mode: config.mode,
         rankBadges: [],
         weightFormula: config.weightFormula,
@@ -1982,40 +2070,60 @@ async function getListWithOwnerData(listId: number) {
 async function ensureLevelExists(levelId: number) {
     requireLevelId(levelId)
 
-    try {
-        return await getLevel(levelId)
-    } catch {
-        let gdLevel: Awaited<ReturnType<typeof fetchLevelFromGD>>
+    const existingLevel = await supabase
+        .from('levels')
+        .select('id')
+        .eq('id', levelId)
+        .maybeSingle()
 
-        try {
-            gdLevel = await fetchLevelFromGD(levelId)
-        } catch {
-            throw new NotFoundError('Level not found on the official Geometry Dash server')
-        }
-
-        return await retrieveOrCreateLevel({
-            id: levelId,
-            name: gdLevel.name,
-            creator: gdLevel.author,
-            difficulty: gdLevel.difficulty ?? null,
-            isPlatformer: gdLevel.length == 5,
-            isChallenge: false,
-            isNonList: false,
-        } as any)
+    if (existingLevel.error) {
+        throw new Error(existingLevel.error.message)
     }
+
+    if (existingLevel.data) {
+        return await getLevel(levelId)
+    }
+
+    let gdLevel: Awaited<ReturnType<typeof fetchLevelFromGD>>
+
+    try {
+        gdLevel = await fetchLevelFromGD(levelId)
+    } catch {
+        throw new NotFoundError('Level not found on the official Geometry Dash server')
+    }
+
+    return await retrieveOrCreateLevel({
+        id: levelId,
+        name: gdLevel.name,
+        creator: gdLevel.author,
+        difficulty: gdLevel.difficulty ?? null,
+        isPlatformer: gdLevel.length == 5,
+        isChallenge: false,
+        isNonList: false,
+    } as any)
 }
 
 async function getCustomListItems(listId: number, mode: string = 'rating', itemRange?: {
     start?: number
     end?: number
-}) {
+}, itemSort: string = 'mode_default') {
     const isTop = mode === 'top'
 
     let itemsQuery = supabase
         .from('listLevels')
         .select('id, created_at, listId, levelId, addedBy, rating, position, minProgress, videoID')
         .eq('listId', listId)
-        .order(isTop ? 'position' : 'rating', { ascending: isTop, nullsFirst: false })
+
+    if (itemSort === 'created_at') {
+        itemsQuery = itemsQuery
+            .order('created_at', { ascending: true })
+            .order('id', { ascending: true })
+    } else {
+        itemsQuery = itemsQuery
+            .order(isTop ? 'position' : 'rating', { ascending: isTop, nullsFirst: false })
+            .order('created_at', { ascending: true })
+            .order('id', { ascending: true })
+    }
 
     if (itemRange?.start !== undefined && itemRange?.end !== undefined) {
         itemsQuery = itemsQuery.range(itemRange.start, itemRange.end)
@@ -2268,7 +2376,7 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: Cus
         const permissions = getCustomListPermissions(list, access)
         const [items, [{ starCount = 0, starred = false } = { starCount: 0, starred: false }], latestRefresh, members, auditLog] = await Promise.all([
             enrichItemsWithViewerEligibleRecords(
-                await getCustomListItems(list.id, list.mode, itemRange),
+                await getCustomListItems(list.id, list.mode, itemRange, list.itemSort || 'mode_default'),
                 list,
                 actorUid
             ),
@@ -2583,6 +2691,10 @@ export async function refreshCustomListLeaderboard(identifier: CustomListIdentif
     const list = await getCustomListRow(resolved.id)
     const access = await assertCanEditList(list, actor)
 
+    if (list.mode === 'top') {
+        await ensureStoredTopPositions(list.id)
+    }
+
     const hydratedList = await getCustomList(list.id, actor)
     const { rankedPlayers, rankedRecords } = await calculateCustomListLeaderboardSnapshot(hydratedList)
     const refreshRow = await persistCustomListLeaderboard(list.id, rankedPlayers, rankedRecords)
@@ -2761,6 +2873,7 @@ export async function createCustomList(ownerId: string, payload: {
     isOfficial?: unknown
     weightFormula?: unknown
     rankBadges?: unknown
+    itemSort?: unknown
 }) {
     const listInsert: CustomListInsert = {
         owner: ownerId,
@@ -2777,6 +2890,7 @@ export async function createCustomList(ownerId: string, payload: {
         faviconUrl: sanitizeThemeUrl(payload.faviconUrl, 'faviconUrl'),
         logoUrl: sanitizeThemeUrl(payload.logoUrl, 'logoUrl'),
         topEnabled: sanitizeTopEnabled(payload.topEnabled),
+        itemSort: sanitizeCustomListItemSort(payload.itemSort),
         slug: sanitizeSlug(payload.slug),
         isOfficial: false,
         rankBadges: sanitizeRankBadges(payload.rankBadges),
@@ -2829,6 +2943,7 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
     slug?: unknown
     weightFormula?: unknown
     rankBadges?: unknown
+    itemSort?: unknown
 }) {
     const existing = await getCustomListRow(listId)
     const access = await assertCanEditList(existing, ownerId)
@@ -2899,6 +3014,10 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
 
     if (payload.topEnabled !== undefined) {
         updates.topEnabled = sanitizeTopEnabled(payload.topEnabled)
+    }
+
+    if (payload.itemSort !== undefined) {
+        updates.itemSort = sanitizeCustomListItemSort(payload.itemSort)
     }
 
     if (payload.slug !== undefined) {
@@ -3291,7 +3410,9 @@ export async function deleteCustomList(listId: number, ownerId: CustomListActor)
     }
 }
 
-export async function addLevelToCustomList(listId: number, ownerId: CustomListActor, levelId: number) {
+export async function addLevelToCustomList(listId: number, ownerId: CustomListActor, levelId: number, options: {
+    createdAt?: unknown
+} = {}) {
     const list = await getCustomListRow(listId)
     const actorUid = getRequiredActorUid(ownerId)
     const access = await assertCanEditListLevels(list, ownerId)
@@ -3304,6 +3425,25 @@ export async function addLevelToCustomList(listId: number, ownerId: CustomListAc
         levelId,
         addedBy: actorUid,
         minProgress: null
+    }
+
+    if (list.mode === 'top') {
+        await ensureStoredTopPositions(listId)
+
+        const { count, error: countError } = await supabase
+            .from('listLevels')
+            .select('id', { count: 'exact', head: true })
+            .eq('listId', listId)
+
+        if (countError) {
+            throw new Error(countError.message)
+        }
+
+        itemInsert.position = count ?? 0
+    }
+
+    if (options.createdAt !== undefined) {
+        itemInsert.created_at = sanitizeListLevelCreatedAt(options.createdAt)
     }
 
     const { error } = await supabase
@@ -3350,6 +3490,10 @@ export async function removeLevelFromCustomList(listId: number, ownerId: CustomL
         throw new NotFoundError('Level is not in this list')
     }
 
+    if (list.mode === 'top') {
+        await ensureStoredTopPositions(listId)
+    }
+
     await syncLevelCount(listId)
     await appendCustomListAuditLog(listId, {
         actorUid: access.actorUid,
@@ -3367,6 +3511,8 @@ export async function updateListLevel(listId: number, ownerId: CustomListActor, 
     minProgress?: unknown
     videoID?: unknown
     videoId?: unknown
+    createdAt?: unknown
+    created_at?: unknown
 }) {
     const list = await getCustomListRow(listId)
     const access = await assertCanEditListLevels(list, ownerId)
@@ -3385,6 +3531,12 @@ export async function updateListLevel(listId: number, ownerId: CustomListActor, 
 
     if (nextVideoID !== undefined) {
         updates.videoID = sanitizeCustomListVideoId(nextVideoID)
+    }
+
+    const nextCreatedAt = patch.createdAt !== undefined ? patch.createdAt : patch.created_at
+
+    if (nextCreatedAt !== undefined) {
+        updates.created_at = sanitizeListLevelCreatedAt(nextCreatedAt)
     }
 
     if (!Object.keys(updates).length) {
