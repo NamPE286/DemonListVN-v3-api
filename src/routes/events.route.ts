@@ -1109,6 +1109,14 @@ router.route('/:id/calc')
         var { data, error } = await supabase
             .rpc('get_event_leaderboard', { event_id: Number(id) });
 
+        if (error) {
+            console.error(error)
+            res.status(500).send({
+                message: error.message
+            })
+            return;
+        }
+
         const newData = calcLeaderboard(data!)
 
         for (const i of newData) {
@@ -1150,15 +1158,22 @@ router.route('/:id/calc')
             return;
         }
 
-        event.isCalculated = true;
-        event.freeze = null;
+        try {
+            await updateEvent(Number(id), {
+                isCalculated: true,
+                freeze: null
+            })
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({
+                message: err.message
+            })
+            return;
+        }
 
-        var { error } = await supabase
-            .from('events')
-            .update(event)
-            .eq('id', event.id)
-
-        res.send()
+        res.send({
+            message: 'Calculated'
+        })
     })
 
 /**
