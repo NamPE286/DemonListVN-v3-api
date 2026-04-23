@@ -115,7 +115,7 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
 
     var b = await supabase
         .from('records')
-        .select('levelid, userid, progress, isChecked')
+        .select('levelid, userid, progress, acceptedManually, acceptedAuto')
         .eq('userid', uid)
         .in('levelid', IDs)
 
@@ -127,7 +127,10 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
     const res = []
 
     for (const i of b.data) {
-        mp.set(i.levelid, i)
+        mp.set(i.levelid, {
+            ...i,
+            isChecked: Boolean((i as any).acceptedManually) || Boolean((i as any).acceptedAuto)
+        })
     }
 
     for (const i of a.data) {
@@ -219,7 +222,7 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
 
     var b = await supabase
         .from('records')
-        .select('levelid, userid, progress, isChecked')
+        .select('levelid, userid, progress, acceptedManually, acceptedAuto')
         .eq('userid', uid)
         .in('levelid', IDs)
 
@@ -231,7 +234,10 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
     const res = []
 
     for (const i of b.data) {
-        mp.set(i.levelid, i)
+        mp.set(i.levelid, {
+            ...i,
+            isChecked: Boolean((i as any).acceptedManually) || Boolean((i as any).acceptedAuto)
+        })
     }
 
     for (const i of a.data) {
@@ -321,9 +327,9 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
 
     var b = await supabase
         .from('records')
-        .select('levelid, userid, progress, isChecked')
+        .select('levelid, userid, progress, acceptedManually, acceptedAuto')
         .eq('userid', uid)
-        .eq('isChecked', true)
+        .eq('acceptedManually', true)
         .in('levelid', IDs)
 
     if (b.error || !b.data) {
@@ -334,7 +340,10 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
     const res = []
 
     for (const i of b.data) {
-        mp.set(i.levelid, i)
+        mp.set(i.levelid, {
+            ...i,
+            isChecked: Boolean((i as any).acceptedManually) || Boolean((i as any).acceptedAuto)
+        })
     }
 
     for (const i of a.data) {
@@ -425,7 +434,7 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
 
     var b = await supabase
         .from('records')
-        .select('levelid, userid, progress, isChecked')
+        .select('levelid, userid, progress, acceptedManually, acceptedAuto')
         .eq('userid', uid)
         .in('levelid', IDs)
 
@@ -437,7 +446,10 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
     const res = []
 
     for (const i of b.data) {
-        mp.set(i.levelid, i)
+        mp.set(i.levelid, {
+            ...i,
+            isChecked: Boolean((i as any).acceptedManually) || Boolean((i as any).acceptedAuto)
+        })
     }
 
     for (const i of a.data) {

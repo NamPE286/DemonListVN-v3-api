@@ -648,7 +648,7 @@ export async function getUserRecordsForPicker(uid: string) {
         .from('records')
         .select('levelid, progress, videoLink, mobile, dlPt, flPt, plPt, clPt, levels!public_records_levelid_fkey!inner(id, name, creator, difficulty, isPlatformer)')
         .eq('userid', uid)
-        .eq('isChecked', true)
+        .eq('acceptedManually', true)
         .order('timestamp', { ascending: false })
         .limit(100)
 

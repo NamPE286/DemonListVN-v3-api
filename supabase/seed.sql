@@ -491,7 +491,7 @@ INSERT INTO "public"."battlePassSeasons" ("id", "title", "description", "start",
 ON CONFLICT DO NOTHING;
 
 -- records (10 rows)
-INSERT INTO "public"."records" ("userid", "levelid", "progress", "videoLink", "mobile", "needMod", "isChecked", "dlPt", "flPt", "clPt", "plPt", "comment", "raw", "refreshRate", "reviewer", "reviewerComment", "suggestedRating", "timestamp", "prioritizedBy", "no", "queueNo", "variant_id") VALUES
+INSERT INTO "public"."records" ("userid", "levelid", "progress", "videoLink", "mobile", "needMod", "acceptedManually", "dlPt", "flPt", "clPt", "plPt", "comment", "raw", "refreshRate", "reviewer", "reviewerComment", "suggestedRating", "timestamp", "prioritizedBy", "no", "queueNo", "variant_id") VALUES
   ('00000000-0000-0000-0000-000000000016', 65610376, 100, 'https://www.youtube.com/watch?v=Nz1h_dYBM1U', FALSE, FALSE, FALSE, NULL, NULL, NULL, NULL, 'idk', '', 240, NULL, NULL, NULL, 1772949326661, 0, NULL, NULL, NULL),
   ('00000000-0000-0000-0000-000000000032', 120825475, 100, 'https://youtu.be/VbhNg-kZzmA?si=4MuLEjV69hfuHCE5', TRUE, FALSE, FALSE, NULL, NULL, NULL, NULL, 'Ship mù', '', 60, NULL, NULL, NULL, 1772949291731, 0, NULL, NULL, NULL),
   ('00000000-0000-0000-0000-000000000016', 108988804, 100, 'https://www.youtube.com/watch?v=sYIBcxPCfhc', FALSE, FALSE, FALSE, NULL, NULL, NULL, NULL, 'Ngồi trúng máy lỏ nên video hơi lag', '', 240, NULL, NULL, NULL, 1772949241107, 0, NULL, NULL, NULL),

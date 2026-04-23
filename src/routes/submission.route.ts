@@ -25,7 +25,8 @@ router.route('/')
         const { user } = res.locals
         req.body.userid = user.uid
         req.body.timestamp = Date.now()
-        req.body.isChecked = false
+        req.body.acceptedManually = false
+        delete req.body.isChecked
 
         if (req.body.videoLink == undefined ||
             req.body.progress == undefined ||

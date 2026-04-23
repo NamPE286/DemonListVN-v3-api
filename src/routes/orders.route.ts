@@ -232,10 +232,10 @@ router.route('/:id/record-card')
 
             const { data: record, error: recordError } = await supabase
                 .from('records')
-                .select('userid, isChecked')
+                .select('userid, acceptedManually')
                 .eq('levelid', levelID)
                 .eq('userid', user.uid!)
-                .eq('isChecked', true)
+                .eq('acceptedManually', true)
                 .single()
 
             if (recordError || !record) {
@@ -333,10 +333,10 @@ router.route('/record-card')
 
         const { data: record, error: recordError } = await supabase
             .from('records')
-            .select('userid, isChecked')
+            .select('userid, acceptedManually')
             .eq('levelid', levelID)
             .eq('userid', user.uid!)
-            .eq('isChecked', true)
+            .eq('acceptedManually', true)
             .single()
 
         if (recordError || !record) {

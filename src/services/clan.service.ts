@@ -193,7 +193,7 @@ export async function fetchClanRecords(clanId: number, { start = 0, end = 50, so
         .select('*, players!userid!inner(*, clans!id(*)), levels!public_records_levelid_fkey(*)')
         .eq('players.clan', clanId)
         .eq('players.isHidden', false)
-        .eq('isChecked', true)
+        .eq('acceptedManually', true)
         .not(sortBy, 'is', null)
         .order(sortBy, { ascending: ascending == 'true' })
         .range(start, end)

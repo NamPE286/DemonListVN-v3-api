@@ -7,6 +7,29 @@ import type { TRecord, TPlayer } from "@src/types";
 import getVideoId from "get-video-id";
 import logger from "@src/utils/logger";
 
+function normalizeAcceptedManuallyFilter(value: unknown) {
+    if (typeof value == 'string') {
+        return value == 'true'
+    }
+
+    return Boolean(value)
+}
+
+function withLegacyRecordAcceptance<T extends Record<string, any>>(record: T | null | undefined) {
+    if (!record) {
+        return record ?? null
+    }
+
+    return {
+        ...record,
+        isChecked: Boolean(record.acceptedManually) || Boolean(record.acceptedAuto)
+    }
+}
+
+function withLegacyRecordAcceptanceList<T extends Record<string, any>>(records: T[] | null | undefined) {
+    return (records || []).map((record) => withLegacyRecordAcceptance(record) as T & { isChecked: boolean })
+}
+
 async function isLevelExists(id: number) {
     const { data, error } = await supabase
         .from('levels')
@@ -21,14 +44,12 @@ async function isLevelExists(id: number) {
 }
 
 export async function getDemonListRecords({ start = 0, end = 0, isChecked = false } = {}) {
-    if (typeof isChecked == 'string') {
-        isChecked = (isChecked == 'true')
-    }
+    isChecked = normalizeAcceptedManuallyFilter(isChecked)
 
     const { data, error } = await supabase
         .from('records')
         .select('*')
-        .match({ isChecked: isChecked })
+        .match({ acceptedManually: isChecked })
         .not('dlPt', 'is', null)
         .order('timestamp', { ascending: true })
         .range(start, end)
@@ -37,18 +58,16 @@ export async function getDemonListRecords({ start = 0, end = 0, isChecked = fals
         throw new Error(error.message)
     }
 
-    return data
+    return withLegacyRecordAcceptanceList(data)
 }
 
 export async function getFeaturedListRecords({ start = 0, end = 0, isChecked = false } = {}) {
-    if (typeof isChecked == 'string') {
-        isChecked = (isChecked == 'true')
-    }
+    isChecked = normalizeAcceptedManuallyFilter(isChecked)
 
     const { data, error } = await supabase
         .from('records')
         .select('*')
-        .match({ isChecked: isChecked })
+        .match({ acceptedManually: isChecked })
         .not('flPt', 'is', null)
         .order('timestamp', { ascending: true })
         .range(start, end)
@@ -57,18 +76,16 @@ export async function getFeaturedListRecords({ start = 0, end = 0, isChecked = f
         throw new Error(error.message)
     }
 
-    return data
+    return withLegacyRecordAcceptanceList(data)
 }
 
 export async function getChallengeListRecords({ start = 0, end = 0, isChecked = false } = {}) {
-    if (typeof isChecked == 'string') {
-        isChecked = (isChecked == 'true')
-    }
+    isChecked = normalizeAcceptedManuallyFilter(isChecked)
 
     const { data, error } = await supabase
         .from('records')
         .select('*')
-        .match({ isChecked: isChecked })
+        .match({ acceptedManually: isChecked })
         .not('clPt', 'is', null)
         .order('timestamp', { ascending: true })
         .range(start, end)
@@ -77,7 +94,7 @@ export async function getChallengeListRecords({ start = 0, end = 0, isChecked = 
         throw new Error(error.message)
     }
 
-    return data
+    return withLegacyRecordAcceptanceList(data)
 }
 
 export async function getPlayerRecordRating(uid: string) {
@@ -102,30 +119,32 @@ export async function getPlayerRecordRating(uid: string) {
 }
 
 export async function getPlayerRecords(uid: string, { start = '0', end = '50', sortBy = 'pt', ascending = 'false', isChecked = 'true' } = {}) {
+    const acceptedManually = normalizeAcceptedManuallyFilter(isChecked)
+
     let query = supabase
         .from('records')
         .select('*, levels!public_records_levelid_fkey!inner(*)')
         .eq('userid', uid)
-        .eq('isChecked', isChecked == 'true')
+        .eq('acceptedManually', acceptedManually)
         .eq('levels.isPlatformer', false)
         .eq('levels.isChallenge', false)
     let query1 = supabase
         .from('records')
         .select('*, levels!public_records_levelid_fkey!inner(*)')
         .eq('userid', uid)
-        .eq('isChecked', isChecked == 'true')
+        .eq('acceptedManually', acceptedManually)
     let query2 = supabase
         .from('records')
         .select('*, levels!public_records_levelid_fkey!inner(*)')
         .eq('userid', uid)
-        .eq('isChecked', isChecked == 'true')
+        .eq('acceptedManually', acceptedManually)
         .eq('levels.isPlatformer', true)
         .eq('levels.isChallenge', false)
     let query3 = supabase
         .from('records')
         .select('*, levels!public_records_levelid_fkey!inner(*)')
         .eq('userid', uid)
-        .eq('isChecked', isChecked == 'true')
+        .eq('acceptedManually', acceptedManually)
         .eq('levels.isChallenge', true)
 
     if (sortBy == 'pt') {
@@ -151,10 +170,10 @@ export async function getPlayerRecords(uid: string, { start = '0', end = '50', s
             .range(parseInt(start), parseInt(end))
 
         return {
-            dl: (await query).data,
-            fl: (await query1).data,
-            pl: (await query2).data,
-            cl: (await query3).data
+            dl: withLegacyRecordAcceptanceList((await query).data),
+            fl: withLegacyRecordAcceptanceList((await query1).data),
+            pl: withLegacyRecordAcceptanceList((await query2).data),
+            cl: withLegacyRecordAcceptanceList((await query3).data)
         }
     }
 
@@ -176,17 +195,15 @@ export async function getPlayerRecords(uid: string, { start = '0', end = '50', s
         .range(parseInt(start), parseInt(end))
 
     return {
-        dl: (await query).data,
-        fl: (await query1).data,
-        pl: (await query2).data,
-        cl: (await query3).data
+        dl: withLegacyRecordAcceptanceList((await query).data),
+        fl: withLegacyRecordAcceptanceList((await query1).data),
+        pl: withLegacyRecordAcceptanceList((await query2).data),
+        cl: withLegacyRecordAcceptanceList((await query3).data)
     }
 }
 
 export async function getLevelRecords(id: number, { start = 0, end = 50, isChecked = true } = {}) {
-    if (typeof isChecked == 'string') {
-        isChecked = (isChecked == 'true')
-    }
+    isChecked = normalizeAcceptedManuallyFilter(isChecked)
 
     const level = await getLevel(id)
 
@@ -195,7 +212,7 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, isCheck
         .select('*, players!userid!inner(*, clans!id(*)), reviewer:players!reviewer(*, clans!id(*))')
         .eq('players.isHidden', false)
         .eq('levelid', id)
-        .eq('isChecked', isChecked)
+        .eq('acceptedManually', isChecked)
         .order('progress', { ascending: level.isPlatformer })
         .order('timestamp')
         .range(start, end)
@@ -204,7 +221,7 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, isCheck
         throw new Error(error.message)
     }
 
-    return data
+    return withLegacyRecordAcceptanceList(data)
 }
 
 export async function getRecord(uid: string, levelID: number) {
@@ -222,7 +239,7 @@ export async function getRecord(uid: string, levelID: number) {
     }
 
     // @ts-ignore
-    return data
+    return withLegacyRecordAcceptance(data)
 }
 
 
@@ -232,7 +249,7 @@ export async function retrieveRecord(user: TPlayer) {
         .select('*, levels!public_records_levelid_fkey!inner(*)')
         .neq('userid', user.uid!)
         .eq('needMod', false)
-        .eq('isChecked', false)
+        .eq('acceptedManually', false)
         .eq('reviewer', user.uid!)
         .limit(1)
         .single()
@@ -247,7 +264,7 @@ export async function retrieveRecord(user: TPlayer) {
         .lte('levels.rating', user.rating! + 500)
         .neq('userid', user.uid!)
         .eq('needMod', false)
-        .eq('isChecked', false)
+        .eq('acceptedManually', false)
         .eq("levels.isPlatformer", false)
         .is('reviewer', null)
         .order('queueNo', { ascending: true, nullsFirst: false })
@@ -261,7 +278,7 @@ export async function retrieveRecord(user: TPlayer) {
         .select('*, levels!public_records_levelid_fkey!inner(*)')
         .neq('userid', user.uid!)
         .eq('needMod', false)
-        .eq('isChecked', false)
+        .eq('acceptedManually', false)
         .eq("levels.isPlatformer", false)
         .is('reviewer', null)
         .order('queueNo', { ascending: true, nullsFirst: false })
@@ -288,18 +305,16 @@ export async function retrieveRecord(user: TPlayer) {
 
     await updateRecord(updData)
 
-    return data
+    return withLegacyRecordAcceptance(data)
 }
 
 export async function getRecords({ start = 0, end = 50, isChecked = false } = {}) {
-    if (typeof isChecked == 'string') {
-        isChecked = (isChecked == 'true')
-    }
+    isChecked = normalizeAcceptedManuallyFilter(isChecked)
 
     const { data, error } = await supabase
         .from('records')
         .select('*, players!userid!inner(*, clans!id(*)), reviewer:players!reviewer(*), levels!public_records_levelid_fkey(*)')
-        .match({ isChecked: isChecked })
+        .match({ acceptedManually: isChecked })
         .eq('players.isHidden', false)
         .order('needMod', { ascending: false })
         .order('queueNo', { ascending: true, nullsFirst: false })
@@ -310,7 +325,7 @@ export async function getRecords({ start = 0, end = 50, isChecked = false } = {}
         throw new Error(error.message)
     }
 
-    return data
+    return withLegacyRecordAcceptanceList(data)
 }
 
 export async function getPlayerSubmissions(uid: string, { start = '0', end = '50', ascending = 'true' } = {}) {
@@ -318,7 +333,7 @@ export async function getPlayerSubmissions(uid: string, { start = '0', end = '50
         .from('records')
         .select('*, levels!public_records_levelid_fkey(*)')
         .eq('userid', uid)
-        .eq('isChecked', false)
+        .eq('acceptedManually', false)
         .order('timestamp', { ascending: ascending == 'true' })
         .range(parseInt(start), parseInt(end))
 
@@ -326,7 +341,7 @@ export async function getPlayerSubmissions(uid: string, { start = '0', end = '50
         throw new Error(error.message)
     }
 
-    return data
+    return withLegacyRecordAcceptanceList(data)
 }
 
 export async function getEstimatedQueue(userID: string, levelID: number, prioritizedBy: number) {
@@ -586,18 +601,28 @@ export async function validateRecord(recordData: TRecord) {
 export async function updateRecord(recordData: TRecord, validate = false, accepted: boolean | null = null) {
     const logs: string[] = [];
 
+    const nextRecordData = { ...(recordData as Record<string, unknown>) } as TRecord & {
+        isChecked?: boolean | null
+    }
+
     if (validate) {
-        const validationLogs = await validateRecord(recordData);
+        const validationLogs = await validateRecord(nextRecordData);
         logs.push(...validationLogs);
     }
 
-    if (accepted !== null) {
-        recordData.isChecked = accepted;
+    if (nextRecordData.acceptedManually === undefined && nextRecordData.isChecked !== undefined) {
+        nextRecordData.acceptedManually = nextRecordData.isChecked;
     }
+
+    if (accepted !== null) {
+        nextRecordData.acceptedManually = accepted;
+    }
+
+    delete nextRecordData.isChecked;
 
     const { error } = await supabase
         .from('records')
-        .upsert(recordData as any)
+        .upsert(nextRecordData as any)
 
     if (error) {
         console.error(error)

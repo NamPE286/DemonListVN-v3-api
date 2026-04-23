@@ -56,6 +56,8 @@ type CustomListLeaderboardRecordEntry = {
     no: number
 }
 
+type CustomListRecordPlatformFilter = 'any' | 'pc' | 'mobile'
+
 type CustomListRankBadge = {
     name: string
     shorthand: string
@@ -127,6 +129,10 @@ type CustomListSettingsPayload = {
     weightFormula?: unknown
     rankBadges?: unknown
     itemSort?: unknown
+    recordFilterPlatform?: unknown
+    recordFilterMinRefreshRate?: unknown
+    recordFilterMaxRefreshRate?: unknown
+    recordFilterManualAcceptanceOnly?: unknown
 }
 
 const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
@@ -147,6 +153,7 @@ type CustomListSubmission = CustomListLevelRow & {
 const VISIBILITY_VALUES = new Set(['private', 'unlisted', 'public'])
 const MODE_VALUES = new Set(['rating', 'top'])
 const CUSTOM_LIST_ITEM_SORT_VALUES = new Set(['mode_default', 'created_at'])
+const CUSTOM_LIST_RECORD_PLATFORM_VALUES = new Set<CustomListRecordPlatformFilter>(['any', 'pc', 'mobile'])
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 const WEIGHT_FORMULA_VALIDATION_SCOPE = {
@@ -613,6 +620,50 @@ function sanitizeCustomListItemSort(value: unknown) {
     return itemSort as 'mode_default' | 'created_at'
 }
 
+function sanitizeCustomListRecordPlatform(value: unknown): CustomListRecordPlatformFilter {
+    if (value == null) {
+        return 'any'
+    }
+
+    if (typeof value !== 'string') {
+        throw new ValidationError('recordFilterPlatform must be a string')
+    }
+
+    const platform = value.trim().toLowerCase()
+
+    if (!CUSTOM_LIST_RECORD_PLATFORM_VALUES.has(platform as CustomListRecordPlatformFilter)) {
+        throw new ValidationError('recordFilterPlatform must be any, pc, or mobile')
+    }
+
+    return platform as CustomListRecordPlatformFilter
+}
+
+function sanitizeCustomListRecordRefreshRate(value: unknown, label: 'recordFilterMinRefreshRate' | 'recordFilterMaxRefreshRate') {
+    if (value == null || value === '') {
+        return null
+    }
+
+    const refreshRate = Number(value)
+
+    if (!Number.isInteger(refreshRate) || refreshRate < 1) {
+        throw new ValidationError(`${label} must be a positive integer`)
+    }
+
+    return refreshRate
+}
+
+function sanitizeCustomListManualAcceptanceOnly(value: unknown) {
+    if (value == null) {
+        return true
+    }
+
+    if (typeof value !== 'boolean') {
+        throw new ValidationError('recordFilterManualAcceptanceOnly must be a boolean')
+    }
+
+    return value
+}
+
 function sanitizeListLevelCreatedAt(value: unknown) {
     if (typeof value !== 'string') {
         throw new ValidationError('createdAt must be a string')
@@ -863,6 +914,113 @@ function normalizeRankBadges(value: unknown): CustomListRankBadge[] {
     } catch {
         return []
     }
+}
+
+function getCustomListRecordPlatform(list: Pick<CustomList, 'recordFilterPlatform'>) {
+    return CUSTOM_LIST_RECORD_PLATFORM_VALUES.has(list.recordFilterPlatform as CustomListRecordPlatformFilter)
+        ? list.recordFilterPlatform as CustomListRecordPlatformFilter
+        : 'any'
+}
+
+function getCustomListRecordMinRefreshRate(list: Pick<CustomList, 'recordFilterMinRefreshRate'>) {
+    return Number.isInteger(list.recordFilterMinRefreshRate) && Number(list.recordFilterMinRefreshRate) > 0
+        ? Number(list.recordFilterMinRefreshRate)
+        : null
+}
+
+function getCustomListRecordMaxRefreshRate(list: Pick<CustomList, 'recordFilterMaxRefreshRate'>) {
+    return Number.isInteger(list.recordFilterMaxRefreshRate) && Number(list.recordFilterMaxRefreshRate) > 0
+        ? Number(list.recordFilterMaxRefreshRate)
+        : null
+}
+
+function isCustomListRecordAccepted(record: {
+    acceptedManually?: boolean | null
+    acceptedAuto?: boolean | null
+}, list: Pick<CustomList, 'recordFilterManualAcceptanceOnly'>) {
+    if (list.recordFilterManualAcceptanceOnly ?? true) {
+        return Boolean(record.acceptedManually)
+    }
+
+    return Boolean(record.acceptedManually) || Boolean(record.acceptedAuto)
+}
+
+function isCustomListRecordEligibleForFilters(record: {
+    acceptedManually?: boolean | null
+    acceptedAuto?: boolean | null
+    mobile?: boolean | null
+    refreshRate?: number | null
+}, list: Pick<CustomList, 'recordFilterPlatform' | 'recordFilterMinRefreshRate' | 'recordFilterMaxRefreshRate' | 'recordFilterManualAcceptanceOnly'>) {
+    if (!isCustomListRecordAccepted(record, list)) {
+        return false
+    }
+
+    const platform = getCustomListRecordPlatform(list)
+
+    if (platform === 'mobile' && !record.mobile) {
+        return false
+    }
+
+    if (platform === 'pc' && record.mobile) {
+        return false
+    }
+
+    const minRefreshRate = getCustomListRecordMinRefreshRate(list)
+    const maxRefreshRate = getCustomListRecordMaxRefreshRate(list)
+
+    if (minRefreshRate == null && maxRefreshRate == null) {
+        return true
+    }
+
+    const refreshRate = Number(record.refreshRate)
+
+    if (!Number.isFinite(refreshRate)) {
+        return false
+    }
+
+    if (minRefreshRate != null && refreshRate < minRefreshRate) {
+        return false
+    }
+
+    if (maxRefreshRate != null && refreshRate > maxRefreshRate) {
+        return false
+    }
+
+    return true
+}
+
+function applyCustomListRecordFiltersToQuery(
+    query: any,
+    list: Pick<CustomList, 'recordFilterPlatform' | 'recordFilterMinRefreshRate' | 'recordFilterMaxRefreshRate' | 'recordFilterManualAcceptanceOnly'>
+) {
+    let nextQuery = query
+
+    if (list.recordFilterManualAcceptanceOnly ?? true) {
+        nextQuery = nextQuery.eq('acceptedManually', true)
+    } else {
+        nextQuery = nextQuery.or('acceptedManually.eq.true,acceptedAuto.eq.true')
+    }
+
+    const platform = getCustomListRecordPlatform(list)
+
+    if (platform === 'mobile') {
+        nextQuery = nextQuery.eq('mobile', true)
+    } else if (platform === 'pc') {
+        nextQuery = nextQuery.eq('mobile', false)
+    }
+
+    const minRefreshRate = getCustomListRecordMinRefreshRate(list)
+    const maxRefreshRate = getCustomListRecordMaxRefreshRate(list)
+
+    if (minRefreshRate != null) {
+        nextQuery = nextQuery.gte('refreshRate', minRefreshRate)
+    }
+
+    if (maxRefreshRate != null) {
+        nextQuery = nextQuery.lte('refreshRate', maxRefreshRate)
+    }
+
+    return nextQuery
 }
 
 function sanitizeRating(value: unknown) {
@@ -1403,7 +1561,11 @@ function getCustomListRecordPoint(
 	return roundCustomListSnapshotValue(recordPoint)
 }
 
-async function enrichItemsWithViewerEligibleRecords(items: any[], list: { isPlatformer: boolean }, viewerId?: string) {
+async function enrichItemsWithViewerEligibleRecords(
+    items: any[],
+    list: Pick<CustomList, 'isPlatformer' | 'recordFilterPlatform' | 'recordFilterMinRefreshRate' | 'recordFilterMaxRefreshRate' | 'recordFilterManualAcceptanceOnly'>,
+    viewerId?: string
+) {
     if (!viewerId || !items.length) {
         return items
     }
@@ -1421,7 +1583,7 @@ async function enrichItemsWithViewerEligibleRecords(items: any[], list: { isPlat
         const end = start + CUSTOM_LIST_LEADERBOARD_RECORD_PAGE_SIZE - 1
         const { data, error } = await supabase
             .from('records')
-            .select('levelid, progress, isChecked')
+            .select('levelid, progress, acceptedManually, acceptedAuto, mobile, refreshRate')
             .eq('userid', viewerId)
             .in('levelid', levelIds)
             .range(start, end)
@@ -1441,6 +1603,10 @@ async function enrichItemsWithViewerEligibleRecords(items: any[], list: { isPlat
                 continue
             }
 
+            if (!isCustomListRecordEligibleForFilters(record, list)) {
+                continue
+            }
+
             const existingRecord = recordsByLevelId.get(record.levelid)
 
             if (isBetterRecordForListItem(record, existingRecord, item, list.isPlatformer)) {
@@ -1457,7 +1623,9 @@ async function enrichItemsWithViewerEligibleRecords(items: any[], list: { isPlat
         const record = recordsByLevelId.get(item.levelId)
         const eligibleRecord = isEligibleRecordForListItem(record, item, list.isPlatformer)
             ? {
-                isChecked: Boolean(record?.isChecked),
+                acceptedAuto: Boolean(record?.acceptedAuto),
+                acceptedManually: Boolean(record?.acceptedManually),
+                isChecked: Boolean(record?.acceptedManually) || Boolean(record?.acceptedAuto),
                 progress: Number(record?.progress) || 0
             }
             : null
@@ -1510,6 +1678,10 @@ async function getOfficialList(slug: OfficialListSlug, viewerId?: string, itemRa
         levelSubmissionEnabled: false,
         faviconUrl: null,
         logoUrl: null,
+        recordFilterPlatform: 'any',
+        recordFilterMinRefreshRate: null,
+        recordFilterMaxRefreshRate: null,
+        recordFilterManualAcceptanceOnly: true,
         topEnabled: config.mode === 'top',
         itemSort: 'mode_default',
         mode: config.mode,
@@ -1560,6 +1732,10 @@ async function getOfficialListSummary(slug: OfficialListSlug) {
         levelSubmissionEnabled: false,
         faviconUrl: null,
         logoUrl: null,
+        recordFilterPlatform: 'any',
+        recordFilterMinRefreshRate: null,
+        recordFilterMaxRefreshRate: null,
+        recordFilterManualAcceptanceOnly: true,
         topEnabled: config.mode === 'top',
         itemSort: 'mode_default',
         mode: config.mode,
@@ -1572,7 +1748,10 @@ async function getOfficialListSummary(slug: OfficialListSlug) {
     }
 }
 
-async function fetchCustomListLeaderboardSourceRecords(levelIds: number[]) {
+async function fetchCustomListLeaderboardSourceRecords(
+    levelIds: number[],
+    list: Pick<CustomList, 'recordFilterPlatform' | 'recordFilterMinRefreshRate' | 'recordFilterMaxRefreshRate' | 'recordFilterManualAcceptanceOnly'>
+) {
     if (!levelIds.length) {
         return [] as any[]
     }
@@ -1582,15 +1761,17 @@ async function fetchCustomListLeaderboardSourceRecords(levelIds: number[]) {
     // Supabase caps uncapped select queries at 1000 rows, so page until the filtered result set is exhausted.
     for (let start = 0; ; start += CUSTOM_LIST_LEADERBOARD_RECORD_PAGE_SIZE) {
         const end = start + CUSTOM_LIST_LEADERBOARD_RECORD_PAGE_SIZE - 1
-        const { data, error } = await supabase
-            .from('records')
-            .select('userid, levelid, progress, timestamp, players!userid!inner(uid)')
-            .eq('isChecked', true)
-            .eq('players.isHidden', false)
-            .in('levelid', levelIds)
-            .order('userid', { ascending: true })
-            .order('levelid', { ascending: true })
-            .range(start, end)
+        const query = applyCustomListRecordFiltersToQuery(
+            supabase
+                .from('records')
+                .select('userid, levelid, progress, timestamp, acceptedManually, acceptedAuto, mobile, refreshRate, players!userid!inner(uid)')
+                .eq('players.isHidden', false)
+                .in('levelid', levelIds)
+                .order('userid', { ascending: true })
+                .order('levelid', { ascending: true }),
+            list
+        )
+        const { data, error } = await query.range(start, end)
 
         if (error) {
             throw new Error(error.message)
@@ -1600,7 +1781,7 @@ async function fetchCustomListLeaderboardSourceRecords(levelIds: number[]) {
             break
         }
 
-        rows.push(...data)
+        rows.push(...data.filter((record: any) => isCustomListRecordEligibleForFilters(record, list)))
 
         if (data.length < CUSTOM_LIST_LEADERBOARD_RECORD_PAGE_SIZE) {
             break
@@ -1652,7 +1833,7 @@ async function calculateCustomListLeaderboardSnapshot(list: Awaited<ReturnType<t
     const itemByLevelId = new Map(items.map((item: any, index: number) => [item.levelId, { item, index }]))
     const isTop = list.mode === 'top'
 
-    const data = await fetchCustomListLeaderboardSourceRecords(levelIds)
+    const data = await fetchCustomListLeaderboardSourceRecords(levelIds, list)
 
     // Step 1: Collect best record per (uid, levelId)
     const bestRecords = new Map<string, { record: any; itemData: { item: any; index: number } }>()
@@ -4077,6 +4258,10 @@ export async function createCustomList(ownerId: string, payload: {
     weightFormula?: unknown
     rankBadges?: unknown
     itemSort?: unknown
+    recordFilterPlatform?: unknown
+    recordFilterMinRefreshRate?: unknown
+    recordFilterMaxRefreshRate?: unknown
+    recordFilterManualAcceptanceOnly?: unknown
 }) {
     const listInsert: CustomListInsert = {
         owner: ownerId,
@@ -4095,11 +4280,23 @@ export async function createCustomList(ownerId: string, payload: {
         topEnabled: sanitizeTopEnabled(payload.topEnabled),
         levelSubmissionEnabled: sanitizeLevelSubmissionEnabled(payload.levelSubmissionEnabled),
         itemSort: sanitizeCustomListItemSort(payload.itemSort),
+        recordFilterPlatform: sanitizeCustomListRecordPlatform(payload.recordFilterPlatform),
+        recordFilterMinRefreshRate: sanitizeCustomListRecordRefreshRate(payload.recordFilterMinRefreshRate, 'recordFilterMinRefreshRate'),
+        recordFilterMaxRefreshRate: sanitizeCustomListRecordRefreshRate(payload.recordFilterMaxRefreshRate, 'recordFilterMaxRefreshRate'),
+        recordFilterManualAcceptanceOnly: sanitizeCustomListManualAcceptanceOnly(payload.recordFilterManualAcceptanceOnly),
         slug: sanitizeSlug(payload.slug),
         isOfficial: false,
         rankBadges: sanitizeRankBadges(payload.rankBadges),
         weightFormula: sanitizeWeightFormula(payload.weightFormula),
         updated_at: new Date().toISOString()
+    }
+
+    if (
+        listInsert.recordFilterMinRefreshRate != null
+        && listInsert.recordFilterMaxRefreshRate != null
+        && listInsert.recordFilterMinRefreshRate > listInsert.recordFilterMaxRefreshRate
+    ) {
+        throw new ValidationError('recordFilterMinRefreshRate must be less than or equal to recordFilterMaxRefreshRate')
     }
 
     if (listInsert.slug) {
@@ -4222,6 +4419,33 @@ async function buildCustomListSettingsUpdatePlan(listId: number, existing: Custo
 
     if (payload.itemSort !== undefined) {
         pendingUpdates.itemSort = sanitizeCustomListItemSort(payload.itemSort)
+    }
+
+    if (payload.recordFilterPlatform !== undefined) {
+        pendingUpdates.recordFilterPlatform = sanitizeCustomListRecordPlatform(payload.recordFilterPlatform)
+    }
+
+    if (payload.recordFilterMinRefreshRate !== undefined) {
+        pendingUpdates.recordFilterMinRefreshRate = sanitizeCustomListRecordRefreshRate(payload.recordFilterMinRefreshRate, 'recordFilterMinRefreshRate')
+    }
+
+    if (payload.recordFilterMaxRefreshRate !== undefined) {
+        pendingUpdates.recordFilterMaxRefreshRate = sanitizeCustomListRecordRefreshRate(payload.recordFilterMaxRefreshRate, 'recordFilterMaxRefreshRate')
+    }
+
+    const nextMinRefreshRate = pendingUpdates.recordFilterMinRefreshRate ?? existing.recordFilterMinRefreshRate
+    const nextMaxRefreshRate = pendingUpdates.recordFilterMaxRefreshRate ?? existing.recordFilterMaxRefreshRate
+
+    if (
+        nextMinRefreshRate != null
+        && nextMaxRefreshRate != null
+        && nextMinRefreshRate > nextMaxRefreshRate
+    ) {
+        throw new ValidationError('recordFilterMinRefreshRate must be less than or equal to recordFilterMaxRefreshRate')
+    }
+
+    if (payload.recordFilterManualAcceptanceOnly !== undefined) {
+        pendingUpdates.recordFilterManualAcceptanceOnly = sanitizeCustomListManualAcceptanceOnly(payload.recordFilterManualAcceptanceOnly)
     }
 
     const changedEntries = (Object.entries(pendingUpdates) as Array<[string, unknown]>)

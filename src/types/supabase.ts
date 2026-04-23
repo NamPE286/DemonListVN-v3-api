@@ -2642,6 +2642,10 @@ export type Database = {
           logoUrl: string | null
           mode: string
           owner: string
+          recordFilterManualAcceptanceOnly: boolean
+          recordFilterMaxRefreshRate: number | null
+          recordFilterMinRefreshRate: number | null
+          recordFilterPlatform: string
           rankBadges: Json
           slug: string | null
           tags: string[]
@@ -2671,6 +2675,10 @@ export type Database = {
           logoUrl?: string | null
           mode?: string
           owner: string
+          recordFilterManualAcceptanceOnly?: boolean
+          recordFilterMaxRefreshRate?: number | null
+          recordFilterMinRefreshRate?: number | null
+          recordFilterPlatform?: string
           rankBadges?: Json
           slug?: string | null
           tags?: string[]
@@ -2700,6 +2708,10 @@ export type Database = {
           logoUrl?: string | null
           mode?: string
           owner?: string
+          recordFilterManualAcceptanceOnly?: boolean
+          recordFilterMaxRefreshRate?: number | null
+          recordFilterMinRefreshRate?: number | null
+          recordFilterPlatform?: string
           rankBadges?: Json
           slug?: string | null
           tags?: string[]
@@ -3550,12 +3562,13 @@ export type Database = {
       }
       records: {
         Row: {
+          acceptedAuto: boolean
+          acceptedManually: boolean | null
           clPt: number | null
           comment: string | null
           dlPt: number | null
           flPt: number | null
           id: number
-          isChecked: boolean | null
           levelid: number
           mobile: boolean
           needMod: boolean
@@ -3574,12 +3587,13 @@ export type Database = {
           videoLink: string | null
         }
         Insert: {
+          acceptedAuto?: boolean
+          acceptedManually?: boolean | null
           clPt?: number | null
           comment?: string | null
           dlPt?: number | null
           flPt?: number | null
           id?: number
-          isChecked?: boolean | null
           levelid: number
           mobile?: boolean
           needMod?: boolean
@@ -3598,12 +3612,13 @@ export type Database = {
           videoLink?: string | null
         }
         Update: {
+          acceptedAuto?: boolean
+          acceptedManually?: boolean | null
           clPt?: number | null
           comment?: string | null
           dlPt?: number | null
           flPt?: number | null
           id?: number
-          isChecked?: boolean | null
           levelid?: number
           mobile?: boolean
           needMod?: boolean

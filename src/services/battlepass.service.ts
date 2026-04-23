@@ -1964,7 +1964,7 @@ export async function isMissionCompleted(userId: string, missionId: number) {
                     .eq('userid', userId)
                     .eq('levelid', condition.targetId)
                     .eq('progress', 100)
-                    .not('isChecked', 'is', null)
+                    .not('acceptedManually', 'is', null)
                     .maybeSingle();
 
                 if (!data) return false;

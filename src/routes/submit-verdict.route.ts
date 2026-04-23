@@ -27,6 +27,13 @@ router.route('/')
     .put(userAuth, async (req, res) => {
         const { user } = res.locals
         const record = await getRecord(req.body.userid, req.body.levelid)
+        const acceptedManually = req.body.acceptedManually ?? req.body.isChecked
+        const recordUpdate = {
+            ...req.body,
+            acceptedManually
+        }
+
+        delete recordUpdate.isChecked
 
         if (record.reviewer!.uid != res.locals.user.uid || (!user.isAdmin && !user.isTrusted)) {
             res.status(401).send()
@@ -35,7 +42,7 @@ router.route('/')
 
         var { error } = await supabase
             .from('records')
-            .update(req.body)
+            .update(recordUpdate)
             .match({ userid: req.body.userid, levelid: req.body.levelid })
 
         if (error) {
@@ -61,9 +68,9 @@ router.route('/')
         }
 
 
-        await logger.log(`${user.name} (${user.uid}) ${req.body.needMod ? 'forwarded' : ''}${req.body.isChecked ? 'accepted' : ''} record ${req.body.levelid} của ${req.body.userid}\nNhận xét của reviewer: ${req.body.reviewerComment}`)
+		await logger.log(`${user.name} (${user.uid}) ${req.body.needMod ? 'forwarded' : ''}${acceptedManually ? 'accepted' : ''} record ${req.body.levelid} của ${req.body.userid}\nNhận xét của reviewer: ${req.body.reviewerComment}`)
         
-        if (req.body.isChecked) {
+        if (acceptedManually) {
             const level = await getLevel(parseInt(req.body.levelid));
 
             await sendNotification({ to: req.body.userid, content: `Record ${level.name} (${level.id}) của bạn đã được chấp nhận bởi ${user.name}.`, status: 0 })

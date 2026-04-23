@@ -505,7 +505,7 @@ const TABLE_DEFS: TableDef[] = [
     name: "records",
     columns: [
       "userid", "levelid", "progress", "videoLink", "mobile",
-      "needMod", "isChecked", "dlPt", "flPt", "clPt", "plPt",
+      "needMod", "acceptedManually", "dlPt", "flPt", "clPt", "plPt",
       "comment", "raw", "refreshRate", "reviewer", "reviewerComment",
       "suggestedRating", "timestamp", "prioritizedBy", "no", "queueNo",
       "variant_id",
