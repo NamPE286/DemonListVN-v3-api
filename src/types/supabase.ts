@@ -2569,6 +2569,58 @@ export type Database = {
           },
         ]
       }
+      listInvitations: {
+        Row: {
+          created_at: string
+          id: number
+          invitedBy: string
+          listId: number
+          role: string
+          uid: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          invitedBy: string
+          listId: number
+          role: string
+          uid: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          invitedBy?: string
+          listId?: number
+          role?: string
+          uid?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_invitations_invited_by_fkey"
+            columns: ["invitedBy"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "list_invitations_list_id_fkey"
+            columns: ["listId"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "list_invitations_uid_fkey"
+            columns: ["uid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       listMembers: {
         Row: {
           addedBy: string

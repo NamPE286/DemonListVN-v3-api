@@ -22,6 +22,8 @@ type CustomListInsert = TablesInsert<'lists'>
 type CustomListUpdate = TablesUpdate<'lists'>
 type CustomListAuditLog = Tables<'listAuditLogs'>
 type CustomListAuditLogInsert = TablesInsert<'listAuditLogs'>
+type CustomListInvitation = Tables<'listInvitations'>
+type CustomListInvitationInsert = TablesInsert<'listInvitations'>
 type CustomListLevelRow = Tables<'listLevels'> & {
     accepted: boolean
     submissionComment?: string | null
@@ -81,6 +83,8 @@ type CustomListPermissions = {
     canTransferOwnership: boolean
     canViewMembers: boolean
     canViewAudit: boolean
+    canViewPendingInvitations: boolean
+    canRespondToInvitation: boolean
 }
 
 type CustomListAccessContext = {
@@ -88,10 +92,16 @@ type CustomListAccessContext = {
     isModerator: boolean
     isOwner: boolean
     memberRole: CustomListMemberRole | null
+    pendingInvitation: CustomListInvitation | null
 }
 
 type CustomListMemberWithPlayerData = CustomListMember & {
     playerData?: any
+}
+
+type CustomListInvitationWithPlayerData = CustomListInvitation & {
+    playerData?: any
+    invitedByData?: any
 }
 
 type CustomListAuditLogWithPlayerData = CustomListAuditLog & {
@@ -142,6 +152,8 @@ type CustomListWithOwnerData = CustomList & {
     currentUserRole?: CustomListResolvedRole
     permissions?: CustomListPermissions
     members?: CustomListMemberWithPlayerData[]
+    pendingInvitations?: CustomListInvitationWithPlayerData[]
+    pendingInvitation?: CustomListInvitationWithPlayerData | null
     auditLog?: CustomListAuditLogWithPlayerData[]
 }
 
@@ -172,6 +184,18 @@ const CUSTOM_LIST_LEADERBOARD_PLAYER_BATCH_SIZE = 500
 const CUSTOM_LIST_RANK_BADGE_LIMIT = 20
 const CUSTOM_LIST_AUDIT_LOG_LIMIT = 50
 const CUSTOM_LIST_MEMBER_ROLE_VALUES = new Set<CustomListMemberRole>(['admin', 'helper'])
+
+function buildCustomListInvitationRedirect(list: Pick<CustomList, 'id' | 'slug'>) {
+    return `/lists/${list.slug || list.id}/collaborator-invitation`
+}
+
+function buildCustomListInvitationRejectRedirect(list: Pick<CustomList, 'id' | 'slug' | 'visibility'>) {
+    if (list.visibility === 'private') {
+        return '/lists'
+    }
+
+    return `/lists/${list.slug || list.id}`
+}
 
 export type CustomListIdentifier = number | string
 
@@ -1238,6 +1262,79 @@ async function getCustomListMembership(listId: number, uid?: string | null) {
     return (data || null) as CustomListMember | null
 }
 
+async function getCustomListInvitation(listId: number, uid?: string | null) {
+    if (!uid) {
+        return null
+    }
+
+    const { data, error } = await supabase
+        .from('listInvitations')
+        .select('*')
+        .eq('listId', listId)
+        .eq('uid', uid)
+        .maybeSingle()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return (data || null) as CustomListInvitation | null
+}
+
+async function hydrateCustomListInvitation(invitation: CustomListInvitation | null) {
+    if (!invitation) {
+        return null
+    }
+
+    const playersByUid = await getPlayersByUid([invitation.uid, invitation.invitedBy])
+
+    return {
+        ...invitation,
+        playerData: playersByUid.get(invitation.uid) || null,
+        invitedByData: playersByUid.get(invitation.invitedBy) || null
+    } satisfies CustomListInvitationWithPlayerData
+}
+
+async function getCustomListInvitations(listId: number) {
+    const { data, error } = await supabase
+        .from('listInvitations')
+        .select('*')
+        .eq('listId', listId)
+        .order('created_at', { ascending: true })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    const invitations = (data || []) as CustomListInvitation[]
+
+    if (!invitations.length) {
+        return [] as CustomListInvitationWithPlayerData[]
+    }
+
+    const playersByUid = await getPlayersByUid(
+        invitations.flatMap((invitation) => [invitation.uid, invitation.invitedBy])
+    )
+
+    return invitations.map((invitation) => ({
+        ...invitation,
+        playerData: playersByUid.get(invitation.uid) || null,
+        invitedByData: playersByUid.get(invitation.invitedBy) || null
+    }))
+}
+
+async function deleteCustomListInvitation(listId: number, uid: string) {
+    const { error } = await supabase
+        .from('listInvitations')
+        .delete()
+        .eq('listId', listId)
+        .eq('uid', uid)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+}
+
 async function getCustomListMembers(listId: number) {
     const { data, error } = await supabase
         .from('listMembers')
@@ -2078,12 +2175,15 @@ async function getCustomListAccess(list: Pick<CustomList, 'id' | 'owner' | 'admi
     const isModerator = canModerateList(actor)
     const isOwner = Boolean(actorUid && list.owner === actorUid)
     let memberRole: CustomListMemberRole | null = null
+    let pendingInvitation: CustomListInvitation | null = null
 
     if (!isOwner && actorUid) {
         const membership = await getCustomListMembership(list.id, actorUid)
 
         if (membership?.role === 'admin' || membership?.role === 'helper') {
             memberRole = membership.role
+        } else {
+            pendingInvitation = await getCustomListInvitation(list.id, actorUid)
         }
     }
 
@@ -2091,7 +2191,8 @@ async function getCustomListAccess(list: Pick<CustomList, 'id' | 'owner' | 'admi
         actorUid,
         isModerator,
         isOwner,
-        memberRole
+        memberRole,
+        pendingInvitation
     } satisfies CustomListAccessContext
 }
 
@@ -2108,7 +2209,7 @@ function resolveCustomListRole(access: CustomListAccessContext): CustomListResol
 }
 
 function canReadPrivateList(access: CustomListAccessContext) {
-    return access.isOwner || access.isModerator || access.memberRole !== null
+    return access.isOwner || access.isModerator || access.memberRole !== null || access.pendingInvitation !== null
 }
 
 function canEditCustomListSettings(list: Pick<CustomList, 'isBanned'>, access: CustomListAccessContext) {
@@ -2171,6 +2272,14 @@ function canViewCustomListAudit(access: CustomListAccessContext) {
     return access.isOwner || access.isModerator || access.memberRole !== null
 }
 
+function canViewCustomListPendingInvitations(access: CustomListAccessContext) {
+    return access.isOwner || access.isModerator || access.memberRole === 'admin'
+}
+
+function canRespondToCustomListInvitation(access: CustomListAccessContext) {
+    return access.pendingInvitation !== null
+}
+
 function getCustomListPermissions(list: Pick<CustomList, 'isBanned' | 'isOfficial' | 'adminsCanManageHelpers'>, access: CustomListAccessContext): CustomListPermissions {
     return {
         canEditSettings: canEditCustomListSettings(list, access),
@@ -2182,7 +2291,9 @@ function getCustomListPermissions(list: Pick<CustomList, 'isBanned' | 'isOfficia
         canConfigureCollaboration: canConfigureCustomListCollaboration(list, access),
         canTransferOwnership: canTransferCustomListOwnership(list, access),
         canViewMembers: canViewCustomListMembers(access),
-        canViewAudit: canViewCustomListAudit(access)
+        canViewAudit: canViewCustomListAudit(access),
+        canViewPendingInvitations: canViewCustomListPendingInvitations(access),
+        canRespondToInvitation: canRespondToCustomListInvitation(access)
     }
 }
 
@@ -3474,7 +3585,7 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: Cus
         const effectiveItemSort = options.itemSort !== undefined
             ? sanitizeCustomListItemSort(options.itemSort)
             : (CUSTOM_LIST_ITEM_SORT_VALUES.has(list.itemSort) ? list.itemSort as 'mode_default' | 'created_at' : 'mode_default')
-        const [items, [{ starCount = 0, starred = false } = { starCount: 0, starred: false }], latestRefresh, members, auditLog] = await Promise.all([
+        const [items, [{ starCount = 0, starred = false } = { starCount: 0, starred: false }], latestRefresh, members, auditLog, pendingInvitations, pendingInvitation] = await Promise.all([
             enrichItemsWithViewerEligibleRecords(
                 await getCustomListItems(list.id, list.mode, itemRange, effectiveItemSort),
                 list,
@@ -3483,7 +3594,9 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: Cus
             enrichListsWithStars([list], actorUid),
             getLatestCustomListLeaderboardRefresh(list.id),
             permissions.canViewMembers ? getCustomListMembers(list.id) : Promise.resolve([] as CustomListMemberWithPlayerData[]),
-            permissions.canViewAudit ? getCustomListAuditLog(list.id) : Promise.resolve([] as CustomListAuditLogWithPlayerData[])
+            permissions.canViewAudit ? getCustomListAuditLog(list.id) : Promise.resolve([] as CustomListAuditLogWithPlayerData[]),
+            permissions.canViewPendingInvitations ? getCustomListInvitations(list.id) : Promise.resolve([] as CustomListInvitationWithPlayerData[]),
+            permissions.canRespondToInvitation ? hydrateCustomListInvitation(access.pendingInvitation) : Promise.resolve(null)
         ])
 
         return {
@@ -3496,6 +3609,8 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: Cus
             currentUserRole: resolveCustomListRole(access),
             permissions,
             members,
+            pendingInvitations,
+            pendingInvitation,
             auditLog,
             items
         }
@@ -4609,6 +4724,7 @@ export async function addCustomListMember(listId: number, actor: CustomListActor
     const uid = sanitizeActorUid(payload.uid, 'member uid')
     const role = sanitizeCustomListMemberRole(payload.role)
     const access = await assertCanManageListMembers(list, actor, { targetRole: role })
+    const actorUid = getRequiredActorUid(actor)
 
     if (uid === list.owner) {
         throw new ValidationError('The owner cannot be added as a collaborator')
@@ -4622,17 +4738,21 @@ export async function addCustomListMember(listId: number, actor: CustomListActor
         throw new ConflictError('This player is already a collaborator on this list')
     }
 
-    const memberInsert: CustomListMemberInsert = {
+    const existingInvitation = await getCustomListInvitation(listId, uid)
+    const now = new Date().toISOString()
+
+    const invitationInsert: CustomListInvitationInsert = {
         listId,
         uid,
         role,
-        addedBy: getRequiredActorUid(actor),
-        updated_at: new Date().toISOString()
+        invitedBy: actorUid,
+        created_at: existingInvitation?.created_at ?? now,
+        updated_at: now
     }
 
     const { error } = await supabase
-        .from('listMembers')
-        .insert(memberInsert)
+        .from('listInvitations')
+        .upsert(invitationInsert, { onConflict: 'listId,uid' })
 
     if (error) {
         throw new Error(error.message)
@@ -4641,10 +4761,124 @@ export async function addCustomListMember(listId: number, actor: CustomListActor
     await touchCustomListActivity(listId)
     await appendCustomListAuditLog(listId, {
         actorUid: access.actorUid,
-        action: 'member_added',
+        action: existingInvitation ? 'member_invitation_updated' : 'member_invited',
+        targetUid: uid,
+        metadata: existingInvitation
+            ? {
+                fromRole: existingInvitation.role,
+                toRole: role
+            }
+            : {
+                role
+            }
+    })
+
+    const inviter = await ensurePlayerExists(actorUid)
+    const invitationMessage = existingInvitation
+        ? `Lời mời cộng tác vào danh sách ${list.title} đã được cập nhật bởi ${inviter.name || actorUid}. Nhấn để xem và phản hồi.`
+        : `Bạn đã được mời cộng tác vào danh sách ${list.title} bởi ${inviter.name || actorUid}. Nhấn để xem và phản hồi.`
+
+    await sendNotification({
+        to: uid,
+        content: invitationMessage,
+        redirect: buildCustomListInvitationRedirect(list)
+    })
+
+    return getCustomList(listId, actor)
+}
+
+export async function acceptCustomListInvitation(listId: number, actor: CustomListActor) {
+    const list = await getCustomListRow(listId)
+    const actorUid = getRequiredActorUid(actor)
+    const invitation = await getCustomListInvitation(listId, actorUid)
+
+    if (!invitation) {
+        throw new NotFoundError('Pending invitation not found')
+    }
+
+    const existingMember = await getCustomListMembership(listId, actorUid)
+
+    if (!existingMember) {
+        const memberInsert: CustomListMemberInsert = {
+            listId,
+            uid: actorUid,
+            role: invitation.role,
+            addedBy: invitation.invitedBy,
+            updated_at: new Date().toISOString()
+        }
+
+        const { error } = await supabase
+            .from('listMembers')
+            .insert(memberInsert)
+
+        if (error) {
+            throw new Error(error.message)
+        }
+    }
+
+    await deleteCustomListInvitation(listId, actorUid)
+    await touchCustomListActivity(listId)
+    await appendCustomListAuditLog(listId, {
+        actorUid,
+        action: 'member_invitation_accepted',
+        targetUid: actorUid,
+        metadata: {
+            role: invitation.role,
+            invitedBy: invitation.invitedBy
+        }
+    })
+
+    return getCustomList(listId, actor)
+}
+
+export async function rejectCustomListInvitation(listId: number, actor: CustomListActor) {
+    const list = await getCustomListRow(listId)
+    const actorUid = getRequiredActorUid(actor)
+    const invitation = await getCustomListInvitation(listId, actorUid)
+
+    if (!invitation) {
+        throw new NotFoundError('Pending invitation not found')
+    }
+
+    await deleteCustomListInvitation(listId, actorUid)
+    await touchCustomListActivity(listId)
+    await appendCustomListAuditLog(listId, {
+        actorUid,
+        action: 'member_invitation_rejected',
+        targetUid: actorUid,
+        metadata: {
+            role: invitation.role,
+            invitedBy: invitation.invitedBy
+        }
+    })
+
+    return {
+        ok: true,
+        redirect: buildCustomListInvitationRejectRedirect(list)
+    }
+}
+
+export async function revokeCustomListInvitation(listId: number, actor: CustomListActor, invitationUid: unknown) {
+    const list = await getCustomListRow(listId)
+    const uid = sanitizeActorUid(invitationUid, 'member uid')
+    const invitation = await getCustomListInvitation(listId, uid)
+
+    if (!invitation) {
+        throw new NotFoundError('Pending invitation not found')
+    }
+
+    const access = await assertCanManageListMembers(list, actor, {
+        targetRole: invitation.role
+    })
+
+    await deleteCustomListInvitation(listId, uid)
+    await touchCustomListActivity(listId)
+    await appendCustomListAuditLog(listId, {
+        actorUid: access.actorUid,
+        action: 'member_invitation_revoked',
         targetUid: uid,
         metadata: {
-            role
+            role: invitation.role
         }
     })
 

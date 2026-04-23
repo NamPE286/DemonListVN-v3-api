@@ -8,6 +8,7 @@ import {
     addLevelToCustomList,
     batchAddExistingLevelsToCustomList,
     batchSaveCustomListLevels,
+    acceptCustomListInvitation,
     addCustomListMember,
     browseLists,
     ConflictError,
@@ -22,6 +23,8 @@ import {
     getOwnCustomLists,
     getRandomCustomListLevel,
     refreshCustomListLeaderboard,
+    rejectCustomListInvitation,
+    revokeCustomListInvitation,
     getStarredCustomLists,
     getStarredListsByLevel,
     NotFoundError,
@@ -410,6 +413,51 @@ router.route('/:id/members/:uid')
         try {
             const listId = parseId(req.params.id, 'list ID')
             res.send(await removeCustomListMember(listId, res.locals.user, req.params.uid))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/invitations/accept')
+    .post(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await acceptCustomListInvitation(listId, res.locals.user))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/invitations/reject')
+    .post(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await rejectCustomListInvitation(listId, res.locals.user))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/invitations/:uid')
+    .delete(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await revokeCustomListInvitation(listId, res.locals.user, req.params.uid))
         } catch (error) {
             if (sendError(res, error)) {
                 return
