@@ -1,7 +1,7 @@
 import supabase from '@src/client/supabase'
 import { sendNotification } from '@src/services/notification.service'
 import { getLevel } from '@src/services/level.service'
-import { getRecord } from '@src/services/record.service'
+import { getRecord, getRecordById, getAcceptedRecord, getPendingRecord } from '@src/services/record.service'
 import userAuth from '@src/middleware/user-auth.middleware'
 import logger from '@src/utils/logger'
 import express from 'express'
@@ -26,24 +26,64 @@ router.route('/')
      */
     .put(userAuth, async (req, res) => {
         const { user } = res.locals
-        const record = await getRecord(req.body.userid, req.body.levelid)
+
+        // Clients may send the record's unique `id` to disambiguate when a
+        // user has both an accepted and a pending replacement row. Fall back
+        // to the legacy (userid, levelid) lookup — which now returns the
+        // pending record if one exists, otherwise the accepted one — for
+        // backwards compatibility.
+        const record: any = req.body.id
+            ? await getRecordById(Number(req.body.id))
+            : (await getPendingRecord(req.body.userid, Number(req.body.levelid)))
+                ?? (await getRecord(req.body.userid, Number(req.body.levelid)))
+
+        if (!record) {
+            res.status(404).send()
+            return
+        }
+
         const acceptedManually = req.body.acceptedManually ?? req.body.isChecked
-        const recordUpdate = {
+        const recordUpdate: any = {
             ...req.body,
+            userid: record.userid ?? record.players?.uid ?? req.body.userid,
+            levelid: record.levelid ?? req.body.levelid,
+            id: record.id,
             acceptedManually
         }
 
         delete recordUpdate.isChecked
 
-        if (record.reviewer!.uid != res.locals.user.uid || (!user.isAdmin && !user.isTrusted)) {
+        const reviewerUid = record.reviewer?.uid ?? record.reviewer
+        if (reviewerUid != user.uid || (!user.isAdmin && !user.isTrusted)) {
             res.status(401).send()
             return
+        }
+
+        // If we are accepting a pending replacement, remove the previously
+        // accepted record for the same (userid, levelid) pair FIRST so that
+        // the partial unique index ("at most one accepted row per user +
+        // level") is not violated by the upcoming update.
+        if (acceptedManually) {
+            const previousAccepted: any = await getAcceptedRecord(recordUpdate.userid, recordUpdate.levelid)
+
+            if (previousAccepted && previousAccepted.id !== record.id) {
+                const { error: deleteErr } = await supabase
+                    .from('records')
+                    .delete()
+                    .eq('id', previousAccepted.id)
+
+                if (deleteErr) {
+                    console.error(deleteErr)
+                    res.status(500).send()
+                    return
+                }
+            }
         }
 
         var { error } = await supabase
             .from('records')
             .update(recordUpdate)
-            .match({ userid: req.body.userid, levelid: req.body.levelid })
+            .eq('id', record.id)
 
         if (error) {
             console.error(error)

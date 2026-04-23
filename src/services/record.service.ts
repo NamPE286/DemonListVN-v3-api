@@ -43,6 +43,46 @@ async function isLevelExists(id: number) {
     return true
 }
 
+/**
+ * Determine whether `candidate` is a strictly better record than `existing`.
+ *
+ * Ordering (best → worst):
+ *   1. Progress: higher is better (for platformer levels, progress is the
+ *      completion time in ms so lower is better).
+ *   2. Refresh rate: lower is better. A missing refresh rate is treated as
+ *      the worst (Infinity).
+ *   3. Platform: mobile is better than PC.
+ */
+function isBetterRecord(
+    candidate: Pick<TRecord, 'progress' | 'refreshRate' | 'mobile'>,
+    existing: Pick<TRecord, 'progress' | 'refreshRate' | 'mobile'>,
+    isPlatformer: boolean
+) {
+    const newProgress = Number(candidate.progress ?? 0)
+    const oldProgress = Number(existing.progress ?? 0)
+
+    if (newProgress !== oldProgress) {
+        return isPlatformer ? newProgress < oldProgress : newProgress > oldProgress
+    }
+
+    const newRefresh = Number.isFinite(Number(candidate.refreshRate))
+        ? Number(candidate.refreshRate)
+        : Number.POSITIVE_INFINITY
+    const oldRefresh = Number.isFinite(Number(existing.refreshRate))
+        ? Number(existing.refreshRate)
+        : Number.POSITIVE_INFINITY
+
+    if (newRefresh !== oldRefresh) {
+        return newRefresh < oldRefresh
+    }
+
+    if (Boolean(candidate.mobile) !== Boolean(existing.mobile)) {
+        return Boolean(candidate.mobile)
+    }
+
+    return false
+}
+
 export async function getDemonListRecords({ start = 0, end = 0, isChecked = false } = {}) {
     isChecked = normalizeAcceptedManuallyFilter(isChecked)
 
@@ -225,11 +265,86 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, isCheck
 }
 
 export async function getRecord(uid: string, levelID: number) {
+    // Multiple rows may exist per (userid, levelid): one accepted and one
+    // pending replacement. Prefer the accepted row so existing callers keep
+    // seeing the "live" record; fall back to the pending one if that is all
+    // that exists.
     const { data, error } = await supabase
         .from('records')
         .select('*, players!userid(*, clans!id(*)), reviewer:players!reviewer(*, clans!id(*)), levels!public_records_levelid_fkey(*)')
         .eq('levelid', levelID)
         .eq('userid', uid)
+        .order('acceptedManually', { ascending: false, nullsFirst: false })
+        .order('acceptedAuto', { ascending: false })
+        .order('timestamp', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+
+    if (error) {
+        console.error(error)
+        throw new Error(error.message)
+    }
+
+    if (!data) {
+        throw new Error('Record not found')
+    }
+
+    // @ts-ignore
+    return withLegacyRecordAcceptance(data)
+}
+
+/**
+ * Return the single accepted record for the (uid, levelID) pair, or null if
+ * none exists. An accepted record has `acceptedManually === true` or
+ * `acceptedAuto === true` and is guaranteed unique by a partial unique index.
+ */
+export async function getAcceptedRecord(uid: string, levelID: number) {
+    const { data, error } = await supabase
+        .from('records')
+        .select('*')
+        .eq('levelid', levelID)
+        .eq('userid', uid)
+        .or('acceptedManually.eq.true,acceptedAuto.eq.true')
+        .limit(1)
+        .maybeSingle()
+
+    if (error) {
+        console.error(error)
+        throw new Error(error.message)
+    }
+
+    return data ?? null
+}
+
+/**
+ * Return the single pending record for the (uid, levelID) pair, or null if
+ * none exists. A pending record has both `acceptedManually` and
+ * `acceptedAuto` false. Uniqueness is guaranteed by a partial unique index.
+ */
+export async function getPendingRecord(uid: string, levelID: number) {
+    const { data, error } = await supabase
+        .from('records')
+        .select('*')
+        .eq('levelid', levelID)
+        .eq('userid', uid)
+        .eq('acceptedAuto', false)
+        .or('acceptedManually.is.null,acceptedManually.eq.false')
+        .limit(1)
+        .maybeSingle()
+
+    if (error) {
+        console.error(error)
+        throw new Error(error.message)
+    }
+
+    return data ?? null
+}
+
+export async function getRecordById(id: number) {
+    const { data, error } = await supabase
+        .from('records')
+        .select('*, players!userid(*, clans!id(*)), reviewer:players!reviewer(*, clans!id(*)), levels!public_records_levelid_fkey(*)')
+        .eq('id', id)
         .limit(1)
         .single()
 
@@ -250,6 +365,7 @@ export async function retrieveRecord(user: TPlayer) {
         .neq('userid', user.uid!)
         .eq('needMod', false)
         .eq('acceptedManually', false)
+        .eq('acceptedAuto', false)
         .eq('reviewer', user.uid!)
         .limit(1)
         .single()
@@ -265,6 +381,7 @@ export async function retrieveRecord(user: TPlayer) {
         .neq('userid', user.uid!)
         .eq('needMod', false)
         .eq('acceptedManually', false)
+        .eq('acceptedAuto', false)
         .eq("levels.isPlatformer", false)
         .is('reviewer', null)
         .order('queueNo', { ascending: true, nullsFirst: false })
@@ -279,6 +396,7 @@ export async function retrieveRecord(user: TPlayer) {
         .neq('userid', user.uid!)
         .eq('needMod', false)
         .eq('acceptedManually', false)
+        .eq('acceptedAuto', false)
         .eq("levels.isPlatformer", false)
         .is('reviewer', null)
         .order('queueNo', { ascending: true, nullsFirst: false })
@@ -295,7 +413,7 @@ export async function retrieveRecord(user: TPlayer) {
         throw new Error("No available record")
     }
 
-    const record = await getRecord(res.userid, res.levelid)
+    const record = await getRecordById(res.id)
 
     // @ts-ignore
     record.reviewer = res.reviewer = user.uid!
@@ -431,89 +549,73 @@ export async function submitRecord(recordData: TRecord) {
         const player = await getPlayer(recordData.userid)
         logs.push(`Player data: ${JSON.stringify(player, null, 2)}`);
 
-        let existingRecord;
+        // Look up both the currently-accepted record and any in-flight
+        // pending replacement independently. Up to one of each may exist per
+        // (userid, levelid) pair.
+        const acceptedRecord = await getAcceptedRecord(recordData.userid!, recordData.levelid!)
+        const pendingRecord = await getPendingRecord(recordData.userid!, recordData.levelid!)
+        logs.push(`Accepted record: ${JSON.stringify(acceptedRecord)}`)
+        logs.push(`Pending record: ${JSON.stringify(pendingRecord)}`)
 
-        try {
-            logs.push('Checking for existing record');
-            existingRecord = await getRecord(recordData.userid!, recordData.levelid!)
-            logs.push(`Existing record found: ${JSON.stringify(existingRecord, null, 2)}`);
-        } catch (e) {
-            logs.push(`No existing record found, error: ${JSON.stringify(e)}`);
-            logs.push(`Player pointercrate: ${player.pointercrate}`);
+        const betterRecordError = {
+            en: 'Better record is submitted',
+            vi: 'Đã có bản ghi tốt hơn'
+        }
 
-            if (player.pointercrate) {
-                logs.push(`Checking Pointercrate approval for: ${player.pointercrate}, ${level.name}`);
-
-                try {
-                    const apv = await approved(player.pointercrate, level.name!);
-                    logs.push(`Pointercrate approval result: ${apv}`);
-                    const updateLogs = await updateRecord(recordData, true, apv);
-                    logs.push(...updateLogs);
-                    logs.push(`Record updated with Pointercrate approval: ${apv}`);
-                } catch (err) {
-                    logs.push(`Failed to fetch from Pointercrate: ${JSON.stringify(err)}`);
-                    logs.push('Updating record without Pointercrate check');
-                    const updateLogs = await updateRecord(recordData, true, false);
-                    logs.push(...updateLogs);
-                    logs.push('Record updated');
-                }
-            } else {
-                logs.push('Updating record without Pointercrate check');
-                const updateLogs = await updateRecord(recordData, true, false);
-                logs.push(...updateLogs);
-                logs.push('Record updated');
+        // If the user already has an accepted record, the new submission must
+        // be strictly better by the new ordering (progress → refresh rate →
+        // mobile). The accepted record is NEVER overwritten here — it stays
+        // in place until a reviewer accepts the pending replacement.
+        if (acceptedRecord) {
+            if (!isBetterRecord(recordData, acceptedRecord as any, level.isPlatformer!)) {
+                logs.push('Accepted record exists and new submission is not better')
+                throw betterRecordError
             }
-            logs.push('Completed - new record created');
+
+            // If a previous pending replacement exists, allow it to be
+            // refined only if the new submission is strictly better than it.
+            if (pendingRecord && !isBetterRecord(recordData, pendingRecord as any, level.isPlatformer!)) {
+                logs.push('Pending replacement exists and new submission is not better than it')
+                throw betterRecordError
+            }
+
+            const nextData: TRecord = {
+                ...recordData,
+                acceptedManually: false,
+                acceptedAuto: false,
+                // Reuse the pending row id if we are replacing an in-flight
+                // pending submission; otherwise insert a brand-new row
+                // alongside the accepted one.
+                id: pendingRecord ? (pendingRecord as any).id : undefined
+            } as any
+
+            // Skip Pointercrate auto-acceptance here: replacing an accepted
+            // record always requires human review.
+            const updateLogs = await updateRecord(nextData, true, false)
+            logs.push(...updateLogs)
+            logs.push('Pending replacement stored; accepted record preserved')
             return { logs }
         }
 
-        logs.push(`Comparing progress. Level isPlatformer: ${level.isPlatformer}`);
-        logs.push(`Existing progress: ${existingRecord.progress}, New progress: ${recordData.progress}`);
-
-        if (!level.isPlatformer && (existingRecord.progress! >= recordData.progress!)) {
-            logs.push('Non-platformer: existing record is better or equal');
-            throw {
-                en: 'Better record is submitted',
-                vi: "Đã có bản ghi tốt hơn"
+        // No accepted record. If a pending one exists, ensure the new
+        // submission is strictly better before replacing it, mirroring the
+        // "no downgrade" rule.
+        if (pendingRecord) {
+            if (!isBetterRecord(recordData, pendingRecord as any, level.isPlatformer!)) {
+                logs.push('Pending record exists and new submission is not better')
+                throw betterRecordError
             }
+
+            const nextData: TRecord = {
+                ...recordData,
+                id: (pendingRecord as any).id
+            } as any
+
+            return await submitNewOrReplacePending(nextData, level, player, logs)
         }
 
-        if (level.isPlatformer && (existingRecord.progress! <= recordData.progress!)) {
-            logs.push('Platformer: existing record is better or equal');
-            throw {
-                en: 'Better record is submitted',
-                vi: "Đã có bản ghi tốt hơn"
-            }
-        }
-
-        logs.push('New record is better, updating');
-        logs.push(`Player pointercrate: ${player.pointercrate}`);
-
-        if (player.pointercrate) {
-            logs.push(`Checking Pointercrate approval for: ${player.pointercrate}, ${level.name}`);
-
-            try {
-                const apv = await approved(player.pointercrate, level.name!);
-                logs.push(`Pointercrate approval result: ${apv}`);
-                const updateLogs = await updateRecord(recordData, true, apv);
-                logs.push(...updateLogs);
-                logs.push(`Record updated with Pointercrate approval: ${apv}`);
-            } catch (err) {
-                logs.push(`Failed to fetch from Pointercrate: ${JSON.stringify(err)}`);
-                logs.push('Updating record without Pointercrate check');
-                const updateLogs = await updateRecord(recordData, true, false);
-                logs.push(...updateLogs);
-                logs.push('Record updated');
-            }
-        } else {
-            logs.push('Updating record without Pointercrate check');
-            const updateLogs = await updateRecord(recordData, true, false);
-            logs.push(...updateLogs);
-            logs.push('Record updated');
-        }
-        logs.push('Completed - record updated');
-
-        return { logs }
+        // No existing record at all: fresh submission.
+        return await submitNewOrReplacePending(recordData, level, player, logs)
     } catch (error) {
         logs.push(`Error occurred: ${JSON.stringify(error)}`);
         throw {
@@ -521,6 +623,47 @@ export async function submitRecord(recordData: TRecord) {
             logs
         }
     }
+}
+
+// Helper that performs the original "insert/replace pending then optionally
+// Pointercrate-auto-accept" flow. Used when there is no currently-accepted
+// record to protect.
+async function submitNewOrReplacePending(recordData: TRecord, level: any, player: TPlayer, logs: string[]) {
+    logs.push(`Player pointercrate: ${player.pointercrate}`)
+
+    // Baseline: a fresh submission is pending — both acceptance flags false.
+    const baseData: TRecord = {
+        ...recordData,
+        acceptedManually: false,
+        acceptedAuto: false
+    } as any
+
+    if (player.pointercrate) {
+        logs.push(`Checking Pointercrate approval for: ${player.pointercrate}, ${level.name}`)
+
+        try {
+            const apv = await approved(player.pointercrate, level.name!)
+            logs.push(`Pointercrate approval result: ${apv}`)
+            // Pointercrate verification is an automatic accept.
+            const autoAcceptedData: TRecord = { ...baseData, acceptedAuto: Boolean(apv) } as any
+            const updateLogs = await updateRecord(autoAcceptedData, true)
+            logs.push(...updateLogs)
+            logs.push(`Record updated with Pointercrate approval: ${apv}`)
+        } catch (err) {
+            logs.push(`Failed to fetch from Pointercrate: ${JSON.stringify(err)}`)
+            logs.push('Updating record without Pointercrate check')
+            const updateLogs = await updateRecord(baseData, true)
+            logs.push(...updateLogs)
+            logs.push('Record updated')
+        }
+    } else {
+        logs.push('Updating record without Pointercrate check')
+        const updateLogs = await updateRecord(baseData, true)
+        logs.push(...updateLogs)
+        logs.push('Record updated')
+    }
+
+    return { logs }
 }
 
 export async function validateRecord(recordData: TRecord) {
@@ -632,25 +775,62 @@ export async function updateRecord(recordData: TRecord, validate = false, accept
     return logs;
 }
 
-export async function deleteRecord(userid: string, levelid: number) {
-    const record = await getRecord(userid, levelid);
-    
-    if (record.prioritizedBy && record.prioritizedBy > 0) {
-        const days = Math.floor(record.prioritizedBy / (1000 * 60 * 60 * 24));
-        
+export async function deleteRecord(userid: string, levelid: number, recordId?: number) {
+    // When a record id is provided, delete exactly that row. Otherwise prefer
+    // deleting the pending replacement (if one exists) so the accepted record
+    // is preserved — this matches the "reject" semantics where the old
+    // accepted record should remain after a bad submission is removed.
+    let targetId = recordId ?? null
+
+    if (!targetId) {
+        const pending = await getPendingRecord(userid, levelid)
+        targetId = pending ? (pending as any).id : null
+    }
+
+    if (!targetId) {
+        const accepted = await getAcceptedRecord(userid, levelid)
+        targetId = accepted ? (accepted as any).id : null
+    }
+
+    if (!targetId) {
+        throw {
+            en: 'Record not found',
+            vi: 'Không tìm thấy bản ghi'
+        }
+    }
+
+    const { data: row, error: fetchError } = await supabase
+        .from('records')
+        .select('prioritizedBy')
+        .eq('id', targetId)
+        .limit(1)
+        .maybeSingle()
+
+    if (fetchError) {
+        throw {
+            en: fetchError.message,
+            vi: fetchError.message
+        }
+    }
+
+    const prioritizedBy = row?.prioritizedBy ?? 0
+
+    if (prioritizedBy && prioritizedBy > 0) {
+        const days = Math.floor(prioritizedBy / (1000 * 60 * 60 * 24))
+
         if (days > 0) {
             await addInventoryItem({
                 userID: userid,
                 itemId: 15,
                 quantity: days
-            });
+            })
         }
     }
-    
+
     const { error } = await supabase
         .from('records')
         .delete()
-        .match({ userid, levelid })
+        .eq('id', targetId)
 
     if (error) {
         throw {
