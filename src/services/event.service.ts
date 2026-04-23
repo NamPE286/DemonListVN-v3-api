@@ -1,5 +1,5 @@
 import supabase from "@src/client/supabase";
-import type { Tables } from "@src/types/supabase";
+import type { Tables, TablesInsert, TablesUpdate } from "@src/types/supabase";
 import { buildFullTextSearchParams } from '@src/utils/full-text-search'
 
 export const EVENT_SELECT_STR = 'id, created_at, start, end, title, description, imgUrl, exp, redirect, minExp, isSupporterOnly, isContest, hidden, isExternal, isRanked'
@@ -51,7 +51,7 @@ function formatEventSubmissions(submissions: Tables<"eventRecords">[], levels: T
     return result
 }
 
-export async function insertEvent(data: Tables<"events">) {
+export async function insertEvent(data: TablesInsert<"events">) {
     const { error } = await supabase
         .from("events")
         .insert(data)
@@ -61,12 +61,12 @@ export async function insertEvent(data: Tables<"events">) {
     }
 }
 
-export async function updateEvent(id: number, data: Tables<"events">) {
-    data.id = id;
+export async function updateEvent(id: number, data: TablesUpdate<"events">) {
+    const { id: _ignoredId, titleFts: _ignoredTitleFts, ...updates } = data;
 
     const { error } = await supabase
         .from("events")
-        .update(data)
+        .update(updates)
         .eq('id', id)
 
     if (error) {
@@ -74,7 +74,7 @@ export async function updateEvent(id: number, data: Tables<"events">) {
     }
 }
 
-export async function updateEventLevel(data: Tables<"eventLevels">) {
+export async function updateEventLevel(data: TablesUpdate<"eventLevels"> & Pick<Tables<"eventLevels">, 'id'>) {
     const { error } = await supabase
         .from("eventLevels")
         .update(data)
@@ -85,7 +85,7 @@ export async function updateEventLevel(data: Tables<"eventLevels">) {
     }
 }
 
-export async function upsertEventLevel(eventID: number, data: Tables<"eventLevels">) {
+export async function upsertEventLevel(eventID: number, data: TablesInsert<"eventLevels">) {
     data.eventID = eventID;
 
     const { error } = await supabase
