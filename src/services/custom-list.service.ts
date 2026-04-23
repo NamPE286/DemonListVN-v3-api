@@ -108,6 +108,27 @@ type BatchCustomListLevelInput = {
     createdAt?: string
 }
 
+type CustomListSettingsPayload = {
+    title?: unknown
+    description?: unknown
+    backgroundColor?: unknown
+    bannerUrl?: unknown
+    borderColor?: unknown
+    visibility?: unknown
+    tags?: unknown
+    mode?: unknown
+    isPlatformer?: unknown
+    communityEnabled?: unknown
+    faviconUrl?: unknown
+    logoUrl?: unknown
+    topEnabled?: unknown
+    levelSubmissionEnabled?: unknown
+    slug?: unknown
+    weightFormula?: unknown
+    rankBadges?: unknown
+    itemSort?: unknown
+}
+
 const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
 type CustomListWithOwnerData = CustomList & {
@@ -651,6 +672,14 @@ function sanitizeBatchCustomListLevelInputs(value: unknown) {
     }
 
     return levelInputs
+}
+
+function sanitizeLevelReorderIds(value: unknown) {
+    if (!Array.isArray(value) || !value.every((id) => Number.isInteger(id) && id > 0)) {
+        throw new ValidationError('levelIds must be an array of positive integers')
+    }
+
+    return value as number[]
 }
 
 function sanitizeOfficial(value: unknown) {
@@ -2745,20 +2774,42 @@ export async function reviewCustomListSubmission(listId: number, actor: CustomLi
     return getCustomList(listId, actor)
 }
 
+async function applyCustomListLevelOrder(listId: number, levelIds: number[]) {
+    const updates = levelIds.map((levelId, index) =>
+        supabase
+            .from('listLevels')
+            .update({ position: index + 1 })
+            .eq('listId', listId)
+            .eq('levelId', levelId)
+            .eq('accepted', true)
+    )
+
+    const results = await Promise.all(updates)
+
+    for (const result of results) {
+        if (result.error) {
+            throw new Error(result.error.message)
+        }
+    }
+}
+
 export async function batchSaveCustomListLevels(listId: number, actor: CustomListActor, payload: {
+    settings?: unknown
     creates?: unknown
     updates?: unknown
     deletes?: unknown
     auditEntries?: unknown
+    reorderLevelIds?: unknown
 }) {
     const list = await getCustomListRow(listId)
-    const access = await assertCanEditListLevels(list, actor)
-    const actorUid = access.actorUid ?? getRequiredActorUid(actor)
-
+    const hasSettingsInput = payload.settings !== undefined
     const createInputs = Array.isArray(payload.creates) ? payload.creates : []
     const updateInputs = Array.isArray(payload.updates) ? payload.updates : []
     const deleteInputs = Array.isArray(payload.deletes) ? payload.deletes : []
     const auditEntries = Array.isArray(payload.auditEntries) ? payload.auditEntries : []
+    const reorderLevelIds = payload.reorderLevelIds !== undefined
+        ? sanitizeLevelReorderIds(payload.reorderLevelIds)
+        : []
 
     const deleteLevelIds = deleteInputs
         .map((value) => Number(value))
@@ -2772,28 +2823,85 @@ export async function batchSaveCustomListLevels(listId: number, actor: CustomLis
         .map((value) => Number((value as any)?.levelId))
         .filter((value) => Number.isInteger(value) && value > 0)
 
-    if (!createLevelIds.length && !updateLevelIds.length && !deleteLevelIds.length && !auditEntries.length) {
+    const hasLevelChanges = Boolean(createLevelIds.length || updateLevelIds.length || deleteLevelIds.length || auditEntries.length || reorderLevelIds.length)
+
+    if (!hasSettingsInput && !hasLevelChanges) {
         return getCustomList(listId, actor)
     }
 
-    const affectedLevelIds = [...new Set([...createLevelIds, ...updateLevelIds, ...deleteLevelIds])]
-    const { data: existingLevels, error: existingLevelsError } = await supabase
-        .from('levels')
-        .select('id, isPlatformer')
-        .in('id', affectedLevelIds)
+    let settingsAccess: CustomListAccessContext | null = null
+    let levelsAccess: CustomListAccessContext | null = null
+    let workingList = list
+    let settingsUpdatePlan: Awaited<ReturnType<typeof buildCustomListSettingsUpdatePlan>> | null = null
 
-    if (existingLevelsError) {
-        throw new Error(existingLevelsError.message)
+    if (hasSettingsInput) {
+        if (!payload.settings || typeof payload.settings !== 'object' || Array.isArray(payload.settings)) {
+            throw new ValidationError('settings must be an object')
+        }
+
+        settingsAccess = await assertCanEditList(list, actor)
+        settingsUpdatePlan = await buildCustomListSettingsUpdatePlan(listId, workingList, payload.settings as CustomListSettingsPayload)
+
+        if (settingsUpdatePlan.changedEntries.length) {
+            workingList = {
+                ...workingList,
+                ...settingsUpdatePlan.updates
+            } as CustomList
+        }
     }
 
-    const levelsById = new Map((existingLevels || []).map((level) => [level.id, level]))
+    if (hasLevelChanges) {
+        levelsAccess = await assertCanEditListLevels(workingList, actor)
+    }
+
+    if (!hasLevelChanges && !settingsUpdatePlan?.changedEntries.length) {
+        return getCustomList(listId, actor)
+    }
+
+    const access = levelsAccess ?? settingsAccess
+    const actorUid = access?.actorUid ?? getRequiredActorUid(actor)
+    const affectedLevelIds = [...new Set([...createLevelIds, ...updateLevelIds, ...deleteLevelIds])]
+    let levelsById = new Map<number, { id: number; isPlatformer: boolean }>()
+
+    if (createLevelIds.length || updateLevelIds.length) {
+        const { data: existingLevels, error: existingLevelsError } = await supabase
+            .from('levels')
+            .select('id, isPlatformer')
+            .in('id', affectedLevelIds)
+
+        if (existingLevelsError) {
+            throw new Error(existingLevelsError.message)
+        }
+
+        levelsById = new Map((existingLevels || []).map((level) => [level.id, level]))
+    }
 
     for (const levelId of [...createLevelIds, ...updateLevelIds]) {
         const level = levelsById.get(levelId) || await ensureLevelExists(levelId)
-        assertLevelTypeMatchesList(list, level)
+        assertLevelTypeMatchesList(workingList, level)
     }
 
-    if (list.mode === 'top') {
+    if (settingsUpdatePlan?.changedEntries.length) {
+        const { error } = await supabase
+            .from('lists')
+            .update(settingsUpdatePlan.updates)
+            .eq('id', listId)
+
+        if (error) {
+            throw new Error(error.message)
+        }
+
+        await appendCustomListAuditLog(listId, {
+            actorUid: settingsAccess?.actorUid ?? actorUid,
+            action: 'list_updated',
+            metadata: {
+                fields: settingsUpdatePlan.changedEntries.map(([field]) => field),
+                changes: settingsUpdatePlan.changes
+            }
+        })
+    }
+
+    if (workingList.mode === 'top') {
         await ensureStoredTopPositions(listId)
     } else {
         await ensureStoredRatingPositions(listId)
@@ -2855,7 +2963,7 @@ export async function batchSaveCustomListLevels(listId: number, actor: CustomLis
                 addedBy: actorUid,
                 accepted: true,
                 rating: Number.isFinite(Number(levelInput.rating)) ? Number(levelInput.rating) : 5,
-                minProgress: levelInput.minProgress === undefined ? null : sanitizeMinProgress(levelInput.minProgress, list.isPlatformer),
+                minProgress: levelInput.minProgress === undefined ? null : sanitizeMinProgress(levelInput.minProgress, workingList.isPlatformer),
                 position: sanitizeSubmissionPosition(positionInput),
                 videoID: videoInput === undefined ? null : sanitizeCustomListVideoId(videoInput)
             }
@@ -2900,7 +3008,7 @@ export async function batchSaveCustomListLevels(listId: number, actor: CustomLis
             }
 
             if (patch.minProgress !== undefined) {
-                updates.minProgress = sanitizeMinProgress(patch.minProgress, list.isPlatformer)
+                updates.minProgress = sanitizeMinProgress(patch.minProgress, workingList.isPlatformer)
             }
 
             const nextVideoID = patch.videoID !== undefined ? patch.videoID : patch.videoId
@@ -2938,6 +3046,14 @@ export async function batchSaveCustomListLevels(listId: number, actor: CustomLis
         }
     }
 
+    if (reorderLevelIds.length) {
+        if (workingList.mode !== 'top') {
+            throw new ValidationError('Reordering is only available in top mode')
+        }
+
+        await applyCustomListLevelOrder(listId, reorderLevelIds)
+    }
+
     for (const entry of auditEntries as Array<{ actorUid?: string | null; action?: string; targetUid?: string | null; metadata?: Record<string, unknown> }>) {
         if (!entry?.action) {
             continue
@@ -2948,6 +3064,16 @@ export async function batchSaveCustomListLevels(listId: number, actor: CustomLis
             action: entry.action,
             targetUid: entry.targetUid ?? null,
             metadata: entry.metadata || {}
+        })
+    }
+
+    if (reorderLevelIds.length) {
+        await appendCustomListAuditLog(listId, {
+            actorUid,
+            action: 'levels_reordered',
+            metadata: {
+                levelIds: reorderLevelIds
+            }
         })
     }
 
@@ -4004,28 +4130,7 @@ export async function createCustomList(ownerId: string, payload: {
     return getCustomList(data.id, ownerId)
 }
 
-export async function updateCustomList(listId: number, ownerId: CustomListActor, payload: {
-    title?: unknown
-    description?: unknown
-    backgroundColor?: unknown
-    bannerUrl?: unknown
-    borderColor?: unknown
-    visibility?: unknown
-    tags?: unknown
-    mode?: unknown
-    isPlatformer?: unknown
-    communityEnabled?: unknown
-    faviconUrl?: unknown
-    logoUrl?: unknown
-    topEnabled?: unknown
-    levelSubmissionEnabled?: unknown
-    slug?: unknown
-    weightFormula?: unknown
-    rankBadges?: unknown
-    itemSort?: unknown
-}) {
-    const existing = await getCustomListRow(listId)
-    const access = await assertCanEditList(existing, ownerId)
+async function buildCustomListSettingsUpdatePlan(listId: number, existing: CustomList, payload: CustomListSettingsPayload) {
     const pendingUpdates: Partial<CustomListUpdate> = {}
     const existingValues = existing as Record<string, unknown>
 
@@ -4122,10 +4227,6 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
     const changedEntries = (Object.entries(pendingUpdates) as Array<[string, unknown]>)
         .filter(([field, nextValue]) => !areCustomListValuesEqual(existingValues[field], nextValue))
 
-    if (!changedEntries.length) {
-        return getCustomList(listId, ownerId)
-    }
-
     const updates: CustomListUpdate = {
         updated_at: new Date().toISOString()
     }
@@ -4139,9 +4240,26 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
         }
     }
 
+    return {
+        changedEntries,
+        changes,
+        updates
+    }
+}
+
+async function applyCustomListSettingsUpdate(listId: number, existing: CustomList, access: CustomListAccessContext, payload: CustomListSettingsPayload) {
+    const updatePlan = await buildCustomListSettingsUpdatePlan(listId, existing, payload)
+
+    if (!updatePlan.changedEntries.length) {
+        return {
+            changed: false,
+            list: existing
+        }
+    }
+
     const { error } = await supabase
         .from('lists')
-        .update(updates)
+        .update(updatePlan.updates)
         .eq('id', listId)
 
     if (error) {
@@ -4152,10 +4270,28 @@ export async function updateCustomList(listId: number, ownerId: CustomListActor,
         actorUid: access.actorUid,
         action: 'list_updated',
         metadata: {
-            fields: changedEntries.map(([field]) => field),
-            changes
+            fields: updatePlan.changedEntries.map(([field]) => field),
+            changes: updatePlan.changes
         }
     })
+
+    return {
+        changed: true,
+        list: {
+            ...existing,
+            ...updatePlan.updates
+        } as CustomList
+    }
+}
+
+export async function updateCustomList(listId: number, ownerId: CustomListActor, payload: CustomListSettingsPayload) {
+    const existing = await getCustomListRow(listId)
+    const access = await assertCanEditList(existing, ownerId)
+    const result = await applyCustomListSettingsUpdate(listId, existing, access, payload)
+
+    if (!result.changed) {
+        return getCustomList(listId, ownerId)
+    }
 
     return getCustomList(listId, ownerId)
 }
@@ -4820,33 +4956,16 @@ export async function reorderListLevels(listId: number, ownerId: CustomListActor
         throw new ValidationError('Reordering is only available in top mode')
     }
 
-    if (!Array.isArray(levelIds) || !levelIds.every((id) => Number.isInteger(id) && id > 0)) {
-        throw new ValidationError('levelIds must be an array of positive integers')
-    }
+    const sanitizedLevelIds = sanitizeLevelReorderIds(levelIds)
 
-    const updates = (levelIds as number[]).map((levelId, index) =>
-        supabase
-            .from('listLevels')
-            .update({ position: index + 1 })
-            .eq('listId', listId)
-            .eq('levelId', levelId)
-            .eq('accepted', true)
-    )
-
-    const results = await Promise.all(updates)
-
-    for (const result of results) {
-        if (result.error) {
-            throw new Error(result.error.message)
-        }
-    }
+    await applyCustomListLevelOrder(listId, sanitizedLevelIds)
 
     await touchCustomListActivity(listId)
     await appendCustomListAuditLog(listId, {
         actorUid: access.actorUid,
         action: 'levels_reordered',
         metadata: {
-            levelIds
+            levelIds: sanitizedLevelIds
         }
     })
 
