@@ -3137,6 +3137,39 @@ export type Database = {
           },
         ]
       }
+      playerCardStatLines: {
+        Row: {
+          listId: number
+          position: number
+          uid: string
+        }
+        Insert: {
+          listId: number
+          position: number
+          uid: string
+        }
+        Update: {
+          listId?: number
+          position?: number
+          uid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playerCardStatLines_listId_fkey"
+            columns: ["listId"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playerCardStatLines_uid_fkey"
+            columns: ["uid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       playerConvictions: {
         Row: {
           content: string
