@@ -2373,6 +2373,58 @@ export type Database = {
           },
         ]
       }
+      listInvitations: {
+        Row: {
+          created_at: string
+          id: number
+          invitedBy: string
+          listId: number
+          role: string
+          uid: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          invitedBy: string
+          listId: number
+          role: string
+          uid: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          invitedBy?: string
+          listId?: number
+          role?: string
+          uid?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_invitations_invited_by_fkey"
+            columns: ["invitedBy"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "list_invitations_list_id_fkey"
+            columns: ["listId"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "list_invitations_uid_fkey"
+            columns: ["uid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       listLeaderboardEntries: {
         Row: {
           completedCount: number
@@ -2507,42 +2559,42 @@ export type Database = {
       }
       listLevels: {
         Row: {
-          addedBy: string
           accepted: boolean
+          addedBy: string
           created_at: string
           id: number
           levelId: number
           listId: number
           minProgress: number | null
-          submissionComment: string | null
           position: number | null
           rating: number
+          submissionComment: string | null
           videoID: string | null
         }
         Insert: {
-          addedBy: string
           accepted?: boolean
+          addedBy: string
           created_at?: string
           id?: number
           levelId: number
           listId: number
           minProgress?: number | null
-          submissionComment?: string | null
           position?: number | null
           rating?: number
+          submissionComment?: string | null
           videoID?: string | null
         }
         Update: {
-          addedBy?: string
           accepted?: boolean
+          addedBy?: string
           created_at?: string
           id?: number
           levelId?: number
           listId?: number
           minProgress?: number | null
-          submissionComment?: string | null
           position?: number | null
           rating?: number
+          submissionComment?: string | null
           videoID?: string | null
         }
         Relationships: [
@@ -2566,58 +2618,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "lists"
             referencedColumns: ["id"]
-          },
-        ]
-      }
-      listInvitations: {
-        Row: {
-          created_at: string
-          id: number
-          invitedBy: string
-          listId: number
-          role: string
-          uid: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          invitedBy: string
-          listId: number
-          role: string
-          uid: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          invitedBy?: string
-          listId?: number
-          role?: string
-          uid?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "list_invitations_invited_by_fkey"
-            columns: ["invitedBy"]
-            isOneToOne: false
-            referencedRelation: "players"
-            referencedColumns: ["uid"]
-          },
-          {
-            foreignKeyName: "list_invitations_list_id_fkey"
-            columns: ["listId"]
-            isOneToOne: false
-            referencedRelation: "lists"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "list_invitations_uid_fkey"
-            columns: ["uid"]
-            isOneToOne: false
-            referencedRelation: "players"
-            referencedColumns: ["uid"]
           },
         ]
       }
@@ -2690,16 +2690,16 @@ export type Database = {
           isOfficial: boolean
           isPlatformer: boolean
           itemSort: string
-          levelSubmissionEnabled: boolean
           levelCount: number
+          levelSubmissionEnabled: boolean
           logoUrl: string | null
           mode: string
           owner: string
+          rankBadges: Json
           recordFilterManualAcceptanceOnly: boolean
           recordFilterMaxRefreshRate: number | null
           recordFilterMinRefreshRate: number | null
           recordFilterPlatform: string
-          rankBadges: Json
           slug: string | null
           tags: string[]
           title: string
@@ -2724,16 +2724,16 @@ export type Database = {
           isOfficial?: boolean
           isPlatformer?: boolean
           itemSort?: string
-          levelSubmissionEnabled?: boolean
           levelCount?: number
+          levelSubmissionEnabled?: boolean
           logoUrl?: string | null
           mode?: string
           owner: string
+          rankBadges?: Json
           recordFilterManualAcceptanceOnly?: boolean
           recordFilterMaxRefreshRate?: number | null
           recordFilterMinRefreshRate?: number | null
           recordFilterPlatform?: string
-          rankBadges?: Json
           slug?: string | null
           tags?: string[]
           title: string
@@ -2758,16 +2758,16 @@ export type Database = {
           isOfficial?: boolean
           isPlatformer?: boolean
           itemSort?: string
-          levelSubmissionEnabled?: boolean
           levelCount?: number
+          levelSubmissionEnabled?: boolean
           logoUrl?: string | null
           mode?: string
           owner?: string
+          rankBadges?: Json
           recordFilterManualAcceptanceOnly?: boolean
           recordFilterMaxRefreshRate?: number | null
           recordFilterMinRefreshRate?: number | null
           recordFilterPlatform?: string
-          rankBadges?: Json
           slug?: string | null
           tags?: string[]
           title?: string
@@ -4086,3 +4086,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
