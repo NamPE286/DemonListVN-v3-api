@@ -2686,6 +2686,7 @@ export type Database = {
           fts: unknown
           id: number
           isBanned: boolean
+          isMirror: boolean
           isOfficial: boolean
           isPlatformer: boolean
           itemSort: string
@@ -2719,6 +2720,7 @@ export type Database = {
           fts?: unknown
           id?: number
           isBanned?: boolean
+          isMirror?: boolean
           isOfficial?: boolean
           isPlatformer?: boolean
           itemSort?: string
@@ -2752,6 +2754,7 @@ export type Database = {
           fts?: unknown
           id?: number
           isBanned?: boolean
+          isMirror?: boolean
           isOfficial?: boolean
           isPlatformer?: boolean
           itemSort?: string

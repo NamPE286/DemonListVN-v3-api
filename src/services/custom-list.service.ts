@@ -36,6 +36,17 @@ type CustomListMember = Tables<'listMembers'>
 type CustomListMemberInsert = TablesInsert<'listMembers'>
 type CustomListMemberUpdate = TablesUpdate<'listMembers'>
 type CustomListStarInsert = TablesInsert<'listStars'>
+type CustomListItemFilters = {
+    topMin?: number | null
+    topMax?: number | null
+    ratingMin?: number | null
+    ratingMax?: number | null
+    nameSearch?: string | null
+    creatorSearch?: string | null
+    searchType?: string | null
+    tagIds?: number[] | null
+    ascending?: boolean | null
+}
 type CustomListLeaderboardRefreshRow = {
     id: number
     listId: number
@@ -2595,7 +2606,7 @@ async function ensureLevelExists(levelId: number) {
 async function getCustomListItems(listId: number, mode: string = 'rating', itemRange?: {
     start?: number
     end?: number
-}, itemSort: string = 'mode_default') {
+}, itemSort: string = 'mode_default', itemFilters?: CustomListItemFilters) {
     const isTop = mode === 'top'
 
     if (isTop) {
@@ -2604,19 +2615,101 @@ async function getCustomListItems(listId: number, mode: string = 'rating', itemR
         await ensureStoredRatingPositions(listId)
     }
 
+    const filters = itemFilters ?? {}
+    const nameSearchParams = buildFullTextSearchParams(filters.nameSearch, filters.searchType)
+    const creatorSearchParams = buildFullTextSearchParams(filters.creatorSearch, filters.searchType)
+
+    let levelIdFilter: number[] | null = null
+
+    if (filters.tagIds && filters.tagIds.length > 0) {
+        const { data: tagRows, error: tagError } = await (supabase as any)
+            .from('levelsTags')
+            .select('level_id')
+            .in('tag_id', filters.tagIds)
+
+        if (tagError) {
+            throw new Error(tagError.message)
+        }
+
+        const tagFilteredIds = [...new Set((tagRows || []).map((row: any) => row.level_id as number))] as number[]
+
+        if (tagFilteredIds.length === 0) {
+            return []
+        }
+
+        levelIdFilter = tagFilteredIds
+    }
+
+    if (nameSearchParams || creatorSearchParams) {
+        let levelQuery = supabase
+            .from('levels')
+            .select('id')
+
+        if (nameSearchParams) {
+            levelQuery = levelQuery.textSearch('nameFts', nameSearchParams.query, nameSearchParams.options)
+        }
+
+        if (creatorSearchParams) {
+            levelQuery = levelQuery.textSearch('creatorFts', creatorSearchParams.query, creatorSearchParams.options)
+        }
+
+        if (levelIdFilter !== null) {
+            levelQuery = levelQuery.in('id', levelIdFilter)
+        }
+
+        const { data: matchedLevels, error: levelMatchError } = await levelQuery
+
+        if (levelMatchError) {
+            throw new Error(levelMatchError.message)
+        }
+
+        const matchedIds = (matchedLevels || []).map((row) => row.id as number)
+
+        if (matchedIds.length === 0) {
+            return []
+        }
+
+        levelIdFilter = matchedIds
+    }
+
     let itemsQuery = supabase
         .from('listLevels')
         .select('id, created_at, listId, levelId, addedBy, rating, position, minProgress, videoID, accepted, submissionComment')
         .eq('listId', listId)
         .eq('accepted', true)
 
+    if (levelIdFilter !== null) {
+        itemsQuery = itemsQuery.in('levelId', levelIdFilter)
+    }
+
+    if (filters.topMin != null) {
+        itemsQuery = itemsQuery.gte('position', filters.topMin)
+    }
+
+    if (filters.topMax != null) {
+        itemsQuery = itemsQuery.lte('position', filters.topMax)
+    }
+
+    if (filters.ratingMin != null) {
+        itemsQuery = itemsQuery.gte('rating', filters.ratingMin)
+    }
+
+    if (filters.ratingMax != null) {
+        itemsQuery = itemsQuery.lte('rating', filters.ratingMax)
+    }
+
+    const overrideAscending = filters.ascending
+
     if (itemSort === 'created_at') {
+        const ascending = overrideAscending ?? true
         itemsQuery = itemsQuery
-            .order('created_at', { ascending: true })
-            .order('id', { ascending: true })
+            .order('created_at', { ascending })
+            .order('id', { ascending })
     } else {
+        const defaultAscending = isTop
+        const ascending = overrideAscending ?? defaultAscending
         itemsQuery = itemsQuery
-            .order(isTop ? 'position' : 'rating', { ascending: isTop, nullsFirst: false })
+            .order(isTop ? 'position' : 'rating', { ascending, nullsFirst: false })
             .order('created_at', { ascending: true })
             .order('id', { ascending: true })
     }
@@ -3568,6 +3661,7 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: Cus
     itemsStart?: number
     itemsEnd?: number
     itemSort?: unknown
+    itemFilters?: CustomListItemFilters
 } = {}) {
     const actorUid = getActorUid(viewerId)
     const itemRange = options.itemsStart !== undefined && options.itemsEnd !== undefined
@@ -3587,7 +3681,7 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: Cus
             : (CUSTOM_LIST_ITEM_SORT_VALUES.has(list.itemSort) ? list.itemSort as 'mode_default' | 'created_at' : 'mode_default')
         const [items, [{ starCount = 0, starred = false } = { starCount: 0, starred: false }], latestRefresh, members, auditLog, pendingInvitations, pendingInvitation] = await Promise.all([
             enrichItemsWithViewerEligibleRecords(
-                await getCustomListItems(list.id, list.mode, itemRange, effectiveItemSort),
+                await getCustomListItems(list.id, list.mode, itemRange, effectiveItemSort, options.itemFilters),
                 list,
                 actorUid
             ),

@@ -293,10 +293,61 @@ router.route('/:id')
                 throw new ValidationError('Invalid item range')
             }
 
+            const parseOptionalNumber = (value: unknown, label: string): number | undefined => {
+                if (value === undefined || value === null || value === '') {
+                    return undefined
+                }
+                const num = Number(value)
+                if (!Number.isFinite(num)) {
+                    throw new ValidationError(`Invalid ${label}`)
+                }
+                return num
+            }
+
+            const parseTagIds = (value: unknown): number[] | undefined => {
+                if (value === undefined || value === null || value === '') {
+                    return undefined
+                }
+                const raw = Array.isArray(value) ? value : String(value).split(',')
+                const ids = raw
+                    .map((entry) => Number(String(entry).trim()))
+                    .filter((n) => Number.isFinite(n) && n > 0)
+                return ids.length > 0 ? ids : undefined
+            }
+
+            const parseAscending = (value: unknown): boolean | undefined => {
+                if (value === undefined || value === null || value === '') {
+                    return undefined
+                }
+                const normalized = String(value).toLowerCase()
+                if (normalized === 'true' || normalized === '1') {
+                    return true
+                }
+                if (normalized === 'false' || normalized === '0') {
+                    return false
+                }
+                return undefined
+            }
+
+            const itemFilters = {
+                topMin: parseOptionalNumber(req.query.topMin, 'topMin'),
+                topMax: parseOptionalNumber(req.query.topMax, 'topMax'),
+                ratingMin: parseOptionalNumber(req.query.ratingMin, 'ratingMin'),
+                ratingMax: parseOptionalNumber(req.query.ratingMax, 'ratingMax'),
+                nameSearch: typeof req.query.nameSearch === 'string' ? req.query.nameSearch : undefined,
+                creatorSearch: typeof req.query.creatorSearch === 'string' ? req.query.creatorSearch : undefined,
+                searchType: typeof req.query.searchType === 'string' ? req.query.searchType : undefined,
+                tagIds: parseTagIds(req.query.tagIds),
+                ascending: parseAscending(req.query.ascending)
+            }
+
+            const hasAnyFilter = Object.values(itemFilters).some((v) => v !== undefined)
+
             res.send(await getCustomList(req.params.id, viewerId, {
                 itemsStart,
                 itemsEnd,
-                itemSort: req.query.itemSort
+                itemSort: req.query.itemSort,
+                itemFilters: hasAnyFilter ? itemFilters : undefined
             }))
         } catch (error) {
             if (sendError(res, error)) {
