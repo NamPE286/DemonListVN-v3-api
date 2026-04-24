@@ -2689,6 +2689,7 @@ export type Database = {
           isMirror: boolean
           isOfficial: boolean
           isPlatformer: boolean
+          isVerified: boolean
           itemSort: string
           levelCount: number
           levelSubmissionEnabled: boolean
@@ -2723,6 +2724,7 @@ export type Database = {
           isMirror?: boolean
           isOfficial?: boolean
           isPlatformer?: boolean
+          isVerified?: boolean
           itemSort?: string
           levelCount?: number
           levelSubmissionEnabled?: boolean
@@ -2757,6 +2759,7 @@ export type Database = {
           isMirror?: boolean
           isOfficial?: boolean
           isPlatformer?: boolean
+          isVerified?: boolean
           itemSort?: string
           levelCount?: number
           levelSubmissionEnabled?: boolean

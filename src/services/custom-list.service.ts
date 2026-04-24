@@ -69,6 +69,22 @@ type CustomListLeaderboardRecordEntry = {
     no: number
 }
 
+type PlayerRankedListSummary = {
+    id: number
+    slug: string | null
+    identifier: string
+    title: string
+    isOfficial: boolean
+    isVerified: boolean
+    mode: string
+    isPlatformer: boolean
+    rank: number
+    score: number
+    completedCount: number
+    lastRefreshedAt: string | null
+    rankBadges: CustomListRankBadge[]
+}
+
 type CustomListRecordPlatformFilter = 'any' | 'pc' | 'mobile'
 
 type CustomListRankBadge = {
@@ -3578,6 +3594,105 @@ export async function getStarredCustomLists(userId: string) {
     return enrichListsWithStars(readableLists, userId)
 }
 
+export async function getPlayerRankedLists(uid: string): Promise<PlayerRankedListSummary[]> {
+    const { data: entryRows, error: entriesError } = await (supabase as any)
+        .from('listLeaderboardEntries')
+        .select('listId, rank, score, completedCount')
+        .eq('uid', uid)
+
+    if (entriesError) {
+        throw new Error(entriesError.message)
+    }
+
+    const entries = (entryRows || []) as Array<{
+        listId: number
+        rank: number
+        score: number
+        completedCount: number
+    }>
+
+    if (!entries.length) {
+        return []
+    }
+
+    const listIds = [...new Set(entries.map((entry) => entry.listId))]
+    const [{ data: lists, error: listsError }, { data: refreshRows, error: refreshError }] = await Promise.all([
+        (supabase as any)
+            .from('lists')
+            .select('id, slug, title, isOfficial, isVerified, mode, isPlatformer, rankBadges, visibility')
+            .in('id', listIds)
+            .eq('visibility', 'public')
+            .or('isOfficial.eq.true,isVerified.eq.true'),
+        (supabase as any)
+            .from('listLeaderboardRefreshes')
+            .select('listId, lastRefreshedAt')
+            .in('listId', listIds)
+    ])
+
+    if (listsError) {
+        throw new Error(listsError.message)
+    }
+
+    if (refreshError) {
+        throw new Error(refreshError.message)
+    }
+
+    const refreshByListId = new Map<number, string | null>()
+
+    for (const refreshRow of refreshRows || []) {
+        refreshByListId.set(refreshRow.listId, refreshRow.lastRefreshedAt ?? null)
+    }
+
+    const officialListOrder = new Map(OFFICIAL_LIST_SLUGS.map((slug, index) => [slug, index]))
+    const listsById = new Map<number, any>()
+
+    for (const list of lists || []) {
+        listsById.set(list.id, list)
+    }
+
+    return entries
+        .map((entry) => {
+            const list = listsById.get(entry.listId)
+
+            if (!list) {
+                return null
+            }
+
+            return {
+                id: list.id,
+                slug: list.slug,
+                identifier: list.slug || String(list.id),
+                title: list.title,
+                isOfficial: Boolean(list.isOfficial),
+                isVerified: Boolean(list.isVerified),
+                mode: list.mode,
+                isPlatformer: Boolean(list.isPlatformer),
+                rank: entry.rank,
+                score: entry.score,
+                completedCount: entry.completedCount,
+                lastRefreshedAt: refreshByListId.get(list.id) ?? null,
+                rankBadges: normalizeRankBadges(list.rankBadges)
+            } satisfies PlayerRankedListSummary
+        })
+        .filter((entry): entry is PlayerRankedListSummary => Boolean(entry))
+        .sort((left, right) => {
+            if (left.isOfficial !== right.isOfficial) {
+                return left.isOfficial ? -1 : 1
+            }
+
+            if (left.isOfficial && right.isOfficial) {
+                const leftOrder = left.slug ? (officialListOrder.get(left.slug as OfficialListSlug) ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER
+                const rightOrder = right.slug ? (officialListOrder.get(right.slug as OfficialListSlug) ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER
+
+                if (leftOrder !== rightOrder) {
+                    return leftOrder - rightOrder
+                }
+            }
+
+            return left.title.localeCompare(right.title, 'en', { sensitivity: 'base' })
+        })
+}
+
 export async function browseLists(options: {
     limit?: number
     offset?: number
@@ -3906,7 +4021,12 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
     const levelIds = [...new Set(entries.map((entry) => entry.levelId))]
     const playersByUid = new Map<string, any>()
     const levelsById = new Map<number, any>()
-    const recordsByKey = new Map<string, { progress: number; timestamp: number | null }>()
+    const recordsByKey = new Map<string, {
+        progress: number
+        timestamp: number | null
+        mobile: boolean
+        refreshRate: number | null
+    }>()
 
     const [playersResult, levelsResult] = await Promise.all([
         uids.length
@@ -3918,7 +4038,7 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
         levelIds.length
             ? supabase
                 .from('levels')
-                .select('id, name, creator, difficulty, isPlatformer, rating, minProgress')
+                .select('id, name, creator, difficulty, isPlatformer, rating, minProgress, videoID')
                 .in('id', levelIds)
             : Promise.resolve({ data: [], error: null })
     ])
@@ -3933,12 +4053,12 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
 
     if (entries.length) {
         const recordFilters = entries
-            .map((entry) => `and(userid.eq.${entry.uid},levelid.eq.${entry.levelId})`)
+            .map((entry) => `and(userid.eq.${entry.uid},levelid.eq.${entry.levelId},or(acceptedManually.eq.true,acceptedAuto.eq.true))`)
             .join(',')
 
         const { data: recordRows, error: recordsError } = await supabase
             .from('records')
-            .select('userid, levelid, progress, timestamp')
+            .select('userid, levelid, progress, timestamp, mobile, refreshRate')
             .or(recordFilters)
 
         if (recordsError) {
@@ -3948,7 +4068,9 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
         for (const record of recordRows || []) {
             recordsByKey.set(`${record.userid}:${record.levelid}`, {
                 progress: Number(record.progress) || 0,
-                timestamp: Number.isFinite(Number(record.timestamp)) ? Number(record.timestamp) : null
+                timestamp: Number.isFinite(Number(record.timestamp)) ? Number(record.timestamp) : null,
+                mobile: Boolean(record.mobile),
+                refreshRate: Number.isFinite(Number(record.refreshRate)) ? Number(record.refreshRate) : null
             })
         }
     }
@@ -3966,7 +4088,9 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
         data: entries.map((entry) => {
             const recordSnapshot = recordsByKey.get(`${entry.uid}:${entry.levelId}`) || {
                 progress: 0,
-                timestamp: null
+                timestamp: null,
+                mobile: false,
+                refreshRate: null
             }
             const itemData = itemByLevelId.get(entry.levelId)
 

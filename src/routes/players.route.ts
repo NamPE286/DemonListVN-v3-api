@@ -2,6 +2,7 @@ import express from 'express'
 import userAuth from '@src/middleware/user-auth.middleware'
 import optionalAuth from '@src/middleware/optional-user-auth.middleware'
 import adminAuth from '@src/middleware/admin-auth.middleware'
+import { publicReadCache } from '@src/middleware/cache-control.middleware'
 import { getHeatmap } from '@src/services/heatmap.service'
 import { getPlayerRecordRating, getPlayerRecords } from '@src/services/record.service'
 import { updateHeatmap } from '@src/services/heatmap.service'
@@ -22,6 +23,7 @@ import {
 } from '@src/services/player.service'
 import { getPostsByUserWithLikeStatus } from '@src/services/community.service'
 import getAuthUid from '@src/middleware/get-auth-uid'
+import { getPlayerRankedLists } from '@src/services/custom-list.service'
 
 const router = express.Router()
 
@@ -237,6 +239,33 @@ router.route('/:uid')
             res.send(player)
         } catch (err) {
             res.status(404).send()
+        }
+    })
+
+router.route('/:uid/lists')
+    /**
+     * @openapi
+     * "/players/{uid}/lists":
+     *   get:
+     *     tags:
+     *       - Player
+     *     summary: Get verified and official ranked lists for a player
+     *     parameters:
+     *       - name: uid
+     *         in: path
+     *         description: The uid of the player
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Success
+     */
+    .get(publicReadCache, async (req, res) => {
+        try {
+            res.send(await getPlayerRankedLists(req.params.uid))
+        } catch {
+            res.status(500).send()
         }
     })
 
