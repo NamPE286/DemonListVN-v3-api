@@ -38,6 +38,36 @@ async function fetchLevelData(levelID: number) {
     return data
 }
 
+function listAllowsAutoAcceptedRecords(list: any) {
+    const status = list?.recordFilterAcceptanceStatus;
+
+    if (status === 'auto' || status === 'any') {
+        return true;
+    }
+
+    return status !== 'manual' && list?.recordFilterManualAcceptanceOnly === false;
+}
+
+async function isLevelInAutoAcceptedRecordList(levelID: number): Promise<boolean> {
+    const { data, error } = await (supabase as any)
+        .from('listLevels')
+        .select('listId, lists!inner(recordFilterAcceptanceStatus, recordFilterManualAcceptanceOnly, isBanned, leaderboardEnabled)')
+        .eq('levelId', levelID)
+        .eq('accepted', true)
+        .eq('lists.isBanned', false)
+        .eq('lists.leaderboardEnabled', true)
+
+    if (error) {
+        return false;
+    }
+
+    return (data || []).some((entry: any) => {
+        const list = Array.isArray(entry.lists) ? entry.lists[0] : entry.lists;
+
+        return listAllowsAutoAcceptedRecords(list);
+    });
+}
+
 async function isEligible(levelID: number, eventCheck = true, battlepassCheck = false): Promise<boolean> {
     const now = new Date();
 
@@ -71,6 +101,10 @@ async function isEligible(levelID: number, eventCheck = true, battlepassCheck = 
                     }
                 }
             }
+        }
+
+        if (await isLevelInAutoAcceptedRecordList(levelID)) {
+            return true;
         }
     }
 
