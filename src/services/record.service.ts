@@ -569,7 +569,8 @@ export async function getPlayerSubmissions(uid: string, { start = '0', end = '50
         .from('records')
         .select('*, levels!public_records_levelid_fkey(*)')
         .eq('userid', uid)
-        .eq('acceptedManually', false)
+        .eq('acceptedAuto', false)
+        .or('acceptedManually.is.null,acceptedManually.eq.false')
         .order('timestamp', { ascending: ascending == 'true' })
         .range(parseInt(start), parseInt(end))
 
