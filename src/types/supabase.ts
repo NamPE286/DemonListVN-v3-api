@@ -2691,6 +2691,7 @@ export type Database = {
           isPlatformer: boolean
           isVerified: boolean
           itemSort: string
+          leaderboardEnabled: boolean
           levelCount: number
           levelSubmissionEnabled: boolean
           logoUrl: string | null
@@ -2726,6 +2727,7 @@ export type Database = {
           isPlatformer?: boolean
           isVerified?: boolean
           itemSort?: string
+          leaderboardEnabled?: boolean
           levelCount?: number
           levelSubmissionEnabled?: boolean
           logoUrl?: string | null
@@ -2761,6 +2763,7 @@ export type Database = {
           isPlatformer?: boolean
           isVerified?: boolean
           itemSort?: string
+          leaderboardEnabled?: boolean
           levelCount?: number
           levelSubmissionEnabled?: boolean
           logoUrl?: string | null

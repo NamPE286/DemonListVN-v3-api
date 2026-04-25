@@ -158,6 +158,7 @@ type CustomListSettingsPayload = {
     mode?: unknown
     isPlatformer?: unknown
     communityEnabled?: unknown
+    leaderboardEnabled?: unknown
     faviconUrl?: unknown
     logoUrl?: unknown
     topEnabled?: unknown
@@ -636,6 +637,18 @@ function sanitizeTopEnabled(value: unknown) {
 
     if (typeof value !== 'boolean') {
         throw new ValidationError('topEnabled must be a boolean')
+    }
+
+    return value
+}
+
+function sanitizeLeaderboardEnabled(value: unknown) {
+    if (value == null) {
+        return true
+    }
+
+    if (typeof value !== 'boolean') {
+        throw new ValidationError('leaderboardEnabled must be a boolean')
     }
 
     return value
@@ -1799,6 +1812,7 @@ async function getOfficialList(slug: OfficialListSlug, viewerId?: string, itemRa
         isPlatformer: config.isPlatformer,
         isOfficial: true,
         communityEnabled: false,
+        leaderboardEnabled: true,
         levelSubmissionEnabled: false,
         faviconUrl: null,
         logoUrl: null,
@@ -1853,6 +1867,7 @@ async function getOfficialListSummary(slug: OfficialListSlug) {
         isPlatformer: config.isPlatformer,
         isOfficial: true,
         communityEnabled: false,
+        leaderboardEnabled: true,
         levelSubmissionEnabled: false,
         faviconUrl: null,
         logoUrl: null,
@@ -2167,6 +2182,53 @@ async function persistCustomListLeaderboard(
     }
 
     return refreshRow as CustomListLeaderboardRefreshRow
+}
+
+async function deleteCustomListLeaderboardArtifacts(listId: number) {
+    const results = await Promise.all([
+        (supabase as any)
+            .from('playerCardStatLines')
+            .delete()
+            .eq('listId', listId),
+        (supabase as any)
+            .from('listLeaderboardEntries')
+            .delete()
+            .eq('listId', listId),
+        (supabase as any)
+            .from('listLeaderboardRecordEntries')
+            .delete()
+            .eq('listId', listId)
+    ])
+
+    for (const result of results) {
+        if (result.error) {
+            throw new Error(result.error.message)
+        }
+    }
+}
+
+async function persistDisabledCustomListLeaderboard(listId: number) {
+    await deleteCustomListLeaderboardArtifacts(listId)
+
+    const lastRefreshedAt = new Date().toISOString()
+    const { data, error } = await (supabase as any)
+        .from('listLeaderboardRefreshes')
+        .upsert({
+            listId,
+            totalPlayers: 0,
+            totalRecords: 0,
+            lastRefreshedAt
+        }, {
+            onConflict: 'listId'
+        })
+        .select('id, listId, totalPlayers, totalRecords, lastRefreshedAt')
+        .single()
+
+    if (error || !data) {
+        throw new Error(error?.message || 'Failed to persist leaderboard refresh')
+    }
+
+    return data as CustomListLeaderboardRefreshRow
 }
 
 export async function resolveCustomListIdentifier(identifier: CustomListIdentifier) {
@@ -2513,6 +2575,8 @@ async function syncLevelCount(listId: number) {
     if (updateError) {
         throw new Error(updateError.message)
     }
+
+    return count ?? 0
 }
 
 export async function touchCustomListActivity(listId: number) {
@@ -2749,7 +2813,7 @@ async function getCustomListItems(listId: number, mode: string = 'rating', itemR
     // @ts-ignore
     const { data: levels, error: levelsError } = await supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*))')
+        .select('*, creatorData:players!creatorId(*, clans!id(*)), levelsTags(tag_id, levelTags(id, name, color))')
         .in('id', levelIds)
 
     if (levelsError) {
@@ -3619,9 +3683,10 @@ export async function getPlayerRankedLists(uid: string): Promise<PlayerRankedLis
     const [{ data: lists, error: listsError }, { data: refreshRows, error: refreshError }] = await Promise.all([
         (supabase as any)
             .from('lists')
-            .select('id, slug, title, isOfficial, isVerified, mode, isPlatformer, rankBadges, visibility')
+            .select('id, slug, title, isOfficial, isVerified, mode, isPlatformer, rankBadges, visibility, leaderboardEnabled')
             .in('id', listIds)
             .eq('visibility', 'public')
+            .eq('leaderboardEnabled', true)
             .or('isOfficial.eq.true,isVerified.eq.true'),
         (supabase as any)
             .from('listLeaderboardRefreshes')
@@ -3815,6 +3880,8 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: Cus
             starCount,
             starred,
             lastRefreshedAt: latestRefresh?.lastRefreshedAt ?? null,
+            leaderboardTotalPlayers: latestRefresh?.totalPlayers ?? 0,
+            leaderboardTotalRecords: latestRefresh?.totalRecords ?? 0,
             currentUserRole: resolveCustomListRole(access),
             permissions,
             members,
@@ -3855,6 +3922,8 @@ async function getCustomListSummary(identifier: CustomListIdentifier, viewerId?:
             starCount,
             starred,
             lastRefreshedAt: latestRefresh?.lastRefreshedAt ?? null,
+            leaderboardTotalPlayers: latestRefresh?.totalPlayers ?? 0,
+            leaderboardTotalRecords: latestRefresh?.totalRecords ?? 0,
             currentUserRole: resolveCustomListRole(access),
             permissions: getCustomListPermissions(list, access)
         }
@@ -3893,9 +3962,19 @@ export async function getCustomListLeaderboard(identifier: CustomListIdentifier,
         }
     }
 
-    const latestRefresh = await getLatestCustomListLeaderboardRefresh(list.id)
+    if ((list as any).leaderboardEnabled === false) {
+        return {
+            list,
+            data: [],
+            total: 0,
+            lastRefreshedAt: (list as any).lastRefreshedAt ?? null
+        }
+    }
 
-    if (!latestRefresh) {
+    const totalPlayers = Number((list as any).leaderboardTotalPlayers ?? 0)
+    const lastRefreshedAt = (list as any).lastRefreshedAt ?? null
+
+    if (!lastRefreshedAt) {
         return {
             list,
             data: [],
@@ -3959,8 +4038,8 @@ export async function getCustomListLeaderboard(identifier: CustomListIdentifier,
     return {
         list,
         data: persistedLeaderboard,
-        total: latestRefresh.totalPlayers,
-        lastRefreshedAt: latestRefresh.lastRefreshedAt
+        total: totalPlayers,
+        lastRefreshedAt
     }
 }
 
@@ -3977,20 +4056,20 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
         uid
     } = options
 
-    const list = await getCustomList(identifier, viewerId)
+    const list = await getCustomListSummary(identifier, viewerId)
 
-    if (list.id <= 0) {
+    if (list.id <= 0 || (list as any).leaderboardEnabled === false) {
         return {
             list,
             data: [],
             total: 0,
-            lastRefreshedAt: null
+            lastRefreshedAt: (list as any).lastRefreshedAt ?? null
         }
     }
 
-    const latestRefresh = await getLatestCustomListLeaderboardRefresh(list.id)
+    const lastRefreshedAt = (list as any).lastRefreshedAt ?? null
 
-    if (!latestRefresh) {
+    if (!lastRefreshedAt) {
         return {
             list,
             data: [],
@@ -4001,7 +4080,7 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
 
     let entriesQuery = (supabase as any)
         .from('listLeaderboardRecordEntries')
-        .select('uid, levelId, point, no', { count: 'exact' })
+        .select('uid, levelId, point, no')
         .eq('listId', list.id)
         .order('no', { ascending: true })
 
@@ -4009,18 +4088,34 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
         entriesQuery = entriesQuery.eq('uid', uid)
     }
 
-    const { data: entryRows, error: entriesError, count: entryCount } = await entriesQuery.range(start, end)
+    const [entriesResult, playerEntryResult] = await Promise.all([
+        entriesQuery.range(start, end),
+        uid
+            ? (supabase as any)
+                .from('listLeaderboardEntries')
+                .select('completedCount')
+                .eq('listId', list.id)
+                .eq('uid', uid)
+                .maybeSingle()
+            : Promise.resolve({ data: null, error: null })
+    ])
+
+    const { data: entryRows, error: entriesError } = entriesResult
 
     if (entriesError) {
         throw new Error(entriesError.message)
     }
 
+    if (playerEntryResult.error) {
+        throw new Error(playerEntryResult.error.message)
+    }
+
     const entries = (entryRows || []) as CustomListLeaderboardRecordEntry[]
-    const itemByLevelId = new Map(list.items.map((item: any, index: number) => [item.levelId, { item, index }]))
     const uids = [...new Set(entries.map((entry) => entry.uid))]
     const levelIds = [...new Set(entries.map((entry) => entry.levelId))]
     const playersByUid = new Map<string, any>()
     const levelsById = new Map<number, any>()
+    const itemByLevelId = new Map<number, { item: any; index: number }>()
     const recordsByKey = new Map<string, {
         progress: number
         timestamp: number | null
@@ -4030,7 +4125,7 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
         acceptedAuto: boolean
     }>()
 
-    const [playersResult, levelsResult] = await Promise.all([
+    const [playersResult, levelsResult, itemsResult] = await Promise.all([
         uids.length
             ? supabase
                 .from('players')
@@ -4042,6 +4137,14 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
                 .from('levels')
                 .select('id, name, creator, difficulty, isPlatformer, rating, minProgress, videoID')
                 .in('id', levelIds)
+            : Promise.resolve({ data: [], error: null }),
+        levelIds.length
+            ? supabase
+                .from('listLevels')
+                .select('id, levelId, rating, position, minProgress, videoID')
+                .eq('listId', list.id)
+                .eq('accepted', true)
+                .in('levelId', levelIds)
             : Promise.resolve({ data: [], error: null })
     ])
 
@@ -4051,6 +4154,10 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
 
     if (levelsResult.error) {
         throw new Error(levelsResult.error.message)
+    }
+
+    if (itemsResult.error) {
+        throw new Error(itemsResult.error.message)
     }
 
     if (entries.length) {
@@ -4087,6 +4194,20 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
         levelsById.set(level.id, level)
     }
 
+    for (const item of itemsResult.data || []) {
+        itemByLevelId.set(item.levelId, {
+            item: {
+                ...item,
+                level: levelsById.get(item.levelId) || null
+            },
+            index: 0
+        })
+    }
+
+    const totalRecords = uid
+        ? Number(playerEntryResult.data?.completedCount ?? 0)
+        : Number((list as any).leaderboardTotalRecords ?? 0)
+
     return {
         list,
         data: entries.map((entry) => {
@@ -4107,7 +4228,7 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
                 level: levelsById.get(entry.levelId) || null,
                 formulaScope: {
                     position: entry.no,
-                    levelCount: list.items.length,
+                    levelCount: Number(list.levelCount ?? 0),
                     top: itemData
                         ? getNormalizedListPosition(itemData.item, itemData.index, list.id < 0)
                         : 0,
@@ -4121,8 +4242,8 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
                 }
             }
         }),
-        total: entryCount ?? latestRefresh.totalRecords,
-        lastRefreshedAt: latestRefresh.lastRefreshedAt
+        total: totalRecords,
+        lastRefreshedAt
     }
 }
 
@@ -4130,14 +4251,27 @@ export async function refreshCustomListLeaderboard(identifier: CustomListIdentif
     const resolved = await resolveCustomListIdentifier(identifier)
     const list = await getCustomListRow(resolved.id)
     await assertCanEditList(list, actor)
+    const levelCount = await syncLevelCount(list.id)
 
-    if (list.mode === 'top') {
-        await ensureStoredTopPositions(list.id)
-    } else {
-        await ensureStoredRatingPositions(list.id)
+    if ((list as any).leaderboardEnabled === false) {
+        const refreshRow = await persistDisabledCustomListLeaderboard(list.id)
+
+        return {
+            listId: list.id,
+            total: refreshRow.totalPlayers,
+            totalRecords: refreshRow.totalRecords,
+            levelCount,
+            lastRefreshedAt: refreshRow.lastRefreshedAt
+        }
     }
 
-    const hydratedList = await getCustomList(list.id, actor)
+    const effectiveItemSort = CUSTOM_LIST_ITEM_SORT_VALUES.has(list.itemSort) ? list.itemSort as 'mode_default' | 'created_at' : 'mode_default'
+    const hydratedList = {
+        ...list,
+        levelCount,
+        itemSort: effectiveItemSort,
+        items: await getCustomListItems(list.id, list.mode, undefined, effectiveItemSort)
+    } as Awaited<ReturnType<typeof getCustomList>>
     const { rankedPlayers, rankedRecords } = await calculateCustomListLeaderboardSnapshot(hydratedList)
     const refreshRow = await persistCustomListLeaderboard(list.id, rankedPlayers, rankedRecords)
 
@@ -4145,6 +4279,7 @@ export async function refreshCustomListLeaderboard(identifier: CustomListIdentif
         listId: list.id,
         total: refreshRow.totalPlayers,
         totalRecords: refreshRow.totalRecords,
+        levelCount,
         lastRefreshedAt: refreshRow.lastRefreshedAt
     }
 }
@@ -4588,6 +4723,7 @@ export async function createCustomList(ownerId: string, payload: {
     mode?: unknown
     isPlatformer?: unknown
     communityEnabled?: unknown
+    leaderboardEnabled?: unknown
     faviconUrl?: unknown
     logoUrl?: unknown
     topEnabled?: unknown
@@ -4614,6 +4750,7 @@ export async function createCustomList(ownerId: string, payload: {
         mode: sanitizeMode(payload.mode),
         isPlatformer: sanitizeListPlatformer(payload.isPlatformer),
         communityEnabled: sanitizeCommunityEnabled(payload.communityEnabled),
+        leaderboardEnabled: sanitizeLeaderboardEnabled(payload.leaderboardEnabled),
         faviconUrl: sanitizeThemeUrl(payload.faviconUrl, 'faviconUrl'),
         logoUrl: sanitizeThemeUrl(payload.logoUrl, 'logoUrl'),
         topEnabled: sanitizeTopEnabled(payload.topEnabled),
@@ -4720,6 +4857,10 @@ async function buildCustomListSettingsUpdatePlan(listId: number, existing: Custo
 
     if (payload.communityEnabled !== undefined) {
         pendingUpdates.communityEnabled = sanitizeCommunityEnabled(payload.communityEnabled)
+    }
+
+    if (payload.leaderboardEnabled !== undefined) {
+        pendingUpdates.leaderboardEnabled = sanitizeLeaderboardEnabled(payload.leaderboardEnabled)
     }
 
     if (payload.faviconUrl !== undefined) {
@@ -4837,6 +4978,10 @@ async function applyCustomListSettingsUpdate(listId: number, existing: CustomLis
             changes: updatePlan.changes
         }
     })
+
+    if (updatePlan.updates.leaderboardEnabled === false) {
+        await deleteCustomListLeaderboardArtifacts(listId)
+    }
 
     return {
         changed: true,

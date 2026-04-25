@@ -125,8 +125,9 @@ export async function getPlayersBatch(uid: string[]) {
 export async function getPlayerCardStatLines(uid: string): Promise<number[]> {
     const { data, error } = await (supabase as any)
         .from('playerCardStatLines')
-        .select('position, listId')
+        .select('position, listId, lists!inner(leaderboardEnabled)')
         .eq('uid', uid)
+        .eq('lists.leaderboardEnabled', true)
         .order('position', { ascending: true })
 
     if (error) {
