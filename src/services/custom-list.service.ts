@@ -180,6 +180,7 @@ type CustomListSettingsPayload = {
     logoUrl?: unknown
     topEnabled?: unknown
     levelSubmissionEnabled?: unknown
+    staffListEnabled?: unknown
     slug?: unknown
     weightFormula?: unknown
     recordScoreFormula?: unknown
@@ -714,6 +715,18 @@ function sanitizeLevelSubmissionEnabled(value: unknown) {
 
     if (typeof value !== 'boolean') {
         throw new ValidationError('levelSubmissionEnabled must be a boolean')
+    }
+
+    return value
+}
+
+function sanitizeStaffListEnabled(value: unknown) {
+    if (value == null) {
+        return true
+    }
+
+    if (typeof value !== 'boolean') {
+        throw new ValidationError('staffListEnabled must be a boolean')
     }
 
     return value
@@ -4497,7 +4510,9 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: Cus
             ),
             enrichListsWithStars([list], actorUid),
             getLatestCustomListLeaderboardRefresh(list.id),
-            permissions.canViewMembers ? getCustomListMembers(list.id) : Promise.resolve([] as CustomListMemberWithPlayerData[]),
+            permissions.canViewMembers || list.staffListEnabled
+                ? getCustomListMembers(list.id)
+                : Promise.resolve([] as CustomListMemberWithPlayerData[]),
             permissions.canViewAudit ? getCustomListAuditLog(list.id) : Promise.resolve([] as CustomListAuditLogWithPlayerData[]),
             permissions.canViewPendingInvitations ? getCustomListInvitations(list.id) : Promise.resolve([] as CustomListInvitationWithPlayerData[]),
             permissions.canRespondToInvitation ? hydrateCustomListInvitation(access.pendingInvitation) : Promise.resolve(null)
@@ -5706,6 +5721,7 @@ export async function createCustomList(ownerId: string, payload: {
     logoUrl?: unknown
     topEnabled?: unknown
     levelSubmissionEnabled?: unknown
+    staffListEnabled?: unknown
     slug?: unknown
     isOfficial?: unknown
     weightFormula?: unknown
@@ -5740,6 +5756,7 @@ export async function createCustomList(ownerId: string, payload: {
         logoUrl: sanitizeThemeUrl(payload.logoUrl, 'logoUrl'),
         topEnabled: sanitizeTopEnabled(payload.topEnabled),
         levelSubmissionEnabled: sanitizeLevelSubmissionEnabled(payload.levelSubmissionEnabled),
+        staffListEnabled: sanitizeStaffListEnabled(payload.staffListEnabled),
         itemSort: sanitizeCustomListItemSort(payload.itemSort),
         recordFilterPlatform: sanitizeCustomListRecordPlatform(payload.recordFilterPlatform),
         recordFilterMinRefreshRate: sanitizeCustomListRecordRefreshRate(payload.recordFilterMinRefreshRate, 'recordFilterMinRefreshRate'),
@@ -5864,6 +5881,10 @@ async function buildCustomListSettingsUpdatePlan(listId: number, existing: Custo
 
     if (payload.levelSubmissionEnabled !== undefined) {
         pendingUpdates.levelSubmissionEnabled = sanitizeLevelSubmissionEnabled(payload.levelSubmissionEnabled)
+    }
+
+    if (payload.staffListEnabled !== undefined) {
+        pendingUpdates.staffListEnabled = sanitizeStaffListEnabled(payload.staffListEnabled)
     }
 
     if (payload.slug !== undefined) {

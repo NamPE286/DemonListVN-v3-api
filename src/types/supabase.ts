@@ -2704,6 +2704,7 @@ export type Database = {
           recordFilterMaxRefreshRate: number | null
           recordFilterMinRefreshRate: number | null
           recordFilterPlatform: string
+          staffListEnabled: boolean
           slug: string | null
           tags: string[]
           title: string
@@ -2742,6 +2743,7 @@ export type Database = {
           recordFilterMaxRefreshRate?: number | null
           recordFilterMinRefreshRate?: number | null
           recordFilterPlatform?: string
+          staffListEnabled?: boolean
           slug?: string | null
           tags?: string[]
           title: string
@@ -2780,6 +2782,7 @@ export type Database = {
           recordFilterMaxRefreshRate?: number | null
           recordFilterMinRefreshRate?: number | null
           recordFilterPlatform?: string
+          staffListEnabled?: boolean
           slug?: string | null
           tags?: string[]
           title?: string
