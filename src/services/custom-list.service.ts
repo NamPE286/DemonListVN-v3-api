@@ -4401,23 +4401,41 @@ export async function browseLists(options: {
     } else if (kind === 'verified') {
         query = query.eq('isVerified', true)
     } else if (kind === 'mirror') {
-        query = query.eq('isMirror', true)
+        query = query.or(`isMirror.eq.true,id.eq.${POINTERCRATE_MIRROR_LIST_ID}`)
     }
 
     if (searchParams) {
         query = query.textSearch('fts', searchParams.query, searchParams.options)
     }
 
-    const { data, error, count } = await query
+    let orderedQuery = query
         .order('isOfficial', { ascending: false })
         .order('updated_at', { ascending: false })
-        .range(0, offset + limit - 1)
+
+    if (kind !== 'mirror') {
+        orderedQuery = orderedQuery.range(0, offset + limit - 1)
+    }
+
+    const { data, error, count } = await orderedQuery
 
     if (error) {
         throw new Error(error.message)
     }
 
-    const databaseLists = await enrichListsWithStars((data || []) as CustomListWithOwnerData[], viewerId)
+    let databaseLists = await enrichListsWithStars((data || []) as CustomListWithOwnerData[], viewerId)
+
+    if (kind === 'mirror') {
+        databaseLists = databaseLists.sort((left, right) => {
+            const leftIsPointercrateMirror = left.id === POINTERCRATE_MIRROR_LIST_ID
+            const rightIsPointercrateMirror = right.id === POINTERCRATE_MIRROR_LIST_ID
+
+            if (leftIsPointercrateMirror !== rightIsPointercrateMirror) {
+                return leftIsPointercrateMirror ? -1 : 1
+            }
+
+            return new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime()
+        })
+    }
     const databaseOfficialSlugs = new Set(
         databaseLists
             .map((list) => list.slug)
