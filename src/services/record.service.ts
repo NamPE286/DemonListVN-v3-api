@@ -3,6 +3,7 @@ import { getLevel, fetchLevelFromGD, retrieveOrCreateLevel } from "@src/services
 import { getPlayer } from "@src/services/player.service";
 import { approved } from "@src/services/pointercrate.service";
 import { addInventoryItem } from "@src/services/inventory.service";
+import { getRecordPublicListStats } from "@src/services/custom-list.service";
 import type { TRecord, TPlayer } from "@src/types";
 import getVideoId from "get-video-id";
 import logger from "@src/utils/logger";
@@ -358,7 +359,18 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, isCheck
     return withLegacyRecordAcceptanceList(data)
 }
 
-export async function getRecord(uid: string, levelID: number) {
+async function withPublicListStats<T extends Record<string, any>>(record: T, includePublicListStats?: boolean) {
+    if (!includePublicListStats) {
+        return record
+    }
+
+    return {
+        ...record,
+        publicListStats: await getRecordPublicListStats(record)
+    }
+}
+
+export async function getRecord(uid: string, levelID: number, options: { includePublicListStats?: boolean } = {}) {
     // Multiple rows may exist per (userid, levelid): one accepted and one
     // pending replacement. Prefer the accepted row so existing callers keep
     // seeing the "live" record; fall back to the pending one if that is all
@@ -384,7 +396,7 @@ export async function getRecord(uid: string, levelID: number) {
     }
 
     // @ts-ignore
-    return withLegacyRecordAcceptance(data)
+    return withPublicListStats(withLegacyRecordAcceptance(data) as any, options.includePublicListStats)
 }
 
 export async function getAcceptedRecords(uid: string, levelID: number) {
@@ -548,7 +560,7 @@ export async function upsertDeathCountAutoRecord({
     return { changed: true, record: data }
 }
 
-export async function getRecordById(id: number) {
+export async function getRecordById(id: number, options: { includePublicListStats?: boolean } = {}) {
     const { data, error } = await supabase
         .from('records')
         .select('*, players!userid(*, clans!id(*)), reviewer:players!reviewer(*, clans!id(*)), levels!public_records_levelid_fkey(*)')
@@ -566,7 +578,7 @@ export async function getRecordById(id: number) {
     }
 
     // @ts-ignore
-    return withLegacyRecordAcceptance(data)
+    return withPublicListStats(withLegacyRecordAcceptance(data) as any, options.includePublicListStats)
 }
 
 

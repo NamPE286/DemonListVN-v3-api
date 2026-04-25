@@ -4345,6 +4345,159 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
     }
 }
 
+export async function getRecordPublicListStats(record: {
+    id?: number | null
+    userid?: string | null
+    levelid?: number | null
+    progress?: number | null
+    acceptedManually?: boolean | null
+    acceptedAuto?: boolean | null
+    mobile?: boolean | null
+    refreshRate?: number | null
+    levels?: {
+        id?: number | null
+        rating?: number | null
+        minProgress?: number | null
+        isPlatformer?: boolean | null
+    } | null
+}) {
+    const recordId = Number(record.id)
+    const uid = typeof record.userid === 'string' ? record.userid : ''
+    const levelId = Number(record.levelid)
+
+    if (!Number.isFinite(recordId) || !uid || !Number.isFinite(levelId)) {
+        return []
+    }
+
+    if (!record.acceptedManually && !record.acceptedAuto) {
+        return []
+    }
+
+    const { data: entryRows, error: entriesError } = await (supabase as any)
+        .from('listLeaderboardRecordEntries')
+        .select('listId, uid, levelId, point, no')
+        .eq('uid', uid)
+        .eq('levelId', levelId)
+
+    if (entriesError) {
+        throw new Error(entriesError.message)
+    }
+
+    const entries = entryRows || []
+    const listIds = [...new Set(entries.map((entry: any) => Number(entry.listId)).filter(Number.isFinite))]
+
+    if (!listIds.length) {
+        return []
+    }
+
+    const [listsResult, itemsResult, recordsResult] = await Promise.all([
+        (supabase as any)
+            .from('lists')
+            .select('id, slug, title, mode, isPlatformer, isOfficial, isVerified, topEnabled, visibility, leaderboardEnabled, recordFilterPlatform, recordFilterMinRefreshRate, recordFilterMaxRefreshRate, recordFilterAcceptanceStatus, recordFilterManualAcceptanceOnly')
+            .eq('visibility', 'public')
+            .in('id', listIds),
+        (supabase as any)
+            .from('listLevels')
+            .select('listId, levelId, rating, position, minProgress, videoID')
+            .eq('levelId', levelId)
+            .eq('accepted', true)
+            .in('listId', listIds),
+        (supabase as any)
+            .from('records')
+            .select('id, userid, levelid, progress, timestamp, mobile, refreshRate, acceptedManually, acceptedAuto')
+            .eq('userid', uid)
+            .eq('levelid', levelId)
+            .or('acceptedManually.eq.true,acceptedAuto.eq.true')
+    ])
+
+    if (listsResult.error) {
+        throw new Error(listsResult.error.message)
+    }
+
+    if (itemsResult.error) {
+        throw new Error(itemsResult.error.message)
+    }
+
+    if (recordsResult.error) {
+        throw new Error(recordsResult.error.message)
+    }
+
+    const listsById = new Map<number, any>((listsResult.data || [])
+        .filter((list: any) => list.leaderboardEnabled !== false)
+        .map((list: any) => [Number(list.id), list]))
+    const itemsByListId = new Map<number, any>((itemsResult.data || []).map((item: any) => [Number(item.listId), item]))
+    const acceptedRecords = recordsResult.data || []
+    const level = {
+        id: levelId,
+        rating: record.levels?.rating ?? null,
+        minProgress: record.levels?.minProgress ?? null,
+        isPlatformer: record.levels?.isPlatformer ?? null
+    }
+    const stats: any[] = []
+
+    for (const entry of entries) {
+        const list = listsById.get(Number(entry.listId))
+        const itemRow = itemsByListId.get(Number(entry.listId))
+
+        if (!list || !itemRow) {
+            continue
+        }
+
+        const item = {
+            ...itemRow,
+            level
+        }
+        let bestRecord: any = null
+
+        for (const candidate of acceptedRecords) {
+            if (!isCustomListRecordEligibleForFilters(candidate, list)) {
+                continue
+            }
+
+            if (!isEligibleRecordForListItem(candidate, item, Boolean(list.isPlatformer), {
+                ignorePlatformerMinProgress: Boolean(list.isPlatformer)
+            })) {
+                continue
+            }
+
+            if (isBetterRecordForListItem(candidate, bestRecord, item, Boolean(list.isPlatformer))) {
+                bestRecord = candidate
+            }
+        }
+
+        if (!bestRecord || Number(bestRecord.id) !== recordId) {
+            continue
+        }
+
+        stats.push({
+            list: {
+                id: Number(list.id),
+                slug: list.slug ?? null,
+                title: list.title,
+                mode: list.mode,
+                isPlatformer: Boolean(list.isPlatformer),
+                isOfficial: Boolean(list.isOfficial),
+                isVerified: Boolean(list.isVerified),
+                topEnabled: Boolean(list.topEnabled)
+            },
+            point: Number(entry.point) || 0,
+            no: Number(entry.no) || 0,
+            item: {
+                position: item.position ?? null,
+                rating: item.rating ?? record.levels?.rating ?? null,
+                minProgress: getEffectiveMinProgress(item)
+            }
+        })
+    }
+
+    return stats.sort((left, right) => {
+        const officialDiff = Number(right.list.isOfficial) - Number(left.list.isOfficial)
+        const verifiedDiff = Number(right.list.isVerified) - Number(left.list.isVerified)
+
+        return officialDiff || verifiedDiff || left.list.title.localeCompare(right.list.title)
+    })
+}
+
 async function getAcceptedRecordsForListLevels(uid: string, levelIds: number[]) {
     const records: any[] = []
 

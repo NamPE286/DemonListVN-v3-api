@@ -227,7 +227,7 @@ router.route('/:userID/:levelID')
                     return
                 }
 
-                const record: any = await getRecordById(recordId)
+                const record: any = await getRecordById(recordId, { includePublicListStats: true })
                 if (!record || record.userid !== userID || record.levelid !== levelIdNum) {
                     res.status(404).send()
                     return
@@ -250,7 +250,7 @@ router.route('/:userID/:levelID')
                 return
             }
 
-            res.send(await getRecord(userID, levelIdNum))
+            res.send(await getRecord(userID, levelIdNum, { includePublicListStats: true }))
         } catch (err) {
             res.status(500).send()
         }
