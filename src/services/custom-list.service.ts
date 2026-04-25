@@ -4126,15 +4126,21 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
     end?: number
     viewerId?: CustomListActor
     uid?: string
+    ignoreRecordSettings?: boolean
 } = {}) {
     const {
         start = 0,
         end = 49,
         viewerId,
-        uid
+        uid,
+        ignoreRecordSettings = false
     } = options
 
     const list = await getCustomListSummary(identifier, viewerId)
+
+    if (ignoreRecordSettings && uid && list.id > 0) {
+        return getCustomListAcceptedPlayerRecords(list, { start, end, uid })
+    }
 
     if (list.id <= 0 || (list as any).leaderboardEnabled === false) {
         return {
@@ -4336,6 +4342,155 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
         }),
         total: totalRecords,
         lastRefreshedAt
+    }
+}
+
+async function getAcceptedRecordsForListLevels(uid: string, levelIds: number[]) {
+    const records: any[] = []
+
+    for (let levelStart = 0; levelStart < levelIds.length; levelStart += CUSTOM_LIST_LEADERBOARD_PLAYER_BATCH_SIZE) {
+        const levelBatch = levelIds.slice(levelStart, levelStart + CUSTOM_LIST_LEADERBOARD_PLAYER_BATCH_SIZE)
+
+        if (!levelBatch.length) {
+            continue
+        }
+
+        for (let recordStart = 0; ; recordStart += CUSTOM_LIST_LEADERBOARD_RECORD_PAGE_SIZE) {
+            const recordEnd = recordStart + CUSTOM_LIST_LEADERBOARD_RECORD_PAGE_SIZE - 1
+            const { data, error } = await supabase
+                .from('records')
+                .select('id, userid, levelid, progress, timestamp, mobile, refreshRate, acceptedManually, acceptedAuto')
+                .eq('userid', uid)
+                .in('levelid', levelBatch)
+                .or('acceptedManually.eq.true,acceptedAuto.eq.true')
+                .order('acceptedManually', { ascending: false, nullsFirst: false })
+                .order('acceptedAuto', { ascending: false })
+                .order('timestamp', { ascending: false, nullsFirst: false })
+                .range(recordStart, recordEnd)
+
+            if (error) {
+                throw new Error(error.message)
+            }
+
+            if (!data?.length) {
+                break
+            }
+
+            records.push(...data)
+
+            if (data.length < CUSTOM_LIST_LEADERBOARD_RECORD_PAGE_SIZE) {
+                break
+            }
+        }
+    }
+
+    return records
+}
+
+async function getCustomListAcceptedPlayerRecords(
+    list: Awaited<ReturnType<typeof getCustomListSummary>>,
+    options: {
+        start: number
+        end: number
+        uid: string
+    }
+) {
+    const effectiveItemSort = CUSTOM_LIST_ITEM_SORT_VALUES.has((list as any).itemSort)
+        ? (list as any).itemSort as 'mode_default' | 'created_at'
+        : 'mode_default'
+    const items = await getCustomListItems(list.id, list.mode, undefined, effectiveItemSort)
+    const itemByLevelId = new Map(items.map((item: any, index: number) => [item.levelId, { item, index }]))
+    const levelIds = [...itemByLevelId.keys()]
+
+    if (!levelIds.length) {
+        return {
+            list,
+            data: [],
+            total: 0,
+            lastRefreshedAt: (list as any).lastRefreshedAt ?? null
+        }
+    }
+
+    const [records, playersByUid] = await Promise.all([
+        getAcceptedRecordsForListLevels(options.uid, levelIds),
+        fetchCustomListLeaderboardPlayers([options.uid])
+    ])
+    const player = playersByUid.get(options.uid) || null
+    const isTop = list.mode === 'top'
+    const entries = records
+        .map((record) => {
+            const itemData = itemByLevelId.get(record.levelid)
+
+            return itemData ? { record, itemData } : null
+        })
+        .filter((entry): entry is { record: any; itemData: { item: any; index: number } } => Boolean(entry))
+        .sort((left, right) => {
+            if (isTop) {
+                const leftPosition = getNormalizedListPosition(left.itemData.item, left.itemData.index, list.id < 0)
+                const rightPosition = getNormalizedListPosition(right.itemData.item, right.itemData.index, list.id < 0)
+
+                if (leftPosition !== rightPosition) {
+                    return leftPosition - rightPosition
+                }
+            } else {
+                const leftRating = Number(left.itemData.item.rating ?? left.itemData.item.level?.rating ?? 0)
+                const rightRating = Number(right.itemData.item.rating ?? right.itemData.item.level?.rating ?? 0)
+
+                if (leftRating !== rightRating) {
+                    return rightRating - leftRating
+                }
+            }
+
+            const acceptanceDiff = getRecordAcceptancePriority(right.record) - getRecordAcceptancePriority(left.record)
+
+            if (acceptanceDiff !== 0) {
+                return acceptanceDiff
+            }
+
+            return Number(right.record.timestamp ?? 0) - Number(left.record.timestamp ?? 0)
+        })
+        .map(({ record, itemData }, index) => {
+            const no = index + 1
+            const point = getCustomListRecordPoint(
+                list as Awaited<ReturnType<typeof getCustomList>>,
+                itemData.item,
+                itemData.index,
+                no,
+                items.length,
+                record
+            )
+            const progress = Number(record.progress) || 0
+
+            return {
+                uid: record.userid,
+                levelId: record.levelid,
+                point,
+                no,
+                id: Number.isFinite(Number(record.id)) ? Number(record.id) : null,
+                progress,
+                timestamp: Number.isFinite(Number(record.timestamp)) ? Number(record.timestamp) : null,
+                mobile: Boolean(record.mobile),
+                refreshRate: Number.isFinite(Number(record.refreshRate)) ? Number(record.refreshRate) : null,
+                acceptedManually: Boolean(record.acceptedManually),
+                acceptedAuto: Boolean(record.acceptedAuto),
+                player,
+                level: itemData.item.level || null,
+                formulaScope: {
+                    position: no,
+                    levelCount: items.length,
+                    top: getNormalizedListPosition(itemData.item, itemData.index, list.id < 0),
+                    rating: Number(itemData.item.rating ?? itemData.item.level?.rating ?? 0),
+                    minProgress: Number(getEffectiveMinProgress(itemData.item) ?? 0),
+                    progress
+                }
+            }
+        })
+
+    return {
+        list,
+        data: entries.slice(options.start, options.end + 1),
+        total: entries.length,
+        lastRefreshedAt: (list as any).lastRefreshedAt ?? null
     }
 }
 

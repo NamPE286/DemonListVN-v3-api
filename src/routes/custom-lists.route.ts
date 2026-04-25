@@ -236,8 +236,9 @@ router.route('/:id/records')
             const uid = typeof req.query.uid === 'string' && req.query.uid.trim().length
                 ? req.query.uid.trim()
                 : undefined
+            const ignoreRecordSettings = req.query.ignoreRecordSettings === 'true' || req.query.ignoreRecordSettings === '1'
 
-            res.send(await getCustomListRecordPoints(req.params.id, { start, end, viewerId, uid }))
+            res.send(await getCustomListRecordPoints(req.params.id, { start, end, viewerId, uid, ignoreRecordSettings }))
         } catch (error) {
             if (sendError(res, error)) {
                 return
