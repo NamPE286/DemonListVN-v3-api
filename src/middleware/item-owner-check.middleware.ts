@@ -20,6 +20,7 @@ export default async function (req: Request, res: Response, next: NextFunction) 
             created_at: item.created_at,
             inventoryId: item.id,
             name: item.items ? item.items.name : '',
+            nameFts: item.items ? item.items.nameFts : null,
             type: item.items ? item.items.type : '',
             redirect: item.items ? item.items.redirect : null,
             productId: item.items ? item.items.productId : null,

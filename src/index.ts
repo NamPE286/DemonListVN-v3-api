@@ -119,9 +119,14 @@ app.listen(port, async () => {
 })
 
 const workerHandler = httpServerHandler({ port: port })
+type WorkerFetch = NonNullable<typeof workerHandler.fetch>
 
 export default {
-    async fetch(request, env, ctx) {
+    async fetch(
+        request: Parameters<WorkerFetch>[0],
+        env: Parameters<WorkerFetch>[1],
+        ctx: Parameters<WorkerFetch>[2]
+    ) {
         if (!workerHandler.fetch) {
             return new Response('Worker handler is not configured', { status: 500 })
         }

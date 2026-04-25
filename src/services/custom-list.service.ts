@@ -3687,7 +3687,8 @@ export async function getOwnCustomLists(ownerId: string) {
                 actorUid: ownerId,
                 isModerator: false,
                 isOwner: list.owner === ownerId,
-                memberRole: list.owner === ownerId ? null : membershipRolesByListId.get(list.id) || null
+                memberRole: list.owner === ownerId ? null : membershipRolesByListId.get(list.id) || null,
+                pendingInvitation: null
             }
 
             return {
@@ -5340,8 +5341,9 @@ export async function revokeCustomListInvitation(listId: number, actor: CustomLi
         throw new NotFoundError('Pending invitation not found')
     }
 
+    const invitationRole = sanitizeCustomListMemberRole(invitation.role)
     const access = await assertCanManageListMembers(list, actor, {
-        targetRole: invitation.role
+        targetRole: invitationRole
     })
 
     await deleteCustomListInvitation(listId, uid)
@@ -5351,7 +5353,7 @@ export async function revokeCustomListInvitation(listId: number, actor: CustomLi
         action: 'member_invitation_revoked',
         targetUid: uid,
         metadata: {
-            role: invitation.role
+            role: invitationRole
         }
     })
 

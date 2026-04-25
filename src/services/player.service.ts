@@ -209,6 +209,11 @@ export async function getPlayer(uid?: string, name?: string) {
 }
 
 export async function updatePlayer(playerData: TPlayer, { updateClan = false } = {}): Promise<TPlayer> {
+    if (!playerData.uid) {
+        throw new Error('Player uid is required')
+    }
+
+    const uid = playerData.uid
     const updateData = { ...playerData } as any
 
     const rawStatLines = (updateData as any).playerCardStatLines
@@ -241,7 +246,7 @@ export async function updatePlayer(playerData: TPlayer, { updateClan = false } =
     let newRenameCooldown: string | undefined
 
     if (updateData.name !== undefined) {
-        const current = await getPlayer(playerData.uid)
+        const current = await getPlayer(uid)
 
         if (current.nameLocked) {
             delete updateData.name
@@ -286,7 +291,7 @@ export async function updatePlayer(playerData: TPlayer, { updateClan = false } =
         const { error: updateError } = await supabase
             .from("players")
             .update(updateData as any)
-            .eq("uid", playerData.uid!)
+            .eq("uid", uid)
 
         if (updateError) {
             throw new Error(updateError.message)
@@ -294,10 +299,10 @@ export async function updatePlayer(playerData: TPlayer, { updateClan = false } =
     }
 
     if (hasStatLineUpdate) {
-        await setPlayerCardStatLines(playerData.uid, nextStatLines)
+        await setPlayerCardStatLines(uid, nextStatLines)
     }
 
-    return await getPlayer(playerData.uid)
+    return await getPlayer(uid)
 }
 
 export async function extendPlayerSupporter(uid: string, month: number, day: number = 0): Promise<void> {

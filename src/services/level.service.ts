@@ -123,7 +123,7 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
         throw b.error
     }
 
-    const mp = new Map<number, typeof b.data[0]>
+    const mp = new Map<number, (typeof b.data)[number] & { isChecked: boolean }>
     const res = []
 
     for (const i of b.data) {
@@ -230,7 +230,7 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
         throw b.error
     }
 
-    const mp = new Map<number, typeof b.data[0]>
+    const mp = new Map<number, (typeof b.data)[number] & { isChecked: boolean }>
     const res = []
 
     for (const i of b.data) {
@@ -336,7 +336,7 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
         throw b.error
     }
 
-    const mp = new Map<number, typeof b.data[0]>
+    const mp = new Map<number, (typeof b.data)[number] & { isChecked: boolean }>
     const res = []
 
     for (const i of b.data) {
@@ -442,7 +442,7 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
         throw b.error
     }
 
-    const mp = new Map<number, typeof b.data[0]>
+    const mp = new Map<number, (typeof b.data)[number] & { isChecked: boolean }>
     const res = []
 
     for (const i of b.data) {

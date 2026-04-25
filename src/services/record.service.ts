@@ -25,6 +25,8 @@ function applyRecordAcceptanceFilter(query: any, isChecked: boolean) {
         .or('acceptedManually.is.null,acceptedManually.eq.false')
 }
 
+function withLegacyRecordAcceptance<T extends Record<string, any>>(record: T): T & { isChecked: boolean }
+function withLegacyRecordAcceptance<T extends Record<string, any>>(record: T | null | undefined): (T & { isChecked: boolean }) | null
 function withLegacyRecordAcceptance<T extends Record<string, any>>(record: T | null | undefined) {
     if (!record) {
         return record ?? null
@@ -211,9 +213,9 @@ type PlayerRecordsQuery = {
 export async function getPlayerRecords(uid: string, { start = '0', end, sortBy = 'pt', ascending = 'false', isChecked = 'true' }: PlayerRecordsQuery = {}) {
     void isChecked
 
-    const parsedStart = parseInt(start, 10)
+    const parsedStart = parseInt(String(start), 10)
     const hasEnd = end !== undefined && end !== null && String(end).trim() !== ''
-    const parsedEnd = hasEnd ? parseInt(end, 10) : NaN
+    const parsedEnd = hasEnd ? parseInt(String(end), 10) : NaN
     const startIndex = Number.isFinite(parsedStart) ? Math.max(parsedStart, 0) : 0
     const endIndex = Number.isFinite(parsedEnd) ? Math.max(parsedEnd, startIndex) : null
     const isAscending = ascending == 'true' || ascending === true
@@ -487,6 +489,10 @@ export async function getRecordById(id: number) {
         throw new Error(error.message)
     }
 
+    if (!data) {
+        throw new Error('Record not found')
+    }
+
     // @ts-ignore
     return withLegacyRecordAcceptance(data)
 }
@@ -549,6 +555,10 @@ export async function retrieveRecord(user: TPlayer) {
 
     const record = await getRecordById(res.id)
 
+    if (!record) {
+        throw new Error('Record not found')
+    }
+
     // @ts-ignore
     record.reviewer = res.reviewer = user.uid!
     record.queueNo = null
@@ -557,7 +567,7 @@ export async function retrieveRecord(user: TPlayer) {
 
     await updateRecord(updData)
 
-    return withLegacyRecordAcceptance(data)
+    return withLegacyRecordAcceptance(record)
 }
 
 export async function getRecords({ start = 0, end = 50, isChecked = false } = {}) {
