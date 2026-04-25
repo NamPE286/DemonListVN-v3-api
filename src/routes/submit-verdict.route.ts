@@ -1,7 +1,7 @@
 import supabase from '@src/client/supabase'
 import { sendNotification } from '@src/services/notification.service'
 import { getLevel } from '@src/services/level.service'
-import { getRecord, getRecordById, getAcceptedRecord, getPendingRecord } from '@src/services/record.service'
+import { getRecord, getRecordById, getManuallyAcceptedRecord, getPendingRecord } from '@src/services/record.service'
 import userAuth from '@src/middleware/user-auth.middleware'
 import logger from '@src/utils/logger'
 import express from 'express'
@@ -59,12 +59,11 @@ router.route('/')
             return
         }
 
-        // If we are accepting a pending replacement, remove the previously
-        // accepted record for the same (userid, levelid) pair FIRST so that
-        // the partial unique index ("at most one accepted row per user +
-        // level") is not violated by the upcoming update.
+        // If we are accepting a pending replacement, remove the previous
+        // manually accepted record for the same (userid, levelid) pair FIRST.
+        // Auto-accepted records are kept as a separate version.
         if (acceptedManually) {
-            const previousAccepted: any = await getAcceptedRecord(recordUpdate.userid, recordUpdate.levelid)
+            const previousAccepted: any = await getManuallyAcceptedRecord(recordUpdate.userid, recordUpdate.levelid)
 
             if (previousAccepted && previousAccepted.id !== record.id) {
                 const { error: deleteErr } = await supabase

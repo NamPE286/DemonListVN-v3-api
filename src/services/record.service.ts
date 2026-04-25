@@ -63,9 +63,11 @@ async function isLevelExists(id: number) {
  *      the worst (Infinity).
  *   3. Platform: mobile is better than PC.
  */
+type ComparableRecord = Pick<TRecord, 'progress' | 'refreshRate' | 'mobile'>
+
 function isBetterRecord(
-    candidate: Pick<TRecord, 'progress' | 'refreshRate' | 'mobile'>,
-    existing: Pick<TRecord, 'progress' | 'refreshRate' | 'mobile'>,
+    candidate: ComparableRecord,
+    existing: ComparableRecord,
     isPlatformer: boolean
 ) {
     const newProgress = Number(candidate.progress ?? 0)
@@ -91,6 +93,38 @@ function isBetterRecord(
     }
 
     return false
+}
+
+function pickBestRecord<T extends ComparableRecord>(records: T[], isPlatformer: boolean) {
+    return records.reduce<T | null>((bestRecord, record) => {
+        if (!bestRecord || isBetterRecord(record, bestRecord, isPlatformer)) {
+            return record
+        }
+
+        return bestRecord
+    }, null)
+}
+
+async function getOrCreateLevelForRecord(levelid: number) {
+    const levelExists = await isLevelExists(levelid)
+
+    if (levelExists) {
+        return await getLevel(levelid)
+    }
+
+    const apiLevel = await fetchLevelFromGD(levelid)
+
+    await retrieveOrCreateLevel({
+        id: levelid,
+        name: apiLevel.name,
+        creator: apiLevel.author,
+        difficulty: apiLevel.difficulty ?? null,
+        isPlatformer: apiLevel.length == 5,
+        isChallenge: false,
+        isNonList: false
+    })
+
+    return await getLevel(levelid)
 }
 
 export async function getDemonListRecords({ start = 0, end = 0, isChecked = false } = {}) {
@@ -296,18 +330,68 @@ export async function getRecord(uid: string, levelID: number) {
     return withLegacyRecordAcceptance(data)
 }
 
-/**
- * Return the single accepted record for the (uid, levelID) pair, or null if
- * none exists. An accepted record has `acceptedManually === true` or
- * `acceptedAuto === true` and is guaranteed unique by a partial unique index.
- */
-export async function getAcceptedRecord(uid: string, levelID: number) {
+export async function getAcceptedRecords(uid: string, levelID: number) {
     const { data, error } = await supabase
         .from('records')
         .select('*')
         .eq('levelid', levelID)
         .eq('userid', uid)
         .or('acceptedManually.eq.true,acceptedAuto.eq.true')
+        .order('acceptedManually', { ascending: false, nullsFirst: false })
+        .order('acceptedAuto', { ascending: false })
+        .order('timestamp', { ascending: true })
+
+    if (error) {
+        console.error(error)
+        throw new Error(error.message)
+    }
+
+    return data ?? []
+}
+
+/**
+ * Return the preferred accepted record for the (uid, levelID) pair, or null if
+ * none exists. Manual acceptance is preferred when a manual and auto accepted
+ * record coexist.
+ */
+export async function getAcceptedRecord(uid: string, levelID: number) {
+    const records = await getAcceptedRecords(uid, levelID)
+
+    return records[0] ?? null
+}
+
+export async function getBestAcceptedRecord(uid: string, levelID: number, isPlatformer: boolean) {
+    const records = await getAcceptedRecords(uid, levelID)
+
+    return pickBestRecord(records, isPlatformer)
+}
+
+export async function getManuallyAcceptedRecord(uid: string, levelID: number) {
+    const { data, error } = await supabase
+        .from('records')
+        .select('*')
+        .eq('levelid', levelID)
+        .eq('userid', uid)
+        .eq('acceptedManually', true)
+        .limit(1)
+        .maybeSingle()
+
+    if (error) {
+        console.error(error)
+        throw new Error(error.message)
+    }
+
+    return data ?? null
+}
+
+export async function getAutoAcceptedRecord(uid: string, levelID: number) {
+    const { data, error } = await supabase
+        .from('records')
+        .select('*')
+        .eq('levelid', levelID)
+        .eq('userid', uid)
+        .eq('acceptedAuto', true)
+        .or('acceptedManually.is.null,acceptedManually.eq.false')
         .limit(1)
         .maybeSingle()
 
@@ -341,6 +425,70 @@ export async function getPendingRecord(uid: string, levelID: number) {
     }
 
     return data ?? null
+}
+
+export async function upsertDeathCountAutoRecord({
+    userid,
+    levelid,
+    progress,
+    mobile = false,
+    refreshRate = 60
+}: {
+    userid: string
+    levelid: number
+    progress: number
+    mobile?: boolean
+    refreshRate?: number | null
+}) {
+    const level = await getOrCreateLevelForRecord(levelid)
+    const acceptedRecords = await getAcceptedRecords(userid, levelid)
+    const bestAcceptedRecord = pickBestRecord(acceptedRecords, Boolean(level.isPlatformer))
+    const normalizedRefreshRate = Number.isFinite(Number(refreshRate)) ? Number(refreshRate) : 60
+    const candidate = {
+        progress,
+        refreshRate: normalizedRefreshRate,
+        mobile: Boolean(mobile)
+    }
+
+    if (bestAcceptedRecord && !isBetterRecord(candidate, bestAcceptedRecord, Boolean(level.isPlatformer))) {
+        return { changed: false, reason: 'not_better' as const }
+    }
+
+    const autoAcceptedRecord = acceptedRecords.find((record) => Boolean(record.acceptedAuto) && !Boolean(record.acceptedManually))
+    const sourceLabel = 'Submitted via Death Count'
+    const recordData: TRecord = {
+        userid,
+        levelid,
+        progress,
+        refreshRate: normalizedRefreshRate,
+        mobile: Boolean(mobile),
+        timestamp: Date.now(),
+        videoLink: sourceLabel,
+        raw: sourceLabel,
+        acceptedManually: false,
+        acceptedAuto: true,
+        needMod: false,
+        queueNo: null,
+        reviewer: null,
+        reviewerComment: null
+    } as any
+
+    if (autoAcceptedRecord) {
+        recordData.id = autoAcceptedRecord.id
+    }
+
+    const { data, error } = await supabase
+        .from('records')
+        .upsert(recordData as any)
+        .select('*')
+        .single()
+
+    if (error) {
+        console.error(error)
+        throw new Error(error.message)
+    }
+
+    return { changed: true, record: data }
 }
 
 export async function getRecordById(id: number) {
@@ -552,10 +700,10 @@ export async function submitRecord(recordData: TRecord) {
         const player = await getPlayer(recordData.userid)
         logs.push(`Player data: ${JSON.stringify(player, null, 2)}`);
 
-        // Look up both the currently-accepted record and any in-flight
+        // Look up both the best currently-accepted record and any in-flight
         // pending replacement independently. Up to one of each may exist per
         // (userid, levelid) pair.
-        const acceptedRecord = await getAcceptedRecord(recordData.userid!, recordData.levelid!)
+        const acceptedRecord = await getBestAcceptedRecord(recordData.userid!, recordData.levelid!, Boolean(level.isPlatformer))
         const pendingRecord = await getPendingRecord(recordData.userid!, recordData.levelid!)
         logs.push(`Accepted record: ${JSON.stringify(acceptedRecord)}`)
         logs.push(`Pending record: ${JSON.stringify(pendingRecord)}`)
