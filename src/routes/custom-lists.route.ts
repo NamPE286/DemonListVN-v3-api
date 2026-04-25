@@ -12,8 +12,10 @@ import {
     addCustomListMember,
     browseLists,
     ConflictError,
+    crawlPointercrateMirrorListPage,
     createCustomList,
     deleteCustomList,
+    finalizePointercrateMirrorListCrawl,
     ForbiddenError,
     getCustomList,
     getCustomListLeaderboard,
@@ -529,6 +531,39 @@ router.route('/:id/star')
         try {
             const listId = parseId(req.params.id, 'list ID')
             res.send(await toggleCustomListStar(listId, res.locals.user.uid))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/crawl/pointercrate')
+    .post(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await crawlPointercrateMirrorListPage(listId, res.locals.user, {
+                after: req.body?.after ?? req.query.after,
+                limit: req.body?.limit ?? req.query.limit
+            }))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/crawl/pointercrate/finalize')
+    .post(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await finalizePointercrateMirrorListCrawl(listId, res.locals.user, req.body || {}))
         } catch (error) {
             if (sendError(res, error)) {
                 return

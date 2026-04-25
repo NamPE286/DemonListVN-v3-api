@@ -13,6 +13,11 @@ import {
     retrieveOrCreateLevel
 } from '@src/services/level.service'
 import { sendNotification } from '@src/services/notification.service'
+import {
+    fetchPointercrateListedDemonsPage,
+    normalizePointercrateListedDemonsLimit,
+    type PointercrateListedDemon
+} from '@src/services/pointercrate.service'
 import getVideoId from 'get-video-id'
 import type { Tables, TablesInsert, TablesUpdate } from '@src/types/supabase'
 import { buildFullTextSearchParams, normalizeFullTextSearchQuery } from '@src/utils/full-text-search'
@@ -237,6 +242,8 @@ const CUSTOM_LIST_LEADERBOARD_PLAYER_BATCH_SIZE = 500
 const CUSTOM_LIST_RANK_BADGE_LIMIT = 20
 const CUSTOM_LIST_AUDIT_LOG_LIMIT = 50
 const CUSTOM_LIST_MEMBER_ROLE_VALUES = new Set<CustomListMemberRole>(['admin', 'helper'])
+const POINTERCRATE_MIRROR_LIST_ID = 109
+const POINTERCRATE_MIRROR_CRAWL_MAX_PAGE_LIMIT = 25
 
 function buildCustomListInvitationRedirect(list: Pick<CustomList, 'id' | 'slug'>) {
     return `/lists/${list.slug || list.id}/collaborator-invitation`
@@ -3716,6 +3723,438 @@ export async function batchSaveCustomListLevels(listId: number, actor: CustomLis
     await touchCustomListActivity(listId)
 
     return getCustomList(listId, actor)
+}
+
+type PointercrateMirrorCrawlFailure = {
+    levelId: number
+    position: number
+    name: string
+    error: string
+}
+
+type PointercrateMirrorCrawlCounters = {
+    processed: number
+    inserted: number
+    updated: number
+    unchanged: number
+    failed: number
+}
+
+function getPointercrateMirrorCrawlObject(value: unknown) {
+    return value && typeof value === 'object' && !Array.isArray(value)
+        ? value as Record<string, unknown>
+        : {}
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+    return error instanceof Error && error.message ? error.message : fallback
+}
+
+function sanitizePointercrateMirrorCrawlAfter(value: unknown) {
+    if (value == null || value === '') {
+        return 0
+    }
+
+    const after = Number(value)
+
+    if (!Number.isInteger(after) || after < 0) {
+        throw new ValidationError('Pointercrate cursor must be a non-negative integer')
+    }
+
+    return after
+}
+
+function sanitizePointercrateMirrorCrawlLimit(value: unknown) {
+    let limit: number
+
+    try {
+        limit = normalizePointercrateListedDemonsLimit(value)
+    } catch (error) {
+        throw new ValidationError(getErrorMessage(error, 'Invalid Pointercrate page limit'))
+    }
+
+    if (limit > POINTERCRATE_MIRROR_CRAWL_MAX_PAGE_LIMIT) {
+        throw new ValidationError(`Pointercrate crawl limit must be between 1 and ${POINTERCRATE_MIRROR_CRAWL_MAX_PAGE_LIMIT}`)
+    }
+
+    return limit
+}
+
+function sanitizePointercrateMirrorSourceLevelIds(value: unknown) {
+    if (!Array.isArray(value)) {
+        throw new ValidationError('Pointercrate source level IDs are required')
+    }
+
+    const sourceLevelIds = value.map((entry) => Number(entry))
+
+    if (sourceLevelIds.some((levelId) => !Number.isInteger(levelId) || levelId <= 0)) {
+        throw new ValidationError('Pointercrate source level IDs must be positive integers')
+    }
+
+    const uniqueLevelIds = [...new Set(sourceLevelIds)]
+
+    if (!uniqueLevelIds.length) {
+        throw new ValidationError('Pointercrate source level IDs are required')
+    }
+
+    return uniqueLevelIds
+}
+
+function sanitizePointercrateMirrorCrawlCounters(value: unknown): PointercrateMirrorCrawlCounters {
+    const source = getPointercrateMirrorCrawlObject(value)
+    const readCounter = (key: keyof PointercrateMirrorCrawlCounters) => {
+        const parsed = Number(source[key])
+        return Number.isFinite(parsed) && parsed >= 0 ? Math.trunc(parsed) : 0
+    }
+
+    return {
+        processed: readCounter('processed'),
+        inserted: readCounter('inserted'),
+        updated: readCounter('updated'),
+        unchanged: readCounter('unchanged'),
+        failed: readCounter('failed')
+    }
+}
+
+function assertPointercrateMirrorListConfig(list: CustomList) {
+    if (list.id !== POINTERCRATE_MIRROR_LIST_ID) {
+        throw new ValidationError(`Pointercrate crawler is configured for list #${POINTERCRATE_MIRROR_LIST_ID}`)
+    }
+
+    if (list.isPlatformer) {
+        throw new ValidationError('Pointercrate mirror list must be a classic list')
+    }
+
+    if (list.mode !== 'top') {
+        throw new ValidationError('Pointercrate mirror list must use top mode')
+    }
+}
+
+function getPointercrateDemonVideoID(demon: PointercrateListedDemon) {
+    if (!demon.video) {
+        return null
+    }
+
+    try {
+        return sanitizeCustomListVideoId(demon.video)
+    } catch {
+        return null
+    }
+}
+
+function getUniquePointercrateDemons(demons: PointercrateListedDemon[]) {
+    const seenLevelIds = new Set<number>()
+    const uniqueDemons: PointercrateListedDemon[] = []
+
+    for (const demon of demons) {
+        if (seenLevelIds.has(demon.level_id)) {
+            continue
+        }
+
+        seenLevelIds.add(demon.level_id)
+        uniqueDemons.push(demon)
+    }
+
+    return uniqueDemons
+}
+
+async function ensurePointercrateMirrorLevels(demons: PointercrateListedDemon[]) {
+    const levelIds = [...new Set(demons.map((demon) => demon.level_id))]
+    const levelsById = new Map<number, { id: number; isPlatformer: boolean }>()
+    const failures = new Map<number, string>()
+
+    if (!levelIds.length) {
+        return { levelsById, failures }
+    }
+
+    const { data: existingLevels, error: existingLevelsError } = await supabase
+        .from('levels')
+        .select('id, isPlatformer')
+        .in('id', levelIds)
+
+    if (existingLevelsError) {
+        throw new Error(existingLevelsError.message)
+    }
+
+    for (const level of existingLevels || []) {
+        levelsById.set(level.id, {
+            id: level.id,
+            isPlatformer: Boolean(level.isPlatformer)
+        })
+    }
+
+    const missingLevelIds = levelIds.filter((levelId) => !levelsById.has(levelId))
+    const levelInserts: TablesInsert<'levels'>[] = []
+
+    for (const levelId of missingLevelIds) {
+        try {
+            const gdLevel = await fetchLevelFromGD(levelId)
+            const isPlatformer = gdLevel.length == 5
+
+            levelInserts.push({
+                id: levelId,
+                name: gdLevel.name,
+                creator: gdLevel.author,
+                difficulty: gdLevel.difficulty ?? null,
+                isPlatformer,
+                isChallenge: false,
+                isNonList: false
+            } as TablesInsert<'levels'>)
+            levelsById.set(levelId, { id: levelId, isPlatformer })
+        } catch (error) {
+            failures.set(levelId, getErrorMessage(error, 'Level not found on the official Geometry Dash server'))
+        }
+    }
+
+    if (levelInserts.length) {
+        const { error } = await supabase
+            .from('levels')
+            .upsert(levelInserts as any, { onConflict: 'id' })
+
+        if (error) {
+            throw new Error(error.message)
+        }
+    }
+
+    return { levelsById, failures }
+}
+
+function pointercrateListItemChanged(existingItem: any, nextRow: CustomListLevelInsert) {
+    return !existingItem.accepted
+        || Number(existingItem.position ?? 0) !== Number(nextRow.position ?? 0)
+        || (existingItem.minProgress ?? null) !== (nextRow.minProgress ?? null)
+        || (existingItem.videoID ?? null) !== (nextRow.videoID ?? null)
+}
+
+async function syncPointercrateListedDemonsToMirrorList(list: CustomList, actorUid: string, demons: PointercrateListedDemon[]) {
+    const uniqueDemons = getUniquePointercrateDemons(demons)
+    const { levelsById, failures: levelFailures } = await ensurePointercrateMirrorLevels(uniqueDemons)
+    const failures: PointercrateMirrorCrawlFailure[] = []
+    const processableDemons: PointercrateListedDemon[] = []
+
+    for (const demon of uniqueDemons) {
+        const levelFailure = levelFailures.get(demon.level_id)
+
+        if (levelFailure) {
+            failures.push({
+                levelId: demon.level_id,
+                position: demon.position,
+                name: demon.name,
+                error: levelFailure
+            })
+            continue
+        }
+
+        const level = levelsById.get(demon.level_id)
+
+        if (!level) {
+            failures.push({
+                levelId: demon.level_id,
+                position: demon.position,
+                name: demon.name,
+                error: 'Level metadata is unavailable'
+            })
+            continue
+        }
+
+        try {
+            assertLevelTypeMatchesList(list, level)
+        } catch (error) {
+            failures.push({
+                levelId: demon.level_id,
+                position: demon.position,
+                name: demon.name,
+                error: getErrorMessage(error, 'This level cannot be added to this list type')
+            })
+            continue
+        }
+
+        processableDemons.push(demon)
+    }
+
+    const processableLevelIds = processableDemons.map((demon) => demon.level_id)
+    let existingItemsByLevelId = new Map<number, any>()
+
+    if (processableLevelIds.length) {
+        const { data: existingItems, error: existingItemsError } = await supabase
+            .from('listLevels')
+            .select('id, levelId, addedBy, accepted, position, minProgress, videoID, rating')
+            .eq('listId', list.id)
+            .in('levelId', processableLevelIds)
+
+        if (existingItemsError) {
+            throw new Error(existingItemsError.message)
+        }
+
+        existingItemsByLevelId = new Map((existingItems || []).map((item) => [Number(item.levelId), item]))
+    }
+
+    const changedRows: CustomListLevelInsert[] = []
+    let inserted = 0
+    let updated = 0
+    let unchanged = 0
+
+    for (const demon of processableDemons) {
+        let minProgress: number | null = null
+
+        try {
+            minProgress = demon.requirement == null
+                ? null
+                : sanitizeMinProgress(demon.requirement, false)
+        } catch (error) {
+            failures.push({
+                levelId: demon.level_id,
+                position: demon.position,
+                name: demon.name,
+                error: getErrorMessage(error, 'Invalid Pointercrate minimum progress')
+            })
+            continue
+        }
+
+        const existingItem = existingItemsByLevelId.get(demon.level_id)
+        const nextRow: CustomListLevelInsert = {
+            ...(existingItem ? { id: existingItem.id } : {}),
+            listId: list.id,
+            levelId: demon.level_id,
+            addedBy: existingItem?.addedBy || actorUid,
+            accepted: true,
+            position: demon.position,
+            minProgress,
+            videoID: getPointercrateDemonVideoID(demon),
+            rating: Number.isFinite(Number(existingItem?.rating)) ? Number(existingItem.rating) : 5
+        }
+
+        if (!existingItem) {
+            inserted += 1
+            changedRows.push(nextRow)
+            continue
+        }
+
+        if (pointercrateListItemChanged(existingItem, nextRow)) {
+            updated += 1
+            changedRows.push(nextRow)
+            continue
+        }
+
+        unchanged += 1
+    }
+
+    if (changedRows.length) {
+        const { error } = await supabase
+            .from('listLevels')
+            .upsert(changedRows as any, { onConflict: 'listId,levelId' })
+
+        if (error) {
+            throw new Error(error.message)
+        }
+
+        await syncLevelCount(list.id)
+    }
+
+    return {
+        processed: uniqueDemons.length,
+        inserted,
+        updated,
+        unchanged,
+        failed: failures.length,
+        failures,
+        sourceLevelIds: uniqueDemons.map((demon) => demon.level_id)
+    }
+}
+
+async function removePointercrateMirrorStaleLevels(listId: number, sourceLevelIds: number[]) {
+    const sourceLevelIdSet = new Set(sourceLevelIds)
+    const { data: existingItems, error: existingItemsError } = await supabase
+        .from('listLevels')
+        .select('levelId')
+        .eq('listId', listId)
+        .eq('accepted', true)
+
+    if (existingItemsError) {
+        throw new Error(existingItemsError.message)
+    }
+
+    const staleLevelIds = (existingItems || [])
+        .map((item) => Number(item.levelId))
+        .filter((levelId) => Number.isInteger(levelId) && !sourceLevelIdSet.has(levelId))
+
+    if (!staleLevelIds.length) {
+        return 0
+    }
+
+    const { error } = await supabase
+        .from('listLevels')
+        .delete()
+        .eq('listId', listId)
+        .in('levelId', staleLevelIds)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return staleLevelIds.length
+}
+
+export async function crawlPointercrateMirrorListPage(listId: number, actor: CustomListActor, options: {
+    after?: unknown
+    limit?: unknown
+} = {}) {
+    const list = await getCustomListRow(listId)
+    const access = await assertCanEditListLevels(list, actor)
+    assertPointercrateMirrorListConfig(list)
+
+    const after = sanitizePointercrateMirrorCrawlAfter(options.after)
+    const limit = sanitizePointercrateMirrorCrawlLimit(options.limit)
+    const page = await fetchPointercrateListedDemonsPage({ after, limit })
+    const summary = await syncPointercrateListedDemonsToMirrorList(list, access.actorUid ?? getRequiredActorUid(actor), page.demons)
+
+    return {
+        source: {
+            name: 'pointercrate',
+            mirrorListId: POINTERCRATE_MIRROR_LIST_ID,
+            after: page.after,
+            limit: page.limit,
+            nextAfter: page.nextAfter,
+            hasMore: page.hasMore,
+            fetched: page.demons.length
+        },
+        ...summary
+    }
+}
+
+export async function finalizePointercrateMirrorListCrawl(listId: number, actor: CustomListActor, payload: {
+    sourceLevelIds?: unknown
+    summary?: unknown
+} = {}) {
+    const list = await getCustomListRow(listId)
+    const access = await assertCanEditListLevels(list, actor)
+    assertPointercrateMirrorListConfig(list)
+
+    const sourceLevelIds = sanitizePointercrateMirrorSourceLevelIds(payload.sourceLevelIds)
+    const counters = sanitizePointercrateMirrorCrawlCounters(payload.summary)
+    const removed = await removePointercrateMirrorStaleLevels(list.id, sourceLevelIds)
+
+    await syncLevelCount(list.id)
+    await appendCustomListAuditLog(list.id, {
+        actorUid: access.actorUid,
+        action: 'pointercrate_mirror_crawled',
+        metadata: {
+            source: 'pointercrate',
+            mirrorListId: POINTERCRATE_MIRROR_LIST_ID,
+            sourceLevelCount: sourceLevelIds.length,
+            processed: counters.processed,
+            inserted: counters.inserted,
+            updated: counters.updated,
+            unchanged: counters.unchanged,
+            failed: counters.failed,
+            removed
+        }
+    })
+
+    return {
+        removed,
+        list: await getCustomList(list.id, actor)
+    }
 }
 
 export async function getOwnCustomLists(ownerId: string) {
