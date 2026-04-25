@@ -1,5 +1,6 @@
 import express from 'express'
-import { getDeathCount, getDeathCountProgress, updateDeathCount } from '@src/services/death-count.service'
+import adminAuth from '@src/middleware/admin-auth.middleware'
+import { getDeathCount, getDeathCountProgress, resetDeathCount, updateDeathCount } from '@src/services/death-count.service'
 import { getActiveseason, trackProgressAfterDeathCount } from '@src/services/battlepass.service'
 import { upsertDeathCountAutoRecord } from '@src/services/record.service'
 import userAuth from '@src/middleware/user-auth.middleware'
@@ -60,6 +61,17 @@ router.route('/:uid/:levelID')
             res.send(await getDeathCount(uid, parseInt(levelID), tag));
         } catch {
             res.status(500).send();
+        }
+    })
+    .delete(adminAuth, async (req, res) => {
+        try {
+            const { uid, levelID } = req.params
+            const tag = String(req.query.tag ?? 'default')
+
+            await resetDeathCount(uid, parseInt(levelID), tag)
+            res.send()
+        } catch (error) {
+            res.status(500).send(error instanceof Error ? error.message : undefined)
         }
     })
 
