@@ -69,6 +69,8 @@ type CustomListLeaderboardRecordEntry = {
     no: number
 }
 
+type CustomListLeaderboardRecordEntryReference = Pick<CustomListLeaderboardRecordEntry, 'point' | 'no'>
+
 type PlayerRankedListSummary = {
     id: number
     slug: string | null
@@ -4540,6 +4542,33 @@ async function getAcceptedRecordsForListLevels(uid: string, levelIds: number[]) 
     return records
 }
 
+async function getCustomListLeaderboardRecordEntryReferences(listId: number, uid: string) {
+    const entriesByKey = new Map<string, CustomListLeaderboardRecordEntryReference>()
+
+    if (listId <= 0) {
+        return entriesByKey
+    }
+
+    const { data, error } = await (supabase as any)
+        .from('listLeaderboardRecordEntries')
+        .select('uid, levelId, point, no')
+        .eq('listId', listId)
+        .eq('uid', uid)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    for (const entry of data || []) {
+        entriesByKey.set(`${entry.uid}:${entry.levelId}`, {
+            point: Number(entry.point) || 0,
+            no: Number(entry.no) || 0
+        })
+    }
+
+    return entriesByKey
+}
+
 async function getCustomListAcceptedPlayerRecords(
     list: Awaited<ReturnType<typeof getCustomListSummary>>,
     options: {
@@ -4564,9 +4593,10 @@ async function getCustomListAcceptedPlayerRecords(
         }
     }
 
-    const [records, playersByUid] = await Promise.all([
+    const [records, playersByUid, leaderboardRecordEntriesByKey] = await Promise.all([
         getAcceptedRecordsForListLevels(options.uid, levelIds),
-        fetchCustomListLeaderboardPlayers([options.uid])
+        fetchCustomListLeaderboardPlayers([options.uid]),
+        getCustomListLeaderboardRecordEntryReferences(list.id, options.uid)
     ])
     const player = playersByUid.get(options.uid) || null
     const isTop = list.mode === 'top'
@@ -4602,16 +4632,10 @@ async function getCustomListAcceptedPlayerRecords(
 
             return Number(right.record.timestamp ?? 0) - Number(left.record.timestamp ?? 0)
         })
-        .map(({ record, itemData }, index) => {
-            const no = index + 1
-            const point = getCustomListRecordPoint(
-                list as Awaited<ReturnType<typeof getCustomList>>,
-                itemData.item,
-                itemData.index,
-                no,
-                items.length,
-                record
-            )
+        .map(({ record, itemData }) => {
+            const leaderboardRecordEntry = leaderboardRecordEntriesByKey.get(`${record.userid}:${record.levelid}`)
+            const no = leaderboardRecordEntry?.no ?? null
+            const point = leaderboardRecordEntry?.point ?? null
             const progress = Number(record.progress) || 0
 
             return {
@@ -4629,7 +4653,7 @@ async function getCustomListAcceptedPlayerRecords(
                 player,
                 level: itemData.item.level || null,
                 formulaScope: {
-                    position: no,
+                    position: no ?? 0,
                     levelCount: items.length,
                     top: getNormalizedListPosition(itemData.item, itemData.index, list.id < 0),
                     rating: Number(itemData.item.rating ?? itemData.item.level?.rating ?? 0),
