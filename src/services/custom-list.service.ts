@@ -177,6 +177,7 @@ type CustomListSettingsPayload = {
     levelSubmissionEnabled?: unknown
     slug?: unknown
     weightFormula?: unknown
+    recordScoreFormula?: unknown
     rankBadges?: unknown
     itemSort?: unknown
     recordFilterPlatform?: unknown
@@ -211,7 +212,17 @@ const CUSTOM_LIST_RECORD_ACCEPTANCE_VALUES = new Set<CustomListRecordAcceptanceF
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 const WEIGHT_FORMULA_VALIDATION_SCOPE = {
+    score: 1,
     position: 1,
+    levelCount: 1,
+    top: 1,
+    rating: 1,
+    time: 0,
+    baseTime: 0,
+    minProgress: 0,
+    progress: 0
+}
+const RECORD_SCORE_FORMULA_VALIDATION_SCOPE = {
     levelCount: 1,
     top: 1,
     rating: 1,
@@ -252,7 +263,8 @@ function getOfficialListConfig(slug: OfficialListSlug) {
                 description: 'Official Geometry Dash Việt Nam classic demon list.',
                 mode: 'rating' as const,
                 isPlatformer: false,
-                weightFormula: 'rating*(max(0,1-abs(position-1))/3+max(0,1-abs(position-2))/5+2*max(0,1-abs(position-3))/15)+10*min(1,max(0,position-3))*min(1,max(0,26-position))/3+2*min(1,max(0,position-25))/3',
+                recordScoreFormula: 'rating',
+                weightFormula: 'score*(max(0,1-abs(position-1))/3+max(0,1-abs(position-2))/5+2*max(0,1-abs(position-3))/15)+(score == 0 ? 0 : 10*min(1,max(0,position-3))*min(1,max(0,26-position))/3+2*min(1,max(0,position-25))/3)',
                 loadLevels: getDemonListLevels
             }
         case 'pl':
@@ -262,7 +274,8 @@ function getOfficialListConfig(slug: OfficialListSlug) {
                 description: 'Official Geometry Dash Việt Nam platformer list.',
                 mode: 'top' as const,
                 isPlatformer: true,
-                weightFormula: '1',
+                recordScoreFormula: 'levelCount - top + 1',
+                weightFormula: 'score == 0 ? 0 : 1',
                 loadLevels: getPlatformerListLevels
             }
         case 'fl':
@@ -272,7 +285,8 @@ function getOfficialListConfig(slug: OfficialListSlug) {
                 description: 'Official Geometry Dash Việt Nam featured list.',
                 mode: 'top' as const,
                 isPlatformer: false,
-                weightFormula: '1',
+                recordScoreFormula: 'levelCount - top + 1',
+                weightFormula: 'score == 0 ? 0 : 1',
                 loadLevels: getFeaturedListLevels
             }
         case 'cl':
@@ -282,7 +296,8 @@ function getOfficialListConfig(slug: OfficialListSlug) {
                 description: 'Official Geometry Dash Việt Nam challenge list.',
                 mode: 'rating' as const,
                 isPlatformer: false,
-                weightFormula: 'rating*(max(0,ceil(-pow((position-42.21)/10,3)+30)/100)/12)',
+                recordScoreFormula: 'rating',
+                weightFormula: 'score*max(0,ceil(-pow((position-42.21)/10,3)+30)/100)/12',
                 loadLevels: getChallengeListLevels
             }
     }
@@ -334,7 +349,7 @@ export class ConflictError extends Error {
     }
 }
 
-const WEIGHT_FORMULA_DISABLED_FUNCTIONS = [
+const CUSTOM_LIST_FORMULA_DISABLED_FUNCTIONS = [
     'import',
     'createUnit',
     'reviver',
@@ -346,22 +361,22 @@ const WEIGHT_FORMULA_DISABLED_FUNCTIONS = [
     'parser'
 ] as const
 
-const weightFormulaMath = create(all)
-const parseWeightFormulaNode = weightFormulaMath.parse.bind(weightFormulaMath)
+const customListFormulaMath = create(all)
+const parseCustomListFormulaNode = customListFormulaMath.parse.bind(customListFormulaMath)
 
-weightFormulaMath.import(
+customListFormulaMath.import(
     Object.fromEntries(
-        WEIGHT_FORMULA_DISABLED_FUNCTIONS.map((functionName) => [
+        CUSTOM_LIST_FORMULA_DISABLED_FUNCTIONS.map((functionName) => [
             functionName,
             () => {
-                throw new ValidationError(`weightFormula function "${functionName}" is disabled`)
+                throw new ValidationError(`Formula function "${functionName}" is disabled`)
             }
         ])
     ),
     { override: true }
 )
 
-function getWeightFormulaNodeType(node: any) {
+function getCustomListFormulaNodeType(node: any) {
     if (typeof node?.type === 'string') {
         return node.type
     }
@@ -373,53 +388,67 @@ function getWeightFormulaNodeType(node: any) {
     return null
 }
 
-function assertWeightFormulaNodeIsSafe(node: any) {
+function assertCustomListFormulaNodeIsSafe(node: any, formulaName: string) {
     node.traverse((child: any) => {
-        if (getWeightFormulaNodeType(child) === 'FunctionAssignmentNode') {
-            throw new ValidationError('weightFormula custom functions are disabled')
+        if (getCustomListFormulaNodeType(child) === 'FunctionAssignmentNode') {
+            throw new ValidationError(`${formulaName} custom functions are disabled`)
         }
     })
 }
 
-function validateWeightFormulaExpression(value: string) {
+function validateCustomListFormulaExpression(value: string, formulaName: string) {
     try {
-        const node = parseWeightFormulaNode(value)
-        assertWeightFormulaNodeIsSafe(node)
+        const node = parseCustomListFormulaNode(value)
+        assertCustomListFormulaNodeIsSafe(node, formulaName)
         return node
     } catch (error) {
         if (error instanceof ValidationError) {
             throw error
         }
 
-        throw new ValidationError('weightFormula must be a valid math expression')
+        throw new ValidationError(`${formulaName} must be a valid math expression`)
     }
 }
 
-function normalizeWeightFormulaResult(result: unknown): number {
+function normalizeCustomListFormulaResult(result: unknown, formulaName: string): number {
     if (result && typeof result === 'object' && Array.isArray((result as { entries?: unknown[] }).entries)) {
         const entries = (result as { entries: unknown[] }).entries
 
         for (let index = entries.length - 1; index >= 0; index -= 1) {
             if (entries[index] !== undefined) {
-                return normalizeWeightFormulaResult(entries[index])
+                return normalizeCustomListFormulaResult(entries[index], formulaName)
             }
         }
     }
 
     if (typeof result === 'boolean' || typeof result === 'string' || Array.isArray(result) || result == null) {
-        throw new ValidationError('weightFormula must evaluate to a finite number')
+        throw new ValidationError(`${formulaName} must evaluate to a finite number`)
     }
 
     const normalized = typeof result === 'number' ? result : Number(result)
 
     if (!Number.isFinite(normalized)) {
-        throw new ValidationError('weightFormula must evaluate to a finite number')
+        throw new ValidationError(`${formulaName} must evaluate to a finite number`)
     }
 
     return normalized
 }
 
+function evaluateCustomListFormulaExpression(value: string, scope: Record<string, number>, formulaName: string) {
+    const node = validateCustomListFormulaExpression(value, formulaName)
+    try {
+        return normalizeCustomListFormulaResult(node.compile().evaluate({ ...scope }), formulaName)
+    } catch (error) {
+        if (error instanceof ValidationError) {
+            throw error
+        }
+
+        throw new ValidationError(error instanceof Error ? error.message : `${formulaName} must evaluate to a finite number`)
+    }
+}
+
 function evaluateWeightFormulaExpression(value: string, scope: {
+    score: number
     position: number
     levelCount: number
     top: number
@@ -429,16 +458,19 @@ function evaluateWeightFormulaExpression(value: string, scope: {
     minProgress: number
     progress: number
 }) {
-    const node = validateWeightFormulaExpression(value)
-    try {
-        return normalizeWeightFormulaResult(node.compile().evaluate({ ...scope }))
-    } catch (error) {
-        if (error instanceof ValidationError) {
-            throw error
-        }
+    return evaluateCustomListFormulaExpression(value, scope, 'weightFormula')
+}
 
-        throw new ValidationError(error instanceof Error ? error.message : 'weightFormula must evaluate to a finite number')
-    }
+function evaluateRecordScoreFormulaExpression(value: string, scope: {
+    levelCount: number
+    top: number
+    rating: number
+    time: number
+    baseTime: number
+    minProgress: number
+    progress: number
+}) {
+    return evaluateCustomListFormulaExpression(value, scope, 'recordScoreFormula')
 }
 
 async function ensureUniqueListSlug(slug: string, excludeListId?: number) {
@@ -849,28 +881,41 @@ function sanitizeListBanState(value: unknown) {
     return value
 }
 
-function sanitizeWeightFormula(value: unknown) {
+function sanitizeCustomListFormula(
+    value: unknown,
+    formulaName: 'weightFormula' | 'recordScoreFormula',
+    fallback: string,
+    validationScope: Record<string, number>
+) {
     if (value == null) {
-        return '1'
+        return fallback
     }
 
     if (typeof value !== 'string') {
-        throw new ValidationError('weightFormula must be a string')
+        throw new ValidationError(`${formulaName} must be a string`)
     }
 
-    const weightFormula = value.trim()
+    const formula = value.trim()
 
-    if (!weightFormula.length) {
-        throw new ValidationError('weightFormula is required')
+    if (!formula.length) {
+        throw new ValidationError(`${formulaName} is required`)
     }
 
-    if (weightFormula.length > 500) {
-        throw new ValidationError('weightFormula must be at most 500 characters')
+    if (formula.length > 500) {
+        throw new ValidationError(`${formulaName} must be at most 500 characters`)
     }
 
-    evaluateWeightFormulaExpression(weightFormula, WEIGHT_FORMULA_VALIDATION_SCOPE)
+    evaluateCustomListFormulaExpression(formula, validationScope, formulaName)
 
-    return weightFormula
+    return formula
+}
+
+function sanitizeWeightFormula(value: unknown) {
+    return sanitizeCustomListFormula(value, 'weightFormula', '1', WEIGHT_FORMULA_VALIDATION_SCOPE)
+}
+
+function sanitizeRecordScoreFormula(value: unknown) {
+    return sanitizeCustomListFormula(value, 'recordScoreFormula', '1', RECORD_SCORE_FORMULA_VALIDATION_SCOPE)
 }
 
 function sanitizeRankBadgeName(value: unknown) {
@@ -1749,28 +1794,58 @@ function roundCustomListSnapshotValue(value: number, digits: number = 3) {
     return Object.is(rounded, -0) ? 0 : rounded
 }
 
+function getCustomListRecordFormulaBaseScope(
+    list: Awaited<ReturnType<typeof getCustomList>>,
+    item: any,
+    itemIndex: number,
+    levelCount: number,
+    record: { progress?: number | null }
+) {
+    const progress = Math.max(0, Number(record.progress) || 0)
+    const minProgress = Number(getEffectiveMinProgress(item) ?? 0)
+
+    return {
+        levelCount,
+        top: getNormalizedListPosition(item, itemIndex, list.id < 0),
+        rating: Number(item.rating ?? item.level?.rating ?? 0),
+        time: progress,
+        baseTime: minProgress,
+        minProgress,
+        progress
+    }
+}
+
+function getCustomListRecordScore(
+    list: Awaited<ReturnType<typeof getCustomList>>,
+    item: any,
+    itemIndex: number,
+    levelCount: number,
+    record: { progress?: number | null }
+) {
+    const score = evaluateRecordScoreFormulaExpression(
+        list.recordScoreFormula || '1',
+        getCustomListRecordFormulaBaseScope(list, item, itemIndex, levelCount, record)
+    )
+
+    return score
+}
+
 function getCustomListRecordPoint(
     list: Awaited<ReturnType<typeof getCustomList>>,
     item: any,
     itemIndex: number,
     position: number,
     levelCount: number,
-    record: { progress?: number | null }
+    record: { progress?: number | null },
+    score: number
 ) {
-	const progress = Math.max(0, Number(record.progress) || 0)
-	const minProgress = Number(getEffectiveMinProgress(item) ?? 0)
-	const recordPoint = evaluateWeightFormulaExpression(list.weightFormula || '1', {
-        position,
-        levelCount,
-        top: getNormalizedListPosition(item, itemIndex, list.id < 0),
-        rating: Number(item.rating ?? item.level?.rating ?? 0),
-		time: progress,
-		baseTime: minProgress,
-        minProgress,
-        progress
+    const recordPoint = evaluateWeightFormulaExpression(list.weightFormula || '1', {
+        ...getCustomListRecordFormulaBaseScope(list, item, itemIndex, levelCount, record),
+        score,
+        position
     })
 
-	return roundCustomListSnapshotValue(recordPoint)
+    return roundCustomListSnapshotValue(recordPoint)
 }
 
 async function enrichItemsWithViewerEligibleRecords(
@@ -1900,6 +1975,7 @@ async function getOfficialList(slug: OfficialListSlug, viewerId?: string, itemRa
         itemSort: 'mode_default',
         mode: config.mode,
         rankBadges: [],
+        recordScoreFormula: config.recordScoreFormula,
         weightFormula: config.weightFormula,
         lastRefreshedAt: null,
         updated_at: new Date().toISOString(),
@@ -1956,6 +2032,7 @@ async function getOfficialListSummary(slug: OfficialListSlug) {
         itemSort: 'mode_default',
         mode: config.mode,
         rankBadges: [],
+        recordScoreFormula: config.recordScoreFormula,
         weightFormula: config.weightFormula,
         lastRefreshedAt: null,
         updated_at: new Date().toISOString(),
@@ -2090,7 +2167,7 @@ async function calculateCustomListLeaderboardSnapshot(list: Awaited<ReturnType<t
         group.push(entry)
     }
 
-    // Step 3: Sort each uid's records by level rating/position, assign no, then evaluate formula
+    // Step 3: Calculate record scores, sort each uid's records by score, assign no, then apply final score formula
     const playerScores = new Map<string, {
         player: any
         score: number
@@ -2107,7 +2184,22 @@ async function calculateCustomListLeaderboardSnapshot(list: Awaited<ReturnType<t
             continue
         }
 
-        entries.sort((a, b) => {
+        const scoredEntries = entries.map((entry) => ({
+            ...entry,
+            score: getCustomListRecordScore(
+                list,
+                entry.itemData.item,
+                entry.itemData.index,
+                items.length,
+                entry.record
+            )
+        }))
+
+        scoredEntries.sort((a, b) => {
+            if (b.score !== a.score) {
+                return b.score - a.score
+            }
+
             if (isTop) {
                 const aPos = getNormalizedListPosition(a.itemData.item, a.itemData.index, list.id < 0)
                 const bPos = getNormalizedListPosition(b.itemData.item, b.itemData.index, list.id < 0)
@@ -2121,8 +2213,8 @@ async function calculateCustomListLeaderboardSnapshot(list: Awaited<ReturnType<t
 
         let totalScore = 0
 
-        for (let i = 0; i < entries.length; i++) {
-            const { record, itemData } = entries[i]
+        for (let i = 0; i < scoredEntries.length; i++) {
+            const { record, itemData, score } = scoredEntries[i]
             const no = i + 1
             const recordPoint = getCustomListRecordPoint(
                 list,
@@ -2130,7 +2222,8 @@ async function calculateCustomListLeaderboardSnapshot(list: Awaited<ReturnType<t
                 itemData.index,
                 no,
                 items.length,
-                record
+                record,
+                score
             )
 
             rankedRecords.push({
@@ -4887,6 +4980,7 @@ function getOfficialLevelListEntries(level: {
                 itemSort: 'mode_default',
                 mode: config.mode,
                 rankBadges: [],
+                recordScoreFormula: config.recordScoreFormula,
                 weightFormula: config.weightFormula,
                 lastRefreshedAt: null,
                 updated_at: updatedAt,
@@ -4925,6 +5019,7 @@ function getOfficialLevelListEntries(level: {
                 itemSort: 'mode_default',
                 mode: config.mode,
                 rankBadges: [],
+                recordScoreFormula: config.recordScoreFormula,
                 weightFormula: config.weightFormula,
                 lastRefreshedAt: null,
                 updated_at: updatedAt,
@@ -4963,6 +5058,7 @@ function getOfficialLevelListEntries(level: {
                 itemSort: 'mode_default',
                 mode: config.mode,
                 rankBadges: [],
+                recordScoreFormula: config.recordScoreFormula,
                 weightFormula: config.weightFormula,
                 lastRefreshedAt: null,
                 updated_at: updatedAt,
@@ -5004,6 +5100,7 @@ function getOfficialLevelListEntries(level: {
             itemSort: 'mode_default',
             mode: config.mode,
             rankBadges: [],
+            recordScoreFormula: config.recordScoreFormula,
             weightFormula: config.weightFormula,
             lastRefreshedAt: null,
             updated_at: updatedAt,
@@ -5155,6 +5252,7 @@ export async function createCustomList(ownerId: string, payload: {
     slug?: unknown
     isOfficial?: unknown
     weightFormula?: unknown
+    recordScoreFormula?: unknown
     rankBadges?: unknown
     itemSort?: unknown
     recordFilterPlatform?: unknown
@@ -5194,6 +5292,7 @@ export async function createCustomList(ownerId: string, payload: {
         slug: sanitizeSlug(payload.slug),
         isOfficial: false,
         rankBadges: sanitizeRankBadges(payload.rankBadges),
+        recordScoreFormula: sanitizeRecordScoreFormula(payload.recordScoreFormula),
         weightFormula: sanitizeWeightFormula(payload.weightFormula),
         updated_at: new Date().toISOString()
     }
@@ -5322,6 +5421,10 @@ async function buildCustomListSettingsUpdatePlan(listId: number, existing: Custo
 
     if (payload.weightFormula !== undefined) {
         pendingUpdates.weightFormula = sanitizeWeightFormula(payload.weightFormula)
+    }
+
+    if (payload.recordScoreFormula !== undefined) {
+        pendingUpdates.recordScoreFormula = sanitizeRecordScoreFormula(payload.recordScoreFormula)
     }
 
     if (payload.rankBadges !== undefined) {
@@ -5854,6 +5957,7 @@ export async function updateCustomListOfficialMetadata(listId: number, payload: 
     isOfficial?: unknown
     slug?: unknown
     weightFormula?: unknown
+    recordScoreFormula?: unknown
 }) {
     const existing = await getCustomListRow(listId)
 
@@ -5877,6 +5981,10 @@ export async function updateCustomListOfficialMetadata(listId: number, payload: 
 
     if (payload.weightFormula !== undefined) {
         updates.weightFormula = sanitizeWeightFormula(payload.weightFormula)
+    }
+
+    if (payload.recordScoreFormula !== undefined) {
+        updates.recordScoreFormula = sanitizeRecordScoreFormula(payload.recordScoreFormula)
     }
 
     const { error } = await supabase

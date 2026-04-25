@@ -2698,6 +2698,7 @@ export type Database = {
           mode: string
           owner: string
           rankBadges: Json
+          recordScoreFormula: string
           recordFilterAcceptanceStatus: string
           recordFilterManualAcceptanceOnly: boolean
           recordFilterMaxRefreshRate: number | null
@@ -2735,6 +2736,7 @@ export type Database = {
           mode?: string
           owner: string
           rankBadges?: Json
+          recordScoreFormula?: string
           recordFilterAcceptanceStatus?: string
           recordFilterManualAcceptanceOnly?: boolean
           recordFilterMaxRefreshRate?: number | null
@@ -2772,6 +2774,7 @@ export type Database = {
           mode?: string
           owner?: string
           rankBadges?: Json
+          recordScoreFormula?: string
           recordFilterAcceptanceStatus?: string
           recordFilterManualAcceptanceOnly?: boolean
           recordFilterMaxRefreshRate?: number | null
