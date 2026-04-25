@@ -1,7 +1,13 @@
 import supabase from '@src/client/supabase'
 import { sendNotification } from '@src/services/notification.service'
 import { getLevel } from '@src/services/level.service'
-import { getRecord, getRecordById, getManuallyAcceptedRecord, getPendingRecord } from '@src/services/record.service'
+import {
+    getRecord,
+    getRecordById,
+    getManuallyAcceptedRecord,
+    getPendingRecord,
+    isOfficialListLevel
+} from '@src/services/record.service'
 import userAuth from '@src/middleware/user-auth.middleware'
 import logger from '@src/utils/logger'
 import express from 'express'
@@ -91,13 +97,25 @@ router.route('/')
         }
 
         const today = new Date().toISOString().slice(0, 10)
-        const prevCount = user.overwatchReviewDate === today ? (user.overwatchReviewCount || 0) : 0
+        const isSameOverwatchDay = user.overwatchReviewDate === today
+        const isOfficialRecord = await isOfficialListLevel(Number(recordUpdate.levelid))
+        const prevCount = isSameOverwatchDay ? (user.overwatchReviewCount || 0) : 0
+        const prevOfficialCount = isSameOverwatchDay ? (user.overwatchOfficialReviewCount || 0) : 0
+        const prevNonOfficialCount = isSameOverwatchDay ? (user.overwatchNonOfficialReviewCount || 0) : 0
+        const overwatchCounterUpdate: any = {
+            overwatchReviewDate: today,
+            overwatchReviewCount: prevCount + 1
+        }
+
+        if (isOfficialRecord) {
+            overwatchCounterUpdate.overwatchOfficialReviewCount = prevOfficialCount + 1
+        } else {
+            overwatchCounterUpdate.overwatchNonOfficialReviewCount = prevNonOfficialCount + 1
+        }
+
         var { error } = await supabase
             .from('players')
-            .update({
-                overwatchReviewDate: today,
-                overwatchReviewCount: prevCount + 1
-            } as any)
+            .update(overwatchCounterUpdate)
             .match({ uid: res.locals.user.uid })
 
         if (error) {

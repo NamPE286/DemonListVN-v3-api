@@ -42,6 +42,104 @@ function withLegacyRecordAcceptanceList<T extends Record<string, any>>(records: 
     return (records || []).map((record) => withLegacyRecordAcceptance(record) as T & { isChecked: boolean })
 }
 
+export type OverwatchRecordScope = 'official' | 'nonOfficial'
+
+const OVERWATCH_RECORD_PAGE_SIZE = 100
+
+async function getOfficialListLevelIds(levelIds: number[]) {
+    const uniqueLevelIds = [...new Set(
+        levelIds
+            .map((levelId) => Number(levelId))
+            .filter((levelId) => Number.isFinite(levelId))
+    )]
+
+    if (!uniqueLevelIds.length) {
+        return new Set<number>()
+    }
+
+    const { data, error } = await (supabase as any)
+        .from('listLevels')
+        .select('levelId, lists!inner(isOfficial)')
+        .in('levelId', uniqueLevelIds)
+        .eq('accepted', true)
+        .eq('lists.isOfficial', true)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return new Set((data || []).map((row: any) => Number(row.levelId)))
+}
+
+export async function isOfficialListLevel(levelId: number) {
+    const officialLevelIds = await getOfficialListLevelIds([levelId])
+
+    return officialLevelIds.has(levelId)
+}
+
+function matchesOverwatchScope(isOfficialListRecord: boolean, scope: OverwatchRecordScope) {
+    return scope === 'official' ? isOfficialListRecord : !isOfficialListRecord
+}
+
+function buildOverwatchRecordQuery(user: TPlayer) {
+    return supabase
+        .from('records')
+        .select('*, levels!public_records_levelid_fkey!inner(*)')
+        .neq('userid', user.uid!)
+        .eq('needMod', false)
+        .eq('acceptedAuto', false)
+        .or('acceptedManually.is.null,acceptedManually.eq.false')
+}
+
+async function getAssignedOverwatchRecord(user: TPlayer) {
+    const { data, error } = await supabase
+        .from('records')
+        .select('*, levels!public_records_levelid_fkey!inner(*)')
+        .neq('userid', user.uid!)
+        .eq('needMod', false)
+        .eq('acceptedAuto', false)
+        .or('acceptedManually.is.null,acceptedManually.eq.false')
+        .eq('reviewer', user.uid!)
+        .limit(1)
+        .maybeSingle()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}
+
+async function getAvailableOverwatchRecord(user: TPlayer, scope: OverwatchRecordScope) {
+    for (let start = 0; ; start += OVERWATCH_RECORD_PAGE_SIZE) {
+        const { data, error } = await buildOverwatchRecordQuery(user)
+            .is('reviewer', null)
+            .order('queueNo', { ascending: true, nullsFirst: false })
+            .range(start, start + OVERWATCH_RECORD_PAGE_SIZE - 1)
+
+        if (error) {
+            throw new Error(error.message)
+        }
+
+        if (!data?.length) {
+            break
+        }
+
+        const officialLevelIds = await getOfficialListLevelIds(data.map((record) => record.levelid))
+        const record = data.find((record) => matchesOverwatchScope(officialLevelIds.has(record.levelid), scope))
+
+        if (record) {
+            return record
+        }
+
+        if (data.length < OVERWATCH_RECORD_PAGE_SIZE) {
+            break
+        }
+    }
+
+    return null
+}
+
 async function isLevelExists(id: number) {
     const { data, error } = await supabase
         .from('levels')
@@ -472,56 +570,14 @@ export async function getRecordById(id: number) {
 }
 
 
-export async function retrieveRecord(user: TPlayer) {
-    var { data, error } = await supabase
-        .from('records')
-        .select('*, levels!public_records_levelid_fkey!inner(*)')
-        .neq('userid', user.uid!)
-        .eq('needMod', false)
-        .eq('acceptedManually', false)
-        .eq('acceptedAuto', false)
-        .eq('reviewer', user.uid!)
-        .limit(1)
-        .single()
+export async function retrieveRecord(user: TPlayer, scope: OverwatchRecordScope = 'official') {
+    const assignedRecord = await getAssignedOverwatchRecord(user)
 
-    if (data) {
-        return data
+    if (assignedRecord) {
+        return assignedRecord
     }
 
-    var { data, error } = await supabase
-        .from('records')
-        .select('*, levels!public_records_levelid_fkey!inner(*)')
-        .lte('levels.rating', user.rating! + 500)
-        .neq('userid', user.uid!)
-        .eq('needMod', false)
-        .eq('acceptedManually', false)
-        .eq('acceptedAuto', false)
-        .eq("levels.isPlatformer", false)
-        .is('reviewer', null)
-        .order('queueNo', { ascending: true, nullsFirst: false })
-        .limit(1)
-        .single()
-
-    let res = data;
-
-    var { data, error } = await supabase
-        .from('records')
-        .select('*, levels!public_records_levelid_fkey!inner(*)')
-        .neq('userid', user.uid!)
-        .eq('needMod', false)
-        .eq('acceptedManually', false)
-        .eq('acceptedAuto', false)
-        .eq("levels.isPlatformer", false)
-        .is('reviewer', null)
-        .order('queueNo', { ascending: true, nullsFirst: false })
-        .limit(1)
-        .single()
-
-    if (res == null) {
-        res = data;
-    } else if (data != null && (new Date(res.queueNo!)) > (new Date(data.queueNo!))) {
-        res = data;
-    }
+    const res = await getAvailableOverwatchRecord(user, scope)
 
     if (res == null) {
         throw new Error("No available record")

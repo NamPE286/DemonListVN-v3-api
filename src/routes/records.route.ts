@@ -1,22 +1,64 @@
 import express from 'express'
 import adminAuth from '@src/middleware/admin-auth.middleware'
 import userAuth from '@src/middleware/user-auth.middleware'
-import { getRecord, getRecords, retrieveRecord, updateRecord, deleteRecord } from '@src/services/record.service'
+import {
+    getRecord,
+    getRecords,
+    retrieveRecord,
+    updateRecord,
+    deleteRecord,
+    type OverwatchRecordScope
+} from '@src/services/record.service'
 import { changeSuggestedRating, getEstimatedQueue } from '@src/services/record.service'
 import { getRecordById, getAcceptedRecord, getPendingRecord } from '@src/services/record.service'
 import logger from '@src/utils/logger'
 
 const router = express.Router()
-const OVERWATCH_DAILY_LIMIT = 3
+const OVERWATCH_DAILY_LIMITS = {
+    official: 3,
+    nonOfficial: 5
+} as const
 
-function getOverwatchDailyCount(user: any) {
+function getOverwatchDailyCount(user: any, scope: OverwatchRecordScope) {
     const today = new Date().toISOString().slice(0, 10)
 
     if (user.overwatchReviewDate !== today) {
         return 0
     }
 
-    return user.overwatchReviewCount || 0
+    return scope === 'official'
+        ? user.overwatchOfficialReviewCount || 0
+        : user.overwatchNonOfficialReviewCount || 0
+}
+
+function getOverwatchLimitSummary(user: any) {
+    return {
+        official: getOverwatchLimit(user, 'official'),
+        nonOfficial: getOverwatchLimit(user, 'nonOfficial')
+    }
+}
+
+function getOverwatchLimit(user: any, scope: OverwatchRecordScope) {
+    const usedToday = getOverwatchDailyCount(user, scope)
+    const limit = OVERWATCH_DAILY_LIMITS[scope]
+
+    return {
+        limit,
+        usedToday,
+        limitLeft: Math.max(0, limit - usedToday)
+    }
+}
+
+function parseOverwatchRecordScope(value: unknown): OverwatchRecordScope | null {
+    if (value === undefined || value === '' || value === 'official') {
+        return 'official'
+    }
+
+    if (value === 'nonOfficial' || value === 'non-official' || value === 'non_official') {
+        return 'nonOfficial'
+    }
+
+    return null
 }
 
 router.route('/')
@@ -298,30 +340,39 @@ router.route('/retrieve')
      */
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
+        const scope = parseOverwatchRecordScope(req.query.type)
+
+        if (!scope) {
+            res.status(400).send({ message: 'Invalid retrieve type' })
+            return
+        }
 
         if (!user.isAdmin && !user.isTrusted) {
             res.status(401).send()
             return
         }
 
-        const usedToday = getOverwatchDailyCount(user)
-        const limitLeft = Math.max(0, OVERWATCH_DAILY_LIMIT - usedToday)
+        const limitStatus = getOverwatchLimit(user, scope)
 
-        if (limitLeft <= 0) {
+        if (limitStatus.limitLeft <= 0) {
             res.status(429).send({
                 message: 'Daily limit reached',
-                limit: OVERWATCH_DAILY_LIMIT,
-                limitLeft: 0
+                type: scope,
+                limit: limitStatus.limit,
+                limitLeft: 0,
+                limits: getOverwatchLimitSummary(user)
             })
             return
         }
 
         try {
-            const record = await retrieveRecord(user)
+            const record = await retrieveRecord(user, scope)
             res.send({
                 ...record,
-                limit: OVERWATCH_DAILY_LIMIT,
-                limitLeft
+                type: scope,
+                limit: limitStatus.limit,
+                limitLeft: limitStatus.limitLeft,
+                limits: getOverwatchLimitSummary(user)
             })
         } catch (err) {
             res.status(500).send()
@@ -337,13 +388,8 @@ router.route('/retrieve-limit')
             return
         }
 
-        const usedToday = getOverwatchDailyCount(user)
-        const limitLeft = Math.max(0, OVERWATCH_DAILY_LIMIT - usedToday)
-
         res.send({
-            limit: OVERWATCH_DAILY_LIMIT,
-            usedToday,
-            limitLeft
+            limits: getOverwatchLimitSummary(user)
         })
     })
 

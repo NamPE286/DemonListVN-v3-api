@@ -3248,6 +3248,8 @@ export type Database = {
           onboarding_step: number
           overallRank: number | null
           overviewData: Json | null
+          overwatchNonOfficialReviewCount: number
+          overwatchOfficialReviewCount: number
           overwatchReviewCount: number
           overwatchReviewDate: string | null
           plrank: number | null
@@ -3300,6 +3302,8 @@ export type Database = {
           onboarding_step?: number
           overallRank?: number | null
           overviewData?: Json | null
+          overwatchNonOfficialReviewCount?: number
+          overwatchOfficialReviewCount?: number
           overwatchReviewCount?: number
           overwatchReviewDate?: string | null
           plrank?: number | null
@@ -3352,6 +3356,8 @@ export type Database = {
           onboarding_step?: number
           overallRank?: number | null
           overviewData?: Json | null
+          overwatchNonOfficialReviewCount?: number
+          overwatchOfficialReviewCount?: number
           overwatchReviewCount?: number
           overwatchReviewDate?: string | null
           plrank?: number | null
