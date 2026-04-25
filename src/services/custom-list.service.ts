@@ -4194,6 +4194,7 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
     const levelsById = new Map<number, any>()
     const itemByLevelId = new Map<number, { item: any; index: number }>()
     const recordsByKey = new Map<string, {
+        id: number | null
         progress: number
         timestamp: number | null
         mobile: boolean
@@ -4262,7 +4263,7 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
 
         const { data: recordRows, error: recordsError } = await supabase
             .from('records')
-            .select('userid, levelid, progress, timestamp, mobile, refreshRate, acceptedManually, acceptedAuto')
+            .select('id, userid, levelid, progress, timestamp, mobile, refreshRate, acceptedManually, acceptedAuto')
             .or(recordFilters)
 
         if (recordsError) {
@@ -4277,6 +4278,7 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
             const itemData = itemByLevelId.get(record.levelid)
             const key = `${record.userid}:${record.levelid}`
             const recordSnapshot = {
+                id: Number.isFinite(Number(record.id)) ? Number(record.id) : null,
                 progress: Number(record.progress) || 0,
                 timestamp: Number.isFinite(Number(record.timestamp)) ? Number(record.timestamp) : null,
                 mobile: Boolean(record.mobile),
@@ -4300,6 +4302,7 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
         list,
         data: entries.map((entry) => {
             const recordSnapshot = recordsByKey.get(`${entry.uid}:${entry.levelId}`) || {
+                id: null,
                 progress: 0,
                 timestamp: null,
                 mobile: false,

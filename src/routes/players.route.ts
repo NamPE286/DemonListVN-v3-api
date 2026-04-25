@@ -432,13 +432,12 @@ router.route('/:uid/records')
      *         schema:
      *           type: number
      *           default: 50
-     *       - name: isChecked
-     *         in: query
-     *         description: Record acception status
+    *       - name: ratingOnly
+    *         in: query
+    *         description: Return player rating progress entries instead of records
      *         required: false
      *         schema:
      *           type: boolean
-     *           default: true
      *     responses:
      *       200:
      *         description: Success

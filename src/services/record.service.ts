@@ -183,6 +183,7 @@ export async function getPlayerRecordRating(uid: string) {
         .from('records')
         .select('userid, progress, no, levels!public_records_levelid_fkey!inner(id, rating), dlPt')
         .eq('userid', uid)
+        .or('acceptedManually.eq.true,acceptedAuto.eq.true')
         .not('dlPt', 'is', null)
         .order('no')
 
@@ -199,85 +200,67 @@ export async function getPlayerRecordRating(uid: string) {
     return res;
 }
 
-export async function getPlayerRecords(uid: string, { start = '0', end = '50', sortBy = 'pt', ascending = 'false', isChecked = 'true' } = {}) {
-    const acceptedManually = normalizeAcceptedManuallyFilter(isChecked)
+type PlayerRecordsQuery = {
+    start?: string | number
+    end?: string | number
+    sortBy?: string
+    ascending?: string | boolean
+    isChecked?: string | boolean
+}
 
-    let query = applyRecordAcceptanceFilter(supabase
-        .from('records')
-        .select('*, levels!public_records_levelid_fkey!inner(*)')
-        .eq('userid', uid)
-        .eq('levels.isPlatformer', false)
-        .eq('levels.isChallenge', false), acceptedManually)
-    let query1 = applyRecordAcceptanceFilter(supabase
-        .from('records')
-        .select('*, levels!public_records_levelid_fkey!inner(*)')
-        .eq('userid', uid)
-        , acceptedManually)
-    let query2 = applyRecordAcceptanceFilter(supabase
-        .from('records')
-        .select('*, levels!public_records_levelid_fkey!inner(*)')
-        .eq('userid', uid)
-        .eq('levels.isPlatformer', true)
-        .eq('levels.isChallenge', false), acceptedManually)
-    let query3 = applyRecordAcceptanceFilter(supabase
-        .from('records')
-        .select('*, levels!public_records_levelid_fkey!inner(*)')
-        .eq('userid', uid)
-        .eq('levels.isChallenge', true), acceptedManually)
+export async function getPlayerRecords(uid: string, { start = '0', end, sortBy = 'pt', ascending = 'false', isChecked = 'true' }: PlayerRecordsQuery = {}) {
+    void isChecked
+
+    const parsedStart = parseInt(start, 10)
+    const hasEnd = end !== undefined && end !== null && String(end).trim() !== ''
+    const parsedEnd = hasEnd ? parseInt(end, 10) : NaN
+    const startIndex = Number.isFinite(parsedStart) ? Math.max(parsedStart, 0) : 0
+    const endIndex = Number.isFinite(parsedEnd) ? Math.max(parsedEnd, startIndex) : null
+    const isAscending = ascending == 'true' || ascending === true
+    const applyRange = <T>(records: T[]) => endIndex === null
+        ? records.slice(startIndex)
+        : records.slice(startIndex, endIndex + 1)
 
     if (sortBy == 'pt') {
-        query = query
-            .order('dlPt', { ascending: ascending == 'true' })
+        const { data, error } = await supabase
+            .from('records')
+            .select('*, levels!public_records_levelid_fkey!inner(*)')
+            .eq('userid', uid)
+            .or('acceptedManually.eq.true,acceptedAuto.eq.true')
             .order('timestamp', { ascending: false })
-            .not('levels.rating', 'is', null)
-            .range(parseInt(start), parseInt(end))
-        query1 = query1
-            .order('flPt', { ascending: ascending == 'true' })
-            .order('timestamp', { ascending: false })
-            .not('levels.flTop', 'is', null)
-            .range(parseInt(start), parseInt(end))
-        query2 = query2
-            .order('plPt', { ascending: ascending == 'true' })
-            .order('timestamp', { ascending: false })
-            .not('levels.rating', 'is', null)
-            .range(parseInt(start), parseInt(end))
-        query3 = query3
-            .order('clPt', { ascending: ascending == 'true' })
-            .order('timestamp', { ascending: false })
-            .not('levels.rating', 'is', null)
-            .range(parseInt(start), parseInt(end))
 
-        return {
-            dl: withLegacyRecordAcceptanceList((await query).data),
-            fl: withLegacyRecordAcceptanceList((await query1).data),
-            pl: withLegacyRecordAcceptanceList((await query2).data),
-            cl: withLegacyRecordAcceptanceList((await query3).data)
+        if (error) {
+            throw new Error(error.message)
         }
+
+        const records = withLegacyRecordAcceptanceList(data).sort((left, right) => {
+            const leftPoint = Math.max(left.dlPt ?? 0, left.flPt ?? 0, left.plPt ?? 0, left.clPt ?? 0)
+            const rightPoint = Math.max(right.dlPt ?? 0, right.flPt ?? 0, right.plPt ?? 0, right.clPt ?? 0)
+            const pointDiff = leftPoint - rightPoint
+
+            if (pointDiff !== 0) {
+                return isAscending ? pointDiff : -pointDiff
+            }
+
+            return Number(right.timestamp ?? 0) - Number(left.timestamp ?? 0)
+        })
+
+        return applyRange(records)
     }
 
-    query = query
-        .order(sortBy, { ascending: ascending == 'true' })
-        .not('levels.rating', 'is', null)
-        .range(parseInt(start), parseInt(end))
-    query1 = query1
-        .order(sortBy, { ascending: ascending == 'true' })
-        .not('levels.flTop', 'is', null)
-        .range(parseInt(start), parseInt(end))
-    query2 = query2
-        .order(sortBy, { ascending: ascending == 'true' })
-        .not('levels.plRating', 'is', null)
-        .range(parseInt(start), parseInt(end))
-    query3 = query3
-        .order(sortBy, { ascending: ascending == 'true' })
-        .not('levels.rating', 'is', null)
-        .range(parseInt(start), parseInt(end))
+    const { data, error } = await supabase
+        .from('records')
+        .select('*, levels!public_records_levelid_fkey!inner(*)')
+        .eq('userid', uid)
+        .or('acceptedManually.eq.true,acceptedAuto.eq.true')
+        .order(sortBy, { ascending: isAscending })
+        .order('timestamp', { ascending: false })
 
-    return {
-        dl: withLegacyRecordAcceptanceList((await query).data),
-        fl: withLegacyRecordAcceptanceList((await query1).data),
-        pl: withLegacyRecordAcceptanceList((await query2).data),
-        cl: withLegacyRecordAcceptanceList((await query3).data)
+    if (error) {
+        throw new Error(error.message)
     }
+
+    return applyRange(withLegacyRecordAcceptanceList(data))
 }
 
 export async function getLevelRecords(id: number, { start = 0, end = 50, isChecked = true } = {}) {
