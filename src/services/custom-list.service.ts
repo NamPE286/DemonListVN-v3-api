@@ -1123,7 +1123,7 @@ function applyCustomListRecordFiltersToQuery(
     if (platform === 'mobile') {
         nextQuery = nextQuery.eq('mobile', true)
     } else if (platform === 'pc') {
-        nextQuery = nextQuery.eq('mobile', false)
+        nextQuery = nextQuery.or('mobile.eq.false,mobile.is.null')
     }
 
     const minRefreshRate = getCustomListRecordMinRefreshRate(list)

@@ -205,12 +205,11 @@ export async function getPlayerRecordRating(uid: string) {
 type PlayerRecordsQuery = {
     start?: string | number
     end?: string | number
-    sortBy?: string
     ascending?: string | boolean
     isChecked?: string | boolean
 }
 
-export async function getPlayerRecords(uid: string, { start = '0', end, sortBy = 'pt', ascending = 'false', isChecked = 'true' }: PlayerRecordsQuery = {}) {
+export async function getPlayerRecords(uid: string, { start = '0', end, ascending = 'false', isChecked = 'true' }: PlayerRecordsQuery = {}) {
     void isChecked
 
     const parsedStart = parseInt(String(start), 10)
@@ -223,40 +222,13 @@ export async function getPlayerRecords(uid: string, { start = '0', end, sortBy =
         ? records.slice(startIndex)
         : records.slice(startIndex, endIndex + 1)
 
-    if (sortBy == 'pt') {
-        const { data, error } = await supabase
-            .from('records')
-            .select('*, levels!public_records_levelid_fkey!inner(*)')
-            .eq('userid', uid)
-            .or('acceptedManually.eq.true,acceptedAuto.eq.true')
-            .order('timestamp', { ascending: false })
-
-        if (error) {
-            throw new Error(error.message)
-        }
-
-        const records = withLegacyRecordAcceptanceList(data).sort((left, right) => {
-            const leftPoint = Math.max(left.dlPt ?? 0, left.flPt ?? 0, left.plPt ?? 0, left.clPt ?? 0)
-            const rightPoint = Math.max(right.dlPt ?? 0, right.flPt ?? 0, right.plPt ?? 0, right.clPt ?? 0)
-            const pointDiff = leftPoint - rightPoint
-
-            if (pointDiff !== 0) {
-                return isAscending ? pointDiff : -pointDiff
-            }
-
-            return Number(right.timestamp ?? 0) - Number(left.timestamp ?? 0)
-        })
-
-        return applyRange(records)
-    }
-
     const { data, error } = await supabase
         .from('records')
         .select('*, levels!public_records_levelid_fkey!inner(*)')
         .eq('userid', uid)
         .or('acceptedManually.eq.true,acceptedAuto.eq.true')
-        .order(sortBy, { ascending: isAscending })
-        .order('timestamp', { ascending: false })
+        .order('acceptedManually', { ascending: false, nullsFirst: false })
+        .order('timestamp', { ascending: isAscending, nullsFirst: false })
 
     if (error) {
         throw new Error(error.message)
