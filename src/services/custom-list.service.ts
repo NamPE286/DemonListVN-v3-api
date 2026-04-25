@@ -3764,7 +3764,7 @@ export async function browseLists(options: {
     search?: string
     searchType?: string
     viewerId?: string
-    kind?: 'custom' | 'official'
+    kind?: 'custom' | 'official' | 'verified' | 'mirror'
 }) {
     const {
         limit = 24,
@@ -3788,6 +3788,10 @@ export async function browseLists(options: {
         query = query.eq('isOfficial', false)
     } else if (kind === 'official') {
         query = query.eq('isOfficial', true)
+    } else if (kind === 'verified') {
+        query = query.eq('isVerified', true)
+    } else if (kind === 'mirror') {
+        query = query.eq('isMirror', true)
     }
 
     if (searchParams) {
@@ -3810,7 +3814,7 @@ export async function browseLists(options: {
             .filter((slug): slug is OfficialListSlug => Boolean(slug) && isOfficialListSlug(slug!))
     )
     const syntheticOfficialLists = await Promise.all(
-        kind === 'custom'
+        kind === 'custom' || kind === 'verified' || kind === 'mirror'
             ? []
             : OFFICIAL_LIST_SLUGS
                 .filter((slug) => !databaseOfficialSlugs.has(slug))
@@ -3825,11 +3829,9 @@ export async function browseLists(options: {
                 })
                 .map((slug) => getOfficialListSummary(slug))
     )
-    const combinedLists = kind === 'official'
-        ? [...syntheticOfficialLists, ...databaseLists]
-        : kind === 'custom'
-            ? databaseLists
-            : [...syntheticOfficialLists, ...databaseLists]
+    const combinedLists = kind === 'custom' || kind === 'verified' || kind === 'mirror'
+        ? databaseLists
+        : [...syntheticOfficialLists, ...databaseLists]
 
     return {
         data: combinedLists.slice(offset, offset + limit),

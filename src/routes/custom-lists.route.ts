@@ -121,7 +121,11 @@ router.route('/')
                 ? 'official'
                 : req.query.kind === 'custom'
                     ? 'custom'
-                    : undefined
+                    : req.query.kind === 'verified'
+                        ? 'verified'
+                        : req.query.kind === 'mirror'
+                            ? 'mirror'
+                            : undefined
             const viewerId = res.locals.authenticated ? res.locals.user.uid : undefined
 
             res.send(await browseLists({ limit, offset, search, searchType, viewerId, kind }))
