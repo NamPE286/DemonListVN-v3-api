@@ -512,8 +512,6 @@ export async function updateLevel(levelData: Awaited<ReturnType<typeof getLevel>
         .from('levels')
         .upsert(upsertData as any)
 
-    await supabase.rpc('update_list')
-
     if (error) {
         throw new Error(error.message)
     }

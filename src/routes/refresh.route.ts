@@ -11,7 +11,7 @@ router.route('/')
      *   patch:
      *     tags:
      *       - Others
-     *     summary: Recalculate all player and level rank
+    *     summary: Recalculate pending record queue numbers
      *     responses:
      *       200:
      *         description: Success
@@ -20,18 +20,10 @@ router.route('/')
      *             schema:
      */
     .patch(adminAuth, async (req, res) => {
-        const a = await supabase.rpc('update_rank')
+        const { error } = await (supabase as any).rpc('calculate_record_queue_no')
 
-        if (a.error) {
-            console.error(a.error)
-            res.status(500).send()
-            return
-        }
-
-        const b = await supabase.rpc('update_list')
-
-        if (b.error) {
-            console.error(b.error)
+        if (error) {
+            console.error(error)
             res.status(500).send()
             return
         }

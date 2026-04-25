@@ -16,6 +16,19 @@ function normalizeAcceptedManuallyFilter(value: unknown) {
     return Boolean(value)
 }
 
+function normalizeRangeIndex(value: unknown, fallback: number) {
+    const parsed = Number.parseInt(String(value), 10)
+
+    return Number.isFinite(parsed) ? Math.max(0, parsed) : fallback
+}
+
+function normalizeListIdFilter(value: unknown) {
+    const rawValue = Array.isArray(value) ? value[0] : value
+    const parsed = Number.parseInt(String(rawValue), 10)
+
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+}
+
 function applyRecordAcceptanceFilter(query: any, isChecked: boolean) {
     if (isChecked) {
         return query.or('acceptedManually.eq.true,acceptedAuto.eq.true')
@@ -41,6 +54,64 @@ function withLegacyRecordAcceptance<T extends Record<string, any>>(record: T | n
 
 function withLegacyRecordAcceptanceList<T extends Record<string, any>>(records: T[] | null | undefined) {
     return (records || []).map((record) => withLegacyRecordAcceptance(record) as T & { isChecked: boolean })
+}
+
+async function getAcceptedListLevelIds(listId: number) {
+    const { data, error } = await supabase
+        .from('listLevels')
+        .select('levelId')
+        .eq('listId', listId)
+        .eq('accepted', true)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return [...new Set((data || []).map((entry) => Number(entry.levelId)).filter(Number.isFinite))]
+}
+
+async function withRecordPublicLists<T extends Record<string, any>>(records: T[]) {
+    const levelIds = [...new Set(
+        records
+            .map((record) => Number(record.levelid ?? record.levels?.id))
+            .filter(Number.isFinite)
+    )]
+
+    if (!levelIds.length) {
+        return records.map((record) => ({ ...record, lists: [] }))
+    }
+
+    const { data, error } = await (supabase as any)
+        .from('listLevels')
+        .select('listId, levelId, lists!inner(id, slug, title, isOfficial, isVerified, isMirror, visibility)')
+        .in('levelId', levelIds)
+        .eq('accepted', true)
+        .eq('lists.visibility', 'public')
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    const listsByLevelId = new Map<number, any[]>()
+
+    for (const entry of data || []) {
+        const levelId = Number(entry.levelId)
+        const list = Array.isArray(entry.lists) ? entry.lists[0] : entry.lists
+
+        if (!Number.isFinite(levelId) || !list) {
+            continue
+        }
+
+        const lists = listsByLevelId.get(levelId) || []
+
+        lists.push(list)
+        listsByLevelId.set(levelId, lists)
+    }
+
+    return records.map((record) => ({
+        ...record,
+        lists: listsByLevelId.get(Number(record.levelid ?? record.levels?.id)) || []
+    }))
 }
 
 export type OverwatchRecordScope = 'official' | 'nonOfficial'
@@ -612,24 +683,37 @@ export async function retrieveRecord(user: TPlayer, scope: OverwatchRecordScope 
     return withLegacyRecordAcceptance(record)
 }
 
-export async function getRecords({ start = 0, end = 50, isChecked = false } = {}) {
+export async function getRecords({ start = 0, end = 50, isChecked = false, listId = undefined } = {}) {
     isChecked = normalizeAcceptedManuallyFilter(isChecked)
 
-    const { data, error } = await supabase
+    const rangeStart = normalizeRangeIndex(start, 0)
+    const rangeEnd = Math.max(rangeStart, normalizeRangeIndex(end, 50))
+    const selectedListId = normalizeListIdFilter(listId)
+    let query = supabase
         .from('records')
         .select('*, players!userid!inner(*, clans!id(*)), reviewer:players!reviewer(*), levels!public_records_levelid_fkey(*)')
-        .match({ acceptedManually: isChecked })
         .eq('players.isHidden', false)
-        .order('needMod', { ascending: false })
+
+    if (selectedListId !== null) {
+        const levelIds = await getAcceptedListLevelIds(selectedListId)
+
+        if (!levelIds.length) {
+            return []
+        }
+
+        query = query.in('levelid', levelIds)
+    }
+
+    const { data, error } = await applyRecordAcceptanceFilter(query, isChecked)
         .order('queueNo', { ascending: true, nullsFirst: false })
         .order('timestamp', { ascending: true })
-        .range(start, end)
+        .range(rangeStart, rangeEnd)
 
     if (error) {
         throw new Error(error.message)
     }
 
-    return withLegacyRecordAcceptanceList(data)
+    return withRecordPublicLists(withLegacyRecordAcceptanceList(data))
 }
 
 export async function getPlayerSubmissions(uid: string, { start = '0', end = '50', ascending = 'true' } = {}) {
@@ -949,6 +1033,22 @@ export async function updateRecord(recordData: TRecord, validate = false, accept
     }
 
     delete nextRecordData.isChecked;
+
+    if (nextRecordData.acceptedManually && nextRecordData.id && nextRecordData.userid && nextRecordData.levelid) {
+        const previousAccepted: any = await getManuallyAcceptedRecord(nextRecordData.userid, Number(nextRecordData.levelid))
+
+        if (previousAccepted && previousAccepted.id !== nextRecordData.id) {
+            const { error: deleteError } = await supabase
+                .from('records')
+                .delete()
+                .eq('id', previousAccepted.id)
+
+            if (deleteError) {
+                console.error(deleteError)
+                throw new Error(deleteError.message)
+            }
+        }
+    }
 
     const { error } = await supabase
         .from('records')
