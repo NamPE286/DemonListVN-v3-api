@@ -7,7 +7,7 @@ ALTER TABLE "communityPosts"
 CREATE TABLE "communityPostParticipants" (
   "id" serial PRIMARY KEY,
   "postId" integer NOT NULL REFERENCES "communityPosts" ("id") ON DELETE CASCADE,
-  "uid" text NOT NULL REFERENCES "players" ("uid") ON DELETE CASCADE,
+  "uid" uuid NOT NULL REFERENCES "players" ("uid") ON DELETE CASCADE,
   "status" text NOT NULL DEFAULT 'pending' CHECK ("status" IN ('pending', 'approved', 'rejected')),
   "createdAt" timestamp with time zone NOT NULL DEFAULT now(),
   "updatedAt" timestamp with time zone NOT NULL DEFAULT now(),

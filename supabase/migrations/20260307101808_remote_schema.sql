@@ -5667,22 +5667,13 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 
 
 
-drop trigger if exists "objects_delete_delete_prefix" on "storage"."objects";
+-- [Keep all the existing content above this...]
 
-drop trigger if exists "objects_insert_create_prefix" on "storage"."objects";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "postgres";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
 
-drop trigger if exists "objects_update_create_prefix" on "storage"."objects";
-
-drop trigger if exists "prefixes_create_hierarchy" on "storage"."prefixes";
-
-drop trigger if exists "prefixes_delete_hierarchy" on "storage"."prefixes";
-
-
-  create policy "Enable read access for all users"
-  on "storage"."buckets"
-  as permissive
-  for insert
-  to public
-with check (true);
+-- DELETE the "drop trigger" and "create policy" blocks for "storage" that were here.
 
 
