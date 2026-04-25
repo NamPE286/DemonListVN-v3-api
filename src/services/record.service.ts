@@ -275,6 +275,8 @@ export async function getLevelRecords(id: number, { start = 0, end = 50, isCheck
         .select('*, players!userid!inner(*, clans!id(*)), reviewer:players!reviewer(*, clans!id(*))')
         .eq('players.isHidden', false)
         .eq('levelid', id)
+        .order('acceptedManually', { ascending: false, nullsFirst: false })
+        .order('acceptedAuto', { ascending: false })
         .order('progress', { ascending: level.isPlatformer })
         .order('timestamp')
         .range(start, end), isChecked)
