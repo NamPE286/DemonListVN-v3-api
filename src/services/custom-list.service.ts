@@ -4026,6 +4026,8 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
         timestamp: number | null
         mobile: boolean
         refreshRate: number | null
+        acceptedManually: boolean
+        acceptedAuto: boolean
     }>()
 
     const [playersResult, levelsResult] = await Promise.all([
@@ -4058,7 +4060,7 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
 
         const { data: recordRows, error: recordsError } = await supabase
             .from('records')
-            .select('userid, levelid, progress, timestamp, mobile, refreshRate')
+            .select('userid, levelid, progress, timestamp, mobile, refreshRate, acceptedManually, acceptedAuto')
             .or(recordFilters)
 
         if (recordsError) {
@@ -4070,7 +4072,9 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
                 progress: Number(record.progress) || 0,
                 timestamp: Number.isFinite(Number(record.timestamp)) ? Number(record.timestamp) : null,
                 mobile: Boolean(record.mobile),
-                refreshRate: Number.isFinite(Number(record.refreshRate)) ? Number(record.refreshRate) : null
+                refreshRate: Number.isFinite(Number(record.refreshRate)) ? Number(record.refreshRate) : null,
+                acceptedManually: Boolean(record.acceptedManually),
+                acceptedAuto: Boolean(record.acceptedAuto)
             })
         }
     }
@@ -4090,7 +4094,9 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
                 progress: 0,
                 timestamp: null,
                 mobile: false,
-                refreshRate: null
+                refreshRate: null,
+                acceptedManually: false,
+                acceptedAuto: false
             }
             const itemData = itemByLevelId.get(entry.levelId)
 
