@@ -86,6 +86,16 @@ type PlayerRankedListSummary = {
 }
 
 type CustomListRecordPlatformFilter = 'any' | 'pc' | 'mobile'
+type CustomListRecordAcceptanceFilter = 'manual' | 'auto' | 'any'
+
+type CustomListRecordFilterSettings = Pick<
+    CustomList,
+    'recordFilterPlatform'
+    | 'recordFilterMinRefreshRate'
+    | 'recordFilterMaxRefreshRate'
+    | 'recordFilterManualAcceptanceOnly'
+    | 'recordFilterAcceptanceStatus'
+>
 
 type CustomListRankBadge = {
     name: string
@@ -171,6 +181,7 @@ type CustomListSettingsPayload = {
     recordFilterMinRefreshRate?: unknown
     recordFilterMaxRefreshRate?: unknown
     recordFilterManualAcceptanceOnly?: unknown
+    recordFilterAcceptanceStatus?: unknown
 }
 
 const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
@@ -194,6 +205,7 @@ const VISIBILITY_VALUES = new Set(['private', 'unlisted', 'public'])
 const MODE_VALUES = new Set(['rating', 'top'])
 const CUSTOM_LIST_ITEM_SORT_VALUES = new Set(['mode_default', 'created_at'])
 const CUSTOM_LIST_RECORD_PLATFORM_VALUES = new Set<CustomListRecordPlatformFilter>(['any', 'pc', 'mobile'])
+const CUSTOM_LIST_RECORD_ACCEPTANCE_VALUES = new Set<CustomListRecordAcceptanceFilter>(['manual', 'auto', 'any'])
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 const WEIGHT_FORMULA_VALIDATION_SCOPE = {
@@ -728,6 +740,24 @@ function sanitizeCustomListManualAcceptanceOnly(value: unknown) {
     return value
 }
 
+function sanitizeCustomListRecordAcceptanceStatus(value: unknown): CustomListRecordAcceptanceFilter {
+    if (value == null) {
+        return 'manual'
+    }
+
+    if (typeof value !== 'string') {
+        throw new ValidationError('recordFilterAcceptanceStatus must be a string')
+    }
+
+    const status = value.trim().toLowerCase()
+
+    if (!CUSTOM_LIST_RECORD_ACCEPTANCE_VALUES.has(status as CustomListRecordAcceptanceFilter)) {
+        throw new ValidationError('recordFilterAcceptanceStatus must be manual, auto, or any')
+    }
+
+    return status as CustomListRecordAcceptanceFilter
+}
+
 function sanitizeListLevelCreatedAt(value: unknown) {
     if (typeof value !== 'string') {
         throw new ValidationError('createdAt must be a string')
@@ -998,12 +1028,32 @@ function getCustomListRecordMaxRefreshRate(list: Pick<CustomList, 'recordFilterM
         : null
 }
 
+function getCustomListRecordAcceptanceStatus(list: Pick<CustomList, 'recordFilterAcceptanceStatus' | 'recordFilterManualAcceptanceOnly'>): CustomListRecordAcceptanceFilter {
+    const status = list.recordFilterAcceptanceStatus
+
+    if (CUSTOM_LIST_RECORD_ACCEPTANCE_VALUES.has(status as CustomListRecordAcceptanceFilter)) {
+        return status as CustomListRecordAcceptanceFilter
+    }
+
+    return (list.recordFilterManualAcceptanceOnly ?? true) ? 'manual' : 'any'
+}
+
+function getManualAcceptanceOnlyForStatus(status: CustomListRecordAcceptanceFilter) {
+    return status === 'manual'
+}
+
 function isCustomListRecordAccepted(record: {
     acceptedManually?: boolean | null
     acceptedAuto?: boolean | null
-}, list: Pick<CustomList, 'recordFilterManualAcceptanceOnly'>) {
-    if (list.recordFilterManualAcceptanceOnly ?? true) {
+}, list: Pick<CustomList, 'recordFilterAcceptanceStatus' | 'recordFilterManualAcceptanceOnly'>) {
+    const status = getCustomListRecordAcceptanceStatus(list)
+
+    if (status === 'manual') {
         return Boolean(record.acceptedManually)
+    }
+
+    if (status === 'auto') {
+        return !record.acceptedManually && Boolean(record.acceptedAuto)
     }
 
     return Boolean(record.acceptedManually) || Boolean(record.acceptedAuto)
@@ -1014,7 +1064,7 @@ function isCustomListRecordEligibleForFilters(record: {
     acceptedAuto?: boolean | null
     mobile?: boolean | null
     refreshRate?: number | null
-}, list: Pick<CustomList, 'recordFilterPlatform' | 'recordFilterMinRefreshRate' | 'recordFilterMaxRefreshRate' | 'recordFilterManualAcceptanceOnly'>) {
+}, list: CustomListRecordFilterSettings) {
     if (!isCustomListRecordAccepted(record, list)) {
         return false
     }
@@ -1055,12 +1105,15 @@ function isCustomListRecordEligibleForFilters(record: {
 
 function applyCustomListRecordFiltersToQuery(
     query: any,
-    list: Pick<CustomList, 'recordFilterPlatform' | 'recordFilterMinRefreshRate' | 'recordFilterMaxRefreshRate' | 'recordFilterManualAcceptanceOnly'>
+    list: CustomListRecordFilterSettings
 ) {
     let nextQuery = query
+    const acceptanceStatus = getCustomListRecordAcceptanceStatus(list)
 
-    if (list.recordFilterManualAcceptanceOnly ?? true) {
+    if (acceptanceStatus === 'manual') {
         nextQuery = nextQuery.eq('acceptedManually', true)
+    } else if (acceptanceStatus === 'auto') {
+        nextQuery = nextQuery.eq('acceptedAuto', true).or('acceptedManually.eq.false,acceptedManually.is.null')
     } else {
         nextQuery = nextQuery.or('acceptedManually.eq.true,acceptedAuto.eq.true')
     }
@@ -1610,7 +1663,20 @@ function getItemIsPlatformer(item: any, fallbackIsPlatformer: boolean) {
     return Boolean(item.level?.isPlatformer ?? fallbackIsPlatformer)
 }
 
-function isBetterRecordForListItem(candidate: { progress?: number | null } | null | undefined, existing: { progress?: number | null } | null | undefined, item: any, isPlatformer: boolean) {
+function getRecordAcceptancePriority(record: { acceptedManually?: boolean | null; acceptedAuto?: boolean | null } | null | undefined) {
+    if (record?.acceptedManually) {
+        return 2
+    }
+
+    return record?.acceptedAuto ? 1 : 0
+}
+
+function isBetterRecordForListItem(
+    candidate: { progress?: number | null; acceptedManually?: boolean | null; acceptedAuto?: boolean | null } | null | undefined,
+    existing: { progress?: number | null; acceptedManually?: boolean | null; acceptedAuto?: boolean | null } | null | undefined,
+    item: any,
+    isPlatformer: boolean
+) {
     if (!candidate) {
         return false
     }
@@ -1628,6 +1694,13 @@ function isBetterRecordForListItem(candidate: { progress?: number | null } | nul
 
     if (!Number.isFinite(existingProgress)) {
         return true
+    }
+
+    const candidateAcceptancePriority = getRecordAcceptancePriority(candidate)
+    const existingAcceptancePriority = getRecordAcceptancePriority(existing)
+
+    if (candidateAcceptancePriority !== existingAcceptancePriority) {
+        return candidateAcceptancePriority > existingAcceptancePriority
     }
 
     return getItemIsPlatformer(item, isPlatformer)
@@ -1700,7 +1773,7 @@ function getCustomListRecordPoint(
 
 async function enrichItemsWithViewerEligibleRecords(
     items: any[],
-    list: Pick<CustomList, 'isPlatformer' | 'recordFilterPlatform' | 'recordFilterMinRefreshRate' | 'recordFilterMaxRefreshRate' | 'recordFilterManualAcceptanceOnly'>,
+    list: Pick<CustomList, 'isPlatformer'> & CustomListRecordFilterSettings,
     viewerId?: string
 ) {
     if (!viewerId || !items.length) {
@@ -1819,6 +1892,7 @@ async function getOfficialList(slug: OfficialListSlug, viewerId?: string, itemRa
         recordFilterPlatform: 'any',
         recordFilterMinRefreshRate: null,
         recordFilterMaxRefreshRate: null,
+        recordFilterAcceptanceStatus: 'manual',
         recordFilterManualAcceptanceOnly: true,
         topEnabled: config.mode === 'top',
         itemSort: 'mode_default',
@@ -1874,6 +1948,7 @@ async function getOfficialListSummary(slug: OfficialListSlug) {
         recordFilterPlatform: 'any',
         recordFilterMinRefreshRate: null,
         recordFilterMaxRefreshRate: null,
+        recordFilterAcceptanceStatus: 'manual',
         recordFilterManualAcceptanceOnly: true,
         topEnabled: config.mode === 'top',
         itemSort: 'mode_default',
@@ -1889,7 +1964,7 @@ async function getOfficialListSummary(slug: OfficialListSlug) {
 
 async function fetchCustomListLeaderboardSourceRecords(
     levelIds: number[],
-    list: Pick<CustomList, 'recordFilterPlatform' | 'recordFilterMinRefreshRate' | 'recordFilterMaxRefreshRate' | 'recordFilterManualAcceptanceOnly'>
+    list: CustomListRecordFilterSettings
 ) {
     if (!levelIds.length) {
         return [] as any[]
@@ -4162,32 +4237,6 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
         throw new Error(itemsResult.error.message)
     }
 
-    if (entries.length) {
-        const recordFilters = entries
-            .map((entry) => `and(userid.eq.${entry.uid},levelid.eq.${entry.levelId},or(acceptedManually.eq.true,acceptedAuto.eq.true))`)
-            .join(',')
-
-        const { data: recordRows, error: recordsError } = await supabase
-            .from('records')
-            .select('userid, levelid, progress, timestamp, mobile, refreshRate, acceptedManually, acceptedAuto')
-            .or(recordFilters)
-
-        if (recordsError) {
-            throw new Error(recordsError.message)
-        }
-
-        for (const record of recordRows || []) {
-            recordsByKey.set(`${record.userid}:${record.levelid}`, {
-                progress: Number(record.progress) || 0,
-                timestamp: Number.isFinite(Number(record.timestamp)) ? Number(record.timestamp) : null,
-                mobile: Boolean(record.mobile),
-                refreshRate: Number.isFinite(Number(record.refreshRate)) ? Number(record.refreshRate) : null,
-                acceptedManually: Boolean(record.acceptedManually),
-                acceptedAuto: Boolean(record.acceptedAuto)
-            })
-        }
-    }
-
     for (const player of playersResult.data || []) {
         playersByUid.set(player.uid, player)
     }
@@ -4204,6 +4253,43 @@ export async function getCustomListRecordPoints(identifier: CustomListIdentifier
             },
             index: 0
         })
+    }
+
+    if (entries.length) {
+        const recordFilters = entries
+            .map((entry) => `and(userid.eq.${entry.uid},levelid.eq.${entry.levelId},or(acceptedManually.eq.true,acceptedAuto.eq.true))`)
+            .join(',')
+
+        const { data: recordRows, error: recordsError } = await supabase
+            .from('records')
+            .select('userid, levelid, progress, timestamp, mobile, refreshRate, acceptedManually, acceptedAuto')
+            .or(recordFilters)
+
+        if (recordsError) {
+            throw new Error(recordsError.message)
+        }
+
+        for (const record of recordRows || []) {
+            if (!isCustomListRecordEligibleForFilters(record, list)) {
+                continue
+            }
+
+            const itemData = itemByLevelId.get(record.levelid)
+            const key = `${record.userid}:${record.levelid}`
+            const recordSnapshot = {
+                progress: Number(record.progress) || 0,
+                timestamp: Number.isFinite(Number(record.timestamp)) ? Number(record.timestamp) : null,
+                mobile: Boolean(record.mobile),
+                refreshRate: Number.isFinite(Number(record.refreshRate)) ? Number(record.refreshRate) : null,
+                acceptedManually: Boolean(record.acceptedManually),
+                acceptedAuto: Boolean(record.acceptedAuto)
+            }
+            const existingSnapshot = recordsByKey.get(key)
+
+            if (!itemData || isBetterRecordForListItem(recordSnapshot, existingSnapshot, itemData.item, list.isPlatformer)) {
+                recordsByKey.set(key, recordSnapshot)
+            }
+        }
     }
 
     const totalRecords = uid
@@ -4739,7 +4825,13 @@ export async function createCustomList(ownerId: string, payload: {
     recordFilterMinRefreshRate?: unknown
     recordFilterMaxRefreshRate?: unknown
     recordFilterManualAcceptanceOnly?: unknown
+    recordFilterAcceptanceStatus?: unknown
 }) {
+    const recordFilterAcceptanceStatus = payload.recordFilterAcceptanceStatus !== undefined
+        ? sanitizeCustomListRecordAcceptanceStatus(payload.recordFilterAcceptanceStatus)
+        : sanitizeCustomListManualAcceptanceOnly(payload.recordFilterManualAcceptanceOnly)
+            ? 'manual'
+            : 'any'
     const listInsert: CustomListInsert = {
         owner: ownerId,
         title: sanitizeTitle(payload.title),
@@ -4761,7 +4853,8 @@ export async function createCustomList(ownerId: string, payload: {
         recordFilterPlatform: sanitizeCustomListRecordPlatform(payload.recordFilterPlatform),
         recordFilterMinRefreshRate: sanitizeCustomListRecordRefreshRate(payload.recordFilterMinRefreshRate, 'recordFilterMinRefreshRate'),
         recordFilterMaxRefreshRate: sanitizeCustomListRecordRefreshRate(payload.recordFilterMaxRefreshRate, 'recordFilterMaxRefreshRate'),
-        recordFilterManualAcceptanceOnly: sanitizeCustomListManualAcceptanceOnly(payload.recordFilterManualAcceptanceOnly),
+        recordFilterAcceptanceStatus,
+        recordFilterManualAcceptanceOnly: getManualAcceptanceOnlyForStatus(recordFilterAcceptanceStatus),
         slug: sanitizeSlug(payload.slug),
         isOfficial: false,
         rankBadges: sanitizeRankBadges(payload.rankBadges),
@@ -4926,8 +5019,14 @@ async function buildCustomListSettingsUpdatePlan(listId: number, existing: Custo
         throw new ValidationError('recordFilterMinRefreshRate must be less than or equal to recordFilterMaxRefreshRate')
     }
 
-    if (payload.recordFilterManualAcceptanceOnly !== undefined) {
+    if (payload.recordFilterAcceptanceStatus !== undefined) {
+        const acceptanceStatus = sanitizeCustomListRecordAcceptanceStatus(payload.recordFilterAcceptanceStatus)
+
+        pendingUpdates.recordFilterAcceptanceStatus = acceptanceStatus
+        pendingUpdates.recordFilterManualAcceptanceOnly = getManualAcceptanceOnlyForStatus(acceptanceStatus)
+    } else if (payload.recordFilterManualAcceptanceOnly !== undefined) {
         pendingUpdates.recordFilterManualAcceptanceOnly = sanitizeCustomListManualAcceptanceOnly(payload.recordFilterManualAcceptanceOnly)
+        pendingUpdates.recordFilterAcceptanceStatus = pendingUpdates.recordFilterManualAcceptanceOnly ? 'manual' : 'any'
     }
 
     const changedEntries = (Object.entries(pendingUpdates) as Array<[string, unknown]>)
