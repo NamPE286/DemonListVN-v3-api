@@ -12,6 +12,8 @@ import {
     addCustomListMember,
     browseLists,
     ConflictError,
+    crawlAredlMirrorList,
+    crawlMirrorList,
     crawlPointercrateMirrorListPage,
     createCustomList,
     deleteCustomList,
@@ -564,6 +566,36 @@ router.route('/:id/crawl/pointercrate/finalize')
         try {
             const listId = parseId(req.params.id, 'list ID')
             res.send(await finalizePointercrateMirrorListCrawl(listId, res.locals.user, req.body || {}))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/crawl')
+    .post(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await crawlMirrorList(listId, res.locals.user))
+        } catch (error) {
+            if (sendError(res, error)) {
+                return
+            }
+
+            console.error(error)
+            res.status(500).send()
+        }
+    })
+
+router.route('/:id/crawl/aredl')
+    .post(userAuth, async (req, res) => {
+        try {
+            const listId = parseId(req.params.id, 'list ID')
+            res.send(await crawlAredlMirrorList(listId, res.locals.user))
         } catch (error) {
             if (sendError(res, error)) {
                 return
