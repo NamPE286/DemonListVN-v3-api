@@ -3907,35 +3907,16 @@ async function ensureMirrorSourceLevels(sourceLevels: Array<{ level_id: number }
     }
 
     const missingLevelIds = levelIds.filter((levelId) => !levelsById.has(levelId))
-    const levelInserts: TablesInsert<'levels'>[] = []
 
     for (const levelId of missingLevelIds) {
         try {
-            const gdLevel = await fetchLevelFromGD(levelId)
-            const isPlatformer = gdLevel.length == 5
-
-            levelInserts.push({
+            const level = await ensureLevelExists(levelId)
+            levelsById.set(levelId, {
                 id: levelId,
-                name: gdLevel.name,
-                creator: gdLevel.author,
-                difficulty: gdLevel.difficulty ?? null,
-                isPlatformer,
-                isChallenge: false,
-                isNonList: false
-            } as TablesInsert<'levels'>)
-            levelsById.set(levelId, { id: levelId, isPlatformer })
+                isPlatformer: Boolean(level.isPlatformer)
+            })
         } catch (error) {
             failures.set(levelId, getErrorMessage(error, 'Level not found on the official Geometry Dash server'))
-        }
-    }
-
-    if (levelInserts.length) {
-        const { error } = await supabase
-            .from('levels')
-            .upsert(levelInserts as any, { onConflict: 'id' })
-
-        if (error) {
-            throw new Error(error.message)
         }
     }
 
@@ -4241,34 +4222,23 @@ async function crawlPointercrateMirrorList(listId: number, actor: CustomListActo
     }
 }
 
-type AredlMirrorUpsertLevel = {
-    level_id: number
-    position: number
-    points: number
-    name: string
+function assertAredlMirrorListConfig(list: CustomList) {
+    if (list.id !== AREDL_MIRROR_LIST_ID) {
+        throw new ValidationError(`AREDL crawler is configured for list #${AREDL_MIRROR_LIST_ID}`)
+    }
+
+    if (!list.isMirror) {
+        throw new ValidationError('Mirror crawler is only available for mirror lists')
+    }
+
+    if (list.isPlatformer) {
+        throw new ValidationError('AREDL mirror list must be a classic list')
+    }
+
+    if (list.mode !== 'top') {
+        throw new ValidationError('AREDL mirror list must use top mode')
+    }
 }
-
-type AredlMirrorUpsertResult = PointercrateMirrorCrawlCounters & {
-    removed: number
-    sourceLevelCount: number
-    failures: PointercrateMirrorCrawlFailure[]
-    list: Partial<CustomList>
-}
-
-const AREDL_MIRROR_UPSERT_VALIDATION_ERRORS = new Set([
-    `AREDL crawler is configured for list #${AREDL_MIRROR_LIST_ID}`,
-    'Mirror crawler is only available for mirror lists',
-    'AREDL mirror list must be a classic list',
-    'AREDL mirror list must use top mode',
-    'AREDL levels payload must be an array',
-    'AREDL levels response must not be empty'
-])
-
-const AREDL_MIRROR_UPSERT_FORBIDDEN_ERRORS = new Set([
-    'Authentication required',
-    'This list has been banned and cannot be edited',
-    'You do not have permission to modify levels on this list'
-])
 
 function getUniqueAredlLevels(levels: AredlLevel[]) {
     const seenLevelIds = new Set<number>()
@@ -4286,55 +4256,171 @@ function getUniqueAredlLevels(levels: AredlLevel[]) {
     return uniqueLevels
 }
 
-function buildAredlMirrorUpsertLevels(levels: AredlLevel[]): AredlMirrorUpsertLevel[] {
-    return getUniqueAredlLevels(levels).map((level) => ({
-        level_id: level.level_id,
-        position: level.position,
-        points: level.points,
-        name: level.name
-    }))
+async function ensureAredlMirrorSourceLevels(levels: AredlLevel[]) {
+    const levelIds = [...new Set(levels.map((level) => level.level_id))]
+    const levelsById = new Map<number, { id: number; isPlatformer: boolean }>()
+
+    if (!levelIds.length) {
+        return levelsById
+    }
+
+    const { data: existingLevels, error: existingLevelsError } = await supabase
+        .from('levels')
+        .select('id, isPlatformer')
+        .in('id', levelIds)
+
+    if (existingLevelsError) {
+        throw new Error(existingLevelsError.message)
+    }
+
+    for (const level of existingLevels || []) {
+        levelsById.set(level.id, {
+            id: level.id,
+            isPlatformer: Boolean(level.isPlatformer)
+        })
+    }
+
+    const missingLevels = levels.filter((level) => !levelsById.has(level.level_id))
+
+    if (missingLevels.length) {
+        const levelInserts: TablesInsert<'levels'>[] = missingLevels.map((level) => ({
+            id: level.level_id,
+            isPlatformer: false,
+            name: level.name
+        }))
+
+        const { error } = await supabase
+            .from('levels')
+            .upsert(levelInserts as any, {
+                onConflict: 'id',
+                ignoreDuplicates: true
+            })
+
+        if (error) {
+            throw new Error(error.message)
+        }
+
+        for (const level of missingLevels) {
+            levelsById.set(level.level_id, {
+                id: level.level_id,
+                isPlatformer: false
+            })
+        }
+    }
+
+    return levelsById
 }
 
-function throwAredlMirrorUpsertError(error: { message?: string }) {
-    const message = error.message || 'Failed to upsert AREDL mirror list'
-
-    if (message === 'List not found') {
-        throw new NotFoundError(message)
-    }
-
-    if (AREDL_MIRROR_UPSERT_FORBIDDEN_ERRORS.has(message)) {
-        throw new ForbiddenError(message)
-    }
-
-    if (AREDL_MIRROR_UPSERT_VALIDATION_ERRORS.has(message)) {
-        throw new ValidationError(message)
-    }
-
-    throw new Error(message)
+function aredlListItemChanged(existingItem: any, nextRow: CustomListLevelInsert) {
+    return !existingItem.accepted
+        || Number(existingItem.position ?? 0) !== Number(nextRow.position ?? 0)
+        || Number(existingItem.rating ?? 0) !== Number(nextRow.rating ?? 0)
 }
 
-async function upsertAredlMirrorLevels(
-    listId: number,
-    actorUid: string,
-    actorIsModerator: boolean,
-    levels: AredlMirrorUpsertLevel[]
-): Promise<AredlMirrorUpsertResult> {
-    const { data, error } = await supabase.rpc('upsert_aredl_mirror_list', {
-        p_actor_is_moderator: actorIsModerator,
-        p_actor_uid: actorUid,
-        p_levels: levels as unknown as Json,
-        p_list_id: listId
-    })
+async function syncAredlLevelsToMirrorList(list: CustomList, actorUid: string, levels: AredlLevel[]) {
+    const uniqueLevels = getUniqueAredlLevels(levels)
+    const levelsById = await ensureAredlMirrorSourceLevels(uniqueLevels)
+    const failures: PointercrateMirrorCrawlFailure[] = []
+    const processableLevels: AredlLevel[] = []
 
-    if (error) {
-        throwAredlMirrorUpsertError(error)
+    for (const level of uniqueLevels) {
+        const storedLevel = levelsById.get(level.level_id)
+
+        if (!storedLevel) {
+            failures.push({
+                levelId: level.level_id,
+                position: level.position,
+                name: level.name,
+                error: 'Level metadata is unavailable'
+            })
+            continue
+        }
+
+        try {
+            assertLevelTypeMatchesList(list, storedLevel)
+        } catch (error) {
+            failures.push({
+                levelId: level.level_id,
+                position: level.position,
+                name: level.name,
+                error: getErrorMessage(error, 'This level cannot be added to this list type')
+            })
+            continue
+        }
+
+        processableLevels.push(level)
     }
 
-    if (!data || typeof data !== 'object' || Array.isArray(data)) {
-        throw new Error('AREDL mirror upsert returned an invalid response')
+    const processableLevelIds = processableLevels.map((level) => level.level_id)
+    let existingItemsByLevelId = new Map<number, any>()
+
+    if (processableLevelIds.length) {
+        const { data: existingItems, error: existingItemsError } = await supabase
+            .from('listLevels')
+            .select('id, levelId, addedBy, accepted, position, minProgress, videoID, rating')
+            .eq('listId', list.id)
+            .in('levelId', processableLevelIds)
+
+        if (existingItemsError) {
+            throw new Error(existingItemsError.message)
+        }
+
+        existingItemsByLevelId = new Map((existingItems || []).map((item) => [Number(item.levelId), item]))
     }
 
-    return data as unknown as AredlMirrorUpsertResult
+    const changedRows: CustomListLevelInsert[] = []
+    let inserted = 0
+    let updated = 0
+    let unchanged = 0
+
+    for (const level of processableLevels) {
+        const existingItem = existingItemsByLevelId.get(level.level_id)
+        const nextRow: CustomListLevelInsert = {
+            ...(existingItem ? { id: existingItem.id } : {}),
+            listId: list.id,
+            levelId: level.level_id,
+            addedBy: existingItem?.addedBy || actorUid,
+            accepted: true,
+            position: level.position,
+            minProgress: existingItem?.minProgress ?? null,
+            videoID: existingItem?.videoID ?? null,
+            rating: level.points
+        }
+
+        if (!existingItem) {
+            inserted += 1
+            changedRows.push(nextRow)
+            continue
+        }
+
+        if (aredlListItemChanged(existingItem, nextRow)) {
+            updated += 1
+            changedRows.push(nextRow)
+            continue
+        }
+
+        unchanged += 1
+    }
+
+    if (changedRows.length) {
+        const { error } = await supabase
+            .from('listLevels')
+            .upsert(changedRows as any, { onConflict: 'listId,levelId' })
+
+        if (error) {
+            throw new Error(error.message)
+        }
+    }
+
+    return {
+        processed: uniqueLevels.length,
+        inserted,
+        updated,
+        unchanged,
+        failed: failures.length,
+        failures,
+        sourceLevelIds: uniqueLevels.map((level) => level.level_id)
+    }
 }
 
 export async function crawlAredlMirrorList(listId: number, actor: CustomListActor) {
@@ -4344,14 +4430,30 @@ export async function crawlAredlMirrorList(listId: number, actor: CustomListActo
         throw new ValidationError(`AREDL crawler is configured for list #${AREDL_MIRROR_LIST_ID}`)
     }
 
-    const actorUid = getRequiredActorUid(actor)
+    const list = await getCustomListRow(listId)
+    const access = await assertCanEditListLevels(list, actor)
+    assertAredlMirrorListConfig(list)
+
     const levels = await fetchAredlLevels()
-    const result = await upsertAredlMirrorLevels(
-        listId,
-        actorUid,
-        canModerateList(actor),
-        buildAredlMirrorUpsertLevels(levels)
-    )
+    const summary = await syncAredlLevelsToMirrorList(list, access.actorUid ?? getRequiredActorUid(actor), levels)
+    const removed = await removeMirrorStaleLevels(list.id, summary.sourceLevelIds)
+
+    await syncLevelCount(list.id)
+    await appendCustomListAuditLog(list.id, {
+        actorUid: access.actorUid,
+        action: 'aredl_mirror_crawled',
+        metadata: {
+            source: 'aredl',
+            mirrorListId: AREDL_MIRROR_LIST_ID,
+            sourceLevelCount: summary.sourceLevelIds.length,
+            processed: summary.processed,
+            inserted: summary.inserted,
+            updated: summary.updated,
+            unchanged: summary.unchanged,
+            failed: summary.failed,
+            removed
+        }
+    })
 
     return {
         source: {
@@ -4359,15 +4461,15 @@ export async function crawlAredlMirrorList(listId: number, actor: CustomListActo
             mirrorListId: AREDL_MIRROR_LIST_ID,
             fetched: levels.length
         },
-        processed: result.processed,
-        inserted: result.inserted,
-        updated: result.updated,
-        unchanged: result.unchanged,
-        failed: result.failed,
-        removed: result.removed,
-        sourceLevelCount: result.sourceLevelCount,
-        failures: result.failures,
-        list: result.list
+        processed: summary.processed,
+        inserted: summary.inserted,
+        updated: summary.updated,
+        unchanged: summary.unchanged,
+        failed: summary.failed,
+        removed,
+        sourceLevelCount: summary.sourceLevelIds.length,
+        failures: summary.failures,
+        list: await getCustomList(list.id, actor)
     }
 }
 
