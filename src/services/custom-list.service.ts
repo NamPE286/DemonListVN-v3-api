@@ -19,7 +19,6 @@ import {
 } from '@src/services/aredl.service'
 import {
     fetchPointercrateListedDemonsPage,
-    normalizePointercrateListedDemonsLimit,
     type PointercrateListedDemon
 } from '@src/services/pointercrate.service'
 import getVideoId from 'get-video-id'
@@ -3772,81 +3771,44 @@ type PointercrateMirrorCrawlCounters = {
     gdFailed: number
 }
 
-function getPointercrateMirrorCrawlObject(value: unknown) {
-    return value && typeof value === 'object' && !Array.isArray(value)
-        ? value as Record<string, unknown>
-        : {}
+type MirrorMappedLevel = {
+    levelId: number
+    name: string
+    position: number
+    minProgress?: number | null
+    videoID?: string | null
+    rating?: number
+}
+
+type MirrorMappedSourceResult = {
+    processed: number
+    sourceLevelIds: number[]
+    levels: MirrorMappedLevel[]
+    failures: PointercrateMirrorCrawlFailure[]
+}
+
+type MirrorSyncSummary = PointercrateMirrorCrawlCounters & {
+    sourceLevelIds: number[]
+    failures: PointercrateMirrorCrawlFailure[]
+}
+
+type MirrorSourceInfo = {
+    name: 'pointercrate' | 'aredl'
+    mirrorListId: number
+    fetched: number
+    pages?: number
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
     return error instanceof Error && error.message ? error.message : fallback
 }
 
-function sanitizePointercrateMirrorCrawlAfter(value: unknown) {
-    if (value == null || value === '') {
-        return 0
-    }
-
-    const after = Number(value)
-
-    if (!Number.isInteger(after) || after < 0) {
-        throw new ValidationError('Pointercrate cursor must be a non-negative integer')
-    }
-
-    return after
-}
-
-function sanitizePointercrateMirrorCrawlLimit(value: unknown) {
-    let limit: number
-
-    try {
-        limit = normalizePointercrateListedDemonsLimit(value)
-    } catch (error) {
-        throw new ValidationError(getErrorMessage(error, 'Invalid Pointercrate page limit'))
-    }
-
-    if (limit > POINTERCRATE_MIRROR_CRAWL_MAX_PAGE_LIMIT) {
-        throw new ValidationError(`Pointercrate crawl limit must be between 1 and ${POINTERCRATE_MIRROR_CRAWL_MAX_PAGE_LIMIT}`)
-    }
-
-    return limit
-}
-
-function sanitizePointercrateMirrorSourceLevelIds(value: unknown) {
-    if (!Array.isArray(value)) {
-        throw new ValidationError('Pointercrate source level IDs are required')
-    }
-
-    const sourceLevelIds = value.map((entry) => Number(entry))
-
-    if (sourceLevelIds.some((levelId) => !Number.isInteger(levelId) || levelId <= 0)) {
-        throw new ValidationError('Pointercrate source level IDs must be positive integers')
-    }
-
-    const uniqueLevelIds = [...new Set(sourceLevelIds)]
-
-    if (!uniqueLevelIds.length) {
-        throw new ValidationError('Pointercrate source level IDs are required')
-    }
-
-    return uniqueLevelIds
-}
-
-function sanitizePointercrateMirrorCrawlCounters(value: unknown): PointercrateMirrorCrawlCounters {
-    const source = getPointercrateMirrorCrawlObject(value)
-    const readCounter = (key: keyof PointercrateMirrorCrawlCounters) => {
-        const parsed = Number(source[key])
-        return Number.isFinite(parsed) && parsed >= 0 ? Math.trunc(parsed) : 0
-    }
-
+function createMirrorCrawlFailure(level: Pick<MirrorMappedLevel, 'levelId' | 'position' | 'name'>, error: string): PointercrateMirrorCrawlFailure {
     return {
-        processed: readCounter('processed'),
-        inserted: readCounter('inserted'),
-        updated: readCounter('updated'),
-        unchanged: readCounter('unchanged'),
-        failed: readCounter('failed'),
-        gdFetched: readCounter('gdFetched'),
-        gdFailed: readCounter('gdFailed')
+        levelId: level.levelId,
+        position: level.position,
+        name: level.name,
+        error
     }
 }
 
@@ -3865,6 +3827,24 @@ function assertPointercrateMirrorListConfig(list: CustomList) {
 
     if (list.mode !== 'top') {
         throw new ValidationError('Pointercrate mirror list must use top mode')
+    }
+}
+
+function assertAredlMirrorListConfig(list: CustomList) {
+    if (list.id !== AREDL_MIRROR_LIST_ID) {
+        throw new ValidationError(`AREDL crawler is configured for list #${AREDL_MIRROR_LIST_ID}`)
+    }
+
+    if (!list.isMirror) {
+        throw new ValidationError('Mirror crawler is only available for mirror lists')
+    }
+
+    if (list.isPlatformer) {
+        throw new ValidationError('AREDL mirror list must be a classic list')
+    }
+
+    if (list.mode !== 'top') {
+        throw new ValidationError('AREDL mirror list must use top mode')
     }
 }
 
@@ -3896,8 +3876,83 @@ function getUniquePointercrateDemons(demons: PointercrateListedDemon[]) {
     return uniqueDemons
 }
 
-async function ensureMirrorSourceLevels(sourceLevels: Array<{ level_id: number }>) {
-    const levelIds = [...new Set(sourceLevels.map((sourceLevel) => sourceLevel.level_id))]
+function getUniqueAredlLevels(levels: AredlLevel[]) {
+    const seenLevelIds = new Set<number>()
+    const uniqueLevels: AredlLevel[] = []
+
+    for (const level of levels) {
+        if (seenLevelIds.has(level.level_id)) {
+            continue
+        }
+
+        seenLevelIds.add(level.level_id)
+        uniqueLevels.push(level)
+    }
+
+    return uniqueLevels
+}
+
+function buildPointercrateMirrorSourceLevels(demons: PointercrateListedDemon[]): MirrorMappedSourceResult {
+    const uniqueDemons = getUniquePointercrateDemons(demons)
+    const levels: MirrorMappedLevel[] = []
+    const failures: PointercrateMirrorCrawlFailure[] = []
+
+    for (const demon of uniqueDemons) {
+        let minProgress: number | null = null
+
+        try {
+            minProgress = demon.requirement == null
+                ? null
+                : sanitizeMinProgress(demon.requirement, false)
+        } catch (error) {
+            failures.push(
+                createMirrorCrawlFailure(
+                    {
+                        levelId: demon.level_id,
+                        position: demon.position,
+                        name: demon.name
+                    },
+                    getErrorMessage(error, 'Invalid Pointercrate minimum progress')
+                )
+            )
+            continue
+        }
+
+        levels.push({
+            levelId: demon.level_id,
+            name: demon.name,
+            position: demon.position,
+            minProgress,
+            videoID: getPointercrateDemonVideoID(demon)
+        })
+    }
+
+    return {
+        processed: uniqueDemons.length,
+        sourceLevelIds: uniqueDemons.map((demon) => demon.level_id),
+        levels,
+        failures
+    }
+}
+
+function buildAredlMirrorSourceLevels(levels: AredlLevel[]): MirrorMappedSourceResult {
+    const uniqueLevels = getUniqueAredlLevels(levels)
+
+    return {
+        processed: uniqueLevels.length,
+        sourceLevelIds: uniqueLevels.map((level) => level.level_id),
+        levels: uniqueLevels.map((level) => ({
+            levelId: level.level_id,
+            name: level.name,
+            position: level.position,
+            rating: level.points
+        })),
+        failures: []
+    }
+}
+
+async function ensureMirrorSourceLevels(levels: MirrorMappedLevel[]) {
+    const levelIds = [...new Set(levels.map((level) => level.levelId))]
     const levelsById = new Map<number, { id: number; isPlatformer: boolean }>()
     const failures = new Map<number, string>()
     let gdFetched = 0
@@ -3945,65 +4000,86 @@ async function ensureMirrorSourceLevels(sourceLevels: Array<{ level_id: number }
     return { levelsById, failures, gdFetched, gdFailed }
 }
 
-function pointercrateListItemChanged(existingItem: any, nextRow: CustomListLevelInsert) {
+function resolveMirrorMappedValue<T>(value: T | null | undefined, existingValue: T | null | undefined, fallback: T | null = null) {
+    if (value === undefined) {
+        return existingValue ?? fallback
+    }
+
+    return value
+}
+
+function buildMirrorListLevelInsert(listId: number, actorUid: string, level: MirrorMappedLevel, existingItem: any, options: {
+    defaultRating?: number
+} = {}): CustomListLevelInsert {
+    const existingRating = Number.isFinite(Number(existingItem?.rating)) ? Number(existingItem.rating) : null
+    const rating = level.rating === undefined
+        ? existingRating ?? options.defaultRating
+        : level.rating
+
+    return {
+        ...(existingItem ? { id: existingItem.id } : {}),
+        listId,
+        levelId: level.levelId,
+        addedBy: existingItem?.addedBy || actorUid,
+        accepted: true,
+        position: level.position,
+        minProgress: resolveMirrorMappedValue(level.minProgress, existingItem?.minProgress ?? null),
+        videoID: resolveMirrorMappedValue(level.videoID, existingItem?.videoID ?? null),
+        ...(rating !== undefined && rating !== null ? { rating } : {})
+    }
+}
+
+function mirrorListItemChanged(existingItem: any, nextRow: CustomListLevelInsert) {
     return !existingItem.accepted
         || Number(existingItem.position ?? 0) !== Number(nextRow.position ?? 0)
         || (existingItem.minProgress ?? null) !== (nextRow.minProgress ?? null)
         || (existingItem.videoID ?? null) !== (nextRow.videoID ?? null)
+        || Number(existingItem.rating ?? 0) !== Number(nextRow.rating ?? 0)
 }
 
-async function syncPointercrateListedDemonsToMirrorList(list: CustomList, actorUid: string, demons: PointercrateListedDemon[]) {
-    const uniqueDemons = getUniquePointercrateDemons(demons)
+async function syncMappedMirrorLevelsToList(list: CustomList, actorUid: string, source: MirrorMappedSourceResult, options: {
+    defaultRating?: number
+} = {}): Promise<MirrorSyncSummary> {
     const {
         levelsById,
         failures: levelFailures,
         gdFetched,
         gdFailed
-    } = await ensureMirrorSourceLevels(uniqueDemons)
-    const failures: PointercrateMirrorCrawlFailure[] = []
-    const processableDemons: PointercrateListedDemon[] = []
+    } = await ensureMirrorSourceLevels(source.levels)
+    const failures = [...source.failures]
+    const processableLevels: MirrorMappedLevel[] = []
 
-    for (const demon of uniqueDemons) {
-        const levelFailure = levelFailures.get(demon.level_id)
+    for (const level of source.levels) {
+        const levelFailure = levelFailures.get(level.levelId)
 
         if (levelFailure) {
-            failures.push({
-                levelId: demon.level_id,
-                position: demon.position,
-                name: demon.name,
-                error: levelFailure
-            })
+            failures.push(createMirrorCrawlFailure(level, levelFailure))
             continue
         }
 
-        const level = levelsById.get(demon.level_id)
+        const storedLevel = levelsById.get(level.levelId)
 
-        if (!level) {
-            failures.push({
-                levelId: demon.level_id,
-                position: demon.position,
-                name: demon.name,
-                error: 'Level metadata is unavailable'
-            })
+        if (!storedLevel) {
+            failures.push(createMirrorCrawlFailure(level, 'Level metadata is unavailable'))
             continue
         }
 
         try {
-            assertLevelTypeMatchesList(list, level)
+            assertLevelTypeMatchesList(list, storedLevel)
         } catch (error) {
-            failures.push({
-                levelId: demon.level_id,
-                position: demon.position,
-                name: demon.name,
-                error: getErrorMessage(error, 'This level cannot be added to this list type')
-            })
+            failures.push(
+                createMirrorCrawlFailure(
+                    level,
+                    getErrorMessage(error, 'This level cannot be added to this list type')
+                )
+            )
             continue
         }
 
-        processableDemons.push(demon)
+        processableLevels.push(level)
     }
 
-    const processableLevelIds = processableDemons.map((demon) => demon.level_id)
+    const processableLevelIds = processableLevels.map((level) => level.levelId)
     let existingItemsByLevelId = new Map<number, any>()
 
     if (processableLevelIds.length) {
@@ -4025,35 +4101,9 @@ async function syncPointercrateListedDemonsToMirrorList(list: CustomList, actorU
     let updated = 0
     let unchanged = 0
 
-    for (const demon of processableDemons) {
-        let minProgress: number | null = null
-
-        try {
-            minProgress = demon.requirement == null
-                ? null
-                : sanitizeMinProgress(demon.requirement, false)
-        } catch (error) {
-            failures.push({
-                levelId: demon.level_id,
-                position: demon.position,
-                name: demon.name,
-                error: getErrorMessage(error, 'Invalid Pointercrate minimum progress')
-            })
-            continue
-        }
-
-        const existingItem = existingItemsByLevelId.get(demon.level_id)
-        const nextRow: CustomListLevelInsert = {
-            ...(existingItem ? { id: existingItem.id } : {}),
-            listId: list.id,
-            levelId: demon.level_id,
-            addedBy: existingItem?.addedBy || actorUid,
-            accepted: true,
-            position: demon.position,
-            minProgress,
-            videoID: getPointercrateDemonVideoID(demon),
-            rating: Number.isFinite(Number(existingItem?.rating)) ? Number(existingItem.rating) : 5
-        }
+    for (const level of processableLevels) {
+        const existingItem = existingItemsByLevelId.get(level.levelId)
+        const nextRow = buildMirrorListLevelInsert(list.id, actorUid, level, existingItem, options)
 
         if (!existingItem) {
             inserted += 1
@@ -4061,7 +4111,7 @@ async function syncPointercrateListedDemonsToMirrorList(list: CustomList, actorU
             continue
         }
 
-        if (pointercrateListItemChanged(existingItem, nextRow)) {
+        if (mirrorListItemChanged(existingItem, nextRow)) {
             updated += 1
             changedRows.push(nextRow)
             continue
@@ -4078,20 +4128,18 @@ async function syncPointercrateListedDemonsToMirrorList(list: CustomList, actorU
         if (error) {
             throw new Error(error.message)
         }
-
-        await syncLevelCount(list.id)
     }
 
     return {
-        processed: uniqueDemons.length,
+        processed: source.processed,
         inserted,
         updated,
         unchanged,
         failed: failures.length,
         gdFetched,
         gdFailed,
-        failures,
-        sourceLevelIds: uniqueDemons.map((demon) => demon.level_id)
+        sourceLevelIds: source.sourceLevelIds,
+        failures
     }
 }
 
@@ -4128,360 +4176,48 @@ async function removeMirrorStaleLevels(listId: number, sourceLevelIds: number[])
     return staleLevelIds.length
 }
 
-async function crawlPointercrateMirrorListPage(listId: number, actor: CustomListActor, options: {
-    after?: unknown
-    limit?: unknown
-} = {}) {
-    const list = await getCustomListRow(listId)
-    const access = await assertCanEditListLevels(list, actor)
-    assertPointercrateMirrorListConfig(list)
-
-    const after = sanitizePointercrateMirrorCrawlAfter(options.after)
-    const limit = sanitizePointercrateMirrorCrawlLimit(options.limit)
-    const page = await fetchPointercrateListedDemonsPage({ after, limit })
-    const summary = await syncPointercrateListedDemonsToMirrorList(list, access.actorUid ?? getRequiredActorUid(actor), page.demons)
-
-    return {
-        source: {
-            name: 'pointercrate',
-            mirrorListId: POINTERCRATE_MIRROR_LIST_ID,
-            after: page.after,
-            limit: page.limit,
-            nextAfter: page.nextAfter,
-            hasMore: page.hasMore,
-            fetched: page.demons.length
-        },
-        ...summary
-    }
-}
-
-async function finalizePointercrateMirrorListCrawl(listId: number, actor: CustomListActor, payload: {
-    sourceLevelIds?: unknown
-    summary?: unknown
-} = {}) {
-    const list = await getCustomListRow(listId)
-    const access = await assertCanEditListLevels(list, actor)
-    assertPointercrateMirrorListConfig(list)
-
-    const sourceLevelIds = sanitizePointercrateMirrorSourceLevelIds(payload.sourceLevelIds)
-    const counters = sanitizePointercrateMirrorCrawlCounters(payload.summary)
-    const removed = await removeMirrorStaleLevels(list.id, sourceLevelIds)
-
-    await syncLevelCount(list.id)
-    await appendCustomListAuditLog(list.id, {
-        actorUid: access.actorUid,
-        action: 'pointercrate_mirror_crawled',
-        metadata: {
-            source: 'pointercrate',
-            mirrorListId: POINTERCRATE_MIRROR_LIST_ID,
-            sourceLevelCount: sourceLevelIds.length,
-            processed: counters.processed,
-            inserted: counters.inserted,
-            updated: counters.updated,
-            unchanged: counters.unchanged,
-            failed: counters.failed,
-            gdFetched: counters.gdFetched,
-            gdFailed: counters.gdFailed,
-            removed
-        }
-    })
-
-    return {
-        removed,
-        list: await getCustomList(list.id, actor)
-    }
-}
-
-async function crawlPointercrateMirrorList(listId: number, actor: CustomListActor) {
-    const sourceLevelIds = new Set<number>()
-    const totals: PointercrateMirrorCrawlCounters = {
-        processed: 0,
-        inserted: 0,
-        updated: 0,
-        unchanged: 0,
-        failed: 0,
-        gdFetched: 0,
-        gdFailed: 0
-    }
+async function fetchAllPointercrateListedDemons() {
+    const demons: PointercrateListedDemon[] = []
     let after = 0
     let pageCount = 0
     let completed = false
 
     while (pageCount < POINTERCRATE_MIRROR_CRAWL_MAX_PAGES) {
-        const page = await crawlPointercrateMirrorListPage(listId, actor, {
+        const page = await fetchPointercrateListedDemonsPage({
             after,
             limit: POINTERCRATE_MIRROR_CRAWL_MAX_PAGE_LIMIT
         })
         pageCount += 1
+        demons.push(...page.demons)
 
-        totals.processed += page.processed
-        totals.inserted += page.inserted
-        totals.updated += page.updated
-        totals.unchanged += page.unchanged
-        totals.failed += page.failed
-        totals.gdFetched += page.gdFetched
-        totals.gdFailed += page.gdFailed
-
-        for (const levelId of page.sourceLevelIds) {
-            sourceLevelIds.add(levelId)
-        }
-
-        if (!page.source.hasMore || page.source.nextAfter == null) {
+        if (!page.hasMore || page.nextAfter == null) {
             completed = true
             break
         }
 
-        after = page.source.nextAfter
+        after = page.nextAfter
     }
 
     if (!completed) {
         throw new ValidationError('Pointercrate crawl stopped after too many pages')
     }
 
-    const finalized = await finalizePointercrateMirrorListCrawl(listId, actor, {
-        sourceLevelIds: [...sourceLevelIds],
-        summary: totals
-    })
-
     return {
-        source: {
-            name: 'pointercrate',
-            mirrorListId: POINTERCRATE_MIRROR_LIST_ID,
-            pages: pageCount,
-            fetched: sourceLevelIds.size
-        },
-        ...totals,
-        removed: finalized.removed,
-        sourceLevelCount: sourceLevelIds.size,
-        list: finalized.list
+        demons,
+        pages: pageCount
     }
 }
 
-function assertAredlMirrorListConfig(list: CustomList) {
-    if (list.id !== AREDL_MIRROR_LIST_ID) {
-        throw new ValidationError(`AREDL crawler is configured for list #${AREDL_MIRROR_LIST_ID}`)
-    }
-
-    if (!list.isMirror) {
-        throw new ValidationError('Mirror crawler is only available for mirror lists')
-    }
-
-    if (list.isPlatformer) {
-        throw new ValidationError('AREDL mirror list must be a classic list')
-    }
-
-    if (list.mode !== 'top') {
-        throw new ValidationError('AREDL mirror list must use top mode')
-    }
-}
-
-function getUniqueAredlLevels(levels: AredlLevel[]) {
-    const seenLevelIds = new Set<number>()
-    const uniqueLevels: AredlLevel[] = []
-
-    for (const level of levels) {
-        if (seenLevelIds.has(level.level_id)) {
-            continue
-        }
-
-        seenLevelIds.add(level.level_id)
-        uniqueLevels.push(level)
-    }
-
-    return uniqueLevels
-}
-
-async function ensureAredlMirrorSourceLevels(levels: AredlLevel[]) {
-    const levelIds = [...new Set(levels.map((level) => level.level_id))]
-    const levelsById = new Map<number, { id: number; isPlatformer: boolean }>()
-
-    if (!levelIds.length) {
-        return levelsById
-    }
-
-    const { data: existingLevels, error: existingLevelsError } = await supabase
-        .from('levels')
-        .select('id, isPlatformer')
-        .in('id', levelIds)
-
-    if (existingLevelsError) {
-        throw new Error(existingLevelsError.message)
-    }
-
-    for (const level of existingLevels || []) {
-        levelsById.set(level.id, {
-            id: level.id,
-            isPlatformer: Boolean(level.isPlatformer)
-        })
-    }
-
-    const missingLevels = levels.filter((level) => !levelsById.has(level.level_id))
-
-    if (missingLevels.length) {
-        const levelInserts: TablesInsert<'levels'>[] = missingLevels.map((level) => ({
-            id: level.level_id,
-            isPlatformer: false,
-            name: level.name
-        }))
-
-        const { error } = await supabase
-            .from('levels')
-            .upsert(levelInserts as any, {
-                onConflict: 'id',
-                ignoreDuplicates: true
-            })
-
-        if (error) {
-            throw new Error(error.message)
-        }
-
-        for (const level of missingLevels) {
-            levelsById.set(level.level_id, {
-                id: level.level_id,
-                isPlatformer: false
-            })
-        }
-    }
-
-    return levelsById
-}
-
-function aredlListItemChanged(existingItem: any, nextRow: CustomListLevelInsert) {
-    return !existingItem.accepted
-        || Number(existingItem.position ?? 0) !== Number(nextRow.position ?? 0)
-        || Number(existingItem.rating ?? 0) !== Number(nextRow.rating ?? 0)
-}
-
-async function syncAredlLevelsToMirrorList(list: CustomList, actorUid: string, levels: AredlLevel[]) {
-    const uniqueLevels = getUniqueAredlLevels(levels)
-    const levelsById = await ensureAredlMirrorSourceLevels(uniqueLevels)
-    const failures: PointercrateMirrorCrawlFailure[] = []
-    const processableLevels: AredlLevel[] = []
-
-    for (const level of uniqueLevels) {
-        const storedLevel = levelsById.get(level.level_id)
-
-        if (!storedLevel) {
-            failures.push({
-                levelId: level.level_id,
-                position: level.position,
-                name: level.name,
-                error: 'Level metadata is unavailable'
-            })
-            continue
-        }
-
-        try {
-            assertLevelTypeMatchesList(list, storedLevel)
-        } catch (error) {
-            failures.push({
-                levelId: level.level_id,
-                position: level.position,
-                name: level.name,
-                error: getErrorMessage(error, 'This level cannot be added to this list type')
-            })
-            continue
-        }
-
-        processableLevels.push(level)
-    }
-
-    const processableLevelIds = processableLevels.map((level) => level.level_id)
-    let existingItemsByLevelId = new Map<number, any>()
-
-    if (processableLevelIds.length) {
-        const { data: existingItems, error: existingItemsError } = await supabase
-            .from('listLevels')
-            .select('id, levelId, addedBy, accepted, position, minProgress, videoID, rating')
-            .eq('listId', list.id)
-            .in('levelId', processableLevelIds)
-
-        if (existingItemsError) {
-            throw new Error(existingItemsError.message)
-        }
-
-        existingItemsByLevelId = new Map((existingItems || []).map((item) => [Number(item.levelId), item]))
-    }
-
-    const changedRows: CustomListLevelInsert[] = []
-    let inserted = 0
-    let updated = 0
-    let unchanged = 0
-
-    for (const level of processableLevels) {
-        const existingItem = existingItemsByLevelId.get(level.level_id)
-        const nextRow: CustomListLevelInsert = {
-            ...(existingItem ? { id: existingItem.id } : {}),
-            listId: list.id,
-            levelId: level.level_id,
-            addedBy: existingItem?.addedBy || actorUid,
-            accepted: true,
-            position: level.position,
-            minProgress: existingItem?.minProgress ?? null,
-            videoID: existingItem?.videoID ?? null,
-            rating: level.points
-        }
-
-        if (!existingItem) {
-            inserted += 1
-            changedRows.push(nextRow)
-            continue
-        }
-
-        if (aredlListItemChanged(existingItem, nextRow)) {
-            updated += 1
-            changedRows.push(nextRow)
-            continue
-        }
-
-        unchanged += 1
-    }
-
-    if (changedRows.length) {
-        const { error } = await supabase
-            .from('listLevels')
-            .upsert(changedRows as any, { onConflict: 'listId,levelId' })
-
-        if (error) {
-            throw new Error(error.message)
-        }
-    }
-
-    return {
-        processed: uniqueLevels.length,
-        inserted,
-        updated,
-        unchanged,
-        failed: failures.length,
-        gdFetched: 0,
-        gdFailed: 0,
-        failures,
-        sourceLevelIds: uniqueLevels.map((level) => level.level_id)
-    }
-}
-
-async function crawlAredlMirrorList(listId: number, actor: CustomListActor) {
-    requireListId(listId)
-
-    if (listId !== AREDL_MIRROR_LIST_ID) {
-        throw new ValidationError(`AREDL crawler is configured for list #${AREDL_MIRROR_LIST_ID}`)
-    }
-
-    const list = await getCustomListRow(listId)
-    const access = await assertCanEditListLevels(list, actor)
-    assertAredlMirrorListConfig(list)
-
-    const levels = await fetchAredlLevels()
-    const summary = await syncAredlLevelsToMirrorList(list, access.actorUid ?? getRequiredActorUid(actor), levels)
+async function finalizeMirrorListCrawl(list: CustomList, actor: CustomListActor, actorUid: string | null, source: MirrorSourceInfo, summary: MirrorSyncSummary) {
     const removed = await removeMirrorStaleLevels(list.id, summary.sourceLevelIds)
 
     await syncLevelCount(list.id)
     await appendCustomListAuditLog(list.id, {
-        actorUid: access.actorUid,
-        action: 'aredl_mirror_crawled',
+        actorUid,
+        action: `${source.name}_mirror_crawled`,
         metadata: {
-            source: 'aredl',
-            mirrorListId: AREDL_MIRROR_LIST_ID,
+            source: source.name,
+            mirrorListId: source.mirrorListId,
             sourceLevelCount: summary.sourceLevelIds.length,
             processed: summary.processed,
             inserted: summary.inserted,
@@ -4496,9 +4232,10 @@ async function crawlAredlMirrorList(listId: number, actor: CustomListActor) {
 
     return {
         source: {
-            name: 'aredl',
-            mirrorListId: AREDL_MIRROR_LIST_ID,
-            fetched: levels.length
+            name: source.name,
+            mirrorListId: source.mirrorListId,
+            ...(source.pages !== undefined ? { pages: source.pages } : {}),
+            fetched: source.fetched
         },
         processed: summary.processed,
         inserted: summary.inserted,
@@ -4512,6 +4249,49 @@ async function crawlAredlMirrorList(listId: number, actor: CustomListActor) {
         failures: summary.failures,
         list: await getCustomList(list.id, actor)
     }
+}
+
+async function crawlPointercrateMirrorList(listId: number, actor: CustomListActor) {
+    const list = await getCustomListRow(listId)
+    const access = await assertCanEditListLevels(list, actor)
+    assertPointercrateMirrorListConfig(list)
+
+    const actorUid = access.actorUid ?? getRequiredActorUid(actor)
+    const { demons, pages } = await fetchAllPointercrateListedDemons()
+    const mapped = buildPointercrateMirrorSourceLevels(demons)
+    const summary = await syncMappedMirrorLevelsToList(list, actorUid, mapped, {
+        defaultRating: 5
+    })
+
+    return finalizeMirrorListCrawl(list, actor, access.actorUid, {
+        name: 'pointercrate',
+        mirrorListId: POINTERCRATE_MIRROR_LIST_ID,
+        fetched: mapped.processed,
+        pages
+    }, summary)
+}
+
+async function crawlAredlMirrorList(listId: number, actor: CustomListActor) {
+    requireListId(listId)
+
+    if (listId !== AREDL_MIRROR_LIST_ID) {
+        throw new ValidationError(`AREDL crawler is configured for list #${AREDL_MIRROR_LIST_ID}`)
+    }
+
+    const list = await getCustomListRow(listId)
+    const access = await assertCanEditListLevels(list, actor)
+    assertAredlMirrorListConfig(list)
+
+    const actorUid = access.actorUid ?? getRequiredActorUid(actor)
+    const levels = await fetchAredlLevels()
+    const mapped = buildAredlMirrorSourceLevels(levels)
+    const summary = await syncMappedMirrorLevelsToList(list, actorUid, mapped)
+
+    return finalizeMirrorListCrawl(list, actor, access.actorUid, {
+        name: 'aredl',
+        mirrorListId: AREDL_MIRROR_LIST_ID,
+        fetched: mapped.processed
+    }, summary)
 }
 
 export async function crawlMirrorList(listId: number, actor: CustomListActor) {
