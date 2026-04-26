@@ -242,6 +242,7 @@ const RECORD_SCORE_FORMULA_VALIDATION_SCOPE = {
 }
 const OFFICIAL_LIST_SLUGS = ['dl', 'pl', 'fl', 'cl'] as const
 const CUSTOM_LIST_LEADERBOARD_RECORD_PAGE_SIZE = 1000
+const CUSTOM_LIST_ITEMS_SELECT_PAGE_SIZE = 1000
 const CUSTOM_LIST_LEADERBOARD_PLAYER_BATCH_SIZE = 500
 const CUSTOM_LIST_RANK_BADGE_LIMIT = 20
 const CUSTOM_LIST_AUDIT_LOG_LIMIT = 50
@@ -2967,59 +2968,82 @@ async function getCustomListItems(listId: number, mode: string = 'rating', itemR
         levelIdFilter = matchedIds
     }
 
-    let itemsQuery = supabase
-        .from('listLevels')
-        .select('id, created_at, listId, levelId, addedBy, rating, position, minProgress, videoID, accepted, submissionComment')
-        .eq('listId', listId)
-        .eq('accepted', true)
+    const buildItemsQuery = () => {
+        let itemsQuery = supabase
+            .from('listLevels')
+            .select('id, created_at, listId, levelId, addedBy, rating, position, minProgress, videoID, accepted, submissionComment')
+            .eq('listId', listId)
+            .eq('accepted', true)
 
-    if (levelIdFilter !== null) {
-        itemsQuery = itemsQuery.in('levelId', levelIdFilter)
+        if (levelIdFilter !== null) {
+            itemsQuery = itemsQuery.in('levelId', levelIdFilter)
+        }
+
+        if (filters.topMin != null) {
+            itemsQuery = itemsQuery.gte('position', filters.topMin)
+        }
+
+        if (filters.topMax != null) {
+            itemsQuery = itemsQuery.lte('position', filters.topMax)
+        }
+
+        if (filters.ratingMin != null) {
+            itemsQuery = itemsQuery.gte('rating', filters.ratingMin)
+        }
+
+        if (filters.ratingMax != null) {
+            itemsQuery = itemsQuery.lte('rating', filters.ratingMax)
+        }
+
+        const overrideAscending = filters.ascending
+
+        if (itemSort === 'created_at') {
+            const ascending = overrideAscending ?? true
+            itemsQuery = itemsQuery
+                .order('created_at', { ascending })
+                .order('id', { ascending })
+        } else {
+            const defaultAscending = isTop
+            const ascending = overrideAscending ?? defaultAscending
+            itemsQuery = itemsQuery
+                .order(isTop ? 'position' : 'rating', { ascending, nullsFirst: false })
+                .order('created_at', { ascending: true })
+                .order('id', { ascending: true })
+        }
+
+        return itemsQuery
     }
 
-    if (filters.topMin != null) {
-        itemsQuery = itemsQuery.gte('position', filters.topMin)
-    }
-
-    if (filters.topMax != null) {
-        itemsQuery = itemsQuery.lte('position', filters.topMax)
-    }
-
-    if (filters.ratingMin != null) {
-        itemsQuery = itemsQuery.gte('rating', filters.ratingMin)
-    }
-
-    if (filters.ratingMax != null) {
-        itemsQuery = itemsQuery.lte('rating', filters.ratingMax)
-    }
-
-    const overrideAscending = filters.ascending
-
-    if (itemSort === 'created_at') {
-        const ascending = overrideAscending ?? true
-        itemsQuery = itemsQuery
-            .order('created_at', { ascending })
-            .order('id', { ascending })
-    } else {
-        const defaultAscending = isTop
-        const ascending = overrideAscending ?? defaultAscending
-        itemsQuery = itemsQuery
-            .order(isTop ? 'position' : 'rating', { ascending, nullsFirst: false })
-            .order('created_at', { ascending: true })
-            .order('id', { ascending: true })
-    }
+    let items: CustomListLevelRow[] = []
 
     if (itemRange?.start !== undefined && itemRange?.end !== undefined) {
-        itemsQuery = itemsQuery.range(itemRange.start, itemRange.end)
+        const { data, error } = await buildItemsQuery().range(itemRange.start, itemRange.end)
+
+        if (error) {
+            throw new Error(error.message)
+        }
+
+        items = (data || []) as CustomListLevelRow[]
+    } else {
+        // Supabase caps uncapped select queries at 1000 rows, so page until the ordered result set is exhausted.
+        for (let start = 0; ; start += CUSTOM_LIST_ITEMS_SELECT_PAGE_SIZE) {
+            const end = start + CUSTOM_LIST_ITEMS_SELECT_PAGE_SIZE - 1
+            const { data, error } = await buildItemsQuery().range(start, end)
+
+            if (error) {
+                throw new Error(error.message)
+            }
+
+            const pageItems = (data || []) as CustomListLevelRow[]
+            items.push(...pageItems)
+
+            if (pageItems.length < CUSTOM_LIST_ITEMS_SELECT_PAGE_SIZE) {
+                break
+            }
+        }
     }
 
-    const { data: items, error: itemsError } = await itemsQuery
-
-    if (itemsError) {
-        throw new Error(itemsError.message)
-    }
-
-    const levelIds = [...new Set((items || []).map((item) => item.levelId))]
+    const levelIds = [...new Set(items.map((item) => item.levelId))]
 
     if (!levelIds.length) {
         return []
@@ -3037,7 +3061,39 @@ async function getCustomListItems(listId: number, mode: string = 'rating', itemR
 
     const levelsById = new Map((levels || []).map((level) => [level.id, level]))
 
-    return (items || []).map((item) => {
+    const missingLevelIds = levelIds.filter((levelId) => !levelsById.has(levelId))
+    const recoveredLevelIds: number[] = []
+
+    for (const levelId of missingLevelIds) {
+        try {
+            await ensureLevelExists(levelId)
+            recoveredLevelIds.push(levelId)
+        } catch (error) {
+            console.warn('[CustomList] failed to hydrate missing level metadata', {
+                listId,
+                levelId,
+                error: error instanceof Error ? error.message : String(error)
+            })
+        }
+    }
+
+    if (recoveredLevelIds.length) {
+        // @ts-ignore
+        const { data: recoveredLevels, error: recoveredLevelsError } = await supabase
+            .from('levels')
+            .select('*, creatorData:players!creatorId(*, clans!id(*)), levelsTags(tag_id, levelTags(id, name, color))')
+            .in('id', recoveredLevelIds)
+
+        if (recoveredLevelsError) {
+            throw new Error(recoveredLevelsError.message)
+        }
+
+        for (const level of recoveredLevels || []) {
+            levelsById.set(level.id, level)
+        }
+    }
+
+    return items.map((item) => {
         const level = levelsById.get(item.levelId) ?? null
 
         return {
@@ -3989,6 +4045,12 @@ function getPointercrateDemonVideoID(demon: PointercrateListedDemon) {
     }
 }
 
+function getAredlLevelVideoID(level: AredlLevel) {
+    void level
+
+    return undefined
+}
+
 function getUniquePointercrateDemons(demons: PointercrateListedDemon[]) {
     const seenLevelIds = new Set<number>()
     const uniqueDemons: PointercrateListedDemon[] = []
@@ -4074,6 +4136,7 @@ function buildAredlMirrorSourceLevels(levels: AredlLevel[]): MirrorMappedSourceR
             levelId: level.level_id,
             name: level.name,
             position: level.position,
+            videoID: getAredlLevelVideoID(level),
             rating: level.points
         })),
         failures: []
