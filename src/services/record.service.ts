@@ -543,6 +543,43 @@ export async function getAutoAcceptedRecord(uid: string, levelID: number) {
     return data ?? null
 }
 
+async function deleteRecordById(recordId: number) {
+    const { error } = await supabase
+        .from('records')
+        .delete()
+        .eq('id', recordId)
+
+    if (error) {
+        console.error(error)
+        throw new Error(error.message)
+    }
+}
+
+export async function removeSupersededAcceptedVersions(recordData: Pick<TRecord, 'id' | 'userid' | 'levelid' | 'acceptedManually'>) {
+    if (!recordData.acceptedManually || !recordData.id || !recordData.userid || !recordData.levelid) {
+        return
+    }
+
+    const levelID = Number(recordData.levelid)
+    const [previousAccepted, autoAcceptedRecord] = await Promise.all([
+        getManuallyAcceptedRecord(recordData.userid, levelID),
+        getAutoAcceptedRecord(recordData.userid, levelID)
+    ])
+    const recordIdsToDelete = new Set<number>()
+
+    if (previousAccepted && previousAccepted.id !== recordData.id) {
+        recordIdsToDelete.add(previousAccepted.id)
+    }
+
+    if (autoAcceptedRecord && autoAcceptedRecord.id !== recordData.id) {
+        recordIdsToDelete.add(autoAcceptedRecord.id)
+    }
+
+    for (const recordId of recordIdsToDelete) {
+        await deleteRecordById(recordId)
+    }
+}
+
 /**
  * Return the single pending record for the (uid, levelID) pair, or null if
  * none exists. A pending record has both `acceptedManually` and
@@ -820,12 +857,14 @@ export async function submitRecord(recordData: TRecord) {
         const player = await getPlayer(recordData.userid)
         logs.push(`Player data: ${JSON.stringify(player, null, 2)}`);
 
-        // Look up both the best currently-accepted record and any in-flight
-        // pending replacement independently. Up to one of each may exist per
-        // (userid, levelid) pair.
-        const acceptedRecord = await getBestAcceptedRecord(recordData.userid!, recordData.levelid!, Boolean(level.isPlatformer))
+        // Look up accepted rows and any in-flight pending replacement
+        // independently. Auto-accepted rows should be preserved, but they do
+        // not block a new submission the way a manually accepted record does.
+        const acceptedRecords = await getAcceptedRecords(recordData.userid!, recordData.levelid!)
+        const manuallyAcceptedRecord = acceptedRecords.find((record) => Boolean(record.acceptedManually)) ?? null
         const pendingRecord = await getPendingRecord(recordData.userid!, recordData.levelid!)
-        logs.push(`Accepted record: ${JSON.stringify(acceptedRecord)}`)
+        logs.push(`Accepted records: ${JSON.stringify(acceptedRecords)}`)
+        logs.push(`Manually accepted record: ${JSON.stringify(manuallyAcceptedRecord)}`)
         logs.push(`Pending record: ${JSON.stringify(pendingRecord)}`)
 
         const betterRecordError = {
@@ -833,19 +872,37 @@ export async function submitRecord(recordData: TRecord) {
             vi: 'Đã có bản ghi tốt hơn'
         }
 
-        // If the user already has an accepted record, the new submission must
-        // be strictly better by the new ordering (progress → refresh rate →
-        // mobile). The accepted record is NEVER overwritten here — it stays
-        // in place until a reviewer accepts the pending replacement.
-        if (acceptedRecord) {
-            if (!isBetterRecord(recordData, acceptedRecord as any, level.isPlatformer!)) {
-                logs.push('Accepted record exists and new submission is not better')
+        // A manually accepted record still blocks a worse submission. Auto-
+        // accepted rows remain submit-overridable, but any accepted row means
+        // the new submission should stay pending until a reviewer resolves it.
+        if (manuallyAcceptedRecord && !isBetterRecord(recordData, manuallyAcceptedRecord as any, level.isPlatformer!)) {
+            logs.push('Manually accepted record exists and new submission is not better')
+            throw betterRecordError
+        }
+
+        if (acceptedRecords.length > 0) {
+            if (manuallyAcceptedRecord) {
+                logs.push('Accepted record exists and manual record gate passed')
+            } else {
+                logs.push('Only auto-accepted record exists; allowing pending submission alongside it')
+            }
+
+            if (!manuallyAcceptedRecord && pendingRecord) {
+                logs.push('Accepted auto-only record exists alongside a pending replacement')
+            }
+
+            if (!manuallyAcceptedRecord && !pendingRecord) {
+                logs.push('Creating a new pending submission while preserving the auto-accepted record')
+            }
+
+            if (!manuallyAcceptedRecord && pendingRecord && !isBetterRecord(recordData, pendingRecord as any, level.isPlatformer!)) {
+                logs.push('Pending replacement exists and new submission is not better than it')
                 throw betterRecordError
             }
 
             // If a previous pending replacement exists, allow it to be
             // refined only if the new submission is strictly better than it.
-            if (pendingRecord && !isBetterRecord(recordData, pendingRecord as any, level.isPlatformer!)) {
+            if (manuallyAcceptedRecord && pendingRecord && !isBetterRecord(recordData, pendingRecord as any, level.isPlatformer!)) {
                 logs.push('Pending replacement exists and new submission is not better than it')
                 throw betterRecordError
             }
@@ -864,7 +921,7 @@ export async function submitRecord(recordData: TRecord) {
             // record always requires human review.
             const updateLogs = await updateRecord(nextData, true, false)
             logs.push(...updateLogs)
-            logs.push('Pending replacement stored; accepted record preserved')
+            logs.push('Pending replacement stored; accepted record versions preserved')
             return { logs }
         }
 
@@ -1034,21 +1091,7 @@ export async function updateRecord(recordData: TRecord, validate = false, accept
 
     delete nextRecordData.isChecked;
 
-    if (nextRecordData.acceptedManually && nextRecordData.id && nextRecordData.userid && nextRecordData.levelid) {
-        const previousAccepted: any = await getManuallyAcceptedRecord(nextRecordData.userid, Number(nextRecordData.levelid))
-
-        if (previousAccepted && previousAccepted.id !== nextRecordData.id) {
-            const { error: deleteError } = await supabase
-                .from('records')
-                .delete()
-                .eq('id', previousAccepted.id)
-
-            if (deleteError) {
-                console.error(deleteError)
-                throw new Error(deleteError.message)
-            }
-        }
-    }
+    await removeSupersededAcceptedVersions(nextRecordData)
 
     const { error } = await supabase
         .from('records')

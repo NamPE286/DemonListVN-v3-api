@@ -5978,6 +5978,13 @@ function getOfficialLevelListEntries(level: {
     const createdAt = level.created_at || new Date().toISOString()
     const updatedAt = createdAt
     const entries: any[] = []
+    const recordFilterDefaults = {
+        recordFilterPlatform: 'any',
+        recordFilterMinRefreshRate: null,
+        recordFilterMaxRefreshRate: null,
+        recordFilterAcceptanceStatus: 'manual',
+        recordFilterManualAcceptanceOnly: true
+    }
 
     if (level.dlTop != null) {
         if (level.isChallenge) {
@@ -6006,6 +6013,7 @@ function getOfficialLevelListEntries(level: {
                 rankBadges: [],
                 recordScoreFormula: config.recordScoreFormula,
                 weightFormula: config.weightFormula,
+                ...recordFilterDefaults,
                 lastRefreshedAt: null,
                 updated_at: updatedAt,
                 starCount: 0,
@@ -6045,6 +6053,7 @@ function getOfficialLevelListEntries(level: {
                 rankBadges: [],
                 recordScoreFormula: config.recordScoreFormula,
                 weightFormula: config.weightFormula,
+                ...recordFilterDefaults,
                 lastRefreshedAt: null,
                 updated_at: updatedAt,
                 starCount: 0,
@@ -6084,6 +6093,7 @@ function getOfficialLevelListEntries(level: {
                 rankBadges: [],
                 recordScoreFormula: config.recordScoreFormula,
                 weightFormula: config.weightFormula,
+                ...recordFilterDefaults,
                 lastRefreshedAt: null,
                 updated_at: updatedAt,
                 starCount: 0,
@@ -6126,6 +6136,7 @@ function getOfficialLevelListEntries(level: {
             rankBadges: [],
             recordScoreFormula: config.recordScoreFormula,
             weightFormula: config.weightFormula,
+            ...recordFilterDefaults,
             lastRefreshedAt: null,
             updated_at: updatedAt,
             starCount: 0,

@@ -4,9 +4,9 @@ import { getLevel } from '@src/services/level.service'
 import {
     getRecord,
     getRecordById,
-    getManuallyAcceptedRecord,
     getPendingRecord,
-    isOfficialListLevel
+    isOfficialListLevel,
+    removeSupersededAcceptedVersions
 } from '@src/services/record.service'
 import userAuth from '@src/middleware/user-auth.middleware'
 import logger from '@src/utils/logger'
@@ -65,23 +65,15 @@ router.route('/')
             return
         }
 
-        // If we are accepting a pending replacement, remove the previous
-        // manually accepted record for the same (userid, levelid) pair FIRST.
-        // Auto-accepted records are kept as a separate version.
+        // If we are accepting a submission, remove any superseded accepted
+        // versions for the same (userid, levelid) pair before updating it.
         if (acceptedManually) {
-            const previousAccepted: any = await getManuallyAcceptedRecord(recordUpdate.userid, recordUpdate.levelid)
-
-            if (previousAccepted && previousAccepted.id !== record.id) {
-                const { error: deleteErr } = await supabase
-                    .from('records')
-                    .delete()
-                    .eq('id', previousAccepted.id)
-
-                if (deleteErr) {
-                    console.error(deleteErr)
-                    res.status(500).send()
-                    return
-                }
+            try {
+                await removeSupersededAcceptedVersions(recordUpdate)
+            } catch (deleteErr) {
+                console.error(deleteErr)
+                res.status(500).send()
+                return
             }
         }
 
