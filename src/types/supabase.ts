@@ -4003,6 +4003,15 @@ export type Database = {
       }
       reset_overwatch_daily_limits: { Args: never; Returns: undefined }
       update_list: { Args: never; Returns: undefined }
+      upsert_aredl_mirror_list: {
+        Args: {
+          p_actor_is_moderator?: boolean
+          p_actor_uid: string
+          p_levels?: Json
+          p_list_id: number
+        }
+        Returns: Json
+      }
       update_rank: { Args: never; Returns: undefined }
       update_supporter_until: { Args: never; Returns: undefined }
     }

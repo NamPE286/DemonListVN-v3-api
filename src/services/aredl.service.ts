@@ -64,7 +64,7 @@ function normalizeAredlLevel(value: unknown): AredlLevel | null {
     return null;
   }
 
-  if (!Number.isFinite(points) || points < 0) {
+  if (!Number.isInteger(points) || points < 0) {
     return null;
   }
 
