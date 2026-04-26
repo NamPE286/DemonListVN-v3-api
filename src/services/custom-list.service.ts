@@ -2844,6 +2844,11 @@ async function getListWithOwnerData(listId: number) {
 }
 
 async function ensureLevelExists(levelId: number) {
+    const { level } = await ensureLevelExistsWithSource(levelId)
+    return level
+}
+
+async function ensureLevelExistsWithSource(levelId: number) {
     requireLevelId(levelId)
 
     const existingLevel = await supabase
@@ -2857,7 +2862,10 @@ async function ensureLevelExists(levelId: number) {
     }
 
     if (existingLevel.data) {
-        return await getLevel(levelId)
+        return {
+            level: await getLevel(levelId),
+            fetchedFromGd: false
+        }
     }
 
     let gdLevel: Awaited<ReturnType<typeof fetchLevelFromGD>>
@@ -2868,15 +2876,18 @@ async function ensureLevelExists(levelId: number) {
         throw new NotFoundError('Level not found on the official Geometry Dash server')
     }
 
-    return await retrieveOrCreateLevel({
-        id: levelId,
-        name: gdLevel.name,
-        creator: gdLevel.author,
-        difficulty: gdLevel.difficulty ?? null,
-        isPlatformer: gdLevel.length == 5,
-        isChallenge: false,
-        isNonList: false,
-    } as any)
+    return {
+        level: await retrieveOrCreateLevel({
+            id: levelId,
+            name: gdLevel.name,
+            creator: gdLevel.author,
+            difficulty: gdLevel.difficulty ?? null,
+            isPlatformer: gdLevel.length == 5,
+            isChallenge: false,
+            isNonList: false,
+        } as any),
+        fetchedFromGd: true
+    }
 }
 
 async function getCustomListItems(listId: number, mode: string = 'rating', itemRange?: {
@@ -3757,6 +3768,8 @@ type PointercrateMirrorCrawlCounters = {
     updated: number
     unchanged: number
     failed: number
+    gdFetched: number
+    gdFailed: number
 }
 
 function getPointercrateMirrorCrawlObject(value: unknown) {
@@ -3831,7 +3844,9 @@ function sanitizePointercrateMirrorCrawlCounters(value: unknown): PointercrateMi
         inserted: readCounter('inserted'),
         updated: readCounter('updated'),
         unchanged: readCounter('unchanged'),
-        failed: readCounter('failed')
+        failed: readCounter('failed'),
+        gdFetched: readCounter('gdFetched'),
+        gdFailed: readCounter('gdFailed')
     }
 }
 
@@ -3885,9 +3900,11 @@ async function ensureMirrorSourceLevels(sourceLevels: Array<{ level_id: number }
     const levelIds = [...new Set(sourceLevels.map((sourceLevel) => sourceLevel.level_id))]
     const levelsById = new Map<number, { id: number; isPlatformer: boolean }>()
     const failures = new Map<number, string>()
+    let gdFetched = 0
+    let gdFailed = 0
 
     if (!levelIds.length) {
-        return { levelsById, failures }
+        return { levelsById, failures, gdFetched, gdFailed }
     }
 
     const { data: existingLevels, error: existingLevelsError } = await supabase
@@ -3910,17 +3927,22 @@ async function ensureMirrorSourceLevels(sourceLevels: Array<{ level_id: number }
 
     for (const levelId of missingLevelIds) {
         try {
-            const level = await ensureLevelExists(levelId)
+            const { level, fetchedFromGd } = await ensureLevelExistsWithSource(levelId)
             levelsById.set(levelId, {
                 id: levelId,
                 isPlatformer: Boolean(level.isPlatformer)
             })
+
+            if (fetchedFromGd) {
+                gdFetched += 1
+            }
         } catch (error) {
             failures.set(levelId, getErrorMessage(error, 'Level not found on the official Geometry Dash server'))
+            gdFailed += 1
         }
     }
 
-    return { levelsById, failures }
+    return { levelsById, failures, gdFetched, gdFailed }
 }
 
 function pointercrateListItemChanged(existingItem: any, nextRow: CustomListLevelInsert) {
@@ -3932,7 +3954,12 @@ function pointercrateListItemChanged(existingItem: any, nextRow: CustomListLevel
 
 async function syncPointercrateListedDemonsToMirrorList(list: CustomList, actorUid: string, demons: PointercrateListedDemon[]) {
     const uniqueDemons = getUniquePointercrateDemons(demons)
-    const { levelsById, failures: levelFailures } = await ensureMirrorSourceLevels(uniqueDemons)
+    const {
+        levelsById,
+        failures: levelFailures,
+        gdFetched,
+        gdFailed
+    } = await ensureMirrorSourceLevels(uniqueDemons)
     const failures: PointercrateMirrorCrawlFailure[] = []
     const processableDemons: PointercrateListedDemon[] = []
 
@@ -4061,6 +4088,8 @@ async function syncPointercrateListedDemonsToMirrorList(list: CustomList, actorU
         updated,
         unchanged,
         failed: failures.length,
+        gdFetched,
+        gdFailed,
         failures,
         sourceLevelIds: uniqueDemons.map((demon) => demon.level_id)
     }
@@ -4099,7 +4128,7 @@ async function removeMirrorStaleLevels(listId: number, sourceLevelIds: number[])
     return staleLevelIds.length
 }
 
-export async function crawlPointercrateMirrorListPage(listId: number, actor: CustomListActor, options: {
+async function crawlPointercrateMirrorListPage(listId: number, actor: CustomListActor, options: {
     after?: unknown
     limit?: unknown
 } = {}) {
@@ -4126,7 +4155,7 @@ export async function crawlPointercrateMirrorListPage(listId: number, actor: Cus
     }
 }
 
-export async function finalizePointercrateMirrorListCrawl(listId: number, actor: CustomListActor, payload: {
+async function finalizePointercrateMirrorListCrawl(listId: number, actor: CustomListActor, payload: {
     sourceLevelIds?: unknown
     summary?: unknown
 } = {}) {
@@ -4151,6 +4180,8 @@ export async function finalizePointercrateMirrorListCrawl(listId: number, actor:
             updated: counters.updated,
             unchanged: counters.unchanged,
             failed: counters.failed,
+            gdFetched: counters.gdFetched,
+            gdFailed: counters.gdFailed,
             removed
         }
     })
@@ -4168,7 +4199,9 @@ async function crawlPointercrateMirrorList(listId: number, actor: CustomListActo
         inserted: 0,
         updated: 0,
         unchanged: 0,
-        failed: 0
+        failed: 0,
+        gdFetched: 0,
+        gdFailed: 0
     }
     let after = 0
     let pageCount = 0
@@ -4186,6 +4219,8 @@ async function crawlPointercrateMirrorList(listId: number, actor: CustomListActo
         totals.updated += page.updated
         totals.unchanged += page.unchanged
         totals.failed += page.failed
+        totals.gdFetched += page.gdFetched
+        totals.gdFailed += page.gdFailed
 
         for (const levelId of page.sourceLevelIds) {
             sourceLevelIds.add(levelId)
@@ -4418,12 +4453,14 @@ async function syncAredlLevelsToMirrorList(list: CustomList, actorUid: string, l
         updated,
         unchanged,
         failed: failures.length,
+        gdFetched: 0,
+        gdFailed: 0,
         failures,
         sourceLevelIds: uniqueLevels.map((level) => level.level_id)
     }
 }
 
-export async function crawlAredlMirrorList(listId: number, actor: CustomListActor) {
+async function crawlAredlMirrorList(listId: number, actor: CustomListActor) {
     requireListId(listId)
 
     if (listId !== AREDL_MIRROR_LIST_ID) {
@@ -4451,6 +4488,8 @@ export async function crawlAredlMirrorList(listId: number, actor: CustomListActo
             updated: summary.updated,
             unchanged: summary.unchanged,
             failed: summary.failed,
+            gdFetched: summary.gdFetched,
+            gdFailed: summary.gdFailed,
             removed
         }
     })
@@ -4466,6 +4505,8 @@ export async function crawlAredlMirrorList(listId: number, actor: CustomListActo
         updated: summary.updated,
         unchanged: summary.unchanged,
         failed: summary.failed,
+        gdFetched: summary.gdFetched,
+        gdFailed: summary.gdFailed,
         removed,
         sourceLevelCount: summary.sourceLevelIds.length,
         failures: summary.failures,
