@@ -3869,6 +3869,38 @@ type MirrorStoredLevel = {
     isPlatformer: boolean
 }
 
+const MIRROR_LIST_SOURCES = [
+    {
+        name: 'pointercrate',
+        mirrorListId: POINTERCRATE_MIRROR_LIST_ID
+    },
+    {
+        name: 'aredl',
+        mirrorListId: AREDL_MIRROR_LIST_ID
+    }
+] as const satisfies readonly Pick<MirrorSourceInfo, 'name' | 'mirrorListId'>[]
+
+const CONFIGURED_MIRROR_LIST_IDS = MIRROR_LIST_SOURCES.map((source) => source.mirrorListId)
+
+function getMirrorSourceByListId(listId: number) {
+    return MIRROR_LIST_SOURCES.find((source) => source.mirrorListId === listId) || null
+}
+
+function isMirrorList(list: Pick<CustomList, 'id' | 'isMirror'>) {
+    return Boolean(list.isMirror || getMirrorSourceByListId(list.id))
+}
+
+function normalizeCustomListMirrorState<T extends { id: number; isMirror?: boolean | null }>(list: T) {
+    return {
+        ...list,
+        isMirror: Boolean(list.isMirror || getMirrorSourceByListId(list.id))
+    }
+}
+
+function normalizeCustomListMirrorStates<T extends { id: number; isMirror?: boolean | null }>(lists: T[]) {
+    return lists.map((list) => normalizeCustomListMirrorState(list))
+}
+
 function getErrorMessage(error: unknown, fallback: string) {
     return error instanceof Error && error.message ? error.message : fallback
 }
@@ -4002,7 +4034,7 @@ function assertPointercrateMirrorListConfig(list: CustomList) {
         throw new ValidationError(`Pointercrate crawler is configured for list #${POINTERCRATE_MIRROR_LIST_ID}`)
     }
 
-    if (!list.isMirror) {
+    if (!isMirrorList(list)) {
         throw new ValidationError('Mirror crawler is only available for mirror lists')
     }
 
@@ -4020,7 +4052,7 @@ function assertAredlMirrorListConfig(list: CustomList) {
         throw new ValidationError(`AREDL crawler is configured for list #${AREDL_MIRROR_LIST_ID}`)
     }
 
-    if (!list.isMirror) {
+    if (!isMirrorList(list)) {
         throw new ValidationError('Mirror crawler is only available for mirror lists')
     }
 
@@ -4664,7 +4696,7 @@ export async function crawlMirrorList(listId: number, actor: CustomListActor) {
     const list = await getCustomListRow(listId)
     await assertCanEditListLevels(list, actor)
 
-    if (!list.isMirror) {
+    if (!isMirrorList(list)) {
         throw new ValidationError('Mirror crawler is only available for mirror lists')
     }
 
@@ -4731,7 +4763,9 @@ export async function getOwnCustomLists(ownerId: string) {
         }
     }
 
-    const enriched = await enrichListsWithStars([...allListsById.values()], ownerId)
+    const enriched = normalizeCustomListMirrorStates(
+        await enrichListsWithStars([...allListsById.values()], ownerId)
+    )
 
     return enriched
         .map((list) => {
@@ -4783,7 +4817,7 @@ export async function getStarredCustomLists(userId: string) {
     const readableLists = ((data || []) as CustomListWithOwnerData[])
         .filter((list) => list.visibility !== 'private' || list.owner === userId)
 
-    return enrichListsWithStars(readableLists, userId)
+    return normalizeCustomListMirrorStates(await enrichListsWithStars(readableLists, userId))
 }
 
 export async function getPlayerRankedLists(uid: string): Promise<PlayerRankedListSummary[]> {
@@ -4919,7 +4953,10 @@ export async function browseLists(options: {
     } else if (kind === 'verified') {
         query = query.eq('isVerified', true)
     } else if (kind === 'mirror') {
-        query = query.or(`isMirror.eq.true,id.eq.${POINTERCRATE_MIRROR_LIST_ID}`)
+        query = query.or([
+            'isMirror.eq.true',
+            ...CONFIGURED_MIRROR_LIST_IDS.map((listId) => `id.eq.${listId}`)
+        ].join(','))
     }
 
     if (searchParams) {
@@ -4940,15 +4977,23 @@ export async function browseLists(options: {
         throw new Error(error.message)
     }
 
-    let databaseLists = await enrichListsWithStars((data || []) as CustomListWithOwnerData[], viewerId)
+    let databaseLists = normalizeCustomListMirrorStates(
+        await enrichListsWithStars((data || []) as CustomListWithOwnerData[], viewerId)
+    )
 
     if (kind === 'mirror') {
         databaseLists = databaseLists.sort((left, right) => {
-            const leftIsPointercrateMirror = left.id === POINTERCRATE_MIRROR_LIST_ID
-            const rightIsPointercrateMirror = right.id === POINTERCRATE_MIRROR_LIST_ID
+            const leftSource = getMirrorSourceByListId(left.id)
+            const rightSource = getMirrorSourceByListId(right.id)
+            const leftSourceRank = leftSource
+                ? CONFIGURED_MIRROR_LIST_IDS.indexOf(leftSource.mirrorListId)
+                : Number.MAX_SAFE_INTEGER
+            const rightSourceRank = rightSource
+                ? CONFIGURED_MIRROR_LIST_IDS.indexOf(rightSource.mirrorListId)
+                : Number.MAX_SAFE_INTEGER
 
-            if (leftIsPointercrateMirror !== rightIsPointercrateMirror) {
-                return leftIsPointercrateMirror ? -1 : 1
+            if (leftSourceRank !== rightSourceRank) {
+                return leftSourceRank - rightSourceRank
             }
 
             return new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime()
@@ -5001,7 +5046,7 @@ export async function getCustomList(listId: CustomListIdentifier, viewerId?: Cus
 
     try {
         const resolved = await resolveCustomListIdentifier(listId)
-        const list = await getListWithOwnerData(resolved.id)
+        const list = normalizeCustomListMirrorState(await getListWithOwnerData(resolved.id))
         const access = await assertReadable(list, viewerId)
         const permissions = getCustomListPermissions(list, access)
         const effectiveItemSort = options.itemSort !== undefined
@@ -5896,7 +5941,9 @@ export async function getStarredListsByLevel(levelId: number, viewerId?: string)
         throw new Error(listsError.message)
     }
 
-    const enriched = await enrichListsWithStars((lists || []) as CustomListWithOwnerData[], viewerId)
+    const enriched = normalizeCustomListMirrorStates(
+        await enrichListsWithStars((lists || []) as CustomListWithOwnerData[], viewerId)
+    )
 
     return enriched
         .filter((list) => list.isOfficial || list.starCount > 0)
@@ -6193,7 +6240,9 @@ export async function getEligibleListsByLevel(levelId: number, progress?: number
         throw new Error(listsError.message)
     }
 
-    const remoteLists = (await enrichListsWithStars((lists || []) as CustomListWithOwnerData[], viewerId))
+    const remoteLists = normalizeCustomListMirrorStates(
+        await enrichListsWithStars((lists || []) as CustomListWithOwnerData[], viewerId)
+    )
         .map((list) => {
             const item = listItemsById.get(list.id) || null
 
