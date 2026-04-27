@@ -142,7 +142,7 @@ router.route('/me')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
 
-        if (res.locals.authType === 'token' && user?.uid) {
+        if (res.locals.authType === 'token' && user?.uid && !user.countryLocked) {
             const detectedCountry = await resolveRequestCountry(req)
 
             if (detectedCountry && user.country !== detectedCountry) {
