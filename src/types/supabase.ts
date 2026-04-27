@@ -2698,14 +2698,14 @@ export type Database = {
           mode: string
           owner: string
           rankBadges: Json
-          recordScoreFormula: string
           recordFilterAcceptanceStatus: string
           recordFilterManualAcceptanceOnly: boolean
           recordFilterMaxRefreshRate: number | null
           recordFilterMinRefreshRate: number | null
           recordFilterPlatform: string
-          staffListEnabled: boolean
+          recordScoreFormula: string
           slug: string | null
+          staffListEnabled: boolean
           tags: string[]
           title: string
           topEnabled: boolean
@@ -2737,14 +2737,14 @@ export type Database = {
           mode?: string
           owner: string
           rankBadges?: Json
-          recordScoreFormula?: string
           recordFilterAcceptanceStatus?: string
           recordFilterManualAcceptanceOnly?: boolean
           recordFilterMaxRefreshRate?: number | null
           recordFilterMinRefreshRate?: number | null
           recordFilterPlatform?: string
-          staffListEnabled?: boolean
+          recordScoreFormula?: string
           slug?: string | null
+          staffListEnabled?: boolean
           tags?: string[]
           title: string
           topEnabled?: boolean
@@ -2776,14 +2776,14 @@ export type Database = {
           mode?: string
           owner?: string
           rankBadges?: Json
-          recordScoreFormula?: string
           recordFilterAcceptanceStatus?: string
           recordFilterManualAcceptanceOnly?: boolean
           recordFilterMaxRefreshRate?: number | null
           recordFilterMinRefreshRate?: number | null
           recordFilterPlatform?: string
-          staffListEnabled?: boolean
+          recordScoreFormula?: string
           slug?: string | null
+          staffListEnabled?: boolean
           tags?: string[]
           title?: string
           topEnabled?: boolean
@@ -3227,6 +3227,7 @@ export type Database = {
           clan: number | null
           clrank: number | null
           clRating: number | null
+          country: string | null
           discord: string | null
           DiscordDMChannelID: string | null
           dlMaxPt: number | null
@@ -3281,6 +3282,7 @@ export type Database = {
           clan?: number | null
           clrank?: number | null
           clRating?: number | null
+          country?: string | null
           discord?: string | null
           DiscordDMChannelID?: string | null
           dlMaxPt?: number | null
@@ -3335,6 +3337,7 @@ export type Database = {
           clan?: number | null
           clrank?: number | null
           clRating?: number | null
+          country?: string | null
           discord?: string | null
           DiscordDMChannelID?: string | null
           dlMaxPt?: number | null
@@ -4003,6 +4006,7 @@ export type Database = {
       }
       reset_overwatch_daily_limits: { Args: never; Returns: undefined }
       update_list: { Args: never; Returns: undefined }
+      update_queue_no: { Args: never; Returns: undefined }
       update_rank: { Args: never; Returns: undefined }
       update_supporter_until: { Args: never; Returns: undefined }
     }
