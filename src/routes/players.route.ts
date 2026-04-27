@@ -371,15 +371,6 @@ router.route('/:uid/onboarding')
         }
 
         if (onboarding_done === true) {
-            const { data: current } = await supabase
-                .from('players')
-                .select('supporterUntil')
-                .eq('uid', uid)
-                .single()
-
-            const currentTs = current?.supporterUntil ? new Date(current.supporterUntil).getTime() : 0
-            const sevenDays = 7 * 24 * 60 * 60 * 1000
-            updateData.supporterUntil = new Date(Math.max(Date.now(), currentTs) + sevenDays).toISOString()
             updateData.onboarding_done = true
             updateData.onboarding_step = 8
         }
