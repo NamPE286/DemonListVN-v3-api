@@ -3228,6 +3228,7 @@ export type Database = {
           clrank: number | null
           clRating: number | null
           country: string | null
+          countryLocked: boolean
           discord: string | null
           DiscordDMChannelID: string | null
           dlMaxPt: number | null
@@ -3283,6 +3284,7 @@ export type Database = {
           clrank?: number | null
           clRating?: number | null
           country?: string | null
+          countryLocked?: boolean
           discord?: string | null
           DiscordDMChannelID?: string | null
           dlMaxPt?: number | null
@@ -3338,6 +3340,7 @@ export type Database = {
           clrank?: number | null
           clRating?: number | null
           country?: string | null
+          countryLocked?: boolean
           discord?: string | null
           DiscordDMChannelID?: string | null
           dlMaxPt?: number | null
