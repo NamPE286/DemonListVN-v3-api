@@ -19,6 +19,7 @@
     "express-rate-limit": "^7.2.0",
     "get-video-id": "^4.1.7",
     "jsonwebtoken": "^9.0.2",
+    "mathjs": "^15.2.0",
     "node-cron": "^3.0.3",
     "octokit": "^5.0.5",
     "openai": "^6.18.0",
@@ -47,6 +48,7 @@
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "update-types": "supabase gen types typescript --local > ./src/types/supabase.ts",
     "sync": "supabase db pull --yes; supabase db reset; npm run update-types",
-    "generate-docs": "npx tsx scripts/generate-swagger-docs.ts"
+    "generate-docs": "npx tsx scripts/generate-swagger-docs.ts",
+    "generate-seed": "npx tsx scripts/generate-seed-data.ts"
   }
 }

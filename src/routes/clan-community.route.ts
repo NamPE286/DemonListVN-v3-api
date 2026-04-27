@@ -1,3 +1,860 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Clan Community
+ *   description: Clan community features (posts, comments, participants, tags, reports)
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/posts:
+ *   get:
+ *     summary: Get clan community posts
+ *     tags: [Clan Community]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *         description: Filter posts by type
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Number of posts to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Pagination offset
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           default: createdAt
+ *         description: Field to sort by
+ *       - in: query
+ *         name: ascending
+ *         schema:
+ *           type: boolean
+ *         description: Sort ascending if true
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search query for posts
+ *       - in: query
+ *         name: tagId
+ *         schema:
+ *           type: integer
+ *         description: Filter by tag ID
+ *     responses:
+ *       200:
+ *         description: Posts retrieved successfully with like status
+ *       403:
+ *         description: Clan boost not active or clan is private and user not a member
+ *       404:
+ *         description: Clan not found
+ *   post:
+ *     summary: Create a new clan community post
+ *     tags: [Clan Community]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 description: Post content
+ *               type:
+ *                 type: string
+ *                 description: Post type
+ *     responses:
+ *       201:
+ *         description: Post created successfully
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Clan boost not active or user is not a clan member
+ *       404:
+ *         description: Clan not found
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/posts/recommended:
+ *   get:
+ *     summary: Get recommended clan community posts
+ *     tags: [Clan Community]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *         description: Filter posts by type
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 25
+ *         description: Number of posts to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Pagination offset
+ *     responses:
+ *       200:
+ *         description: Recommended posts retrieved successfully with like status
+ *       403:
+ *         description: Clan boost not active or clan is private and user not a member
+ *       404:
+ *         description: Clan not found
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/posts/views:
+ *   post:
+ *     summary: Record post views
+ *     tags: [Clan Community]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - postIds
+ *             properties:
+ *               postIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: Array of post IDs to record views for (max 50)
+ *     responses:
+ *       204:
+ *         description: Post views recorded successfully
+ *       400:
+ *         description: postIds must be a non-empty array
+ *       403:
+ *         description: Clan boost not active or user is not a clan member
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/tags:
+ *   get:
+ *     summary: Get all post tags
+ *     tags: [Clan Community]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *     responses:
+ *       200:
+ *         description: Tags retrieved successfully
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/posts/{postId}:
+ *   get:
+ *     summary: Get a single clan community post
+ *     tags: [Clan Community]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Post ID
+ *     responses:
+ *       200:
+ *         description: Post retrieved successfully with like status
+ *       403:
+ *         description: Clan boost not active or clan is private and user not a member
+ *       404:
+ *         description: Post not found or clan not found
+ *   put:
+ *     summary: Update a clan community post
+ *     tags: [Clan Community]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Post ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 description: Updated post content
+ *     responses:
+ *       200:
+ *         description: Post updated successfully
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Clan boost not active, user is not a clan member, or not post owner
+ *       404:
+ *         description: Clan or post not found
+ *   delete:
+ *     summary: Delete a clan community post
+ *     tags: [Clan Community]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Post ID
+ *     responses:
+ *       200:
+ *         description: Post deleted successfully
+ *       403:
+ *         description: Clan boost not active, user is not a clan member, or not post owner
+ *       404:
+ *         description: Clan or post not found
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/posts/{postId}/pin:
+ *   post:
+ *     summary: Toggle post pin status (clan owner or admin only)
+ *     tags: [Clan Community]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Post ID
+ *     responses:
+ *       200:
+ *         description: Post pin status toggled successfully
+ *       403:
+ *         description: Clan boost not active, user is not a clan member, or not clan owner/admin
+ *       404:
+ *         description: Clan or post not found
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/posts/{postId}/like:
+ *   post:
+ *     summary: Toggle post like status
+ *     tags: [Clan Community]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Post ID
+ *     responses:
+ *       200:
+ *         description: Post like status toggled successfully
+ *       403:
+ *         description: Clan boost not active or user is not a clan member
+ *       404:
+ *         description: Clan or post not found
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/posts/{postId}/comments:
+ *   get:
+ *     summary: Get comments for a post
+ *     tags: [Clan Community]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Post ID
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Number of comments to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Pagination offset
+ *     responses:
+ *       200:
+ *         description: Comments retrieved successfully with like status
+ *       403:
+ *         description: Clan boost not active or clan is private and user not a member
+ *       404:
+ *         description: Clan not found
+ *   post:
+ *     summary: Create a comment on a post
+ *     tags: [Clan Community]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Post ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 description: Comment content
+ *               attachedLevel:
+ *                 type: integer
+ *                 description: Attached level reference
+ *     responses:
+ *       201:
+ *         description: Comment created successfully
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Clan boost not active or user is not a clan member
+ *       404:
+ *         description: Clan not found
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/comments/{commentId}:
+ *   delete:
+ *     summary: Delete a comment
+ *     tags: [Clan Community]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Comment ID
+ *     responses:
+ *       200:
+ *         description: Comment deleted successfully
+ *       403:
+ *         description: Clan boost not active, user is not a clan member, or not comment owner
+ *       404:
+ *         description: Clan or comment not found
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/comments/{commentId}/like:
+ *   post:
+ *     summary: Toggle comment like status
+ *     tags: [Clan Community]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Comment ID
+ *     responses:
+ *       200:
+ *         description: Comment like status toggled successfully
+ *       403:
+ *         description: Clan boost not active or user is not a clan member
+ *       404:
+ *         description: Clan or comment not found
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/posts/{postId}/report:
+ *   post:
+ *     summary: Report a post
+ *     tags: [Clan Community]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Post ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Reason for reporting
+ *               description:
+ *                 type: string
+ *                 description: Additional description
+ *     responses:
+ *       201:
+ *         description: Report submitted successfully
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Clan boost not active or user is not a clan member
+ *       404:
+ *         description: Clan not found
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/comments/{commentId}/report:
+ *   post:
+ *     summary: Report a comment
+ *     tags: [Clan Community]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Comment ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Reason for reporting
+ *               description:
+ *                 type: string
+ *                 description: Additional description
+ *     responses:
+ *       201:
+ *         description: Report submitted successfully
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Clan boost not active or user is not a clan member
+ *       404:
+ *         description: Clan not found
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/posts/{postId}/tags:
+ *   put:
+ *     summary: Set tags on a post
+ *     tags: [Clan Community]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Post ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - tagIds
+ *             properties:
+ *               tagIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: Array of tag IDs to assign to the post
+ *     responses:
+ *       200:
+ *         description: Tags updated successfully
+ *       400:
+ *         description: tagIds must be an array
+ *       403:
+ *         description: Clan boost not active, user is not a clan member, or not post owner
+ *       404:
+ *         description: Clan or post not found
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/players/search:
+ *   get:
+ *     summary: Search players for @ mention
+ *     tags: [Clan Community]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query (minimum 1 character)
+ *     responses:
+ *       200:
+ *         description: List of matching players (max 8)
+ *       403:
+ *         description: Clan boost not active or clan is private and user not a member
+ *       404:
+ *         description: Clan not found
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/posts/{postId}/participants:
+ *   get:
+ *     summary: Get participants for a post
+ *     tags: [Clan Community]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Post ID
+ *     responses:
+ *       200:
+ *         description: Participants retrieved successfully with current user's status
+ *       403:
+ *         description: Clan boost not active or clan is private and user not a member
+ *       404:
+ *         description: Clan not found
+ *   post:
+ *     summary: Request participation in a post
+ *     tags: [Clan Community]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Post ID
+ *     responses:
+ *       201:
+ *         description: Participation request submitted successfully
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Clan boost not active or user is not a clan member
+ *       404:
+ *         description: Clan not found
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/posts/{postId}/participants/cancel:
+ *   post:
+ *     summary: Cancel participation in a post
+ *     tags: [Clan Community]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Post ID
+ *     responses:
+ *       200:
+ *         description: Participation cancelled successfully
+ *       403:
+ *         description: Clan boost not active or user is not a clan member
+ *       404:
+ *         description: Clan not found
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/posts/{postId}/participants/{uid}/approve:
+ *   put:
+ *     summary: Approve a participant's participation request
+ *     tags: [Clan Community]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Post ID
+ *       - in: path
+ *         name: uid
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID of the participant to approve
+ *     responses:
+ *       200:
+ *         description: Participant approved successfully
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Clan boost not active, user is not a clan member, or not authorized
+ *       404:
+ *         description: Clan or post not found
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/posts/{postId}/participants/{uid}/reject:
+ *   put:
+ *     summary: Reject a participant's participation request
+ *     tags: [Clan Community]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Post ID
+ *       - in: path
+ *         name: uid
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID of the participant to reject
+ *     responses:
+ *       200:
+ *         description: Participant rejected successfully
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Clan boost not active, user is not a clan member, or not authorized
+ *       404:
+ *         description: Clan or post not found
+ */
+
+/**
+ * @swagger
+ * /clans/{id}/community/posts/{postId}/participants/{uid}/revoke:
+ *   delete:
+ *     summary: Revoke a participant's participation
+ *     tags: [Clan Community]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Clan ID
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Post ID
+ *       - in: path
+ *         name: uid
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID of the participant to revoke
+ *     responses:
+ *       200:
+ *         description: Participant revoked successfully
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Clan boost not active, user is not a clan member, or not authorized
+ *       404:
+ *         description: Clan or post not found
+ */
+
 import express from 'express'
 import type { Request, Response, NextFunction } from 'express'
 import userAuth from '@src/middleware/user-auth.middleware'
@@ -103,11 +960,12 @@ router.route('/:id/community/posts')
         const sortBy = (req.query.sortBy as string) || 'createdAt'
         const ascending = req.query.ascending === 'true'
         const search = req.query.search as string | undefined
+        const searchType = req.query.searchType as string | undefined
         const tagId = req.query.tagId ? parseInt(req.query.tagId as string) : undefined
         const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
 
         const result = await getPostsWithLikeStatus(
-            { type, limit, offset, sortBy, ascending, search, tagId, clanId },
+            { type, limit, offset, sortBy, ascending, search, searchType, tagId, clanId },
             userId
         )
 
@@ -347,11 +1205,12 @@ router.route('/:id/community/posts/:postId/tags')
 router.route('/:id/community/players/search')
     .get(optionalAuth, clanCommunityAccess(false), async (req, res) => {
         const q = req.query.q as string
+        const searchType = req.query.searchType as string | undefined
         if (!q || q.length < 1) {
             res.json([])
             return
         }
-        const players = await searchPlayers(q, 8)
+        const players = await searchPlayers(q, 8, searchType)
         res.json(players)
     })
 

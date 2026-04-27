@@ -122,6 +122,62 @@ export async function getPlayersBatch(uid: string[]) {
     return uid.map(id => data.find(player => player.uid === id)).filter(Boolean)
 }
 
+export async function getPlayerCardStatLines(uid: string): Promise<number[]> {
+    const { data, error } = await (supabase as any)
+        .from('playerCardStatLines')
+        .select('position, listId, lists!inner(leaderboardEnabled)')
+        .eq('uid', uid)
+        .eq('lists.leaderboardEnabled', true)
+        .order('position', { ascending: true })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return ((data || []) as Array<{ position: number, listId: number }>)
+        .sort((a, b) => a.position - b.position)
+        .map((row) => row.listId)
+}
+
+export async function setPlayerCardStatLines(uid: string, listIds: number[]): Promise<void> {
+    const normalized = Array.from(new Set(listIds.filter((id): id is number => typeof id === 'number' && Number.isFinite(id))))
+
+    const { error: deleteError } = await (supabase as any)
+        .from('playerCardStatLines')
+        .delete()
+        .eq('uid', uid)
+
+    if (deleteError) {
+        throw new Error(deleteError.message)
+    }
+
+    if (!normalized.length) {
+        return
+    }
+
+    const rows = normalized.map((listId, index) => ({ uid, position: index, listId }))
+
+    const { error: insertError } = await (supabase as any)
+        .from('playerCardStatLines')
+        .insert(rows)
+
+    if (insertError) {
+        throw new Error(insertError.message)
+    }
+}
+
+async function attachPlayerCardStatLines<T extends { uid: string } | null | undefined>(player: T): Promise<T> {
+    if (!player) {
+        return player
+    }
+
+    const statLines = await getPlayerCardStatLines(player.uid)
+
+    ;(player as any).playerCardStatLines = statLines
+
+    return player
+}
+
 export async function getPlayer(uid?: string, name?: string) {
     if (uid) {
         const { data, error } = await supabase
@@ -134,7 +190,7 @@ export async function getPlayer(uid?: string, name?: string) {
             throw new Error(error.message)
         }
 
-        return data
+        return await attachPlayerCardStatLines(data)
     } else if (name) {
         const { data, error } = await supabase
             .from('players')
@@ -146,14 +202,38 @@ export async function getPlayer(uid?: string, name?: string) {
             throw new Error(error.message)
         }
 
-        return data
+        return await attachPlayerCardStatLines(data)
     }
 
     throw new Error('Either uid or name must be provided')
 }
 
 export async function updatePlayer(playerData: TPlayer, { updateClan = false } = {}): Promise<TPlayer> {
-    const updateData = { ...playerData }
+    if (!playerData.uid) {
+        throw new Error('Player uid is required')
+    }
+
+    const uid = playerData.uid
+    const updateData = { ...playerData } as any
+
+    const rawStatLines = (updateData as any).playerCardStatLines
+    const hasStatLineUpdate = Array.isArray(rawStatLines)
+    const nextStatLines: number[] = hasStatLineUpdate
+        ? (rawStatLines as unknown[])
+              .map((value) => {
+                  if (typeof value === 'number') return value
+                  if (typeof value === 'string' && value.trim().length) {
+                      const parsed = Number(value)
+                      return Number.isFinite(parsed) ? parsed : null
+                  }
+                  return null
+              })
+              .filter((value): value is number => typeof value === 'number')
+        : []
+
+    delete updateData.playerCardStatLines
+    delete updateData.nameFts
+    delete updateData.id
 
     if (!/^[A-Za-z0-9]+$/.test(updateData.name!)) {
         throw new Error("Invalid name format")
@@ -163,9 +243,27 @@ export async function updatePlayer(playerData: TPlayer, { updateClan = false } =
         delete updateData.name
     }
 
+    let newRenameCooldown: string | undefined
+
+    if (updateData.name !== undefined) {
+        const current = await getPlayer(uid)
+
+        if (current.nameLocked) {
+            delete updateData.name
+        } else if (updateData.name !== current.name) {
+            if (current.renameCooldown && new Date(current.renameCooldown) > new Date()) {
+                throw new Error('Rename cooldown active')
+            }
+            newRenameCooldown = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        } else {
+            delete updateData.name
+        }
+    }
+
     delete updateData.isAdmin
     delete updateData.isTrusted
     delete updateData.isBanned
+    delete updateData.isManager
     delete updateData.reviewCooldown
     delete updateData.renameCooldown
     delete updateData.rating
@@ -181,6 +279,10 @@ export async function updatePlayer(playerData: TPlayer, { updateClan = false } =
         delete updateData.clan
     }
 
+    if (newRenameCooldown) {
+        updateData.renameCooldown = newRenameCooldown
+    }
+
     const { error } = await supabase
         .from('players')
         .upsert(updateData as any)
@@ -189,14 +291,18 @@ export async function updatePlayer(playerData: TPlayer, { updateClan = false } =
         const { error: updateError } = await supabase
             .from("players")
             .update(updateData as any)
-            .eq("uid", playerData.uid!)
+            .eq("uid", uid)
 
         if (updateError) {
             throw new Error(updateError.message)
         }
     }
 
-    return await getPlayer(playerData.uid)
+    if (hasStatLineUpdate) {
+        await setPlayerCardStatLines(uid, nextStatLines)
+    }
+
+    return await getPlayer(uid)
 }
 
 export async function extendPlayerSupporter(uid: string, month: number, day: number = 0): Promise<void> {

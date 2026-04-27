@@ -41,6 +41,170 @@ export const swaggerHtml = `<!DOCTYPE html>
     }
   ],
   "paths": {
+    "/ads/rewards/daily-checkin": {
+      "get": {
+        "summary": "Get daily check-in reward status",
+        "tags": [
+          "Ads"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daily check-in status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "claimed": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ads/rewards/confirm": {
+      "get": {
+        "summary": "Confirm daily check-in reward (Google Ads callback)",
+        "tags": [
+          "Ads"
+        ],
+        "description": "Server-side callback called by Google after a rewarded ad is completed",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "User ID"
+          },
+          {
+            "in": "query",
+            "name": "reward_type",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Type of reward"
+          },
+          {
+            "in": "query",
+            "name": "reward_amount",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Amount of reward"
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Verification token"
+          },
+          {
+            "in": "query",
+            "name": "timestamp",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Timestamp of the reward"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reward confirmed or already claimed"
+          },
+          "400": {
+            "description": "Missing user_id"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/analytics/revenue": {
+      "get": {
+        "summary": "Get revenue analytics data",
+        "tags": [
+          "Analytics"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "schema": {
+              "type": "string",
+              "default": "30d"
+            },
+            "description": "Time period for analytics (e.g., 7d, 30d, 90d)"
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Start date (ISO format)"
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "End date (ISO format)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Revenue analytics data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - user is not admin or manager"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/APIKey": {
       "get": {
         "tags": [
@@ -198,12 +362,91 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
+    "/auth/otp": {
+      "post": {
+        "summary": "Create a new OTP code",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns the newly created 6-digit OTP code"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/auth/otp/{code}": {
+      "patch": {
+        "summary": "Grant an OTP code",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The 6-digit OTP code"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OTP code granted successfully"
+          },
+          "400": {
+            "description": "OTP code is expired or already granted"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "get": {
+        "summary": "Check OTP code grant status",
+        "tags": [
+          "Auth"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The 6-digit OTP code"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns grant status. If granted, returns APIKey on first check"
+          },
+          "400": {
+            "description": "OTP code is expired"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/battlepass": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Get active battle pass season",
+        "summary": "Get active Pass season",
         "responses": {
           "200": {
             "description": "Success",
@@ -222,9 +465,9 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/season": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Create a new battle pass season (Admin only)",
+        "summary": "Create a new Pass season (Admin only)",
         "security": [
           {
             "bearerAuth": []
@@ -267,9 +510,9 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/season/{id}": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Get a specific battle pass season",
+        "summary": "Get a specific Pass season",
         "parameters": [
           {
             "name": "id",
@@ -292,9 +535,9 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "patch": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Update a battle pass season (Admin only)",
+        "summary": "Update a Pass season (Admin only)",
         "security": [
           {
             "bearerAuth": []
@@ -334,9 +577,9 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/season/{id}/archive": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Archive a battle pass season (Admin only)",
+        "summary": "Archive a Pass season (Admin only)",
         "security": [
           {
             "bearerAuth": []
@@ -366,9 +609,9 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/progress": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Get current user's battle pass progress",
+        "summary": "Get current user's Pass progress",
         "security": [
           {
             "bearerAuth": []
@@ -390,9 +633,9 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/progress/{seasonId}": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Get current user's battle pass progress for a specific season",
+        "summary": "Get current user's Pass progress for a specific season",
         "security": [
           {
             "bearerAuth": []
@@ -422,9 +665,9 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/upgrade": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Upgrade to premium battle pass (Admin only - typically called after payment)",
+        "summary": "Upgrade to premium Pass (Admin only - typically called after payment)",
         "security": [
           {
             "bearerAuth": []
@@ -461,7 +704,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/levels": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get active season's levels",
         "responses": {
@@ -477,7 +720,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/season/{id}/levels": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get levels for a specific season",
         "parameters": [
@@ -502,7 +745,7 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Add a level to a season (Admin only)",
         "security": [
@@ -558,7 +801,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/level/{levelId}": {
       "patch": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Update a season level (Admin only)",
         "security": [
@@ -570,7 +813,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           {
             "name": "levelId",
             "in": "path",
-            "description": "Battle Pass Level ID",
+            "description": "Pass Level ID",
             "required": true,
             "schema": {
               "type": "integer"
@@ -598,7 +841,7 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "delete": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Delete a season level (Admin only)",
         "security": [
@@ -610,7 +853,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           {
             "name": "levelId",
             "in": "path",
-            "description": "Battle Pass Level ID",
+            "description": "Pass Level ID",
             "required": true,
             "schema": {
               "type": "integer"
@@ -630,7 +873,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/levels/progress": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get user's progress on levels (single or batch)",
         "security": [
@@ -642,7 +885,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           {
             "name": "ids",
             "in": "query",
-            "description": "Comma-separated Battle Pass Level IDs, or single ID",
+            "description": "Comma-separated Pass Level IDs, or single ID",
             "required": true,
             "schema": {
               "type": "string"
@@ -659,10 +902,155 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
+    "/battlepass/daily-weekly": {
+      "get": {
+        "tags": [
+          "Pass"
+        ],
+        "summary": "Get daily and weekly levels for active season with user progress",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success - Returns daily and weekly level info with progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "daily": {
+                      "type": "object",
+                      "nullable": true
+                    },
+                    "weekly": {
+                      "type": "object",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active season"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/season/{id}/daily-weekly": {
+      "get": {
+        "tags": [
+          "Pass"
+        ],
+        "summary": "Get daily and weekly levels for a specific season with user progress",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Season ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/level/{levelId}/claim/{claimType}": {
+      "post": {
+        "tags": [
+          "Pass"
+        ],
+        "summary": "Claim XP reward for daily/weekly level progress",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "levelId",
+            "in": "path",
+            "description": "Pass Level ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "claimType",
+            "in": "path",
+            "description": "Type of reward to claim",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "minProgress",
+                "completion"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "XP claimed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "xp": {
+                      "type": "integer"
+                    },
+                    "previousXp": {
+                      "type": "integer"
+                    },
+                    "newXp": {
+                      "type": "integer"
+                    },
+                    "previousTier": {
+                      "type": "integer"
+                    },
+                    "newTier": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid claim type or conditions not met"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/battlepass/mappacks/progress": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get user's progress on map packs (single or batch)",
         "security": [
@@ -674,7 +1062,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           {
             "name": "ids",
             "in": "query",
-            "description": "Comma-separated Battle Pass Map Pack IDs, or single ID",
+            "description": "Comma-separated Pass Map Pack IDs, or single ID",
             "required": true,
             "schema": {
               "type": "string"
@@ -694,7 +1082,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/mappacks/levels/progress": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get user's progress on map pack levels",
         "security": [
@@ -741,7 +1129,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/mappacks": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get active season's unlocked map packs",
         "responses": {
@@ -754,10 +1142,43 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
+    "/battlepass/mappacks/next-locked": {
+      "get": {
+        "tags": [
+          "Pass"
+        ],
+        "summary": "Get the next locked map pack in the active season",
+        "description": "Returns the first locked map pack in the active season's map pack list, useful for showing what the user needs to unlock next.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "nextLockedMapPack": {
+                      "type": "object",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active season"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/battlepass/season/{id}/mappacks": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get all map packs for a season (Admin gets all, users get unlocked only)",
         "parameters": [
@@ -782,7 +1203,7 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Create a map pack for a season (Admin only)",
         "security": [
@@ -847,14 +1268,14 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/mappack/{mapPackId}": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Get a specific battle pass map pack",
+        "summary": "Get a specific Pass map pack",
         "parameters": [
           {
             "name": "mapPackId",
             "in": "path",
-            "description": "Battle Pass Map Pack ID",
+            "description": "Pass Map Pack ID",
             "required": true,
             "schema": {
               "type": "integer"
@@ -872,9 +1293,9 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "patch": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Update a battle pass map pack (Admin only)",
+        "summary": "Update a Pass map pack (Admin only)",
         "security": [
           {
             "bearerAuth": []
@@ -884,7 +1305,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           {
             "name": "mapPackId",
             "in": "path",
-            "description": "Battle Pass Map Pack ID",
+            "description": "Pass Map Pack ID",
             "required": true,
             "schema": {
               "type": "integer"
@@ -912,9 +1333,9 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "delete": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
-        "summary": "Delete a battle pass map pack (Admin only)",
+        "summary": "Delete a Pass map pack (Admin only)",
         "security": [
           {
             "bearerAuth": []
@@ -924,7 +1345,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           {
             "name": "mapPackId",
             "in": "path",
-            "description": "Battle Pass Map Pack ID",
+            "description": "Pass Map Pack ID",
             "required": true,
             "schema": {
               "type": "integer"
@@ -944,7 +1365,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/mappack/{mapPackId}/claim": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Claim XP reward for completing a map pack",
         "security": [
@@ -976,10 +1397,475 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
+    "/battlepass/course": {
+      "get": {
+        "tags": [
+          "Pass"
+        ],
+        "summary": "Get active season's course with entries and user progress",
+        "description": "Returns the course for the active season, including all entries (levels/map packs), user progress, and completion status. If user is authenticated, includes progress and completion data.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "course": {
+                      "type": "object"
+                    },
+                    "seasonId": {
+                      "type": "integer"
+                    },
+                    "entries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active course"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/course/entry/{entryId}/claim": {
+      "post": {
+        "tags": [
+          "Pass"
+        ],
+        "summary": "Claim XP and item reward for completing a course entry",
+        "description": "Claims the reward for a completed course entry. The entry must be completed, and all previous entries in the course must also be completed. Rewards include XP and optionally an item.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "description": "Course Entry ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reward claimed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Already claimed, entry not completed, or entry is locked"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/courses": {
+      "get": {
+        "tags": [
+          "Pass"
+        ],
+        "summary": "Get all courses (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Pass"
+        ],
+        "summary": "Create a new course (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Course created successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/course/{courseId}": {
+      "get": {
+        "tags": [
+          "Pass"
+        ],
+        "summary": "Get a specific course (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "description": "Course ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Pass"
+        ],
+        "summary": "Update a course (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "description": "Course ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Course updated successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Pass"
+        ],
+        "summary": "Delete a course (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "description": "Course ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Course deleted successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/course/{courseId}/entries": {
+      "get": {
+        "tags": [
+          "Pass"
+        ],
+        "summary": "Get all entries for a course (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "description": "Course ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Pass"
+        ],
+        "summary": "Create a course entry (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "description": "Course ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "level",
+                      "mappack"
+                    ]
+                  },
+                  "refId": {
+                    "type": "integer"
+                  },
+                  "sortOrder": {
+                    "type": "integer"
+                  },
+                  "rewardItemId": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "rewardQuantity": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Course entry created successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/course/entry/{entryId}": {
+      "patch": {
+        "tags": [
+          "Pass"
+        ],
+        "summary": "Update a course entry (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "description": "Course Entry ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "level",
+                      "mappack"
+                    ]
+                  },
+                  "refId": {
+                    "type": "integer"
+                  },
+                  "sortOrder": {
+                    "type": "integer"
+                  },
+                  "rewardItemId": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "rewardQuantity": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Course entry updated successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Pass"
+        ],
+        "summary": "Delete a course entry (Admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "description": "Course Entry ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Course entry deleted successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/battlepass/rewards": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get active season's tier rewards",
         "responses": {
@@ -995,7 +1881,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/season/{id}/rewards": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get tier rewards for a specific season",
         "parameters": [
@@ -1020,7 +1906,7 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Create a tier reward (Admin only)",
         "security": [
@@ -1079,7 +1965,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/reward/{rewardId}": {
       "delete": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Delete a tier reward (Admin only)",
         "security": [
@@ -1111,7 +1997,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/reward/{rewardId}/claim": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Claim a tier reward",
         "security": [
@@ -1146,7 +2032,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/rewards/claimable": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get all claimable rewards for current user",
         "security": [
@@ -1170,7 +2056,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/xp/add": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Add XP to a user (Admin only)",
         "security": [
@@ -1212,7 +2098,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/missions": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get active season's missions with user status",
         "security": [
@@ -1233,7 +2119,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/season/{id}/missions": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get missions for a specific season",
         "parameters": [
@@ -1258,7 +2144,7 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Create a mission for a season (Admin only)",
         "security": [
@@ -1339,7 +2225,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/mission/{missionId}": {
       "get": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Get a specific mission",
         "parameters": [
@@ -1364,7 +2250,7 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "patch": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Update a mission (Admin only)",
         "security": [
@@ -1404,7 +2290,7 @@ export const swaggerHtml = `<!DOCTYPE html>
       },
       "delete": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Delete a mission (Admin only)",
         "security": [
@@ -1436,7 +2322,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/mission/{missionId}/claim": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Claim a completed mission reward",
         "security": [
@@ -1471,7 +2357,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/mission/{missionId}/reward": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Add a reward to a mission (Admin only)",
         "security": [
@@ -1524,7 +2410,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/mission/{missionId}/reward/{rewardId}": {
       "delete": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Remove a reward from a mission (Admin only)",
         "security": [
@@ -1565,7 +2451,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/webhook/refresh/daily": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Webhook to refresh daily missions (Cron only)",
         "description": "Called by cron service to reset all daily missions. Removes all progress and claims for missions with refreshType='daily'.",
@@ -1611,7 +2497,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/webhook/refresh/weekly": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Webhook to refresh weekly missions (Cron only)",
         "description": "Called by cron service to reset all weekly missions. Removes all progress and claims for missions with refreshType='weekly'. Should be called on Mondays at 0:00 AM UTC+7.",
@@ -1657,7 +2543,7 @@ export const swaggerHtml = `<!DOCTYPE html>
     "/battlepass/webhook/refresh/{type}": {
       "post": {
         "tags": [
-          "Battle Pass"
+          "Pass"
         ],
         "summary": "Webhook to refresh missions by type (Cron only)",
         "description": "Generic endpoint to refresh missions by refresh type.",
@@ -1693,6 +2579,189 @@ export const swaggerHtml = `<!DOCTYPE html>
           },
           "500": {
             "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/webhook/refresh-levels/daily": {
+      "post": {
+        "tags": [
+          "Pass"
+        ],
+        "summary": "Webhook to refresh daily level progress (Cron only)",
+        "description": "Called by cron service to reset all daily level progress. Removes all progress and claims for levels with type='daily'. Should be called daily at 0:00 AM UTC+7.",
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daily level progress refreshed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "refreshed": {
+                      "type": "integer"
+                    },
+                    "levelIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      }
+                    },
+                    "seasonId": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/battlepass/webhook/refresh-levels/weekly": {
+      "post": {
+        "tags": [
+          "Pass"
+        ],
+        "summary": "Webhook to refresh weekly level progress (Cron only)",
+        "description": "Called by cron service to reset all weekly level progress. Removes all progress and claims for levels with type='weekly'. Should be called on Mondays at 0:00 AM UTC+7.",
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Weekly level progress refreshed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "refreshed": {
+                      "type": "integer"
+                    },
+                    "levelIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      }
+                    },
+                    "seasonId": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/buyers/top": {
+      "get": {
+        "summary": "Get top buyers by revenue",
+        "tags": [
+          "Buyers"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "interval",
+            "schema": {
+              "type": "integer",
+              "default": 2592000000
+            },
+            "description": "Time interval in milliseconds"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 1000
+            },
+            "description": "Maximum number of buyers to return"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Offset for pagination"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of top buyers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/buyers/progress": {
+      "get": {
+        "summary": "Get supporter revenue progress",
+        "tags": [
+          "Buyers"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "interval",
+            "schema": {
+              "type": "integer",
+              "default": 2592000000
+            },
+            "description": "Time interval in milliseconds"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Supporter revenue progress data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "serverCostPercent": {
+                      "type": "number"
+                    },
+                    "minecraftServerPercent": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1761,6 +2830,41 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
+    "/card/{id}/activate": {
+      "patch": {
+        "tags": [
+          "Card"
+        ],
+        "summary": "Activate a card",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID of the card",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Card activated successfully"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/card/{id}/content": {
       "patch": {
         "tags": [
@@ -1808,6 +2912,108 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
+    "/card/record/{id}/img": {
+      "patch": {
+        "tags": [
+          "Card"
+        ],
+        "summary": "Update record card image",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID of the record card",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "imgURL"
+                ],
+                "properties": {
+                  "imgURL": {
+                    "type": "string",
+                    "description": "URL of the image"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Record card image updated successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/card/record/{id}/avatar": {
+      "patch": {
+        "tags": [
+          "Card"
+        ],
+        "summary": "Update record card avatar",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID of the record card",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "avatarURL"
+                ],
+                "properties": {
+                  "avatarURL": {
+                    "type": "string",
+                    "description": "URL of the avatar image"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Record card avatar updated successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/changelogs/publish": {
       "post": {
         "tags": [
@@ -1825,6 +3031,1355 @@ export const swaggerHtml = `<!DOCTYPE html>
           },
           "500": {
             "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/checkout": {
+      "post": {
+        "tags": [
+          "Checkout"
+        ],
+        "summary": "Process checkout for mixed cart (products + record cards)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "cartItems",
+                  "address",
+                  "phone",
+                  "recipientName",
+                  "paymentMethod"
+                ],
+                "properties": {
+                  "cartItems": {
+                    "type": "array"
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "phone": {
+                    "type": "integer"
+                  },
+                  "recipientName": {
+                    "type": "string"
+                  },
+                  "paymentMethod": {
+                    "type": "string",
+                    "enum": [
+                      "Bank Transfer",
+                      "COD"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Order created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orderID": {
+                      "type": "integer"
+                    },
+                    "checkoutUrl": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or invalid fields"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/posts": {
+      "get": {
+        "summary": "Get clan community posts",
+        "tags": [
+          "Clan Community"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter posts by type"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "Number of posts to return"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Pagination offset"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "default": "createdAt"
+            },
+            "description": "Field to sort by"
+          },
+          {
+            "in": "query",
+            "name": "ascending",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Sort ascending if true"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search query for posts"
+          },
+          {
+            "in": "query",
+            "name": "tagId",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter by tag ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Posts retrieved successfully with like status"
+          },
+          "403": {
+            "description": "Clan boost not active or clan is private and user not a member"
+          },
+          "404": {
+            "description": "Clan not found"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new clan community post",
+        "tags": [
+          "Clan Community"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "content"
+                ],
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "description": "Post content"
+                  },
+                  "type": {
+                    "type": "string",
+                    "description": "Post type"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Post created successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "403": {
+            "description": "Clan boost not active or user is not a clan member"
+          },
+          "404": {
+            "description": "Clan not found"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/posts/recommended": {
+      "get": {
+        "summary": "Get recommended clan community posts",
+        "tags": [
+          "Clan Community"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter posts by type"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 25
+            },
+            "description": "Number of posts to return"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Pagination offset"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recommended posts retrieved successfully with like status"
+          },
+          "403": {
+            "description": "Clan boost not active or clan is private and user not a member"
+          },
+          "404": {
+            "description": "Clan not found"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/posts/views": {
+      "post": {
+        "summary": "Record post views",
+        "tags": [
+          "Clan Community"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "postIds"
+                ],
+                "properties": {
+                  "postIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "Array of post IDs to record views for (max 50)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Post views recorded successfully"
+          },
+          "400": {
+            "description": "postIds must be a non-empty array"
+          },
+          "403": {
+            "description": "Clan boost not active or user is not a clan member"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/tags": {
+      "get": {
+        "summary": "Get all post tags",
+        "tags": [
+          "Clan Community"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tags retrieved successfully"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/posts/{postId}": {
+      "get": {
+        "summary": "Get a single clan community post",
+        "tags": [
+          "Clan Community"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "postId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Post ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post retrieved successfully with like status"
+          },
+          "403": {
+            "description": "Clan boost not active or clan is private and user not a member"
+          },
+          "404": {
+            "description": "Post not found or clan not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a clan community post",
+        "tags": [
+          "Clan Community"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "postId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Post ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "description": "Updated post content"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Post updated successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "403": {
+            "description": "Clan boost not active, user is not a clan member, or not post owner"
+          },
+          "404": {
+            "description": "Clan or post not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a clan community post",
+        "tags": [
+          "Clan Community"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "postId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Post ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post deleted successfully"
+          },
+          "403": {
+            "description": "Clan boost not active, user is not a clan member, or not post owner"
+          },
+          "404": {
+            "description": "Clan or post not found"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/posts/{postId}/pin": {
+      "post": {
+        "summary": "Toggle post pin status (clan owner or admin only)",
+        "tags": [
+          "Clan Community"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "postId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Post ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post pin status toggled successfully"
+          },
+          "403": {
+            "description": "Clan boost not active, user is not a clan member, or not clan owner/admin"
+          },
+          "404": {
+            "description": "Clan or post not found"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/posts/{postId}/like": {
+      "post": {
+        "summary": "Toggle post like status",
+        "tags": [
+          "Clan Community"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "postId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Post ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post like status toggled successfully"
+          },
+          "403": {
+            "description": "Clan boost not active or user is not a clan member"
+          },
+          "404": {
+            "description": "Clan or post not found"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/posts/{postId}/comments": {
+      "get": {
+        "summary": "Get comments for a post",
+        "tags": [
+          "Clan Community"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "postId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Post ID"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "description": "Number of comments to return"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Pagination offset"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comments retrieved successfully with like status"
+          },
+          "403": {
+            "description": "Clan boost not active or clan is private and user not a member"
+          },
+          "404": {
+            "description": "Clan not found"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a comment on a post",
+        "tags": [
+          "Clan Community"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "postId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Post ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "content"
+                ],
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "description": "Comment content"
+                  },
+                  "attachedLevel": {
+                    "type": "integer",
+                    "description": "Attached level reference"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comment created successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "403": {
+            "description": "Clan boost not active or user is not a clan member"
+          },
+          "404": {
+            "description": "Clan not found"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/comments/{commentId}": {
+      "delete": {
+        "summary": "Delete a comment",
+        "tags": [
+          "Clan Community"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "commentId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Comment ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comment deleted successfully"
+          },
+          "403": {
+            "description": "Clan boost not active, user is not a clan member, or not comment owner"
+          },
+          "404": {
+            "description": "Clan or comment not found"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/comments/{commentId}/like": {
+      "post": {
+        "summary": "Toggle comment like status",
+        "tags": [
+          "Clan Community"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "commentId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Comment ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comment like status toggled successfully"
+          },
+          "403": {
+            "description": "Clan boost not active or user is not a clan member"
+          },
+          "404": {
+            "description": "Clan or comment not found"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/posts/{postId}/report": {
+      "post": {
+        "summary": "Report a post",
+        "tags": [
+          "Clan Community"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "postId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Post ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "reason"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "description": "Reason for reporting"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Additional description"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Report submitted successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "403": {
+            "description": "Clan boost not active or user is not a clan member"
+          },
+          "404": {
+            "description": "Clan not found"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/comments/{commentId}/report": {
+      "post": {
+        "summary": "Report a comment",
+        "tags": [
+          "Clan Community"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "commentId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Comment ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "reason"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "description": "Reason for reporting"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Additional description"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Report submitted successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "403": {
+            "description": "Clan boost not active or user is not a clan member"
+          },
+          "404": {
+            "description": "Clan not found"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/posts/{postId}/tags": {
+      "put": {
+        "summary": "Set tags on a post",
+        "tags": [
+          "Clan Community"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "postId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Post ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "tagIds"
+                ],
+                "properties": {
+                  "tagIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "Array of tag IDs to assign to the post"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tags updated successfully"
+          },
+          "400": {
+            "description": "tagIds must be an array"
+          },
+          "403": {
+            "description": "Clan boost not active, user is not a clan member, or not post owner"
+          },
+          "404": {
+            "description": "Clan or post not found"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/players/search": {
+      "get": {
+        "summary": "Search players for @ mention",
+        "tags": [
+          "Clan Community"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search query (minimum 1 character)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of matching players (max 8)"
+          },
+          "403": {
+            "description": "Clan boost not active or clan is private and user not a member"
+          },
+          "404": {
+            "description": "Clan not found"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/posts/{postId}/participants": {
+      "get": {
+        "summary": "Get participants for a post",
+        "tags": [
+          "Clan Community"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "postId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Post ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Participants retrieved successfully with current user's status"
+          },
+          "403": {
+            "description": "Clan boost not active or clan is private and user not a member"
+          },
+          "404": {
+            "description": "Clan not found"
+          }
+        }
+      },
+      "post": {
+        "summary": "Request participation in a post",
+        "tags": [
+          "Clan Community"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "postId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Post ID"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Participation request submitted successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "403": {
+            "description": "Clan boost not active or user is not a clan member"
+          },
+          "404": {
+            "description": "Clan not found"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/posts/{postId}/participants/cancel": {
+      "post": {
+        "summary": "Cancel participation in a post",
+        "tags": [
+          "Clan Community"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "postId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Post ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Participation cancelled successfully"
+          },
+          "403": {
+            "description": "Clan boost not active or user is not a clan member"
+          },
+          "404": {
+            "description": "Clan not found"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/posts/{postId}/participants/{uid}/approve": {
+      "put": {
+        "summary": "Approve a participant's participation request",
+        "tags": [
+          "Clan Community"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "postId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Post ID"
+          },
+          {
+            "in": "path",
+            "name": "uid",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "User ID of the participant to approve"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Participant approved successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "403": {
+            "description": "Clan boost not active, user is not a clan member, or not authorized"
+          },
+          "404": {
+            "description": "Clan or post not found"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/posts/{postId}/participants/{uid}/reject": {
+      "put": {
+        "summary": "Reject a participant's participation request",
+        "tags": [
+          "Clan Community"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "postId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Post ID"
+          },
+          {
+            "in": "path",
+            "name": "uid",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "User ID of the participant to reject"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Participant rejected successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "403": {
+            "description": "Clan boost not active, user is not a clan member, or not authorized"
+          },
+          "404": {
+            "description": "Clan or post not found"
+          }
+        }
+      }
+    },
+    "/clans/{id}/community/posts/{postId}/participants/{uid}/revoke": {
+      "delete": {
+        "summary": "Revoke a participant's participation",
+        "tags": [
+          "Clan Community"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Clan ID"
+          },
+          {
+            "in": "path",
+            "name": "postId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Post ID"
+          },
+          {
+            "in": "path",
+            "name": "uid",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "User ID of the participant to revoke"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Participant revoked successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "403": {
+            "description": "Clan boost not active, user is not a clan member, or not authorized"
+          },
+          "404": {
+            "description": "Clan or post not found"
           }
         }
       }
@@ -2470,6 +5025,1785 @@ export const swaggerHtml = `<!DOCTYPE html>
           },
           "500": {
             "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/community/posts": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Get community posts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "discussion",
+                "media",
+                "guide",
+                "announcement",
+                "collab"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "default": "created_at"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ascending",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of community posts"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Create a community post",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "content": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "discussion",
+                      "media",
+                      "guide",
+                      "announcement",
+                      "collab"
+                    ]
+                  },
+                  "image_url": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Post created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/community/posts/recommended": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Get recommended community posts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "discussion",
+                "media",
+                "guide",
+                "announcement",
+                "review",
+                "collab"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 25
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of recommended community posts"
+          }
+        }
+      }
+    },
+    "/community/posts/views": {
+      "post": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Record post views for the current user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "postIds"
+                ],
+                "properties": {
+                  "postIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Views recorded"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/community/posts/{id}/view": {
+      "post": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Record a single post view",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "View recorded"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/community/posts/{id}": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Get a single community post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post details"
+          },
+          "404": {
+            "description": "Post not found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Update a community post",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "content": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "image_url": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Post updated"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Delete a community post",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post deleted"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/community/posts/{id}/pin": {
+      "post": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Toggle pin on a community post (admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pin toggled"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/community/posts/{id}/like": {
+      "post": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Toggle like on a community post",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Like toggled"
+          }
+        }
+      }
+    },
+    "/community/posts/{id}/comments": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Get comments for a post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of comments"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Add a comment to a post",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "content"
+                ],
+                "properties": {
+                  "content": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comment created"
+          }
+        }
+      }
+    },
+    "/community/comments/{id}": {
+      "delete": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Delete a comment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comment deleted"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/community/comments/{id}/like": {
+      "post": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Toggle like on a comment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Like toggled"
+          }
+        }
+      }
+    },
+    "/community/admin/posts": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - List all community posts with search",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all community posts"
+          }
+        }
+      }
+    },
+    "/community/admin/posts/{id}": {
+      "delete": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - Force delete a community post",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post deleted"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - Update any community post",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "content": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "pinned": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Post updated"
+          }
+        }
+      }
+    },
+    "/community/posts/{id}/report": {
+      "post": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Report a post",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "reason"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Report submitted successfully"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/community/comments/{id}/report": {
+      "post": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Report a comment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "reason"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Report submitted successfully"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/community/my/records": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Get user's verified records for attachment picker",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of user's verified records"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/community/levels/search": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Search levels for attachment picker",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of matching levels"
+          }
+        }
+      }
+    },
+    "/community/admin/reports": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - List all reports",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "resolved",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of reports"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/community/admin/reports/{id}/resolve": {
+      "put": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - Resolve a report",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Report resolved"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Report not found"
+          }
+        }
+      }
+    },
+    "/community/admin/posts/{id}/hidden": {
+      "put": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - Toggle hide/unhide a post",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "hidden"
+                ],
+                "properties": {
+                  "hidden": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Post hidden/unhidden"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/community/admin/comments": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - List all comments with search/filter",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hidden",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "moderationStatus",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "postId",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of comments"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/community/admin/comments/{id}": {
+      "delete": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - Force delete a comment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comment deleted"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/community/admin/moderation/pending": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - List posts pending moderation approval",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of posts pending moderation"
+          }
+        }
+      }
+    },
+    "/community/admin/moderation/{id}/approve": {
+      "put": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - Approve a pending post",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post approved"
+          }
+        }
+      }
+    },
+    "/community/admin/moderation/{id}/reject": {
+      "put": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - Reject a pending post",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post rejected"
+          }
+        }
+      }
+    },
+    "/community/admin/moderation/comments/pending": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - List comments pending moderation",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of comments pending moderation"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/community/admin/moderation/comments/{id}/approve": {
+      "put": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - Approve a pending comment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comment approved"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Comment not found"
+          }
+        }
+      }
+    },
+    "/community/admin/moderation/comments/{id}/reject": {
+      "put": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - Reject a pending comment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comment rejected"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Comment not found"
+          }
+        }
+      }
+    },
+    "/community/admin/comments/{id}/hidden": {
+      "put": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - Toggle hide/unhide a comment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "hidden"
+                ],
+                "properties": {
+                  "hidden": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comment hidden/unhidden"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/community/players/search": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Search players for @ mention",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of matching players"
+          }
+        }
+      }
+    },
+    "/community/levels/{id}/posts": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Get community posts related to a level",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 5
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of posts related to the level"
+          }
+        }
+      }
+    },
+    "/community/posts/{id}/participants": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Get participants for a post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of participants and current user's status"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Request to participate in a post",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Participation request created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "409": {
+            "description": "Conflict (already participating)"
+          }
+        }
+      }
+    },
+    "/community/posts/{id}/participants/cancel": {
+      "post": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Cancel own participation request",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Participation request cancelled"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/community/posts/{id}/participants/{uid}/approve": {
+      "put": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Approve a participant (post owner only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "uid",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Participant approved"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/community/posts/{id}/participants/{uid}/reject": {
+      "put": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Reject a participant (post owner only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "uid",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Participant rejected"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/community/posts/{id}/participants/{uid}/revoke": {
+      "delete": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Revoke an approved participant (post owner only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "uid",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Participant revoked"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/community/tags": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Get all post tags",
+        "responses": {
+          "200": {
+            "description": "List of all post tags"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - Create a post tag",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "color": {
+                    "type": "string"
+                  },
+                  "admin_only": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tag created"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/community/tags/{id}": {
+      "delete": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - Delete a post tag (removes from all posts)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tag deleted"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Admin - Update a post tag",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "color": {
+                    "type": "string"
+                  },
+                  "admin_only": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tag updated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Tag not found"
+          }
+        }
+      }
+    },
+    "/community/posts/{id}/tags": {
+      "put": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Set tags on a post",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "tagIds"
+                ],
+                "properties": {
+                  "tagIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tags updated"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       }
@@ -3674,6 +8008,88 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
+    "/homepage": {
+      "get": {
+        "summary": "Get homepage aggregated data",
+        "tags": [
+          "Homepage"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "description": "Returns aggregated data for homepage including events, top supporters, clans, community posts, levels, and optionally battlepass progress for authenticated users",
+        "responses": {
+          "200": {
+            "description": "Homepage data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "topSupporters": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "serverProgress": {
+                      "type": "object"
+                    },
+                    "topClans": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "communityPosts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "levels": {
+                      "type": "object",
+                      "properties": {
+                        "dl": {
+                          "type": "array"
+                        },
+                        "fl": {
+                          "type": "array"
+                        },
+                        "pl": {
+                          "type": "array"
+                        },
+                        "cl": {
+                          "type": "array"
+                        }
+                      }
+                    },
+                    "activeSeason": {
+                      "type": "object"
+                    },
+                    "battlepassProgress": {
+                      "type": "object",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/inventory": {
       "get": {
         "tags": [
@@ -3748,6 +8164,56 @@ export const swaggerHtml = `<!DOCTYPE html>
                 "schema": null
               }
             }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/inventory/item/{id}/consume": {
+      "delete": {
+        "tags": [
+          "Inventory"
+        ],
+        "summary": "Consume queue boost item",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The item ID (should be QUEUE_BOOST)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "levelID": {
+                    "type": "number"
+                  },
+                  "quantity": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Queue boost consumed successfully"
           },
           "500": {
             "description": "Internal server error"
@@ -3924,7 +8390,7 @@ export const swaggerHtml = `<!DOCTYPE html>
         "tags": [
           "Leaderboard"
         ],
-        "summary": "Get leaderboard of Platformer List",
+        "summary": "Get leaderboard of Featured List",
         "parameters": [
           {
             "name": "start",
@@ -3979,6 +8445,470 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
+    "/leaderboard/pl": {
+      "get": {
+        "tags": [
+          "Leaderboard"
+        ],
+        "summary": "Get leaderboard of Platformer List",
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "description": "Range start index",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 0
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "description": "Range end index",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 50
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "description": "Property of player to sort by",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "plrank"
+            }
+          },
+          {
+            "name": "ascending",
+            "in": "query",
+            "description": "Sort ascending",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/leaderboard/cl": {
+      "get": {
+        "tags": [
+          "Leaderboard"
+        ],
+        "summary": "Get leaderboard of Challenge List",
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "description": "Range start index",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 0
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "description": "Range end index",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 50
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "description": "Property of player to sort by",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "clrank"
+            }
+          },
+          {
+            "name": "ascending",
+            "in": "query",
+            "description": "Sort ascending",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/level-submissions": {
+      "get": {
+        "tags": [
+          "Level Submissions"
+        ],
+        "summary": "Get all level submissions (admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "default": 0
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Level Submissions"
+        ],
+        "summary": "Submit a new challenge level for review",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "levelId": {
+                    "type": "number"
+                  },
+                  "comment": {
+                    "type": "string"
+                  },
+                  "videoID": {
+                    "type": "string",
+                    "description": "YouTube video ID extracted from the video link"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/level-submissions/user/{userId}": {
+      "get": {
+        "tags": [
+          "Level Submissions"
+        ],
+        "summary": "Get level submissions by user",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/level-submissions/{userId}/{levelId}": {
+      "delete": {
+        "tags": [
+          "Level Submissions"
+        ],
+        "summary": "Delete a level submission (admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "levelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/level-submissions/{userId}/{levelId}/verdict": {
+      "post": {
+        "tags": [
+          "Level Submissions"
+        ],
+        "summary": "Accept or reject a level submission (admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "levelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "accept": {
+                    "type": "boolean"
+                  },
+                  "rating": {
+                    "type": "number"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/levels/tags": {
+      "get": {
+        "tags": [
+          "Level"
+        ],
+        "summary": "Get all level tags",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Level"
+        ],
+        "summary": "Create a level tag (admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tag created successfully"
+          },
+          "409": {
+            "description": "Tag already exists"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/levels/tags/{tagId}": {
+      "delete": {
+        "tags": [
+          "Level"
+        ],
+        "summary": "Delete a level tag (admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tagId",
+            "in": "path",
+            "description": "The ID of the tag to delete",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tag deleted successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Level"
+        ],
+        "summary": "Update a level tag (admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tagId",
+            "in": "path",
+            "description": "The ID of the tag to update",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tag updated successfully"
+          },
+          "409": {
+            "description": "Tag already exists"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/levels/refresh": {
+      "post": {
+        "tags": [
+          "Level"
+        ],
+        "summary": "Refresh level (webhook only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Level refreshed successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/level": {
       "put": {
         "tags": [
@@ -4000,13 +8930,13 @@ export const swaggerHtml = `<!DOCTYPE html>
     },
     "/levels/new": {
       "get": {
-        "summary": "Get new unrated levels",
+        "summary": "Retrieve new levels with null ratings, flTop, and insaneTier.",
         "tags": [
-          "Level"
+          "Levels"
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Successfully retrieved levels.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4016,7 +8946,7 @@ export const swaggerHtml = `<!DOCTYPE html>
             }
           },
           "500": {
-            "description": "Internal server error"
+            "description": "Internal server error."
           }
         }
       }
@@ -4060,6 +8990,41 @@ export const swaggerHtml = `<!DOCTYPE html>
                 "schema": null
               }
             }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/levels/batch": {
+      "post": {
+        "tags": [
+          "Level"
+        ],
+        "summary": "Get multiple levels by IDs",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "batch": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "Array of level IDs"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
           },
           "500": {
             "description": "Internal server error"
@@ -4224,12 +9189,224 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
+    "/levels/{id}/tags": {
+      "get": {
+        "tags": [
+          "Level"
+        ],
+        "summary": "Get tags for a level",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID of the level",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Level"
+        ],
+        "summary": "Set tags on a level (admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID of the level",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tag_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tags set successfully"
+          },
+          "400": {
+            "description": "Invalid tag_ids format"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/levels/{id}/variants": {
+      "get": {
+        "tags": [
+          "Level"
+        ],
+        "summary": "Get variants for a level",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID of the level",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Level"
+        ],
+        "summary": "Add a variant to a level (admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID of the main level",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "variantLevelId"
+                ],
+                "properties": {
+                  "variantLevelId": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Variant added successfully"
+          },
+          "400": {
+            "description": "Missing variantLevelId"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/levels/{id}/variants/{variantId}": {
+      "delete": {
+        "tags": [
+          "Level"
+        ],
+        "summary": "Remove a variant from a level (admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID of the main level",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "variantId",
+            "in": "path",
+            "description": "The ID of the variant to remove",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Variant removed successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/list/dl": {
       "get": {
         "tags": [
           "List"
         ],
         "summary": "Get all records of the Demon List",
+        "deprecated": true,
         "parameters": [
           {
             "name": "start",
@@ -4354,6 +9531,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           "List"
         ],
         "summary": "Get all records of the Platformer List",
+        "deprecated": true,
         "parameters": [
           {
             "name": "start",
@@ -4478,6 +9656,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           "List"
         ],
         "summary": "Get all records of the Demon List",
+        "deprecated": true,
         "parameters": [
           {
             "name": "start",
@@ -4592,6 +9771,7 @@ export const swaggerHtml = `<!DOCTYPE html>
           "List"
         ],
         "summary": "Get all records of the Demon List",
+        "deprecated": true,
         "parameters": [
           {
             "name": "start",
@@ -4642,6 +9822,182 @@ export const swaggerHtml = `<!DOCTYPE html>
           "List"
         ],
         "summary": "Get all records of the Featured List",
+        "deprecated": true,
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "description": "Range start index",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 0
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "description": "Range end index",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 50
+            }
+          },
+          {
+            "name": "isChecked",
+            "in": "query",
+            "description": "Record acception status",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/list/cl": {
+      "get": {
+        "tags": [
+          "List"
+        ],
+        "summary": "Get all levels of the Challenge List",
+        "deprecated": true,
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "description": "Range start index",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 0
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "description": "Range end index",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 50
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "description": "Property of level to sort by",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "dlTop"
+            }
+          },
+          {
+            "name": "ascending",
+            "in": "query",
+            "description": "Sort ascending",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "uid",
+            "in": "query",
+            "description": "Progress of player",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "topStart",
+            "in": "query",
+            "description": "Minimum dlTop position to filter",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "topEnd",
+            "in": "query",
+            "description": "Maximum dlTop position to filter",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "ratingMin",
+            "in": "query",
+            "description": "Minimum rating to filter",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "ratingMax",
+            "in": "query",
+            "description": "Maximum rating to filter",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "nameSearch",
+            "in": "query",
+            "description": "Search levels by name (case insensitive)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "creatorSearch",
+            "in": "query",
+            "description": "Search levels by creator name (case insensitive)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/list/cl/records": {
+      "get": {
+        "tags": [
+          "List"
+        ],
+        "summary": "Get all records of the Challenge List",
+        "deprecated": true,
         "parameters": [
           {
             "name": "start",
@@ -4692,18 +10048,20 @@ export const swaggerHtml = `<!DOCTYPE html>
           "List"
         ],
         "summary": "Get a random level from a list",
+        "deprecated": true,
         "parameters": [
           {
             "name": "list",
             "in": "path",
-            "description": "List type (dl, pl, or fl)",
+            "description": "List type (dl, pl, fl, or cl)",
             "required": true,
             "schema": {
               "type": "string",
               "enum": [
                 "dl",
                 "pl",
-                "fl"
+                "fl",
+                "cl"
               ]
             }
           },
@@ -4783,6 +10141,41 @@ export const swaggerHtml = `<!DOCTYPE html>
         "responses": {
           "200": {
             "description": "Map pack created successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/mappacks/batch": {
+      "post": {
+        "tags": [
+          "Map Packs"
+        ],
+        "summary": "Get multiple map packs by IDs",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "batch": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "Array of map pack IDs"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
           },
           "500": {
             "description": "Internal server error"
@@ -4978,6 +10371,211 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
+    "/merchant/orders/all": {
+      "get": {
+        "tags": [
+          "Merchant"
+        ],
+        "summary": "Get all orders with filtering (manager only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "description": "Filter by order state",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "paymentMethod",
+            "in": "query",
+            "description": "Filter by payment method",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search term",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": null
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/merchant/order/{id}/state": {
+      "patch": {
+        "tags": [
+          "Merchant"
+        ],
+        "summary": "Change order state (manager only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The order ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "PAID",
+                      "CANCELLED",
+                      "EXPIRED"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Order state updated successfully"
+          },
+          "400": {
+            "description": "Invalid state"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/merchant/products": {
+      "get": {
+        "tags": [
+          "Merchant"
+        ],
+        "summary": "Get all products (manager only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": null
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Merchant"
+        ],
+        "summary": "Create a product (manager only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product created successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/merchant/products/{id}": {
+      "patch": {
+        "tags": [
+          "Merchant"
+        ],
+        "summary": "Update a product (manager only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The product ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product updated successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/merchant/orders": {
       "get": {
         "tags": [
@@ -5049,6 +10647,64 @@ export const swaggerHtml = `<!DOCTYPE html>
         "responses": {
           "200": {
             "description": "Tracking information added successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/merchant/record-cards": {
+      "get": {
+        "tags": [
+          "Merchant"
+        ],
+        "summary": "Get all record cards (manager only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": null
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/merchant/record-cards/{id}/printed": {
+      "patch": {
+        "tags": [
+          "Merchant"
+        ],
+        "summary": "Mark a record card as printed (manager only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The record card ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Record card marked as printed successfully"
           },
           "500": {
             "description": "Internal server error"
@@ -5278,6 +10934,167 @@ export const swaggerHtml = `<!DOCTYPE html>
           },
           "500": {
             "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/orders/{id}/record-card": {
+      "post": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "Create a record card for an existing order",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The order ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "levelID",
+                  "template",
+                  "material"
+                ],
+                "properties": {
+                  "levelID": {
+                    "type": "integer",
+                    "description": "Level ID for the record card"
+                  },
+                  "template": {
+                    "type": "integer",
+                    "description": "Template ID"
+                  },
+                  "material": {
+                    "type": "string",
+                    "enum": [
+                      "paper",
+                      "plastic"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Record card created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "cardID": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing required fields or invalid material"
+          },
+          "401": {
+            "description": "Unauthorized - order doesn't belong to user"
+          },
+          "404": {
+            "description": "Record not found or not accepted"
+          }
+        }
+      }
+    },
+    "/orders/record-card": {
+      "post": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "Create a record card with a new order",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "levelID",
+                  "template",
+                  "material",
+                  "address",
+                  "phone",
+                  "recipientName"
+                ],
+                "properties": {
+                  "levelID": {
+                    "type": "integer"
+                  },
+                  "template": {
+                    "type": "integer"
+                  },
+                  "material": {
+                    "type": "string",
+                    "enum": [
+                      "paper",
+                      "plastic"
+                    ]
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "recipientName": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Order and record card created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "orderID": {
+                      "type": "integer"
+                    },
+                    "cardID": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing required fields or invalid material"
+          },
+          "404": {
+            "description": "Record not found or not accepted"
           }
         }
       }
@@ -5583,9 +11400,7 @@ export const swaggerHtml = `<!DOCTYPE html>
             }
           }
         }
-      }
-    },
-    "/player": {
+      },
       "put": {
         "tags": [
           "Player"
@@ -5600,6 +11415,20 @@ export const swaggerHtml = `<!DOCTYPE html>
         "responses": {
           "200": {
             "description": "Success"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Player"
+        ],
+        "summary": "Create a new player account",
+        "responses": {
+          "201": {
+            "description": "Player created successfully"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         }
       }
@@ -5644,7 +11473,7 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
-    "/player/{uid}": {
+    "/players/{uid}": {
       "get": {
         "tags": [
           "Player"
@@ -5673,7 +11502,75 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
-    "/player/{uid}/records": {
+    "/players/{uid}/onboarding": {
+      "patch": {
+        "tags": [
+          "Player"
+        ],
+        "summary": "Update player onboarding data",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "uid",
+            "in": "path",
+            "description": "The UID of the player",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "province": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "onboarding_step": {
+                    "type": "integer"
+                  },
+                  "onboarding_done": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Onboarding data updated successfully"
+          },
+          "400": {
+            "description": "Invalid input or name cooldown active"
+          },
+          "403": {
+            "description": "Forbidden - not authorized"
+          },
+          "409": {
+            "description": "Name already in use"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/players/{uid}/records": {
       "get": {
         "tags": [
           "Player"
@@ -5732,7 +11629,7 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
-    "/player/{uid}/heatmap": {
+    "/players/{uid}/heatmap/{year}": {
       "get": {
         "tags": [
           "Player"
@@ -5765,7 +11662,31 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
-    "/{uid}/submissions": {
+    "/players/heatmap/{count}": {
+      "post": {
+        "tags": [
+          "Player"
+        ],
+        "summary": "Add 1 attempt to the heatmap",
+        "parameters": [
+          {
+            "name": "count",
+            "in": "path",
+            "description": "Amount of attempt to add",
+            "required": true,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/players/{uid}/submissions": {
       "get": {
         "tags": [
           "Player"
@@ -5789,7 +11710,7 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
-    "/player/syncRole": {
+    "/players/syncRole": {
       "patch": {
         "tags": [
           "Player"
@@ -5805,7 +11726,7 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
-    "/{uid}/medals": {
+    "/players/{uid}/medals": {
       "get": {
         "tags": [
           "Player"
@@ -5893,6 +11814,151 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
+    "/players/{uid}/created-challenges": {
+      "get": {
+        "tags": [
+          "Player"
+        ],
+        "summary": "Get challenges created by a player",
+        "parameters": [
+          {
+            "name": "uid",
+            "in": "path",
+            "description": "The UID of the player",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": null
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/players/{uid}/community-posts": {
+      "get": {
+        "tags": [
+          "Player"
+        ],
+        "summary": "Get community posts by a player",
+        "parameters": [
+          {
+            "name": "uid",
+            "in": "path",
+            "description": "The UID of the player",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/players/{uid}/convictions": {
+      "get": {
+        "tags": [
+          "Player"
+        ],
+        "summary": "Get player convictions",
+        "parameters": [
+          {
+            "name": "uid",
+            "in": "path",
+            "description": "The UID of the player",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Player"
+        ],
+        "summary": "Add a conviction to player (admin only)",
+        "parameters": [
+          {
+            "name": "uid",
+            "in": "path",
+            "description": "The UID of the player",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string"
+                  },
+                  "creditReduce": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid payload"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/provinces": {
       "get": {
         "tags": [
@@ -5907,6 +11973,40 @@ export const swaggerHtml = `<!DOCTYPE html>
                 "schema": null
               }
             }
+          }
+        }
+      }
+    },
+    "/record-card/{id}": {
+      "get": {
+        "summary": "Get a record card by ID",
+        "tags": [
+          "Record Card"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Record card ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Record card retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Record card not found"
           }
         }
       }
@@ -6284,6 +12384,44 @@ export const swaggerHtml = `<!DOCTYPE html>
         }
       }
     },
+    "/storage/object": {
+      "delete": {
+        "tags": [
+          "Storage"
+        ],
+        "summary": "Delete a file from S3 storage",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "description": "File path to delete",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File deleted successfully"
+          },
+          "400": {
+            "description": "Missing file path"
+          },
+          "403": {
+            "description": "Forbidden - user not authorized for this path"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/store/product/{id}": {
       "get": {
         "tags": [
@@ -6389,9 +12527,184 @@ export const swaggerHtml = `<!DOCTYPE html>
           }
         }
       }
+    },
+    "/sync/wiki": {
+      "post": {
+        "summary": "Sync wiki data",
+        "tags": [
+          "Sync"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "commit_id"
+                ],
+                "properties": {
+                  "commit_id": {
+                    "type": "string",
+                    "description": "The commit ID to sync wiki data from"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Wiki sync successful"
+          },
+          "400": {
+            "description": "Bad request - missing commit_id"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/wiki/latest": {
+      "get": {
+        "summary": "Get latest wiki files",
+        "tags": [
+          "Wiki"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "locale",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated list of locales (e.g., 'en,vi')"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 8
+            },
+            "description": "Maximum number of wiki files to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Latest wiki files retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/wiki/files/{path}": {
+      "get": {
+        "summary": "Get wiki files by path",
+        "tags": [
+          "Wiki"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Wiki file path"
+          },
+          {
+            "in": "query",
+            "name": "locale",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated list of locales"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "default": "created_at"
+            },
+            "description": "Field to sort by"
+          },
+          {
+            "in": "query",
+            "name": "ascending",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Sort order"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Offset for pagination"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Limit for pagination"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Wiki files retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "tags": [
+    {
+      "name": "Ads",
+      "description": "Advertisement and rewards endpoints"
+    },
+    {
+      "name": "Analytics",
+      "description": "Analytics and metrics endpoints"
+    },
     {
       "name": "API Key",
       "description": "Endpoints for managing API keys"
@@ -6399,6 +12712,30 @@ export const swaggerHtml = `<!DOCTYPE html>
     {
       "name": "Auth",
       "description": "Authentication routes"
+    },
+    {
+      "name": "Buyers",
+      "description": "Top buyers and supporter progress"
+    },
+    {
+      "name": "Clan Community",
+      "description": "Clan community features (posts, comments, participants, tags, reports)"
+    },
+    {
+      "name": "Homepage",
+      "description": "Homepage aggregated data"
+    },
+    {
+      "name": "Record Card",
+      "description": "Record card endpoints"
+    },
+    {
+      "name": "Sync",
+      "description": "Data synchronization endpoints"
+    },
+    {
+      "name": "Wiki",
+      "description": "Wiki file endpoints"
     }
   ]
 };

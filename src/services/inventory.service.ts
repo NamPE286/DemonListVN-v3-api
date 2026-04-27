@@ -3,6 +3,7 @@ import supabase from "@src/client/supabase";
 import { getEventQuest } from "@src/services/event-quest.service";
 import { getCase as getCaseItems, getItem } from "@src/services/item.service";
 import { getPlayer } from "@src/services/player.service";
+import type { TInventoryItem } from "@src/types";
 import type { TablesInsert } from "@src/types/supabase";
 
 type Player = Awaited<ReturnType<typeof getPlayer>>;
@@ -74,6 +75,77 @@ export async function consumeItem(inventoryItemId: number, quantity: number = 1,
             throw new Error(error.message);
         }
     }
+}
+
+type CouponInventoryItem = Pick<
+    TInventoryItem,
+    'inventoryId' | 'userID' | 'productId' | 'quantity' | 'useRedirect' | 'created_at' | 'expireAt' | 'defaultExpireAfter'
+>;
+
+function getInventoryCouponExpireAfter(item: Pick<CouponInventoryItem, 'created_at' | 'expireAt' | 'defaultExpireAfter'>) {
+    if (item.expireAt) {
+        const createdAtMs = new Date(item.created_at).getTime();
+        const expireAtMs = new Date(item.expireAt).getTime();
+        const expireAfter = expireAtMs - createdAtMs;
+
+        if (Number.isFinite(expireAfter) && expireAfter > 0) {
+            return expireAfter;
+        }
+    }
+
+    return item.defaultExpireAfter;
+}
+
+async function createCouponForInventoryItem(item: Pick<CouponInventoryItem, 'userID' | 'productId' | 'quantity' | 'created_at' | 'expireAt' | 'defaultExpireAfter'>) {
+    if (!item.productId) {
+        throw new Error('Item has no product');
+    }
+
+    const expireAfter = getInventoryCouponExpireAfter(item);
+
+    if (!expireAfter) {
+        throw new Error('expireAfter is null');
+    }
+
+    const { data, error } = await supabase
+        .from('coupons')
+        .insert({
+            percent: 1,
+            validUntil: new Date(Date.now() + expireAfter).toISOString(),
+            productID: item.productId,
+            owner: item.userID,
+            quantity: item.quantity || 1
+        })
+        .select('code')
+        .single();
+
+    if (error || !data) {
+        throw new Error(error?.message || 'Failed to create coupon');
+    }
+
+    return data.code;
+}
+
+export async function consumeCouponInventoryItem(item: CouponInventoryItem) {
+    if (item.useRedirect) {
+        await consumeItem(item.inventoryId);
+        return { redirectTo: item.useRedirect };
+    }
+
+    const code = await createCouponForInventoryItem(item);
+
+    try {
+        await consumeItem(item.inventoryId);
+    } catch (error) {
+        await supabase
+            .from('coupons')
+            .delete()
+            .eq('code', code);
+
+        throw error;
+    }
+
+    return { redirectTo: `/redeem/${code}` };
 }
 
 export async function addCaseResult(player: Player, inventoryItemId: number, caseItem: CaseItem | null) {
@@ -180,42 +252,13 @@ export async function addInventoryCaseItem(player: Player, caseItem: CaseItem) {
         throw new Error('player.uid is undefined');
     }
 
-    if (caseItem.items?.productId) {
-        const expireAfter = caseItem.expireAfter || caseItem.items.defaultExpireAfter
-
-        if (!expireAfter) {
-            throw new Error("expireAfter is null")
-        }
-
-        var { data, error } = await supabase
-            .from('coupons')
-            .insert({
-                percent: 1,
-                validUntil: new Date(new Date().getTime() + expireAfter).toISOString(),
-                productID: caseItem.items?.productId,
-                owner: player.uid,
-                quantity: caseItem.items.quantity
-            })
-            .select()
-            .single()
-
-
-        if (!data || error) {
-            throw new Error(error?.message)
-        }
-
-        await addInventoryItem({
-            userID: player.uid,
-            itemId: caseItem.itemId,
-            redirectTo: '/redeem/' + data?.code,
-            expireAt: new Date(new Date().getTime() + expireAfter).toISOString()
-        })
-    } else {
-        await addInventoryItem({
-            userID: player.uid,
-            itemId: caseItem.id
-        })
-    }
+    await addInventoryItem({
+        userID: player.uid,
+        itemId: caseItem.itemId,
+        expireAt: caseItem.expireAfter
+            ? new Date(Date.now() + caseItem.expireAfter).toISOString()
+            : null
+    })
 }
 
 type Reward = {
@@ -236,39 +279,11 @@ export async function receiveReward(player: Player, reward: Reward) {
         throw new Error('player.uid is undefined');
     }
 
-    if (reward.productId) {
-        if (!reward.expireAfter) {
-            throw new Error("expireAfter is null")
-        }
-
-        var { data, error } = await supabase
-            .from('coupons')
-            .insert({
-                percent: 1,
-                validUntil: new Date(new Date().getTime() + reward.expireAfter).toISOString(),
-                productID: reward.productId,
-                owner: player.uid
-            })
-            .select()
-            .single()
-
-
-        if (!data || error) {
-            throw new Error(error?.message)
-        }
-
-        await addInventoryItem({
-            userID: player.uid,
-            itemId: reward.id!,
-            redirectTo: '/redeem/' + data?.code,
-            expireAt: new Date(new Date().getTime() + reward.expireAfter).toISOString()
-        })
-
-
-    } else {
-        await addInventoryItem({
-            userID: player.uid,
-            itemId: reward.id!,
-        })
-    }
+    await addInventoryItem({
+        userID: player.uid,
+        itemId: reward.id!,
+        expireAt: reward.expireAfter
+            ? new Date(Date.now() + reward.expireAfter).toISOString()
+            : null
+    })
 }

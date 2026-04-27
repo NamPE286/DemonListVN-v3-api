@@ -20,6 +20,7 @@ import {
     getUserRecordsForPicker,
     getLevelsForPicker,
     searchPlayers,
+    getPostsByListWithLikeStatus,
     getPostsByLevelWithLikeStatus,
     getCommunityPosts,
     getCommunityPostsCount,
@@ -146,11 +147,12 @@ router.route('/posts')
         const sortBy = (req.query.sortBy as string) || 'createdAt'
         const ascending = req.query.ascending === 'true'
         const search = req.query.search as string | undefined
+        const searchType = req.query.searchType as string | undefined
         const tagId = req.query.tagId ? parseInt(req.query.tagId as string) : undefined
         const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
 
         const result = await getPostsWithLikeStatus(
-            { type, limit, offset, sortBy, ascending, search, tagId, clanId: null },
+            { type, limit, offset, sortBy, ascending, search, searchType, tagId, clanId: null },
             userId
         )
 
@@ -788,6 +790,42 @@ router.route('/admin/posts/:id')
 
 // Report a post
 router.route('/posts/:id/report')
+    /**
+     * @openapi
+     * "/community/posts/{id}/report":
+     *   post:
+     *     tags:
+     *       - Community
+     *     summary: Report a post
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+     *               - reason
+     *             properties:
+     *               reason:
+     *                 type: string
+     *               description:
+     *                 type: string
+     *     responses:
+     *       201:
+     *         description: Report submitted successfully
+     *       400:
+     *         description: Bad request
+     *       401:
+     *         description: Unauthorized
+     */
     .post(userAuth, async (req, res) => {
         try {
             const report = await reportContent({
@@ -804,6 +842,42 @@ router.route('/posts/:id/report')
 
 // Report a comment
 router.route('/comments/:id/report')
+    /**
+     * @openapi
+     * "/community/comments/{id}/report":
+     *   post:
+     *     tags:
+     *       - Community
+     *     summary: Report a comment
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+     *               - reason
+     *             properties:
+     *               reason:
+     *                 type: string
+     *               description:
+     *                 type: string
+     *     responses:
+     *       201:
+     *         description: Report submitted successfully
+     *       400:
+     *         description: Bad request
+     *       401:
+     *         description: Unauthorized
+     */
     .post(userAuth, async (req, res) => {
         try {
             const report = await reportContent({
@@ -820,6 +894,21 @@ router.route('/comments/:id/report')
 
 // Get user's verified records for attachment picker
 router.route('/my/records')
+    /**
+     * @openapi
+     * "/community/my/records":
+     *   get:
+     *     tags:
+     *       - Community
+     *     summary: Get user's verified records for attachment picker
+     *     security:
+     *       - bearerAuth: []
+     *     responses:
+     *       200:
+     *         description: List of user's verified records
+     *       401:
+     *         description: Unauthorized
+     */
     .get(userAuth, async (req, res) => {
         const records = await getUserRecordsForPicker(res.locals.user.uid)
         res.json(records)
@@ -827,15 +916,67 @@ router.route('/my/records')
 
 // Search levels for attachment picker
 router.route('/levels/search')
+    /**
+     * @openapi
+     * "/community/levels/search":
+     *   get:
+     *     tags:
+     *       - Community
+     *     summary: Search levels for attachment picker
+     *     parameters:
+     *       - in: query
+     *         name: q
+     *         schema:
+     *           type: string
+     *       - in: query
+     *         name: limit
+     *         schema:
+     *           type: integer
+     *           default: 20
+     *     responses:
+     *       200:
+     *         description: List of matching levels
+     */
     .get(optionalAuth, async (req, res) => {
         const search = req.query.q as string | undefined
+        const searchType = req.query.searchType as string | undefined
         const limit = parseInt(req.query.limit as string) || 20
-        const levels = await getLevelsForPicker(search, limit)
+        const levels = await getLevelsForPicker(search, limit, searchType)
         res.json(levels)
     })
 
 // Admin: list reports
 router.route('/admin/reports')
+    /**
+     * @openapi
+     * "/community/admin/reports":
+     *   get:
+     *     tags:
+     *       - Community
+     *     summary: Admin - List all reports
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: query
+     *         name: resolved
+     *         schema:
+     *           type: boolean
+     *       - in: query
+     *         name: limit
+     *         schema:
+     *           type: integer
+     *           default: 50
+     *       - in: query
+     *         name: offset
+     *         schema:
+     *           type: integer
+     *           default: 0
+     *     responses:
+     *       200:
+     *         description: List of reports
+     *       403:
+     *         description: Forbidden
+     */
     .get(adminAuth, async (req, res) => {
         const resolved = req.query.resolved === 'true' ? true : req.query.resolved === 'false' ? false : undefined
         const limit = parseInt(req.query.limit as string) || 50
@@ -851,6 +992,29 @@ router.route('/admin/reports')
 
 // Admin: resolve a report
 router.route('/admin/reports/:id/resolve')
+    /**
+     * @openapi
+     * "/community/admin/reports/{id}/resolve":
+     *   put:
+     *     tags:
+     *       - Community
+     *     summary: Admin - Resolve a report
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: Report resolved
+     *       403:
+     *         description: Forbidden
+     *       404:
+     *         description: Report not found
+     */
     .put(adminAuth, async (req, res) => {
         const reportId = parseInt(req.params.id)
         const report = await resolveReport(reportId)
@@ -859,6 +1023,40 @@ router.route('/admin/reports/:id/resolve')
 
 // Admin: toggle hide/unhide a post
 router.route('/admin/posts/:id/hidden')
+    /**
+     * @openapi
+     * "/community/admin/posts/{id}/hidden":
+     *   put:
+     *     tags:
+     *       - Community
+     *     summary: Admin - Toggle hide/unhide a post
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+     *               - hidden
+     *             properties:
+     *               hidden:
+     *                 type: boolean
+     *     responses:
+     *       200:
+     *         description: Post hidden/unhidden
+     *       400:
+     *         description: Bad request
+     *       403:
+     *         description: Forbidden
+     */
     .put(adminAuth, async (req, res) => {
         const postId = parseInt(req.params.id)
         const { hidden } = req.body
@@ -873,17 +1071,60 @@ router.route('/admin/posts/:id/hidden')
 
 // Admin: list all comments with search/filter
 router.route('/admin/comments')
+    /**
+     * @openapi
+     * "/community/admin/comments":
+     *   get:
+     *     tags:
+     *       - Community
+     *     summary: Admin - List all comments with search/filter
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: query
+     *         name: search
+     *         schema:
+     *           type: string
+     *       - in: query
+     *         name: hidden
+     *         schema:
+     *           type: boolean
+     *       - in: query
+     *         name: moderationStatus
+     *         schema:
+     *           type: string
+     *       - in: query
+     *         name: postId
+     *         schema:
+     *           type: integer
+     *       - in: query
+     *         name: limit
+     *         schema:
+     *           type: integer
+     *           default: 50
+     *       - in: query
+     *         name: offset
+     *         schema:
+     *           type: integer
+     *           default: 0
+     *     responses:
+     *       200:
+     *         description: List of comments
+     *       403:
+     *         description: Forbidden
+     */
     .get(adminAuth, async (req, res) => {
         const limit = parseInt(req.query.limit as string) || 50
         const offset = parseInt(req.query.offset as string) || 0
         const search = req.query.search as string | undefined
+        const searchType = req.query.searchType as string | undefined
         const hidden = req.query.hidden === 'true' ? true : req.query.hidden === 'false' ? false : undefined
         const moderationStatus = req.query.moderationStatus as string | undefined
         const postId = req.query.postId ? parseInt(req.query.postId as string) : undefined
 
         const [comments, total] = await Promise.all([
-            getAdminComments({ limit, offset, search, hidden, moderationStatus, postId }),
-            getAdminCommentsCount({ search, hidden, moderationStatus, postId })
+            getAdminComments({ limit, offset, search, searchType, hidden, moderationStatus, postId }),
+            getAdminCommentsCount({ search, searchType, hidden, moderationStatus, postId })
         ])
 
         res.json({ data: comments, total })
@@ -891,6 +1132,27 @@ router.route('/admin/comments')
 
 // Admin: force delete any comment
 router.route('/admin/comments/:id')
+    /**
+     * @openapi
+     * "/community/admin/comments/{id}":
+     *   delete:
+     *     tags:
+     *       - Community
+     *     summary: Admin - Force delete a comment
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: Comment deleted
+     *       403:
+     *         description: Forbidden
+     */
     .delete(adminAuth, async (req, res) => {
         const commentId = parseInt(req.params.id)
         await deleteComment(commentId)
@@ -997,6 +1259,32 @@ router.route('/admin/moderation/:id/reject')
 
 // Admin: list comments pending moderation
 router.route('/admin/moderation/comments/pending')
+    /**
+     * @openapi
+     * "/community/admin/moderation/comments/pending":
+     *   get:
+     *     tags:
+     *       - Community
+     *     summary: Admin - List comments pending moderation
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: query
+     *         name: limit
+     *         schema:
+     *           type: integer
+     *           default: 50
+     *       - in: query
+     *         name: offset
+     *         schema:
+     *           type: integer
+     *           default: 0
+     *     responses:
+     *       200:
+     *         description: List of comments pending moderation
+     *       403:
+     *         description: Forbidden
+     */
     .get(adminAuth, async (req, res) => {
         const limit = parseInt(req.query.limit as string) || 50
         const offset = parseInt(req.query.offset as string) || 0
@@ -1011,6 +1299,29 @@ router.route('/admin/moderation/comments/pending')
 
 // Admin: approve a pending comment
 router.route('/admin/moderation/comments/:id/approve')
+    /**
+     * @openapi
+     * "/community/admin/moderation/comments/{id}/approve":
+     *   put:
+     *     tags:
+     *       - Community
+     *     summary: Admin - Approve a pending comment
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: Comment approved
+     *       403:
+     *         description: Forbidden
+     *       404:
+     *         description: Comment not found
+     */
     .put(adminAuth, async (req, res) => {
         try {
             const comment = await approveComment(parseInt(req.params.id))
@@ -1022,6 +1333,29 @@ router.route('/admin/moderation/comments/:id/approve')
 
 // Admin: reject a pending comment
 router.route('/admin/moderation/comments/:id/reject')
+    /**
+     * @openapi
+     * "/community/admin/moderation/comments/{id}/reject":
+     *   put:
+     *     tags:
+     *       - Community
+     *     summary: Admin - Reject a pending comment
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: Comment rejected
+     *       403:
+     *         description: Forbidden
+     *       404:
+     *         description: Comment not found
+     */
     .put(adminAuth, async (req, res) => {
         try {
             await rejectComment(parseInt(req.params.id))
@@ -1033,6 +1367,40 @@ router.route('/admin/moderation/comments/:id/reject')
 
 // Admin: toggle hide/unhide a comment (via admin table)
 router.route('/admin/comments/:id/hidden')
+    /**
+     * @openapi
+     * "/community/admin/comments/{id}/hidden":
+     *   put:
+     *     tags:
+     *       - Community
+     *     summary: Admin - Toggle hide/unhide a comment
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+     *               - hidden
+     *             properties:
+     *               hidden:
+     *                 type: boolean
+     *     responses:
+     *       200:
+     *         description: Comment hidden/unhidden
+     *       400:
+     *         description: Bad request
+     *       403:
+     *         description: Forbidden
+     */
     .put(adminAuth, async (req, res) => {
         const commentId = parseInt(req.params.id)
         const { hidden } = req.body
@@ -1047,18 +1415,58 @@ router.route('/admin/comments/:id/hidden')
 
 // Search players for @ mention
 router.route('/players/search')
+    /**
+     * @openapi
+     * "/community/players/search":
+     *   get:
+     *     tags:
+     *       - Community
+     *     summary: Search players for @ mention
+     *     parameters:
+     *       - in: query
+     *         name: q
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: List of matching players
+     */
     .get(optionalAuth, async (req, res) => {
         const q = req.query.q as string
+        const searchType = req.query.searchType as string | undefined
         if (!q || q.length < 1) {
             res.json([])
             return
         }
-        const players = await searchPlayers(q, 8)
+        const players = await searchPlayers(q, 8, searchType)
         res.json(players)
     })
 
 // Get community posts related to a level
 router.route('/levels/:id/posts')
+    /**
+     * @openapi
+     * "/community/levels/{id}/posts":
+     *   get:
+     *     tags:
+     *       - Community
+     *     summary: Get community posts related to a level
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *       - in: query
+     *         name: limit
+     *         schema:
+     *           type: integer
+     *           default: 5
+     *     responses:
+     *       200:
+     *         description: List of posts related to the level
+     */
     .get(optionalAuth, async (req, res) => {
         const levelId = parseInt(req.params.id)
         const limit = parseInt(req.query.limit as string) || 5
@@ -1076,10 +1484,46 @@ router.route('/levels/:id/posts')
         res.json(posts)
     })
 
+// Get community posts related to a custom list
+router.route('/lists/:id/posts')
+    .get(optionalAuth, async (req, res) => {
+        const listId = parseInt(req.params.id)
+        const limit = parseInt(req.query.limit as string) || 5
+        const userId = res.locals.authenticated ? res.locals.user?.uid : undefined
+
+        let posts = await getPostsByListWithLikeStatus(listId, limit, userId)
+
+        const isAdmin = res.locals.authenticated && res.locals.user?.isAdmin
+        if (!isAdmin && posts.length > 0) {
+            const postIds = posts.map((p: any) => p.id)
+            const approvedIds = await getApprovedPostIds(postIds)
+            posts = posts.filter((p: any) => approvedIds.has(p.id))
+        }
+
+        res.json(posts)
+    })
+
 // ---- Participants ----
 
 // Get participants for a post
 router.route('/posts/:id/participants')
+    /**
+     * @openapi
+     * "/community/posts/{id}/participants":
+     *   get:
+     *     tags:
+     *       - Community
+     *     summary: Get participants for a post
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: List of participants and current user's status
+     */
     .get(optionalAuth, async (req, res) => {
         try {
             const postId = parseInt(req.params.id)
@@ -1100,6 +1544,29 @@ router.route('/posts/:id/participants')
 
 // Request to participate in a post
 router.route('/posts/:id/participants')
+    /**
+     * @openapi
+     * "/community/posts/{id}/participants":
+     *   post:
+     *     tags:
+     *       - Community
+     *     summary: Request to participate in a post
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       201:
+     *         description: Participation request created
+     *       401:
+     *         description: Unauthorized
+     *       409:
+     *         description: Conflict (already participating)
+     */
     .post(userAuth, async (req, res) => {
         try {
             const result = await requestParticipation(
@@ -1114,6 +1581,27 @@ router.route('/posts/:id/participants')
 
 // Cancel own participation request
 router.route('/posts/:id/participants/cancel')
+    /**
+     * @openapi
+     * "/community/posts/{id}/participants/cancel":
+     *   post:
+     *     tags:
+     *       - Community
+     *     summary: Cancel own participation request
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: Participation request cancelled
+     *       401:
+     *         description: Unauthorized
+     */
     .post(userAuth, async (req, res) => {
         try {
             const result = await cancelParticipation(
@@ -1128,6 +1616,34 @@ router.route('/posts/:id/participants/cancel')
 
 // Approve a participant (post owner only)
 router.route('/posts/:id/participants/:uid/approve')
+    /**
+     * @openapi
+     * "/community/posts/{id}/participants/{uid}/approve":
+     *   put:
+     *     tags:
+     *       - Community
+     *     summary: Approve a participant (post owner only)
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *       - in: path
+     *         name: uid
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Participant approved
+     *       401:
+     *         description: Unauthorized
+     *       403:
+     *         description: Forbidden
+     */
     .put(userAuth, async (req, res) => {
         try {
             const result = await approveParticipant(
@@ -1143,6 +1659,34 @@ router.route('/posts/:id/participants/:uid/approve')
 
 // Reject a participant (post owner only)
 router.route('/posts/:id/participants/:uid/reject')
+    /**
+     * @openapi
+     * "/community/posts/{id}/participants/{uid}/reject":
+     *   put:
+     *     tags:
+     *       - Community
+     *     summary: Reject a participant (post owner only)
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *       - in: path
+     *         name: uid
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Participant rejected
+     *       401:
+     *         description: Unauthorized
+     *       403:
+     *         description: Forbidden
+     */
     .put(userAuth, async (req, res) => {
         try {
             const result = await rejectParticipant(
@@ -1158,6 +1702,34 @@ router.route('/posts/:id/participants/:uid/reject')
 
 // Revoke an approved participant (post owner only)
 router.route('/posts/:id/participants/:uid/revoke')
+    /**
+     * @openapi
+     * "/community/posts/{id}/participants/{uid}/revoke":
+     *   delete:
+     *     tags:
+     *       - Community
+     *     summary: Revoke an approved participant (post owner only)
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *       - in: path
+     *         name: uid
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Participant revoked
+     *       401:
+     *         description: Unauthorized
+     *       403:
+     *         description: Forbidden
+     */
     .delete(userAuth, async (req, res) => {
         try {
             const result = await revokeParticipant(
@@ -1175,6 +1747,17 @@ router.route('/posts/:id/participants/:uid/revoke')
 
 // Get all post tags
 router.route('/tags')
+    /**
+     * @openapi
+     * "/community/tags":
+     *   get:
+     *     tags:
+     *       - Community
+     *     summary: Get all post tags
+     *     responses:
+     *       200:
+     *         description: List of all post tags
+     */
     .get(optionalAuth, async (_req, res) => {
         const tags = await getPostTags()
         res.json(tags)
@@ -1182,6 +1765,38 @@ router.route('/tags')
 
 // Admin: create a post tag
 router.route('/tags')
+    /**
+     * @openapi
+     * "/community/tags":
+     *   post:
+     *     tags:
+     *       - Community
+     *     summary: Admin - Create a post tag
+     *     security:
+     *       - bearerAuth: []
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+     *               - name
+     *             properties:
+     *               name:
+     *                 type: string
+     *               color:
+     *                 type: string
+     *               admin_only:
+     *                 type: boolean
+     *     responses:
+     *       201:
+     *         description: Tag created
+     *       400:
+     *         description: Bad request
+     *       403:
+     *         description: Forbidden
+     */
     .post(adminAuth, async (req, res) => {
         try {
             const tag = await createPostTag(req.body)
@@ -1193,6 +1808,27 @@ router.route('/tags')
 
 // Admin: delete a post tag (removes from all posts)
 router.route('/tags/:id')
+    /**
+     * @openapi
+     * "/community/tags/{id}":
+     *   delete:
+     *     tags:
+     *       - Community
+     *     summary: Admin - Delete a post tag (removes from all posts)
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     responses:
+     *       200:
+     *         description: Tag deleted
+     *       403:
+     *         description: Forbidden
+     */
     .delete(adminAuth, async (req, res) => {
         await deletePostTag(parseInt(req.params.id))
         res.json({ success: true })
@@ -1200,6 +1836,41 @@ router.route('/tags/:id')
 
 // Admin: update a post tag (name, color, admin_only)
 router.route('/tags/:id')
+    /**
+     * @openapi
+     * "/community/tags/{id}":
+     *   put:
+     *     tags:
+     *       - Community
+     *     summary: Admin - Update a post tag
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     requestBody:
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               name:
+     *                 type: string
+     *               color:
+     *                 type: string
+     *               admin_only:
+     *                 type: boolean
+     *     responses:
+     *       200:
+     *         description: Tag updated
+     *       403:
+     *         description: Forbidden
+     *       404:
+     *         description: Tag not found
+     */
     .put(adminAuth, async (req, res) => {
         try {
             const tag = await updatePostTag(parseInt(req.params.id), req.body)
@@ -1211,6 +1882,44 @@ router.route('/tags/:id')
 
 // Set tags on a post
 router.route('/posts/:id/tags')
+    /**
+     * @openapi
+     * "/community/posts/{id}/tags":
+     *   put:
+     *     tags:
+     *       - Community
+     *     summary: Set tags on a post
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+     *               - tagIds
+     *             properties:
+     *               tagIds:
+     *                 type: array
+     *                 items:
+     *                   type: integer
+     *     responses:
+     *       200:
+     *         description: Tags updated
+     *       400:
+     *         description: Bad request
+     *       401:
+     *         description: Unauthorized
+     *       403:
+     *         description: Forbidden
+     */
     .put(userAuth, async (req, res) => {
         try {
             const { tagIds } = req.body

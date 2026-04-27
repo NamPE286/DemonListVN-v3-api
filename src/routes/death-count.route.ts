@@ -1,9 +1,29 @@
 import express from 'express'
-import { getDeathCount, updateDeathCount } from '@src/services/death-count.service'
+import adminAuth from '@src/middleware/admin-auth.middleware'
+import { getDeathCount, getDeathCountProgress, resetDeathCount, updateDeathCount } from '@src/services/death-count.service'
 import { getActiveseason, trackProgressAfterDeathCount } from '@src/services/battlepass.service'
+import { upsertDeathCountAutoRecord } from '@src/services/record.service'
 import userAuth from '@src/middleware/user-auth.middleware'
 
 const router = express.Router()
+
+function parseBoolean(value: unknown, fallback = false) {
+    if (typeof value == 'boolean') {
+        return value
+    }
+
+    if (typeof value == 'string') {
+        return ['true', '1', 'yes'].includes(value.toLowerCase())
+    }
+
+    return fallback
+}
+
+function parseNumber(value: unknown, fallback: number) {
+    const parsed = Number(value)
+
+    return Number.isFinite(parsed) ? parsed : fallback
+}
 
 router.route('/:uid/:levelID')
     /**
@@ -41,6 +61,17 @@ router.route('/:uid/:levelID')
             res.send(await getDeathCount(uid, parseInt(levelID), tag));
         } catch {
             res.status(500).send();
+        }
+    })
+    .delete(adminAuth, async (req, res) => {
+        try {
+            const { uid, levelID } = req.params
+            const tag = String(req.query.tag ?? 'default')
+
+            await resetDeathCount(uid, parseInt(levelID), tag)
+            res.send()
+        } catch (error) {
+            res.status(500).send(error instanceof Error ? error.message : undefined)
         }
     })
 
@@ -88,6 +119,8 @@ router.route('/:levelID/:count')
 
         const setCompleted = req.query.completed !== undefined
         const tag = String(req.query.tag ?? 'default')
+        const mobile = parseBoolean(req.query.mobile ?? req.body?.mobile)
+        const refreshRate = parseNumber(req.query.refreshRate ?? req.body?.refreshRate, 60)
 
         try {
             const { levelID } = req.params
@@ -95,7 +128,17 @@ router.route('/:levelID/:count')
             const levelIDNum = parseInt(levelID)
 
             try {
-                await updateDeathCount(uid, levelIDNum, tag, arr, setCompleted);
+                const player = await updateDeathCount(uid, levelIDNum, tag, arr, setCompleted);
+
+                if (tag == 'default') {
+                    await upsertDeathCountAutoRecord({
+                        userid: uid,
+                        levelid: levelIDNum,
+                        progress: player.completedTime ? 100 : getDeathCountProgress(player.count),
+                        mobile,
+                        refreshRate
+                    })
+                }
             } catch (err) {
                 console.error('Check A', err)
             }

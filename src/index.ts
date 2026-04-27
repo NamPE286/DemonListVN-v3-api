@@ -3,6 +3,11 @@ import cors from 'cors'
 import swaggerDocs from '@src/utils/swagger.ts'
 import { version } from '../package.json'
 import { httpServerHandler } from 'cloudflare:node';
+import {
+    createWorkerCacheKey,
+    isWorkerEdgeCacheable,
+    isWorkerResponseCacheable
+} from '@src/middleware/cache-control.middleware'
 
 import listRoute from './routes/list.route'
 import mergeAccountRoute from './routes/merge-account.route'
@@ -27,6 +32,7 @@ import authRoute from './routes/auth.route'
 import levelsRoute from './routes/levels.route'
 import couponRoute from './routes/coupon.route'
 import cardRoute from './routes/card.route'
+import recordCardRoute from './routes/record-card.route'
 import storeRoute from './routes/store.route'
 import merchantRoute from './routes/merchant.route'
 import storageRoute from './routes/storage.route'
@@ -41,6 +47,11 @@ import wikiRoute from './routes/wiki.route'
 import levelSubmissionsRoute from './routes/level-submissions.route'
 import communityRoute from './routes/community.route'
 import clanCommunityRoute from './routes/clan-community.route'
+import homepageRoute from './routes/homepage.route'
+import adsRoute from './routes/ads.route'
+import analyticsRoute from './routes/analytics.route'
+import checkoutRoute from './routes/checkout.route'
+import listsRoute from './routes/custom-lists.route'
 
 const app = express()
 const port = 8787
@@ -79,6 +90,7 @@ app.use('/auth', authRoute)
 app.use('/levels', levelsRoute)
 app.use('/coupon', couponRoute)
 app.use('/card', cardRoute)
+app.use('/record-card', recordCardRoute)
 app.use('/store', storeRoute)
 app.use('/merchant', merchantRoute)
 app.use('/storage', storageRoute)
@@ -92,6 +104,13 @@ app.use('/sync', syncRoute)
 app.use('/wiki', wikiRoute)
 app.use('/level-submissions', levelSubmissionsRoute)
 app.use('/community', communityRoute)
+app.use('/homepage', homepageRoute)
+app.use('/ads', adsRoute)
+app.use('/analytics', analyticsRoute)
+app.use('/checkout', checkoutRoute)
+app.use('/lists', listsRoute)
+app.use('/custom-lists', listsRoute)
+app.use('/lists', listsRoute)
 
 app.listen(port, async () => {
     console.log(`Server started on port ${port}`)
@@ -99,4 +118,36 @@ app.listen(port, async () => {
     await swaggerDocs(app, port)
 })
 
-export default httpServerHandler({ port: port });
+const workerHandler = httpServerHandler({ port: port })
+type WorkerFetch = NonNullable<typeof workerHandler.fetch>
+
+export default {
+    async fetch(
+        request: Parameters<WorkerFetch>[0],
+        env: Parameters<WorkerFetch>[1],
+        ctx: Parameters<WorkerFetch>[2]
+    ) {
+        if (!workerHandler.fetch) {
+            return new Response('Worker handler is not configured', { status: 500 })
+        }
+
+        if (!isWorkerEdgeCacheable(request)) {
+            return workerHandler.fetch(request, env, ctx)
+        }
+
+        const cacheKey = createWorkerCacheKey(request)
+        const cachedResponse = await caches.default.match(cacheKey)
+
+        if (cachedResponse) {
+            return cachedResponse
+        }
+
+        const response = await workerHandler.fetch(request, env, ctx)
+
+        if (isWorkerResponseCacheable(response)) {
+            ctx.waitUntil(caches.default.put(cacheKey, response.clone()))
+        }
+
+        return response
+    }
+}

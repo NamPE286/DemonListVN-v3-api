@@ -1,7 +1,7 @@
 import userAuth from '@src/middleware/user-auth.middleware'
 import itemOwnerCheck from '@src/middleware/item-owner-check.middleware'
 import express from 'express'
-import { consumeItem } from '@src/services/inventory.service'
+import { consumeCouponInventoryItem } from '@src/services/inventory.service'
 import supabase from '@src/client/supabase'
 import { getPlayerInventoryItems } from '@src/services/player.service'
 import { consumeCase, consumeQueueBoost } from '@src/services/item-consumer.service'
@@ -94,6 +94,39 @@ router.route('/:id')
     })
 
 router.route('/item/:id/consume')
+    /**
+     * @openapi
+     * "/inventory/item/{id}/consume":
+     *   delete:
+     *     tags:
+     *       - Inventory
+     *     summary: Consume queue boost item
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The item ID (should be QUEUE_BOOST)
+     *         required: true
+     *         schema:
+     *           type: string
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               levelID:
+     *                 type: number
+     *               quantity:
+     *                 type: number
+     *     responses:
+     *       200:
+     *         description: Queue boost consumed successfully
+     *       500:
+     *         description: Internal server error
+     */
     .delete(userAuth, async (req, res) => {
         const { user } = res.locals
         const { id } = req.params
@@ -150,9 +183,13 @@ router.route('/:id/consume')
 
             if (item.type == 'case') {
                 result = await consumeCase(user, item.inventoryId, item.itemId)
+            } else if (item.useRedirect || item.productId) {
+                result = await consumeCouponInventoryItem(item)
+            } else {
+                throw new Error('Item cannot be consumed')
             }
 
-            res.send(result)
+            res.send(result || {})
         } catch (err) {
             console.error(err);
             res.status(500).send()

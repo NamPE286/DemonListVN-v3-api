@@ -828,9 +828,9 @@ router.route('/:id/list/:list')
 
         const { data, error } = await supabase
             .from('levels')
-            .select('*, records!inner(userid, levelid, isChecked, players!public_records_userid_fkey!inner(uid, clan))')
+            .select('*, records!inner(userid, levelid, acceptedManually, acceptedAuto, players!public_records_userid_fkey!inner(uid, clan))')
             .eq("records.players.clan", Number(id))
-            .eq("records.isChecked", true)
+            .eq("records.acceptedManually", true)
             .eq('isPlatformer', isPlat)
             .not(x, 'is', null)
             .order(x, { ascending: false })

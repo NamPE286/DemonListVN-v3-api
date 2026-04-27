@@ -31,13 +31,6 @@ COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
 
-CREATE EXTENSION IF NOT EXISTS "pg_graphql" WITH SCHEMA "graphql";
-
-
-
-
-
-
 CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
 
 
@@ -83,6 +76,41 @@ $$;
 
 
 ALTER FUNCTION "public"."add_event_levels_progress"("updates" "jsonb") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."assert_custom_list_level_platformer_match"("p_list_id" bigint, "p_level_id" bigint) RETURNS "void"
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+    list_is_platformer boolean;
+    level_is_platformer boolean;
+BEGIN
+    SELECT "isPlatformer"
+    INTO list_is_platformer
+    FROM public."lists"
+    WHERE "id" = "p_list_id";
+
+    IF list_is_platformer IS NULL THEN
+        RAISE EXCEPTION 'Custom list % does not exist', "p_list_id";
+    END IF;
+
+    SELECT "isPlatformer"
+    INTO level_is_platformer
+    FROM public."levels"
+    WHERE "id" = "p_level_id";
+
+    IF level_is_platformer IS NULL THEN
+        RAISE EXCEPTION 'Level % does not exist', "p_level_id";
+    END IF;
+
+    IF list_is_platformer <> level_is_platformer THEN
+        RAISE EXCEPTION 'Platformer levels can only be added to platformer lists and classic levels can only be added to classic lists';
+    END IF;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."assert_custom_list_level_platformer_match"("p_list_id" bigint, "p_level_id" bigint) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."auto_hide_reported_content"() RETURNS "trigger"
@@ -170,6 +198,43 @@ END;$$;
 ALTER FUNCTION "public"."get_event_leaderboard"("event_id" integer) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."get_player_level_tag_analysis"("player_uid" "uuid", "include_dl" boolean DEFAULT true, "include_fl" boolean DEFAULT false, "include_pl" boolean DEFAULT false, "include_cl" boolean DEFAULT false) RETURNS TABLE("tag_id" integer, "tag_name" "text", "tag_color" "text", "record_count" bigint)
+    LANGUAGE "plpgsql" STABLE
+    AS $$
+BEGIN
+    -- Validate at least one list is selected
+    IF NOT (include_dl OR include_fl OR include_pl OR include_cl) THEN
+        RETURN;
+    END IF;
+
+    RETURN QUERY
+    SELECT 
+        lt.id AS tag_id,
+        lt.name AS tag_name,
+        lt.color AS tag_color,
+        COUNT(DISTINCT r.levelid) AS record_count
+    FROM records r
+    INNER JOIN levels l ON r.levelid = l.id
+    INNER JOIN levels_tags lt_map ON l.id = lt_map.level_id
+    INNER JOIN level_tags lt ON lt_map.tag_id = lt.id
+    WHERE r.userid = player_uid
+      AND r."isChecked" = true
+      AND (
+          (include_dl AND r."dlPt" IS NOT NULL) OR
+          (include_fl AND r."flPt" IS NOT NULL) OR
+          (include_pl AND r."plPt" IS NOT NULL) OR
+          (include_cl AND r."clPt" IS NOT NULL)
+      )
+    GROUP BY lt.id, lt.name, lt.color
+    ORDER BY record_count DESC
+    LIMIT 15;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_player_level_tag_analysis"("player_uid" "uuid", "include_dl" boolean, "include_fl" boolean, "include_pl" boolean, "include_cl" boolean) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."get_queue_no"("userid" "uuid", "levelid" bigint, "p" bigint) RETURNS bigint
     LANGUAGE "plpgsql"
     AS $$DECLARE
@@ -223,7 +288,7 @@ CREATE TABLE IF NOT EXISTS "public"."levels" (
     "id" bigint NOT NULL,
     "name" character varying DEFAULT 'N/a'::character varying,
     "creator" "text",
-    "videoID" character varying DEFAULT 'N/a'::character varying,
+    "videoID" "text",
     "minProgress" bigint DEFAULT '100'::bigint,
     "flTop" double precision,
     "dlTop" double precision,
@@ -237,11 +302,53 @@ CREATE TABLE IF NOT EXISTS "public"."levels" (
     "difficulty" "text",
     "isChallenge" boolean DEFAULT false NOT NULL,
     "creatorId" "uuid",
-    "main_level_id" bigint
+    "main_level_id" bigint,
+    "nameFts" "tsvector" GENERATED ALWAYS AS ("setweight"("to_tsvector"('"simple"'::"regconfig", (COALESCE("name", (''::"text")::character varying))::"text"), 'A'::"char")) STORED,
+    "creatorFts" "tsvector" GENERATED ALWAYS AS ("setweight"("to_tsvector"('"simple"'::"regconfig", COALESCE("creator", ''::"text")), 'A'::"char")) STORED
 );
 
 
 ALTER TABLE "public"."levels" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."levels"."videoID" IS 'deprecated, use listLevels instead';
+
+
+
+COMMENT ON COLUMN "public"."levels"."minProgress" IS 'deprecated, use listLevels instead';
+
+
+
+COMMENT ON COLUMN "public"."levels"."flTop" IS 'deprecated, use listLevels instead';
+
+
+
+COMMENT ON COLUMN "public"."levels"."dlTop" IS 'deprecated, use listLevels instead';
+
+
+
+COMMENT ON COLUMN "public"."levels"."flPt" IS 'deprecated, use listLevels instead';
+
+
+
+COMMENT ON COLUMN "public"."levels"."rating" IS 'deprecated, use listLevels instead';
+
+
+
+COMMENT ON COLUMN "public"."levels"."insaneTier" IS 'deprecrated, will be removed';
+
+
+
+COMMENT ON COLUMN "public"."levels"."accepted" IS 'deprecated, replaced by list level submission';
+
+
+
+COMMENT ON COLUMN "public"."levels"."isNonList" IS 'deprecated, will be removed';
+
+
+
+COMMENT ON COLUMN "public"."levels"."isChallenge" IS 'deprecated, will be removed';
+
 
 
 CREATE OR REPLACE FUNCTION "public"."get_random_levels"("row_count" integer, "filter_type" "text") RETURNS SETOF "public"."levels"
@@ -415,6 +522,8 @@ CREATE OR REPLACE FUNCTION "public"."reset_overwatch_daily_limits"() RETURNS "vo
 BEGIN
     UPDATE "public"."players"
     SET "overwatchReviewCount" = 0,
+        "overwatchOfficialReviewCount" = 0,
+        "overwatchNonOfficialReviewCount" = 0,
         "overwatchReviewDate" = CURRENT_DATE;
 END;
 $$;
@@ -716,9 +825,50 @@ end$$;
 ALTER FUNCTION "public"."update_list"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."update_queue_no"() RETURNS "void"
+    LANGUAGE "sql"
+    AS $$
+  update public.records
+  set "queueNo" = null;
+
+  with RankedRecords as (
+    select
+      row_number() over (
+        order by
+          case
+            when p."supporterUntil" is null
+              then r.timestamp - r."prioritizedBy"
+
+            when p."supporterUntil" > now()
+              then (r.timestamp - 2592000000)::bigint - r."prioritizedBy"
+
+            else r.timestamp - r."prioritizedBy"
+          end
+      ) as "queueNo",
+      r.userid,
+      r.levelid
+    from public.records r
+    join public.players p
+      on p.uid = r.userid
+    where r."acceptedManually" = false and r."acceptedAuto" = false
+      and r."needMod" = false
+      and r."reviewer" is null
+  )
+  update public.records r
+  set "queueNo" = rr."queueNo"
+  from RankedRecords rr
+  where r.userid = rr.userid
+    and r.levelid = rr.levelid;
+$$;
+
+
+ALTER FUNCTION "public"."update_queue_no"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."update_rank"() RETURNS "void"
     LANGUAGE "plpgsql"
     AS $$begin
+PERFORM set_config('statement_timeout', '10min', true);
 
 update players
 set
@@ -1395,6 +1545,71 @@ $$;
 ALTER FUNCTION "public"."update_supporter_until"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."validate_custom_list_level_platformer_match"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+    PERFORM public."assert_custom_list_level_platformer_match"(NEW."listId", NEW."levelId");
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."validate_custom_list_level_platformer_match"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."validate_custom_list_platformer_update"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+    IF NEW."isPlatformer" IS DISTINCT FROM OLD."isPlatformer"
+        AND EXISTS (
+            SELECT 1
+            FROM public."listLevels" AS "listLevels"
+            INNER JOIN public."levels" AS "levels"
+                ON "levels"."id" = "listLevels"."levelId"
+            WHERE "listLevels"."listId" = NEW."id"
+                AND COALESCE("levels"."isPlatformer", false) <> NEW."isPlatformer"
+        ) THEN
+        RAISE EXCEPTION 'Cannot change custom list % to %, because it already contains levels of the opposite type',
+            NEW."id",
+            CASE WHEN NEW."isPlatformer" THEN 'platformer' ELSE 'classic' END;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."validate_custom_list_platformer_update"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."validate_level_platformer_custom_lists"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+    IF NEW."isPlatformer" IS DISTINCT FROM OLD."isPlatformer"
+        AND EXISTS (
+            SELECT 1
+            FROM public."listLevels" AS "listLevels"
+            INNER JOIN public."lists" AS "lists"
+                ON "lists"."id" = "listLevels"."listId"
+            WHERE "listLevels"."levelId" = NEW."id"
+                AND COALESCE("lists"."isPlatformer", false) <> NEW."isPlatformer"
+        ) THEN
+        RAISE EXCEPTION 'Cannot change level % to %, because it already belongs to custom lists of the opposite type',
+            NEW."id",
+            CASE WHEN NEW."isPlatformer" THEN 'platformer' ELSE 'classic' END;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."validate_level_platformer_custom_lists"() OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."APIKey" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "key" "text" DEFAULT "md5"(("random"())::"text") NOT NULL,
@@ -1451,6 +1666,7 @@ CREATE TABLE IF NOT EXISTS "public"."items" (
     "quantity" bigint DEFAULT '1'::bigint NOT NULL,
     "stackable" boolean DEFAULT false NOT NULL,
     "defaultExpireAfter" bigint,
+    "nameFts" "tsvector" GENERATED ALWAYS AS ("setweight"("to_tsvector"('"simple"'::"regconfig", (COALESCE("name", (''::"text")::character varying))::"text"), 'A'::"char")) STORED,
     CONSTRAINT "items_rarity_check" CHECK (((0 <= "rarity") AND ("rarity" <= 4)))
 );
 
@@ -1583,7 +1799,8 @@ CREATE TABLE IF NOT EXISTS "public"."battlePassMapPackLevelProgress" (
     "battlePassMapPackId" bigint NOT NULL,
     "levelID" bigint NOT NULL,
     "userID" "uuid" NOT NULL,
-    "progress" bigint DEFAULT '0'::bigint NOT NULL
+    "progress" bigint DEFAULT '0'::bigint NOT NULL,
+    "xpClaimed" boolean DEFAULT false NOT NULL
 );
 
 
@@ -1941,6 +2158,7 @@ CREATE TABLE IF NOT EXISTS "public"."clans" (
     "boostedUntil" timestamp with time zone DEFAULT "now"() NOT NULL,
     "homeContent" "text",
     "mode" "text" DEFAULT 'markdown'::"text" NOT NULL,
+    "nameFts" "tsvector" GENERATED ALWAYS AS ("setweight"("to_tsvector"('"simple"'::"regconfig", COALESCE("name", ''::"text")), 'A'::"char")) STORED,
     CONSTRAINT "clans_memberLimit_check" CHECK (("memberLimit" <= 500)),
     CONSTRAINT "clans_mode_check" CHECK (("mode" = ANY (ARRAY['markdown'::"text", 'iframe'::"text"]))),
     CONSTRAINT "clans_name_check" CHECK (("length"("name") <= 30)),
@@ -1970,7 +2188,8 @@ CREATE TABLE IF NOT EXISTS "public"."communityComments" (
     "likesCount" integer DEFAULT 0 NOT NULL,
     "createdAt" timestamp with time zone DEFAULT "now"() NOT NULL,
     "hidden" boolean DEFAULT false NOT NULL,
-    "attachedLevel" "jsonb"
+    "attachedLevel" "jsonb",
+    "fts" "tsvector" GENERATED ALWAYS AS ("setweight"("to_tsvector"('"simple"'::"regconfig", COALESCE("content", ''::"text")), 'A'::"char")) STORED
 );
 
 
@@ -2000,6 +2219,36 @@ CREATE TABLE IF NOT EXISTS "public"."communityLikes" (
 
 
 ALTER TABLE "public"."communityLikes" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."communityPostParticipants" (
+    "id" integer NOT NULL,
+    "postId" integer NOT NULL,
+    "uid" "uuid" NOT NULL,
+    "status" "text" DEFAULT 'pending'::"text" NOT NULL,
+    "createdAt" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updatedAt" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "communityPostParticipants_status_check" CHECK (("status" = ANY (ARRAY['pending'::"text", 'approved'::"text", 'rejected'::"text"])))
+);
+
+
+ALTER TABLE "public"."communityPostParticipants" OWNER TO "postgres";
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."communityPostParticipants_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."communityPostParticipants_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."communityPostParticipants_id_seq" OWNED BY "public"."communityPostParticipants"."id";
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."communityPostViews" (
@@ -2033,7 +2282,11 @@ CREATE TABLE IF NOT EXISTS "public"."communityPosts" (
     "isRecommended" boolean,
     "fts" "tsvector" GENERATED ALWAYS AS (("setweight"("to_tsvector"('"english"'::"regconfig", COALESCE("title", ''::"text")), 'A'::"char") || "setweight"("to_tsvector"('"english"'::"regconfig", COALESCE("content", ''::"text")), 'B'::"char"))) STORED,
     "viewsCount" integer DEFAULT 0 NOT NULL,
-    CONSTRAINT "community_posts_type_check" CHECK (("type" = ANY (ARRAY['discussion'::"text", 'media'::"text", 'guide'::"text", 'announcement'::"text", 'review'::"text"])))
+    "maxParticipants" integer,
+    "participantsCount" integer DEFAULT 0 NOT NULL,
+    "clanId" bigint,
+    "attachedList" "jsonb",
+    CONSTRAINT "communityPosts_type_check" CHECK (("type" = ANY (ARRAY['discussion'::"text", 'media'::"text", 'guide'::"text", 'announcement'::"text", 'review'::"text", 'collab'::"text"])))
 );
 
 
@@ -2360,11 +2613,28 @@ CREATE TABLE IF NOT EXISTS "public"."events" (
     "isCalculated" boolean DEFAULT false NOT NULL,
     "priority" bigint DEFAULT '0'::bigint NOT NULL,
     "type" "text" DEFAULT 'basic'::"text" NOT NULL,
+    "titleFts" "tsvector" GENERATED ALWAYS AS ("setweight"("to_tsvector"('"simple"'::"regconfig", COALESCE("title", ''::"text")), 'A'::"char")) STORED,
     CONSTRAINT "events_type_check" CHECK (("type" = ANY (ARRAY['basic'::"text", 'contest'::"text", 'raid'::"text"])))
 );
 
 
 ALTER TABLE "public"."events" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."friendships" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "userId" "uuid" NOT NULL,
+    "friendId" "uuid" NOT NULL,
+    "createdAt" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "friendships_check" CHECK (("userId" <> "friendId"))
+);
+
+
+ALTER TABLE "public"."friendships" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."friendships" IS 'Stores friend relationships between players';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."heatmap" (
@@ -2461,7 +2731,7 @@ CREATE TABLE IF NOT EXISTS "public"."levelSubmissions" (
 ALTER TABLE "public"."levelSubmissions" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."level_tags" (
+CREATE TABLE IF NOT EXISTS "public"."levelTags" (
     "id" integer NOT NULL,
     "name" "text" NOT NULL,
     "color" "text" DEFAULT '#6b7280'::"text" NOT NULL,
@@ -2469,7 +2739,7 @@ CREATE TABLE IF NOT EXISTS "public"."level_tags" (
 );
 
 
-ALTER TABLE "public"."level_tags" OWNER TO "postgres";
+ALTER TABLE "public"."levelTags" OWNER TO "postgres";
 
 
 CREATE SEQUENCE IF NOT EXISTS "public"."level_tags_id_seq"
@@ -2484,17 +2754,289 @@ CREATE SEQUENCE IF NOT EXISTS "public"."level_tags_id_seq"
 ALTER SEQUENCE "public"."level_tags_id_seq" OWNER TO "postgres";
 
 
-ALTER SEQUENCE "public"."level_tags_id_seq" OWNED BY "public"."level_tags"."id";
+ALTER SEQUENCE "public"."level_tags_id_seq" OWNED BY "public"."levelTags"."id";
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."levels_tags" (
+CREATE TABLE IF NOT EXISTS "public"."levelsTags" (
     "level_id" bigint NOT NULL,
     "tag_id" integer NOT NULL
 );
 
 
-ALTER TABLE "public"."levels_tags" OWNER TO "postgres";
+ALTER TABLE "public"."levelsTags" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."listAuditLogs" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "listId" bigint NOT NULL,
+    "actorUid" "uuid",
+    "action" "text" NOT NULL,
+    "targetUid" "uuid",
+    "metadata" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL
+);
+
+
+ALTER TABLE "public"."listAuditLogs" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."listAuditLogs" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."listAuditLogs_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."listInvitations" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "listId" bigint NOT NULL,
+    "uid" "uuid" NOT NULL,
+    "role" "text" NOT NULL,
+    "invitedBy" "uuid" NOT NULL,
+    CONSTRAINT "list_invitations_role_check" CHECK (("role" = ANY (ARRAY['admin'::"text", 'helper'::"text"])))
+);
+
+
+ALTER TABLE "public"."listInvitations" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."listInvitations" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."listInvitations_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."listLeaderboardEntries" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "uid" "uuid" NOT NULL,
+    "rank" bigint NOT NULL,
+    "score" double precision NOT NULL,
+    "completedCount" integer DEFAULT 0 NOT NULL,
+    "listId" bigint NOT NULL,
+    CONSTRAINT "listLeaderboardEntries_completedCount_check" CHECK (("completedCount" >= 0)),
+    CONSTRAINT "listLeaderboardEntries_rank_check" CHECK (("rank" > 0))
+);
+
+
+ALTER TABLE "public"."listLeaderboardEntries" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."listLeaderboardEntries" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."listLeaderboardEntries_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."listLeaderboardRecordEntries" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "listId" bigint NOT NULL,
+    "uid" "uuid" NOT NULL,
+    "levelId" bigint NOT NULL,
+    "point" double precision NOT NULL,
+    "no" bigint NOT NULL,
+    CONSTRAINT "listLeaderboardRecordEntries_no_check" CHECK (("no" > 0))
+);
+
+
+ALTER TABLE "public"."listLeaderboardRecordEntries" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."listLeaderboardRecordEntries" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."listLeaderboardRecordEntries_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."listLeaderboardRefreshes" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "listId" bigint NOT NULL,
+    "totalPlayers" bigint DEFAULT '0'::bigint NOT NULL,
+    "lastRefreshedAt" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "totalRecords" bigint DEFAULT '0'::bigint NOT NULL
+);
+
+
+ALTER TABLE "public"."listLeaderboardRefreshes" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."listLeaderboardRefreshes" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."listLeaderboardRefreshes_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."listLevels" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "listId" bigint NOT NULL,
+    "levelId" bigint NOT NULL,
+    "addedBy" "uuid" NOT NULL,
+    "rating" integer DEFAULT 5 NOT NULL,
+    "position" integer,
+    "minProgress" integer,
+    "videoID" "text",
+    "accepted" boolean DEFAULT true NOT NULL,
+    "submissionComment" "text",
+    CONSTRAINT "listLevels_minProgress_check" CHECK ((("minProgress" IS NULL) OR ("minProgress" >= 0))),
+    CONSTRAINT "listLevels_rating_check" CHECK (("rating" >= 0))
+);
+
+
+ALTER TABLE "public"."listLevels" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."listLevels" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."listLevels_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."listMembers" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "listId" bigint NOT NULL,
+    "uid" "uuid" NOT NULL,
+    "role" "text" NOT NULL,
+    "addedBy" "uuid" NOT NULL,
+    CONSTRAINT "list_members_role_check" CHECK (("role" = ANY (ARRAY['admin'::"text", 'helper'::"text"])))
+);
+
+
+ALTER TABLE "public"."listMembers" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."listMembers" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."listMembers_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."listStars" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "listId" bigint NOT NULL,
+    "uid" "uuid" NOT NULL
+);
+
+
+ALTER TABLE "public"."listStars" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."listStars" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."listStars_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."lists" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "owner" "uuid" NOT NULL,
+    "title" "text" NOT NULL,
+    "description" "text" DEFAULT ''::"text" NOT NULL,
+    "visibility" "text" DEFAULT 'private'::"text" NOT NULL,
+    "tags" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "levelCount" bigint DEFAULT '0'::bigint NOT NULL,
+    "mode" "text" DEFAULT 'rating'::"text" NOT NULL,
+    "isPlatformer" boolean DEFAULT false NOT NULL,
+    "communityEnabled" boolean DEFAULT true NOT NULL,
+    "slug" "text",
+    "isOfficial" boolean DEFAULT false NOT NULL,
+    "weightFormula" "text" DEFAULT '1'::"text" NOT NULL,
+    "isBanned" boolean DEFAULT false NOT NULL,
+    "rankBadges" "jsonb" DEFAULT '[]'::"jsonb" NOT NULL,
+    "backgroundColor" "text",
+    "bannerUrl" "text",
+    "borderColor" "text",
+    "logoUrl" "text",
+    "topEnabled" boolean DEFAULT true NOT NULL,
+    "adminsCanManageHelpers" boolean DEFAULT false NOT NULL,
+    "fts" "tsvector" GENERATED ALWAYS AS (("setweight"("to_tsvector"('"simple"'::"regconfig", COALESCE("title", ''::"text")), 'A'::"char") || "setweight"("to_tsvector"('"simple"'::"regconfig", COALESCE("description", ''::"text")), 'B'::"char"))) STORED,
+    "faviconUrl" "text",
+    "itemSort" "text" DEFAULT 'mode_default'::"text" NOT NULL,
+    "levelSubmissionEnabled" boolean DEFAULT false NOT NULL,
+    "recordFilterPlatform" "text" DEFAULT 'any'::"text" NOT NULL,
+    "recordFilterMinRefreshRate" integer,
+    "recordFilterMaxRefreshRate" integer,
+    "recordFilterManualAcceptanceOnly" boolean DEFAULT true NOT NULL,
+    "isMirror" boolean DEFAULT false NOT NULL,
+    "isVerified" boolean DEFAULT false NOT NULL,
+    "leaderboardEnabled" boolean DEFAULT true NOT NULL,
+    "recordFilterAcceptanceStatus" "text" DEFAULT 'manual'::"text" NOT NULL,
+    "recordScoreFormula" "text" DEFAULT '1'::"text" NOT NULL,
+    "staffListEnabled" boolean DEFAULT true NOT NULL,
+    CONSTRAINT "lists_item_sort_check" CHECK (("itemSort" = ANY (ARRAY['mode_default'::"text", 'created_at'::"text"]))),
+    CONSTRAINT "lists_mode_check" CHECK (("mode" = ANY (ARRAY['rating'::"text", 'top'::"text"]))),
+    CONSTRAINT "lists_recordFilterAcceptanceStatus_check" CHECK (("recordFilterAcceptanceStatus" = ANY (ARRAY['manual'::"text", 'auto'::"text", 'any'::"text"]))),
+    CONSTRAINT "lists_recordFilterPlatform_check" CHECK (("recordFilterPlatform" = ANY (ARRAY['any'::"text", 'pc'::"text", 'mobile'::"text"]))),
+    CONSTRAINT "lists_recordFilterRefreshRate_check" CHECK (((("recordFilterMinRefreshRate" IS NULL) OR ("recordFilterMinRefreshRate" > 0)) AND (("recordFilterMaxRefreshRate" IS NULL) OR ("recordFilterMaxRefreshRate" > 0)) AND (("recordFilterMinRefreshRate" IS NULL) OR ("recordFilterMaxRefreshRate" IS NULL) OR ("recordFilterMinRefreshRate" <= "recordFilterMaxRefreshRate")))),
+    CONSTRAINT "lists_record_score_formula_check" CHECK ((("length"("recordScoreFormula") >= 1) AND ("length"("recordScoreFormula") <= 500))),
+    CONSTRAINT "lists_slug_check" CHECK ((("slug" IS NULL) OR (("length"("slug") >= 1) AND ("length"("slug") <= 100) AND ("slug" ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'::"text")))),
+    CONSTRAINT "lists_title_check" CHECK ((("length"("title") >= 1) AND ("length"("title") <= 100))),
+    CONSTRAINT "lists_visibility_check" CHECK (("visibility" = ANY (ARRAY['private'::"text", 'unlisted'::"text", 'public'::"text"]))),
+    CONSTRAINT "lists_weight_formula_check" CHECK ((("length"("weightFormula") >= 1) AND ("length"("weightFormula") <= 500)))
+);
+
+
+ALTER TABLE "public"."lists" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."lists" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."lists_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."mapPackLevels" (
@@ -2637,6 +3179,7 @@ CREATE TABLE IF NOT EXISTS "public"."orders" (
     "recipientName" "text",
     "targetClanID" bigint,
     "data" "jsonb",
+    "recipientNameFts" "tsvector" GENERATED ALWAYS AS ("setweight"("to_tsvector"('"simple"'::"regconfig", COALESCE("recipientName", ''::"text")), 'A'::"char")) STORED,
     CONSTRAINT "orders_discount_check" CHECK (("discount" <= (1)::double precision))
 );
 
@@ -2673,6 +3216,17 @@ CREATE TABLE IF NOT EXISTS "public"."otp" (
 
 
 ALTER TABLE "public"."otp" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."playerCardStatLines" (
+    "uid" "uuid" NOT NULL,
+    "position" smallint NOT NULL,
+    "listId" bigint NOT NULL,
+    CONSTRAINT "playerCardStatLines_position_check" CHECK ((("position" >= 0) AND ("position" < 16)))
+);
+
+
+ALTER TABLE "public"."playerCardStatLines" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."playerConvictions" (
@@ -2770,11 +3324,66 @@ CREATE TABLE IF NOT EXISTS "public"."players" (
     "clrank" bigint,
     "overwatchReviewCount" integer DEFAULT 0 NOT NULL,
     "overwatchReviewDate" "date",
+    "onboarding_done" boolean DEFAULT false NOT NULL,
+    "onboarding_step" smallint DEFAULT '1'::smallint NOT NULL,
+    "isManager" boolean DEFAULT false NOT NULL,
+    "nameFts" "tsvector" GENERATED ALWAYS AS ("setweight"("to_tsvector"('"simple"'::"regconfig", COALESCE("name", ''::"text")), 'A'::"char")) STORED,
+    "overwatchOfficialReviewCount" integer DEFAULT 0 NOT NULL,
+    "overwatchNonOfficialReviewCount" integer DEFAULT 0 NOT NULL,
+    "country" "text",
     CONSTRAINT "players_name_check" CHECK (("length"("name") <= 20))
 );
 
 
 ALTER TABLE "public"."players" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."players"."totalFLpt" IS 'deprecated, will be removed';
+
+
+
+COMMENT ON COLUMN "public"."players"."totalDLpt" IS 'deprecated, will be removed';
+
+
+
+COMMENT ON COLUMN "public"."players"."flrank" IS 'deprecated, use listLeaderboardEntries instead';
+
+
+
+COMMENT ON COLUMN "public"."players"."dlrank" IS 'deprecated, use listLeaderboardEntries instead';
+
+
+
+COMMENT ON COLUMN "public"."players"."rating" IS 'deprecated, use listLeaderboardEntries instead';
+
+
+
+COMMENT ON COLUMN "public"."players"."dlMaxPt" IS 'deprecated, will be removed';
+
+
+
+COMMENT ON COLUMN "public"."players"."flMaxPt" IS 'deprecated, will be removed';
+
+
+
+COMMENT ON COLUMN "public"."players"."overallRank" IS 'deprecated, use listLeaderboardEntries instead';
+
+
+
+COMMENT ON COLUMN "public"."players"."plRating" IS 'deprecated, use listLeaderboardEntries instead';
+
+
+
+COMMENT ON COLUMN "public"."players"."plrank" IS 'deprecated, use listLeaderboardEntries instead';
+
+
+
+COMMENT ON COLUMN "public"."players"."clRating" IS 'deprecated, use listLeaderboardEntries instead';
+
+
+
+COMMENT ON COLUMN "public"."players"."clrank" IS 'deprecated, use listLeaderboardEntries instead';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."playersAchievement" (
@@ -2880,6 +3489,24 @@ ALTER TABLE "public"."events" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDEN
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."recordCards" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "orderID" bigint,
+    "owner" "uuid" NOT NULL,
+    "levelID" bigint NOT NULL,
+    "template" integer DEFAULT 1 NOT NULL,
+    "material" "text" NOT NULL,
+    "img" "text",
+    "printed" boolean DEFAULT false,
+    "avatar" "text",
+    CONSTRAINT "record_cards_material_check" CHECK (("material" = ANY (ARRAY['paper'::"text", 'plastic'::"text"])))
+);
+
+
+ALTER TABLE "public"."recordCards" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."records" (
     "videoLink" character varying,
     "refreshRate" bigint DEFAULT '60'::bigint,
@@ -2890,7 +3517,7 @@ CREATE TABLE IF NOT EXISTS "public"."records" (
     "userid" "uuid" NOT NULL,
     "levelid" bigint NOT NULL,
     "mobile" boolean DEFAULT false NOT NULL,
-    "isChecked" boolean DEFAULT false,
+    "acceptedManually" boolean DEFAULT false,
     "comment" character varying,
     "suggestedRating" bigint,
     "reviewer" "uuid",
@@ -2902,14 +3529,51 @@ CREATE TABLE IF NOT EXISTS "public"."records" (
     "plPt" double precision,
     "prioritizedBy" bigint DEFAULT '0'::bigint NOT NULL,
     "clPt" double precision,
-    "variant_id" bigint
+    "id" bigint NOT NULL,
+    "acceptedAuto" boolean DEFAULT false NOT NULL,
+    CONSTRAINT "records_id_check" CHECK (("id" > 0))
 );
 
 
 ALTER TABLE "public"."records" OWNER TO "postgres";
 
 
+COMMENT ON COLUMN "public"."records"."flPt" IS 'deprecated, use listLeaderboardRecordEntries instead';
+
+
+
+COMMENT ON COLUMN "public"."records"."dlPt" IS 'deprecated, use listLeaderboardRecordEntries instead';
+
+
+
+COMMENT ON COLUMN "public"."records"."suggestedRating" IS 'deprecated, will be removed';
+
+
+
+COMMENT ON COLUMN "public"."records"."no" IS 'deprecated, use listLeaderboardRecordEntries instead';
+
+
+
+COMMENT ON COLUMN "public"."records"."plPt" IS 'deprecated, use listLeaderboardRecordEntries instead';
+
+
+
 COMMENT ON COLUMN "public"."records"."prioritizedBy" IS 'Prioritize record by some ms';
+
+
+
+COMMENT ON COLUMN "public"."records"."clPt" IS 'deprecated, use listLeaderboardRecordEntries instead';
+
+
+
+ALTER TABLE "public"."records" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."records_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
 
 
 
@@ -3042,6 +3706,10 @@ ALTER TABLE ONLY "public"."communityLikes" ALTER COLUMN "id" SET DEFAULT "nextva
 
 
 
+ALTER TABLE ONLY "public"."communityPostParticipants" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."communityPostParticipants_id_seq"'::"regclass");
+
+
+
 ALTER TABLE ONLY "public"."communityPostViews" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."community_post_views_id_seq"'::"regclass");
 
 
@@ -3054,7 +3722,7 @@ ALTER TABLE ONLY "public"."communityReports" ALTER COLUMN "id" SET DEFAULT "next
 
 
 
-ALTER TABLE ONLY "public"."level_tags" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."level_tags_id_seq"'::"regclass");
+ALTER TABLE ONLY "public"."levelTags" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."level_tags_id_seq"'::"regclass");
 
 
 
@@ -3237,6 +3905,16 @@ ALTER TABLE ONLY "public"."clans"
 
 
 
+ALTER TABLE ONLY "public"."communityPostParticipants"
+    ADD CONSTRAINT "communityPostParticipants_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."communityPostParticipants"
+    ADD CONSTRAINT "communityPostParticipants_postId_uid_key" UNIQUE ("postId", "uid");
+
+
+
 ALTER TABLE ONLY "public"."communityCommentsAdmin"
     ADD CONSTRAINT "community_comments_admin_pkey" PRIMARY KEY ("commentId");
 
@@ -3352,6 +4030,16 @@ ALTER TABLE ONLY "public"."eventRecords"
 
 
 
+ALTER TABLE ONLY "public"."friendships"
+    ADD CONSTRAINT "friendships_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."friendships"
+    ADD CONSTRAINT "friendships_user_id_friend_id_key" UNIQUE ("userId", "friendId");
+
+
+
 ALTER TABLE ONLY "public"."inventory"
     ADD CONSTRAINT "inventory_id_key" UNIQUE ("id");
 
@@ -3377,12 +4065,12 @@ ALTER TABLE ONLY "public"."levelSubmissions"
 
 
 
-ALTER TABLE ONLY "public"."level_tags"
+ALTER TABLE ONLY "public"."levelTags"
     ADD CONSTRAINT "level_tags_name_key" UNIQUE ("name");
 
 
 
-ALTER TABLE ONLY "public"."level_tags"
+ALTER TABLE ONLY "public"."levelTags"
     ADD CONSTRAINT "level_tags_pkey" PRIMARY KEY ("id");
 
 
@@ -3392,8 +4080,98 @@ ALTER TABLE ONLY "public"."levels"
 
 
 
-ALTER TABLE ONLY "public"."levels_tags"
+ALTER TABLE ONLY "public"."levelsTags"
     ADD CONSTRAINT "levels_tags_pkey" PRIMARY KEY ("level_id", "tag_id");
+
+
+
+ALTER TABLE ONLY "public"."listAuditLogs"
+    ADD CONSTRAINT "listAuditLogs_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."listInvitations"
+    ADD CONSTRAINT "listInvitations_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."listLeaderboardEntries"
+    ADD CONSTRAINT "listLeaderboardEntries_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."listLeaderboardRecordEntries"
+    ADD CONSTRAINT "listLeaderboardRecordEntries_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."listLeaderboardRefreshes"
+    ADD CONSTRAINT "listLeaderboardRefreshes_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."listLevels"
+    ADD CONSTRAINT "listLevels_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."listMembers"
+    ADD CONSTRAINT "listMembers_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."listStars"
+    ADD CONSTRAINT "listStars_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."listInvitations"
+    ADD CONSTRAINT "list_invitations_list_id_uid_key" UNIQUE ("listId", "uid");
+
+
+
+ALTER TABLE ONLY "public"."listLeaderboardEntries"
+    ADD CONSTRAINT "list_leaderboard_entries_list_id_rank_key" UNIQUE ("listId", "rank");
+
+
+
+ALTER TABLE ONLY "public"."listLeaderboardEntries"
+    ADD CONSTRAINT "list_leaderboard_entries_list_id_uid_key" UNIQUE ("listId", "uid");
+
+
+
+ALTER TABLE ONLY "public"."listLeaderboardRecordEntries"
+    ADD CONSTRAINT "list_leaderboard_record_entries_list_id_uid_level_id_key" UNIQUE ("listId", "uid", "levelId");
+
+
+
+ALTER TABLE ONLY "public"."listLeaderboardRecordEntries"
+    ADD CONSTRAINT "list_leaderboard_record_entries_list_id_uid_no_key" UNIQUE ("listId", "uid", "no");
+
+
+
+ALTER TABLE ONLY "public"."listLeaderboardRefreshes"
+    ADD CONSTRAINT "list_leaderboard_refreshes_list_id_key" UNIQUE ("listId");
+
+
+
+ALTER TABLE ONLY "public"."listLevels"
+    ADD CONSTRAINT "list_levels_list_id_level_id_key" UNIQUE ("listId", "levelId");
+
+
+
+ALTER TABLE ONLY "public"."listMembers"
+    ADD CONSTRAINT "list_members_list_id_uid_key" UNIQUE ("listId", "uid");
+
+
+
+ALTER TABLE ONLY "public"."listStars"
+    ADD CONSTRAINT "list_stars_list_id_uid_key" UNIQUE ("listId", "uid");
+
+
+
+ALTER TABLE ONLY "public"."lists"
+    ADD CONSTRAINT "lists_pkey" PRIMARY KEY ("id");
 
 
 
@@ -3429,6 +4207,11 @@ ALTER TABLE ONLY "public"."orders"
 
 ALTER TABLE ONLY "public"."otp"
     ADD CONSTRAINT "otp_pkey" PRIMARY KEY ("code");
+
+
+
+ALTER TABLE ONLY "public"."playerCardStatLines"
+    ADD CONSTRAINT "playerCardStatLines_pkey" PRIMARY KEY ("uid", "position");
 
 
 
@@ -3497,8 +4280,13 @@ ALTER TABLE ONLY "public"."events"
 
 
 
+ALTER TABLE ONLY "public"."recordCards"
+    ADD CONSTRAINT "record_cards_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."records"
-    ADD CONSTRAINT "records_pkey" PRIMARY KEY ("userid", "levelid");
+    ADD CONSTRAINT "records_pkey" PRIMARY KEY ("id");
 
 
 
@@ -3555,6 +4343,22 @@ CREATE INDEX "battlePassXPLogs_userID_idx" ON "public"."battlePassXPLogs" USING 
 
 
 
+CREATE INDEX "clans_name_fts_idx" ON "public"."clans" USING "gin" ("nameFts");
+
+
+
+CREATE INDEX "community_comments_fts_idx" ON "public"."communityComments" USING "gin" ("fts");
+
+
+
+CREATE INDEX "community_posts_attached_list_id_idx" ON "public"."communityPosts" USING "btree" ((("attachedList" ->> 'id'::"text")));
+
+
+
+CREATE INDEX "events_title_fts_idx" ON "public"."events" USING "gin" ("titleFts");
+
+
+
 CREATE INDEX "idx_community_comments_admin_hidden" ON "public"."communityCommentsAdmin" USING "btree" ("hidden");
 
 
@@ -3587,6 +4391,18 @@ CREATE INDEX "idx_community_likes_uid" ON "public"."communityLikes" USING "btree
 
 
 
+CREATE INDEX "idx_community_post_participants_post" ON "public"."communityPostParticipants" USING "btree" ("postId");
+
+
+
+CREATE INDEX "idx_community_post_participants_status" ON "public"."communityPostParticipants" USING "btree" ("postId", "status");
+
+
+
+CREATE INDEX "idx_community_post_participants_uid" ON "public"."communityPostParticipants" USING "btree" ("uid");
+
+
+
 CREATE INDEX "idx_community_post_views_post_id" ON "public"."communityPostViews" USING "btree" ("postId");
 
 
@@ -3603,11 +4419,19 @@ CREATE INDEX "idx_community_posts_admin_status" ON "public"."communityPostsAdmin
 
 
 
+CREATE INDEX "idx_community_posts_clan_id" ON "public"."communityPosts" USING "btree" ("clanId") WHERE ("clanId" IS NOT NULL);
+
+
+
 CREATE INDEX "idx_community_posts_created_at" ON "public"."communityPosts" USING "btree" ("createdAt" DESC);
 
 
 
 CREATE INDEX "idx_community_posts_fts" ON "public"."communityPosts" USING "gin" ("fts");
+
+
+
+CREATE INDEX "idx_community_posts_global" ON "public"."communityPosts" USING "btree" ("clanId") WHERE ("clanId" IS NULL);
 
 
 
@@ -3639,19 +4463,131 @@ CREATE INDEX "idx_community_reports_resolved" ON "public"."communityReports" USI
 
 
 
+CREATE INDEX "idx_friendships_friend" ON "public"."friendships" USING "btree" ("friendId");
+
+
+
+CREATE INDEX "idx_friendships_user" ON "public"."friendships" USING "btree" ("userId");
+
+
+
 CREATE INDEX "idx_levels_main_level_id" ON "public"."levels" USING "btree" ("main_level_id");
 
 
 
-CREATE INDEX "idx_levels_tags_level_id" ON "public"."levels_tags" USING "btree" ("level_id");
+CREATE INDEX "idx_levels_tags_level_id" ON "public"."levelsTags" USING "btree" ("level_id");
 
 
 
-CREATE INDEX "idx_levels_tags_tag_id" ON "public"."levels_tags" USING "btree" ("tag_id");
+CREATE INDEX "idx_levels_tags_tag_id" ON "public"."levelsTags" USING "btree" ("tag_id");
 
 
 
-CREATE INDEX "idx_records_variant_id" ON "public"."records" USING "btree" ("variant_id");
+CREATE INDEX "items_name_fts_idx" ON "public"."items" USING "gin" ("nameFts");
+
+
+
+CREATE INDEX "levels_creator_fts_idx" ON "public"."levels" USING "gin" ("creatorFts");
+
+
+
+CREATE INDEX "levels_name_fts_idx" ON "public"."levels" USING "gin" ("nameFts");
+
+
+
+CREATE INDEX "list_audit_logs_list_id_created_at_idx" ON "public"."listAuditLogs" USING "btree" ("listId", "created_at" DESC);
+
+
+
+CREATE INDEX "list_invitations_list_id_idx" ON "public"."listInvitations" USING "btree" ("listId");
+
+
+
+CREATE INDEX "list_invitations_uid_idx" ON "public"."listInvitations" USING "btree" ("uid");
+
+
+
+CREATE INDEX "list_leaderboard_entries_list_id_rank_idx" ON "public"."listLeaderboardEntries" USING "btree" ("listId", "rank");
+
+
+
+CREATE INDEX "list_leaderboard_record_entries_list_id_uid_no_idx" ON "public"."listLeaderboardRecordEntries" USING "btree" ("listId", "uid", "no");
+
+
+
+CREATE INDEX "list_leaderboard_refreshes_list_id_last_refreshed_at_idx" ON "public"."listLeaderboardRefreshes" USING "btree" ("listId", "lastRefreshedAt" DESC);
+
+
+
+CREATE INDEX "list_levels_level_id_idx" ON "public"."listLevels" USING "btree" ("levelId");
+
+
+
+CREATE INDEX "list_levels_list_id_accepted_created_at_idx" ON "public"."listLevels" USING "btree" ("listId", "accepted", "created_at");
+
+
+
+CREATE INDEX "list_levels_list_id_idx" ON "public"."listLevels" USING "btree" ("listId");
+
+
+
+CREATE INDEX "list_members_list_id_idx" ON "public"."listMembers" USING "btree" ("listId");
+
+
+
+CREATE INDEX "list_members_uid_idx" ON "public"."listMembers" USING "btree" ("uid");
+
+
+
+CREATE INDEX "list_stars_list_id_idx" ON "public"."listStars" USING "btree" ("listId");
+
+
+
+CREATE INDEX "list_stars_uid_idx" ON "public"."listStars" USING "btree" ("uid");
+
+
+
+CREATE INDEX "lists_fts_idx" ON "public"."lists" USING "gin" ("fts");
+
+
+
+CREATE INDEX "lists_is_official_idx" ON "public"."lists" USING "btree" ("isOfficial", "updated_at" DESC);
+
+
+
+CREATE INDEX "lists_owner_idx" ON "public"."lists" USING "btree" ("owner");
+
+
+
+CREATE UNIQUE INDEX "lists_slug_key" ON "public"."lists" USING "btree" ("slug") WHERE ("slug" IS NOT NULL);
+
+
+
+CREATE INDEX "lists_visibility_idx" ON "public"."lists" USING "btree" ("visibility");
+
+
+
+CREATE INDEX "orders_recipient_name_fts_idx" ON "public"."orders" USING "gin" ("recipientNameFts");
+
+
+
+CREATE INDEX "playerCardStatLines_listId_idx" ON "public"."playerCardStatLines" USING "btree" ("listId");
+
+
+
+CREATE INDEX "players_name_fts_idx" ON "public"."players" USING "gin" ("nameFts");
+
+
+
+CREATE UNIQUE INDEX "records_auto_accepted_userid_levelid_key" ON "public"."records" USING "btree" ("userid", "levelid") WHERE ((COALESCE("acceptedManually", false) = false) AND ("acceptedAuto" IS TRUE));
+
+
+
+CREATE UNIQUE INDEX "records_manually_accepted_userid_levelid_key" ON "public"."records" USING "btree" ("userid", "levelid") WHERE ("acceptedManually" IS TRUE);
+
+
+
+CREATE UNIQUE INDEX "records_pending_userid_levelid_key" ON "public"."records" USING "btree" ("userid", "levelid") WHERE ((COALESCE("acceptedManually", false) = false) AND ("acceptedAuto" = false));
 
 
 
@@ -3676,6 +4612,18 @@ CREATE OR REPLACE TRIGGER "community_post_views_count_trigger" AFTER INSERT ON "
 
 
 CREATE OR REPLACE TRIGGER "trigger_refresh_wiki_tree" AFTER INSERT OR DELETE OR UPDATE OR TRUNCATE ON "public"."wiki" FOR EACH STATEMENT EXECUTE FUNCTION "public"."refresh_wiki_tree"();
+
+
+
+CREATE OR REPLACE TRIGGER "validate_custom_list_level_platformer_match" BEFORE INSERT OR UPDATE OF "listId", "levelId" ON "public"."listLevels" FOR EACH ROW EXECUTE FUNCTION "public"."validate_custom_list_level_platformer_match"();
+
+
+
+CREATE OR REPLACE TRIGGER "validate_custom_list_platformer_update" BEFORE UPDATE OF "isPlatformer" ON "public"."lists" FOR EACH ROW EXECUTE FUNCTION "public"."validate_custom_list_platformer_update"();
+
+
+
+CREATE OR REPLACE TRIGGER "validate_level_platformer_custom_lists" BEFORE UPDATE OF "isPlatformer" ON "public"."levels" FOR EACH ROW EXECUTE FUNCTION "public"."validate_level_platformer_custom_lists"();
 
 
 
@@ -3904,6 +4852,21 @@ ALTER TABLE ONLY "public"."clans"
 
 
 
+ALTER TABLE ONLY "public"."communityPostParticipants"
+    ADD CONSTRAINT "communityPostParticipants_postId_fkey" FOREIGN KEY ("postId") REFERENCES "public"."communityPosts"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."communityPostParticipants"
+    ADD CONSTRAINT "communityPostParticipants_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."communityPosts"
+    ADD CONSTRAINT "communityPosts_clanId_fkey" FOREIGN KEY ("clanId") REFERENCES "public"."clans"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."communityCommentsAdmin"
     ADD CONSTRAINT "community_comments_admin_comment_id_fkey" FOREIGN KEY ("commentId") REFERENCES "public"."communityComments"("id") ON DELETE CASCADE;
 
@@ -4054,6 +5017,16 @@ ALTER TABLE ONLY "public"."eventRecords"
 
 
 
+ALTER TABLE ONLY "public"."friendships"
+    ADD CONSTRAINT "friendships_friend_id_fkey" FOREIGN KEY ("friendId") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."friendships"
+    ADD CONSTRAINT "friendships_user_id_fkey" FOREIGN KEY ("userId") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."inventory"
     ADD CONSTRAINT "inventory_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "public"."items"("id");
 
@@ -4089,13 +5062,118 @@ ALTER TABLE ONLY "public"."levels"
 
 
 
-ALTER TABLE ONLY "public"."levels_tags"
+ALTER TABLE ONLY "public"."levelsTags"
     ADD CONSTRAINT "levels_tags_level_id_fkey" FOREIGN KEY ("level_id") REFERENCES "public"."levels"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."levels_tags"
-    ADD CONSTRAINT "levels_tags_tag_id_fkey" FOREIGN KEY ("tag_id") REFERENCES "public"."level_tags"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."levelsTags"
+    ADD CONSTRAINT "levels_tags_tag_id_fkey" FOREIGN KEY ("tag_id") REFERENCES "public"."levelTags"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."listAuditLogs"
+    ADD CONSTRAINT "list_audit_logs_actor_uid_fkey" FOREIGN KEY ("actorUid") REFERENCES "public"."players"("uid") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."listAuditLogs"
+    ADD CONSTRAINT "list_audit_logs_list_id_fkey" FOREIGN KEY ("listId") REFERENCES "public"."lists"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."listAuditLogs"
+    ADD CONSTRAINT "list_audit_logs_target_uid_fkey" FOREIGN KEY ("targetUid") REFERENCES "public"."players"("uid") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."listInvitations"
+    ADD CONSTRAINT "list_invitations_invited_by_fkey" FOREIGN KEY ("invitedBy") REFERENCES "public"."players"("uid");
+
+
+
+ALTER TABLE ONLY "public"."listInvitations"
+    ADD CONSTRAINT "list_invitations_list_id_fkey" FOREIGN KEY ("listId") REFERENCES "public"."lists"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."listInvitations"
+    ADD CONSTRAINT "list_invitations_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."listLeaderboardEntries"
+    ADD CONSTRAINT "list_leaderboard_entries_list_id_fkey" FOREIGN KEY ("listId") REFERENCES "public"."lists"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."listLeaderboardEntries"
+    ADD CONSTRAINT "list_leaderboard_entries_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."listLeaderboardRecordEntries"
+    ADD CONSTRAINT "list_leaderboard_record_entries_level_id_fkey" FOREIGN KEY ("levelId") REFERENCES "public"."levels"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."listLeaderboardRecordEntries"
+    ADD CONSTRAINT "list_leaderboard_record_entries_list_id_fkey" FOREIGN KEY ("listId") REFERENCES "public"."lists"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."listLeaderboardRecordEntries"
+    ADD CONSTRAINT "list_leaderboard_record_entries_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."listLeaderboardRefreshes"
+    ADD CONSTRAINT "list_leaderboard_refreshes_list_id_fkey" FOREIGN KEY ("listId") REFERENCES "public"."lists"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."listLevels"
+    ADD CONSTRAINT "list_levels_added_by_fkey" FOREIGN KEY ("addedBy") REFERENCES "public"."players"("uid");
+
+
+
+ALTER TABLE ONLY "public"."listLevels"
+    ADD CONSTRAINT "list_levels_level_id_fkey" FOREIGN KEY ("levelId") REFERENCES "public"."levels"("id");
+
+
+
+ALTER TABLE ONLY "public"."listLevels"
+    ADD CONSTRAINT "list_levels_list_id_fkey" FOREIGN KEY ("listId") REFERENCES "public"."lists"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."listMembers"
+    ADD CONSTRAINT "list_members_added_by_fkey" FOREIGN KEY ("addedBy") REFERENCES "public"."players"("uid");
+
+
+
+ALTER TABLE ONLY "public"."listMembers"
+    ADD CONSTRAINT "list_members_list_id_fkey" FOREIGN KEY ("listId") REFERENCES "public"."lists"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."listMembers"
+    ADD CONSTRAINT "list_members_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."listStars"
+    ADD CONSTRAINT "list_stars_list_id_fkey" FOREIGN KEY ("listId") REFERENCES "public"."lists"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."listStars"
+    ADD CONSTRAINT "list_stars_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."lists"
+    ADD CONSTRAINT "lists_owner_fkey" FOREIGN KEY ("owner") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
 
 
 
@@ -4151,6 +5229,16 @@ ALTER TABLE ONLY "public"."orders"
 
 ALTER TABLE ONLY "public"."otp"
     ADD CONSTRAINT "otp_granted_by_fkey" FOREIGN KEY ("granted_by") REFERENCES "public"."players"("uid") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."playerCardStatLines"
+    ADD CONSTRAINT "playerCardStatLines_listId_fkey" FOREIGN KEY ("listId") REFERENCES "public"."lists"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."playerCardStatLines"
+    ADD CONSTRAINT "playerCardStatLines_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
 
 
 
@@ -4219,13 +5307,23 @@ ALTER TABLE ONLY "public"."eventRecords"
 
 
 
+ALTER TABLE ONLY "public"."recordCards"
+    ADD CONSTRAINT "record_cards_levelID_fkey" FOREIGN KEY ("levelID") REFERENCES "public"."levels"("id");
+
+
+
+ALTER TABLE ONLY "public"."recordCards"
+    ADD CONSTRAINT "record_cards_orderID_fkey" FOREIGN KEY ("orderID") REFERENCES "public"."orders"("id");
+
+
+
+ALTER TABLE ONLY "public"."recordCards"
+    ADD CONSTRAINT "record_cards_owner_fkey" FOREIGN KEY ("owner") REFERENCES "public"."players"("uid");
+
+
+
 ALTER TABLE ONLY "public"."records"
     ADD CONSTRAINT "records_reviewer_fkey" FOREIGN KEY ("reviewer") REFERENCES "public"."players"("uid") ON UPDATE CASCADE ON DELETE SET NULL;
-
-
-
-ALTER TABLE ONLY "public"."records"
-    ADD CONSTRAINT "records_variant_id_fkey" FOREIGN KEY ("variant_id") REFERENCES "public"."levels"("id") ON DELETE SET NULL;
 
 
 
@@ -4242,7 +5340,7 @@ ALTER TABLE ONLY "public"."userSocial"
 ALTER TABLE "public"."APIKey" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "Enable delete for users based on user_id" ON "public"."records" FOR DELETE USING ((("auth"."uid"() = "userid") AND ("isChecked" = false)));
+CREATE POLICY "Enable delete for users based on user_id" ON "public"."records" FOR DELETE USING ((("auth"."uid"() = "userid") AND ("acceptedManually" = false)));
 
 
 
@@ -4365,6 +5463,9 @@ ALTER TABLE "public"."communityCommentsAdmin" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."communityLikes" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."communityPostParticipants" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."communityPostViews" ENABLE ROW LEVEL SECURITY;
 
 
@@ -4474,6 +5575,9 @@ ALTER TABLE "public"."eventRecords" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."events" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."friendships" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."heatmap" ENABLE ROW LEVEL SECURITY;
 
 
@@ -4495,13 +5599,40 @@ ALTER TABLE "public"."levelGDStates" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."levelSubmissions" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."level_tags" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."levelTags" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."levels" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."levels_tags" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."levelsTags" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."listAuditLogs" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."listInvitations" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."listLeaderboardEntries" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."listLeaderboardRecordEntries" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."listLeaderboardRefreshes" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."listLevels" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."listMembers" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."listStars" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."lists" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."mapPackLevels" ENABLE ROW LEVEL SECURITY;
@@ -4525,6 +5656,9 @@ ALTER TABLE "public"."orders" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."otp" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."playerCardStatLines" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."playerConvictions" ENABLE ROW LEVEL SECURITY;
 
 
@@ -4541,6 +5675,9 @@ ALTER TABLE "public"."postTags" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."products" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."recordCards" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."records" ENABLE ROW LEVEL SECURITY;
@@ -4750,12 +5887,15 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
-
-
-
 GRANT ALL ON FUNCTION "public"."add_event_levels_progress"("updates" "jsonb") TO "anon";
 GRANT ALL ON FUNCTION "public"."add_event_levels_progress"("updates" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."add_event_levels_progress"("updates" "jsonb") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."assert_custom_list_level_platformer_match"("p_list_id" bigint, "p_level_id" bigint) TO "anon";
+GRANT ALL ON FUNCTION "public"."assert_custom_list_level_platformer_match"("p_list_id" bigint, "p_level_id" bigint) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."assert_custom_list_level_platformer_match"("p_list_id" bigint, "p_level_id" bigint) TO "service_role";
 
 
 
@@ -4774,6 +5914,12 @@ GRANT ALL ON FUNCTION "public"."auto_hide_reported_posts"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."get_event_leaderboard"("event_id" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_event_leaderboard"("event_id" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_event_leaderboard"("event_id" integer) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_player_level_tag_analysis"("player_uid" "uuid", "include_dl" boolean, "include_fl" boolean, "include_pl" boolean, "include_cl" boolean) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_player_level_tag_analysis"("player_uid" "uuid", "include_dl" boolean, "include_fl" boolean, "include_pl" boolean, "include_cl" boolean) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_player_level_tag_analysis"("player_uid" "uuid", "include_dl" boolean, "include_fl" boolean, "include_pl" boolean, "include_cl" boolean) TO "service_role";
 
 
 
@@ -4867,6 +6013,12 @@ GRANT ALL ON FUNCTION "public"."update_list"() TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."update_queue_no"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_queue_no"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_queue_no"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."update_rank"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_rank"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_rank"() TO "service_role";
@@ -4876,6 +6028,24 @@ GRANT ALL ON FUNCTION "public"."update_rank"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."update_supporter_until"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_supporter_until"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_supporter_until"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."validate_custom_list_level_platformer_match"() TO "anon";
+GRANT ALL ON FUNCTION "public"."validate_custom_list_level_platformer_match"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."validate_custom_list_level_platformer_match"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."validate_custom_list_platformer_update"() TO "anon";
+GRANT ALL ON FUNCTION "public"."validate_custom_list_platformer_update"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."validate_custom_list_platformer_update"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."validate_level_platformer_custom_lists"() TO "anon";
+GRANT ALL ON FUNCTION "public"."validate_level_platformer_custom_lists"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."validate_level_platformer_custom_lists"() TO "service_role";
 
 
 
@@ -5186,6 +6356,18 @@ GRANT ALL ON TABLE "public"."communityLikes" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."communityPostParticipants" TO "anon";
+GRANT ALL ON TABLE "public"."communityPostParticipants" TO "authenticated";
+GRANT ALL ON TABLE "public"."communityPostParticipants" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."communityPostParticipants_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."communityPostParticipants_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."communityPostParticipants_id_seq" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."communityPostViews" TO "anon";
 GRANT ALL ON TABLE "public"."communityPostViews" TO "authenticated";
 GRANT ALL ON TABLE "public"."communityPostViews" TO "service_role";
@@ -5336,6 +6518,12 @@ GRANT ALL ON TABLE "public"."events" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."friendships" TO "anon";
+GRANT ALL ON TABLE "public"."friendships" TO "authenticated";
+GRANT ALL ON TABLE "public"."friendships" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."heatmap" TO "anon";
 GRANT ALL ON TABLE "public"."heatmap" TO "authenticated";
 GRANT ALL ON TABLE "public"."heatmap" TO "service_role";
@@ -5384,9 +6572,9 @@ GRANT ALL ON TABLE "public"."levelSubmissions" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."level_tags" TO "anon";
-GRANT ALL ON TABLE "public"."level_tags" TO "authenticated";
-GRANT ALL ON TABLE "public"."level_tags" TO "service_role";
+GRANT ALL ON TABLE "public"."levelTags" TO "anon";
+GRANT ALL ON TABLE "public"."levelTags" TO "authenticated";
+GRANT ALL ON TABLE "public"."levelTags" TO "service_role";
 
 
 
@@ -5396,9 +6584,117 @@ GRANT ALL ON SEQUENCE "public"."level_tags_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."levels_tags" TO "anon";
-GRANT ALL ON TABLE "public"."levels_tags" TO "authenticated";
-GRANT ALL ON TABLE "public"."levels_tags" TO "service_role";
+GRANT ALL ON TABLE "public"."levelsTags" TO "anon";
+GRANT ALL ON TABLE "public"."levelsTags" TO "authenticated";
+GRANT ALL ON TABLE "public"."levelsTags" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."listAuditLogs" TO "anon";
+GRANT ALL ON TABLE "public"."listAuditLogs" TO "authenticated";
+GRANT ALL ON TABLE "public"."listAuditLogs" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."listAuditLogs_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."listAuditLogs_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."listAuditLogs_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."listInvitations" TO "anon";
+GRANT ALL ON TABLE "public"."listInvitations" TO "authenticated";
+GRANT ALL ON TABLE "public"."listInvitations" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."listInvitations_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."listInvitations_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."listInvitations_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."listLeaderboardEntries" TO "anon";
+GRANT ALL ON TABLE "public"."listLeaderboardEntries" TO "authenticated";
+GRANT ALL ON TABLE "public"."listLeaderboardEntries" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."listLeaderboardEntries_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."listLeaderboardEntries_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."listLeaderboardEntries_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."listLeaderboardRecordEntries" TO "anon";
+GRANT ALL ON TABLE "public"."listLeaderboardRecordEntries" TO "authenticated";
+GRANT ALL ON TABLE "public"."listLeaderboardRecordEntries" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."listLeaderboardRecordEntries_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."listLeaderboardRecordEntries_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."listLeaderboardRecordEntries_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."listLeaderboardRefreshes" TO "anon";
+GRANT ALL ON TABLE "public"."listLeaderboardRefreshes" TO "authenticated";
+GRANT ALL ON TABLE "public"."listLeaderboardRefreshes" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."listLeaderboardRefreshes_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."listLeaderboardRefreshes_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."listLeaderboardRefreshes_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."listLevels" TO "anon";
+GRANT ALL ON TABLE "public"."listLevels" TO "authenticated";
+GRANT ALL ON TABLE "public"."listLevels" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."listLevels_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."listLevels_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."listLevels_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."listMembers" TO "anon";
+GRANT ALL ON TABLE "public"."listMembers" TO "authenticated";
+GRANT ALL ON TABLE "public"."listMembers" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."listMembers_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."listMembers_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."listMembers_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."listStars" TO "anon";
+GRANT ALL ON TABLE "public"."listStars" TO "authenticated";
+GRANT ALL ON TABLE "public"."listStars" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."listStars_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."listStars_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."listStars_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."lists" TO "anon";
+GRANT ALL ON TABLE "public"."lists" TO "authenticated";
+GRANT ALL ON TABLE "public"."lists" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."lists_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."lists_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."lists_id_seq" TO "service_role";
 
 
 
@@ -5480,6 +6776,12 @@ GRANT ALL ON TABLE "public"."otp" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."playerCardStatLines" TO "anon";
+GRANT ALL ON TABLE "public"."playerCardStatLines" TO "authenticated";
+GRANT ALL ON TABLE "public"."playerCardStatLines" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."playerConvictions" TO "anon";
 GRANT ALL ON TABLE "public"."playerConvictions" TO "authenticated";
 GRANT ALL ON TABLE "public"."playerConvictions" TO "service_role";
@@ -5558,9 +6860,21 @@ GRANT ALL ON SEQUENCE "public"."promotions_id_seq" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."recordCards" TO "anon";
+GRANT ALL ON TABLE "public"."recordCards" TO "authenticated";
+GRANT ALL ON TABLE "public"."recordCards" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."records" TO "anon";
 GRANT ALL ON TABLE "public"."records" TO "authenticated";
 GRANT ALL ON TABLE "public"."records" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."records_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."records_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."records_id_seq" TO "service_role";
 
 
 
@@ -5675,5 +6989,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
 
 -- DELETE the "drop trigger" and "create policy" blocks for "storage" that were here.
+
 
 

@@ -74,8 +74,8 @@ const router = express.Router()
  * "/battlepass":
  *   get:
  *     tags:
- *       - Battle Pass
- *     summary: Get active battle pass season
+ *       - Pass
+ *     summary: Get active Pass season
  *     responses:
  *       200:
  *         description: Success
@@ -113,8 +113,8 @@ router.route('/')
  * "/battlepass/season":
  *   post:
  *     tags:
- *       - Battle Pass
- *     summary: Create a new battle pass season (Admin only)
+ *       - Pass
+ *     summary: Create a new Pass season (Admin only)
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -154,8 +154,8 @@ router.route('/season')
  * "/battlepass/season/{id}":
  *   get:
  *     tags:
- *       - Battle Pass
- *     summary: Get a specific battle pass season
+ *       - Pass
+ *     summary: Get a specific Pass season
  *     parameters:
  *       - name: id
  *         in: path
@@ -170,8 +170,8 @@ router.route('/season')
  *         description: Internal server error
  *   patch:
  *     tags:
- *       - Battle Pass
- *     summary: Update a battle pass season (Admin only)
+ *       - Pass
+ *     summary: Update a Pass season (Admin only)
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -228,8 +228,8 @@ router.route('/season/:id')
  * "/battlepass/season/{id}/archive":
  *   post:
  *     tags:
- *       - Battle Pass
- *     summary: Archive a battle pass season (Admin only)
+ *       - Pass
+ *     summary: Archive a Pass season (Admin only)
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -262,8 +262,8 @@ router.route('/season/:id/archive')
  * "/battlepass/progress":
  *   get:
  *     tags:
- *       - Battle Pass
- *     summary: Get current user's battle pass progress
+ *       - Pass
+ *     summary: Get current user's Pass progress
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -296,8 +296,8 @@ router.route('/progress')
  * "/battlepass/progress/{seasonId}":
  *   get:
  *     tags:
- *       - Battle Pass
- *     summary: Get current user's battle pass progress for a specific season
+ *       - Pass
+ *     summary: Get current user's Pass progress for a specific season
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -331,8 +331,8 @@ router.route('/progress/:seasonId')
  * "/battlepass/upgrade":
  *   post:
  *     tags:
- *       - Battle Pass
- *     summary: Upgrade to premium battle pass (Admin only - typically called after payment)
+ *       - Pass
+ *     summary: Upgrade to premium Pass (Admin only - typically called after payment)
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -369,7 +369,7 @@ router.route('/upgrade')
  * "/battlepass/levels":
  *   get:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Get active season's levels
  *     responses:
  *       200:
@@ -398,7 +398,7 @@ router.route('/levels')
  * "/battlepass/season/{id}/levels":
  *   get:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Get levels for a specific season
  *     parameters:
  *       - name: id
@@ -414,7 +414,7 @@ router.route('/levels')
  *         description: Internal server error
  *   post:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Add a level to a season (Admin only)
  *     security:
  *       - bearerAuth: []
@@ -476,14 +476,14 @@ router.route('/season/:id/levels')
  * "/battlepass/level/{levelId}":
  *   patch:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Update a season level (Admin only)
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - name: levelId
  *         in: path
- *         description: Battle Pass Level ID
+ *         description: Pass Level ID
  *         required: true
  *         schema:
  *           type: integer
@@ -500,14 +500,14 @@ router.route('/season/:id/levels')
  *         description: Internal server error
  *   delete:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Delete a season level (Admin only)
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - name: levelId
  *         in: path
- *         description: Battle Pass Level ID
+ *         description: Pass Level ID
  *         required: true
  *         schema:
  *           type: integer
@@ -544,14 +544,14 @@ router.route('/level/:levelId')
  * "/battlepass/levels/progress":
  *   get:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Get user's progress on levels (single or batch)
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - name: ids
  *         in: query
- *         description: Comma-separated Battle Pass Level IDs, or single ID
+ *         description: Comma-separated Pass Level IDs, or single ID
  *         required: true
  *         schema:
  *           type: string
@@ -591,7 +591,7 @@ router.route('/levels/progress')
  * "/battlepass/daily-weekly":
  *   get:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Get daily and weekly levels for active season with user progress
  *     security:
  *       - bearerAuth: []
@@ -639,7 +639,7 @@ router.route('/daily-weekly')
  * "/battlepass/season/{id}/daily-weekly":
  *   get:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Get daily and weekly levels for a specific season with user progress
  *     security:
  *       - bearerAuth: []
@@ -676,14 +676,14 @@ router.route('/season/:id/daily-weekly')
  * "/battlepass/level/{levelId}/claim/{claimType}":
  *   post:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Claim XP reward for daily/weekly level progress
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - name: levelId
  *         in: path
- *         description: Battle Pass Level ID
+ *         description: Pass Level ID
  *         required: true
  *         schema:
  *           type: integer
@@ -754,14 +754,14 @@ router.route('/level/:levelId/claim/:claimType')
  * "/battlepass/mappacks/progress":
  *   get:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Get user's progress on map packs (single or batch)
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - name: ids
  *         in: query
- *         description: Comma-separated Battle Pass Map Pack IDs, or single ID
+ *         description: Comma-separated Pass Map Pack IDs, or single ID
  *         required: true
  *         schema:
  *           type: string
@@ -797,7 +797,7 @@ router.route('/mappacks/progress')
  * "/battlepass/mappacks/levels/progress":
  *   post:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Get user's progress on map pack levels
  *     security:
  *       - bearerAuth: []
@@ -841,7 +841,7 @@ router.route('/mappacks/levels/progress')
  * "/battlepass/mappacks":
  *   get:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Get active season's unlocked map packs
  *     responses:
  *       200:
@@ -883,6 +883,30 @@ router.route('/mappacks')
         }
     })
 
+/**
+ * @openapi
+ * "/battlepass/mappacks/next-locked":
+ *   get:
+ *     tags:
+ *       - Pass
+ *     summary: Get the next locked map pack in the active season
+ *     description: Returns the first locked map pack in the active season's map pack list, useful for showing what the user needs to unlock next.
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 nextLockedMapPack:
+ *                   type: object
+ *                   nullable: true
+ *       404:
+ *         description: No active season
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/mappacks/next-locked')
     .get(async (_req, res) => {
         try {
@@ -905,7 +929,7 @@ router.route('/mappacks/next-locked')
  * "/battlepass/season/{id}/mappacks":
  *   get:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Get all map packs for a season (Admin gets all, users get unlocked only)
  *     parameters:
  *       - name: id
@@ -921,7 +945,7 @@ router.route('/mappacks/next-locked')
  *         description: Internal server error
  *   post:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Create a map pack for a season (Admin only)
  *     security:
  *       - bearerAuth: []
@@ -993,12 +1017,12 @@ router.route('/season/:id/mappacks')
  * "/battlepass/mappack/{mapPackId}":
  *   get:
  *     tags:
- *       - Battle Pass
- *     summary: Get a specific battle pass map pack
+ *       - Pass
+ *     summary: Get a specific Pass map pack
  *     parameters:
  *       - name: mapPackId
  *         in: path
- *         description: Battle Pass Map Pack ID
+ *         description: Pass Map Pack ID
  *         required: true
  *         schema:
  *           type: integer
@@ -1009,14 +1033,14 @@ router.route('/season/:id/mappacks')
  *         description: Internal server error
  *   patch:
  *     tags:
- *       - Battle Pass
- *     summary: Update a battle pass map pack (Admin only)
+ *       - Pass
+ *     summary: Update a Pass map pack (Admin only)
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - name: mapPackId
  *         in: path
- *         description: Battle Pass Map Pack ID
+ *         description: Pass Map Pack ID
  *         required: true
  *         schema:
  *           type: integer
@@ -1033,14 +1057,14 @@ router.route('/season/:id/mappacks')
  *         description: Internal server error
  *   delete:
  *     tags:
- *       - Battle Pass
- *     summary: Delete a battle pass map pack (Admin only)
+ *       - Pass
+ *     summary: Delete a Pass map pack (Admin only)
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - name: mapPackId
  *         in: path
- *         description: Battle Pass Map Pack ID
+ *         description: Pass Map Pack ID
  *         required: true
  *         schema:
  *           type: integer
@@ -1109,7 +1133,7 @@ router.route('/mappack/:mapPackId')
  * "/battlepass/mappack/{mapPackId}/claim":
  *   post:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Claim XP reward for completing a map pack
  *     security:
  *       - bearerAuth: []
@@ -1147,6 +1171,37 @@ router.route('/mappack/:mapPackId/claim')
         }
     })
 
+/**
+ * @openapi
+ * "/battlepass/course":
+ *   get:
+ *     tags:
+ *       - Pass
+ *     summary: Get active season's course with entries and user progress
+ *     description: Returns the course for the active season, including all entries (levels/map packs), user progress, and completion status. If user is authenticated, includes progress and completion data.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 course:
+ *                   type: object
+ *                 seasonId:
+ *                   type: integer
+ *                 entries:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       404:
+ *         description: No active course
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/course')
     .get(optionalUserAuth, async (req, res) => {
         const { user, authenticated } = res.locals
@@ -1165,6 +1220,35 @@ router.route('/course')
         }
     })
 
+/**
+ * @openapi
+ * "/battlepass/course/entry/{entryId}/claim":
+ *   post:
+ *     tags:
+ *       - Pass
+ *     summary: Claim XP and item reward for completing a course entry
+ *     description: Claims the reward for a completed course entry. The entry must be completed, and all previous entries in the course must also be completed. Rewards include XP and optionally an item.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: entryId
+ *         in: path
+ *         description: Course Entry ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Reward claimed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       400:
+ *         description: Already claimed, entry not completed, or entry is locked
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/course/entry/:entryId/claim')
     .post(userAuth, async (req, res) => {
         const { user } = res.locals
@@ -1189,6 +1273,49 @@ router.route('/course/entry/:entryId/claim')
         }
     })
 
+/**
+ * @openapi
+ * "/battlepass/courses":
+ *   get:
+ *     tags:
+ *       - Pass
+ *     summary: Get all courses (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       500:
+ *         description: Internal server error
+ *   post:
+ *     tags:
+ *       - Pass
+ *     summary: Create a new course (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Course created successfully
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/courses')
     .get(adminAuth, async (_req, res) => {
         try {
@@ -1209,6 +1336,75 @@ router.route('/courses')
         }
     })
 
+/**
+ * @openapi
+ * "/battlepass/course/{courseId}":
+ *   get:
+ *     tags:
+ *       - Pass
+ *     summary: Get a specific course (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: courseId
+ *         in: path
+ *         description: Course ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *       500:
+ *         description: Internal server error
+ *   patch:
+ *     tags:
+ *       - Pass
+ *     summary: Update a course (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: courseId
+ *         in: path
+ *         description: Course ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Course updated successfully
+ *       500:
+ *         description: Internal server error
+ *   delete:
+ *     tags:
+ *       - Pass
+ *     summary: Delete a course (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: courseId
+ *         in: path
+ *         description: Course ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Course deleted successfully
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/course/:courseId')
     .get(adminAuth, async (req, res) => {
         const { courseId } = req.params
@@ -1241,6 +1437,71 @@ router.route('/course/:courseId')
         }
     })
 
+/**
+ * @openapi
+ * "/battlepass/course/{courseId}/entries":
+ *   get:
+ *     tags:
+ *       - Pass
+ *     summary: Get all entries for a course (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: courseId
+ *         in: path
+ *         description: Course ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       500:
+ *         description: Internal server error
+ *   post:
+ *     tags:
+ *       - Pass
+ *     summary: Create a course entry (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: courseId
+ *         in: path
+ *         description: Course ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [level, mappack]
+ *               refId:
+ *                 type: integer
+ *               sortOrder:
+ *                 type: integer
+ *               rewardItemId:
+ *                 type: integer
+ *                 nullable: true
+ *               rewardQuantity:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Course entry created successfully
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/course/:courseId/entries')
     .get(adminAuth, async (req, res) => {
         const { courseId } = req.params
@@ -1266,6 +1527,65 @@ router.route('/course/:courseId/entries')
         }
     })
 
+/**
+ * @openapi
+ * "/battlepass/course/entry/{entryId}":
+ *   patch:
+ *     tags:
+ *       - Pass
+ *     summary: Update a course entry (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: entryId
+ *         in: path
+ *         description: Course Entry ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [level, mappack]
+ *               refId:
+ *                 type: integer
+ *               sortOrder:
+ *                 type: integer
+ *               rewardItemId:
+ *                 type: integer
+ *                 nullable: true
+ *               rewardQuantity:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Course entry updated successfully
+ *       500:
+ *         description: Internal server error
+ *   delete:
+ *     tags:
+ *       - Pass
+ *     summary: Delete a course entry (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: entryId
+ *         in: path
+ *         description: Course Entry ID
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Course entry deleted successfully
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/course/entry/:entryId')
     .patch(adminAuth, async (req, res) => {
         const { entryId } = req.params
@@ -1293,7 +1613,7 @@ router.route('/course/entry/:entryId')
  * "/battlepass/rewards":
  *   get:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Get active season's tier rewards
  *     responses:
  *       200:
@@ -1322,7 +1642,7 @@ router.route('/rewards')
  * "/battlepass/season/{id}/rewards":
  *   get:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Get tier rewards for a specific season
  *     parameters:
  *       - name: id
@@ -1338,7 +1658,7 @@ router.route('/rewards')
  *         description: Internal server error
  *   post:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Create a tier reward (Admin only)
  *     security:
  *       - bearerAuth: []
@@ -1402,7 +1722,7 @@ router.route('/season/:id/rewards')
  * "/battlepass/reward/{rewardId}":
  *   delete:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Delete a tier reward (Admin only)
  *     security:
  *       - bearerAuth: []
@@ -1436,7 +1756,7 @@ router.route('/reward/:rewardId')
  * "/battlepass/reward/{rewardId}/claim":
  *   post:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Claim a tier reward
  *     security:
  *       - bearerAuth: []
@@ -1480,7 +1800,7 @@ router.route('/reward/:rewardId/claim')
  * "/battlepass/rewards/claimable":
  *   get:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Get all claimable rewards for current user
  *     security:
  *       - bearerAuth: []
@@ -1514,7 +1834,7 @@ router.route('/rewards/claimable')
  * "/battlepass/xp/add":
  *   post:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Add XP to a user (Admin only)
  *     security:
  *       - bearerAuth: []
@@ -1563,7 +1883,7 @@ router.route('/xp/add')
  * "/battlepass/missions":
  *   get:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Get active season's missions with user status
  *     security:
  *       - bearerAuth: []
@@ -1595,7 +1915,7 @@ router.route('/missions')
  * "/battlepass/season/{id}/missions":
  *   get:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Get missions for a specific season
  *     parameters:
  *       - name: id
@@ -1611,7 +1931,7 @@ router.route('/missions')
  *         description: Internal server error
  *   post:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Create a mission for a season (Admin only)
  *     security:
  *       - bearerAuth: []
@@ -1685,7 +2005,7 @@ router.route('/season/:id/missions')
  * "/battlepass/mission/{missionId}":
  *   get:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Get a specific mission
  *     parameters:
  *       - name: missionId
@@ -1701,7 +2021,7 @@ router.route('/season/:id/missions')
  *         description: Internal server error
  *   patch:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Update a mission (Admin only)
  *     security:
  *       - bearerAuth: []
@@ -1725,7 +2045,7 @@ router.route('/season/:id/missions')
  *         description: Internal server error
  *   delete:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Delete a mission (Admin only)
  *     security:
  *       - bearerAuth: []
@@ -1779,7 +2099,7 @@ router.route('/mission/:missionId')
  * "/battlepass/mission/{missionId}/claim":
  *   post:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Claim a completed mission reward
  *     security:
  *       - bearerAuth: []
@@ -1822,7 +2142,7 @@ router.route('/mission/:missionId/claim')
  * "/battlepass/mission/{missionId}/reward":
  *   post:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Add a reward to a mission (Admin only)
  *     security:
  *       - bearerAuth: []
@@ -1875,7 +2195,7 @@ router.route('/mission/:missionId/reward')
  * "/battlepass/mission/{missionId}/reward/{rewardId}":
  *   delete:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Remove a reward from a mission (Admin only)
  *     security:
  *       - bearerAuth: []
@@ -1917,7 +2237,7 @@ router.route('/mission/:missionId/reward/:rewardId')
  * "/battlepass/webhook/refresh/daily":
  *   post:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Webhook to refresh daily missions (Cron only)
  *     description: Called by cron service to reset all daily missions. Removes all progress and claims for missions with refreshType='daily'.
  *     security:
@@ -1964,7 +2284,7 @@ router.route('/webhook/refresh/daily')
  * "/battlepass/webhook/refresh/weekly":
  *   post:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Webhook to refresh weekly missions (Cron only)
  *     description: Called by cron service to reset all weekly missions. Removes all progress and claims for missions with refreshType='weekly'. Should be called on Mondays at 0:00 AM UTC+7.
  *     security:
@@ -2011,7 +2331,7 @@ router.route('/webhook/refresh/weekly')
  * "/battlepass/webhook/refresh/{type}":
  *   post:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Webhook to refresh missions by type (Cron only)
  *     description: Generic endpoint to refresh missions by refresh type.
  *     security:
@@ -2064,7 +2384,7 @@ router.route('/webhook/refresh/:type')
  * "/battlepass/webhook/refresh-levels/daily":
  *   post:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Webhook to refresh daily level progress (Cron only)
  *     description: Called by cron service to reset all daily level progress. Removes all progress and claims for levels with type='daily'. Should be called daily at 0:00 AM UTC+7.
  *     security:
@@ -2111,7 +2431,7 @@ router.route('/webhook/refresh-levels/daily')
  * "/battlepass/webhook/refresh-levels/weekly":
  *   post:
  *     tags:
- *       - Battle Pass
+ *       - Pass
  *     summary: Webhook to refresh weekly level progress (Cron only)
  *     description: Called by cron service to reset all weekly level progress. Removes all progress and claims for levels with type='weekly'. Should be called on Mondays at 0:00 AM UTC+7.
  *     security:

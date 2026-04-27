@@ -1,4 +1,5 @@
 import supabase from "@src/client/supabase";
+import { buildFullTextSearchParams, mergeUniqueById } from '@src/utils/full-text-search'
 
 export async function getCase(id: number) {
     const { data, error } = await supabase
@@ -27,26 +28,53 @@ export async function getItem(id: number) {
     return data;
 }
 
-export async function searchItems(query: string) {
-    const isNumeric = !isNaN(Number(query));
+export async function searchItems(query: string, searchType?: string) {
+    const searchParams = buildFullTextSearchParams(query, searchType)
 
-    let queryBuilder = supabase
-        .from('items')
-        .select('*')
-        .order('id', { ascending: true })
-        .limit(50);
+    if (!searchParams) {
+        return []
+    }
+
+    const isNumeric = !isNaN(Number(query))
 
     if (isNumeric) {
-        queryBuilder = queryBuilder.or(`id.eq.${query},name.ilike.%${query}%`);
-    } else {
-        queryBuilder = queryBuilder.ilike('name', `%${query}%`);
+        const [{ data: idData, error: idError }, { data: nameData, error: nameError }] = await Promise.all([
+            supabase
+                .from('items')
+                .select('*')
+                .eq('id', Number(query))
+                .limit(50),
+            supabase
+                .from('items')
+                .select('*')
+                .textSearch('nameFts', searchParams.query, searchParams.options)
+                .order('id', { ascending: true })
+                .limit(50)
+        ])
+
+        if (idError) {
+            throw new Error(idError.message)
+        }
+
+        if (nameError) {
+            throw new Error(nameError.message)
+        }
+
+        return mergeUniqueById(idData, nameData)
+            .sort((left, right) => left.id - right.id)
+            .slice(0, 50)
     }
 
-    const { data, error } = await queryBuilder;
+    const { data, error } = await supabase
+        .from('items')
+        .select('*')
+        .textSearch('nameFts', searchParams.query, searchParams.options)
+        .order('id', { ascending: true })
+        .limit(50)
 
     if (error) {
-        throw new Error(error.message);
+        throw new Error(error.message)
     }
 
-    return data;
+    return data
 }

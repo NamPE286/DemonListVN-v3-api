@@ -1,14 +1,13 @@
 import express from "express";
+import { legacyListDeprecation, publicReadCache } from '@src/middleware/cache-control.middleware'
 import { getDemonListLevels, getFeaturedListLevels, getPlatformerListLevels, getChallengeListLevels } from '@src/services/level.service'
 import { getDemonListRecords, getFeaturedListRecords, getChallengeListRecords } from "@src/services/record.service";
 import supabase from "@src/client/supabase";
 
 const router = express.Router()
 
-router.use((req, res, next) => {
-    res.set('Cache-Control', 'public, s-maxage=180, max-age=180')
-    next()
-})
+router.use(legacyListDeprecation)
+router.use(publicReadCache)
 
 router.route('/dl')
     /**
@@ -18,6 +17,7 @@ router.route('/dl')
      *     tags:
      *       - List
      *     summary: Get all records of the Demon List
+    *     deprecated: true
      *     parameters:
      *       - name: start
      *         in: query
@@ -113,6 +113,7 @@ router.route('/pl')
      *     tags:
      *       - List
      *     summary: Get all records of the Platformer List
+    *     deprecated: true
      *     parameters:
      *       - name: start
      *         in: query
@@ -208,6 +209,7 @@ router.route('/fl')
      *     tags:
      *       - List
      *     summary: Get all records of the Demon List
+    *     deprecated: true
      *     parameters:
      *       - name: start
      *         in: query
@@ -297,6 +299,7 @@ router.route('/dl/records')
      *     tags:
      *       - List
      *     summary: Get all records of the Demon List
+    *     deprecated: true
      *     parameters:
      *       - name: start
      *         in: query
@@ -343,6 +346,7 @@ router.route('/fl/records')
      *     tags:
      *       - List
      *     summary: Get all records of the Featured List
+    *     deprecated: true
      *     parameters:
      *       - name: start
      *         in: query
@@ -389,6 +393,7 @@ router.route('/cl')
      *     tags:
      *       - List
      *     summary: Get all levels of the Challenge List
+    *     deprecated: true
      *     parameters:
      *       - name: start
      *         in: query
@@ -484,6 +489,7 @@ router.route('/cl/records')
      *     tags:
      *       - List
      *     summary: Get all records of the Challenge List
+    *     deprecated: true
      *     parameters:
      *       - name: start
      *         in: query
@@ -554,6 +560,7 @@ async function getIDBound(list: string, min: boolean) {
  *     tags:
  *       - List
  *     summary: Get a random level from a list
+ *     deprecated: true
  *     parameters:
  *       - name: list
  *         in: path

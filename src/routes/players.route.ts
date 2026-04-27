@@ -2,6 +2,7 @@ import express from 'express'
 import userAuth from '@src/middleware/user-auth.middleware'
 import optionalAuth from '@src/middleware/optional-user-auth.middleware'
 import adminAuth from '@src/middleware/admin-auth.middleware'
+import { publicReadCache } from '@src/middleware/cache-control.middleware'
 import { getHeatmap } from '@src/services/heatmap.service'
 import { getPlayerRecordRating, getPlayerRecords } from '@src/services/record.service'
 import { updateHeatmap } from '@src/services/heatmap.service'
@@ -22,6 +23,7 @@ import {
 } from '@src/services/player.service'
 import { getPostsByUserWithLikeStatus } from '@src/services/community.service'
 import getAuthUid from '@src/middleware/get-auth-uid'
+import { getPlayerRankedLists } from '@src/services/custom-list.service'
 
 const router = express.Router()
 
@@ -114,19 +116,38 @@ router.route('/')
             await updatePlayer(data)
 
             res.send()
-        } catch (err) {
-            res.status(500).send()
+        } catch (err: any) {
+            if (err.message === 'Rename cooldown active') {
+                res.status(400).send({ message: 'Đang trong thời gian chờ đổi tên' })
+            } else {
+                res.status(500).send()
+            }
         }
     })
 
     .post(getAuthUid, async (req, res) => {
+        /**
+         * @openapi
+         * "/players":
+         *   post:
+         *     tags:
+         *       - Player
+         *     summary: Create a new player account
+         *     responses:
+         *       201:
+         *         description: Player created successfully
+         *       500:
+         *         description: Internal server error
+         */
         const { userId } = res.locals
 
         const { error } = await supabase
             .from("players")
             .insert({
                 uid: userId,
-                name: String(new Date().getTime())
+                name: String(new Date().getTime()),
+                onboarding_done: false,
+                onboarding_step: 1
             })
 
         if (error) {
@@ -135,7 +156,7 @@ router.route('/')
             return;
         }
 
-        res.send();
+        res.status(201).send();
     })
 
 /**
@@ -221,6 +242,158 @@ router.route('/:uid')
         }
     })
 
+router.route('/:uid/lists')
+    /**
+     * @openapi
+     * "/players/{uid}/lists":
+     *   get:
+     *     tags:
+     *       - Player
+     *     summary: Get verified and official ranked lists for a player
+     *     parameters:
+     *       - name: uid
+     *         in: path
+     *         description: The uid of the player
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Success
+     */
+    .get(publicReadCache, async (req, res) => {
+        try {
+            res.send(await getPlayerRankedLists(req.params.uid))
+        } catch {
+            res.status(500).send()
+        }
+    })
+
+router.route('/:uid/onboarding')
+    /**
+     * @openapi
+     * "/players/{uid}/onboarding":
+     *   patch:
+     *     tags:
+     *       - Player
+     *     summary: Update player onboarding data
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: uid
+     *         in: path
+     *         description: The UID of the player
+     *         required: true
+     *         schema:
+     *           type: string
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               name:
+     *                 type: string
+     *               province:
+     *                 type: string
+     *               city:
+     *                 type: string
+     *               onboarding_step:
+     *                 type: integer
+     *               onboarding_done:
+     *                 type: boolean
+     *     responses:
+     *       200:
+     *         description: Onboarding data updated successfully
+     *       400:
+     *         description: Invalid input or name cooldown active
+     *       403:
+     *         description: Forbidden - not authorized
+     *       409:
+     *         description: Name already in use
+     *       500:
+     *         description: Internal server error
+     */
+    .patch(userAuth, async (req, res) => {
+        const { uid } = req.params
+        const { user } = res.locals
+
+        if (user.uid !== uid) {
+            res.status(403).send()
+            return
+        }
+
+        const { name, province, city, onboarding_step, onboarding_done } = req.body ?? {}
+        const updateData: Record<string, any> = {}
+
+        if (name !== undefined) {
+            if (!/^[A-Za-z0-9]{3,30}$/.test(name)) {
+                res.status(400).send({ message: 'Tên chỉ gồm chữ và số, 3-30 ký tự' })
+                return
+            }
+
+            const { data: current } = await supabase
+                .from('players')
+                .select('nameLocked, renameCooldown')
+                .eq('uid', uid)
+                .single()
+
+            if (current?.nameLocked) {
+                res.status(400).send({ message: 'Tên đã bị khóa' })
+                return
+            }
+
+            if (current?.renameCooldown && new Date(current.renameCooldown) > new Date()) {
+                res.status(400).send({ message: 'Đang trong thời gian chờ đổi tên' })
+                return
+            }
+
+            const { data: existing } = await supabase
+                .from('players')
+                .select('uid')
+                .eq('name', name)
+                .single()
+
+            if (existing && existing.uid !== uid) {
+                res.status(409).send({ message: 'Tên đã được sử dụng' })
+                return
+            }
+
+            updateData.name = name
+            updateData.renameCooldown = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        }
+
+        if (province !== undefined) updateData.province = province
+        if (city !== undefined) updateData.city = city
+        if (onboarding_step !== undefined && typeof onboarding_step === 'number') {
+            updateData.onboarding_step = onboarding_step
+        }
+
+        if (onboarding_done === true) {
+            updateData.onboarding_done = true
+            updateData.onboarding_step = 8
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            res.status(400).send({ message: 'No fields to update' })
+            return
+        }
+
+        const { error } = await supabase
+            .from('players')
+            .update(updateData)
+            .eq('uid', uid)
+
+        if (error) {
+            console.error(error)
+            res.status(500).send()
+            return
+        }
+
+        res.send()
+    })
+
 router.route('/:uid/records')
     /**
      * @openapi
@@ -250,13 +423,12 @@ router.route('/:uid/records')
      *         schema:
      *           type: number
      *           default: 50
-     *       - name: isChecked
-     *         in: query
-     *         description: Record acception status
+    *       - name: ratingOnly
+    *         in: query
+    *         description: Return player rating progress entries instead of records
      *         required: false
      *         schema:
      *           type: boolean
-     *           default: true
      *     responses:
      *       200:
      *         description: Success

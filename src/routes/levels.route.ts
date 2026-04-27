@@ -3,7 +3,7 @@ import type { NextFunction, Response, Request } from 'express'
 import adminAuth from '@src/middleware/admin-auth.middleware'
 import { getLevelDeathCount } from '@src/services/death-count.service'
 import { getLevelRecords } from '@src/services/record.service'
-import { updateLevel, getLevel, fetchLevelFromGD, deleteLevel, refreshLevel, getLevelTags, createLevelTag, deleteLevelTag, updateLevelTag, setLevelTags, getLevelTagsForLevel, addLevelVariant, removeLevelVariant, getLevelVariants, retrieveOrCreateLevel } from '@src/services/level.service'
+import { updateLevel, getLevel, fetchLevelFromGD, deleteLevel, refreshLevel, getLevelTags, createLevelTag, deleteLevelTag, updateLevelTag, setLevelTags, getLevelTagsForLevel, addLevelVariant, removeLevelVariant, getLevelVariants, retrieveOrCreateLevel, crawlLevel, crawlLevels } from '@src/services/level.service'
 import userAuth from '@src/middleware/user-auth.middleware'
 import supabase from '@src/client/supabase'
 import { getEventLevelsSafe } from '@src/services/event.service'
@@ -25,7 +25,62 @@ function checkID(req: Request, res: Response, next: NextFunction) {
     next()
 }
 
+function parseForcedQuery(value: unknown) {
+    if (typeof value !== 'string') {
+        return false
+    }
+
+    const normalizedValue = value.trim().toLowerCase()
+    return normalizedValue === '1' || normalizedValue === 'true' || normalizedValue === 'yes'
+}
+
+function parseBatchCrawlIds(value: unknown) {
+    if (typeof value !== 'string') {
+        return null
+    }
+
+    const rawEntries = value
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+
+    if (!rawEntries.length) {
+        return null
+    }
+
+    const ids = rawEntries.map((entry) => Number.parseInt(entry, 10))
+
+    if (ids.some((id) => !Number.isInteger(id) || id <= 0)) {
+        return null
+    }
+
+    if (!ids.length) {
+        return null
+    }
+
+    return [...new Set(ids)]
+}
+
 // Get all level tags
+/**
+ * @openapi
+ * "/levels/tags":
+ *   get:
+ *     tags:
+ *       - Level
+ *     summary: Get all level tags
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/tags')
     .get(async (_req, res) => {
         try {
@@ -38,6 +93,29 @@ router.route('/tags')
     })
 
 // Admin: create a level tag
+/**
+ * @openapi
+ * "/levels/tags":
+ *   post:
+ *     tags:
+ *       - Level
+ *     summary: Create a level tag (admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       201:
+ *         description: Tag created successfully
+ *       409:
+ *         description: Tag already exists
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/tags')
     .post(adminAuth, async (req, res) => {
         try {
@@ -54,6 +132,28 @@ router.route('/tags')
     })
 
 // Admin: delete a level tag (removes from all levels)
+/**
+ * @openapi
+ * "/levels/tags/{tagId}":
+ *   delete:
+ *     tags:
+ *       - Level
+ *     summary: Delete a level tag (admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: tagId
+ *         in: path
+ *         description: The ID of the tag to delete
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Tag deleted successfully
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/tags/:tagId')
     .delete(adminAuth, async (req, res) => {
         try {
@@ -66,6 +166,36 @@ router.route('/tags/:tagId')
     })
 
 // Admin: update a level tag (name and/or color)
+/**
+ * @openapi
+ * "/levels/tags/{tagId}":
+ *   put:
+ *     tags:
+ *       - Level
+ *     summary: Update a level tag (admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: tagId
+ *         in: path
+ *         description: The ID of the tag to update
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Tag updated successfully
+ *       409:
+ *         description: Tag already exists
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/tags/:tagId')
     .put(adminAuth, async (req, res) => {
         try {
@@ -81,6 +211,21 @@ router.route('/tags/:tagId')
         }
     })
 
+/**
+ * @openapi
+ * "/levels/refresh":
+ *   post:
+ *     tags:
+ *       - Level
+ *     summary: Refresh level (webhook only)
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Level refreshed successfully
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/refresh')
     .post(webhookAuth, async (req, res) => {
         try {
@@ -91,6 +236,37 @@ router.route('/refresh')
         }
 
         res.send()
+    })
+
+router.route('/crawl')
+    .post(userAuth, async (req: Request, res: Response) => {
+        const levelIds = parseBatchCrawlIds(req.query.ids)
+
+        if (!levelIds) {
+            res.status(400).json({ error: 'Query parameter ids must be a comma-separated list of positive integers' })
+            return
+        }
+
+        const forced = parseForcedQuery(req.query.forced)
+
+        if (forced && !res.locals.user?.isAdmin) {
+            res.status(403).json({ error: 'Forced crawl is only available for admins' })
+            return
+        }
+
+        try {
+            const results = await crawlLevels(levelIds, { forced })
+            res.send({
+                forced,
+                results,
+                crawled: results.filter((result) => result.status === 'crawled').length,
+                skipped: results.filter((result) => result.status === 'skipped').length,
+                notFound: results.filter((result) => result.status === 'not_found').length
+            })
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
     })
 
 router.route('/')
@@ -347,6 +523,29 @@ router.route('/:id')
         }
     })
 
+router.route('/:id/crawl')
+    .post([userAuth, checkID], async (req: Request, res: Response) => {
+        const levelId = parseInt(req.params.id)
+        const forced = parseForcedQuery(req.query.forced)
+
+        if (forced && !res.locals.user?.isAdmin) {
+            res.status(403).json({ error: 'Forced crawl is only available for admins' })
+            return
+        }
+
+        try {
+            const result = await crawlLevel(levelId, { forced })
+            res.send({
+                ...result.level,
+                crawlStatus: result.status,
+                forced
+            })
+        } catch (err) {
+            console.error(err)
+            res.status(404).json({ error: 'Level not found on the official Geometry Dash server' })
+        }
+    })
+
 
 router.route('/:id/records')
     /**
@@ -503,6 +702,30 @@ router.route('/:id/inEvent')
 // ---- Level Tags ----
 
 // Get tags for a level
+/**
+ * @openapi
+ * "/levels/{id}/tags":
+ *   get:
+ *     tags:
+ *       - Level
+ *     summary: Get tags for a level
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The ID of the level
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/:id/tags')
     .get(checkID, async (req, res) => {
         try {
@@ -515,6 +738,41 @@ router.route('/:id/tags')
     })
 
 // Admin: set tags on a level
+/**
+ * @openapi
+ * "/levels/{id}/tags":
+ *   put:
+ *     tags:
+ *       - Level
+ *     summary: Set tags on a level (admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The ID of the level
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               tag_ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *     responses:
+ *       200:
+ *         description: Tags set successfully
+ *       400:
+ *         description: Invalid tag_ids format
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/:id/tags')
     .put([adminAuth, checkID], async (req: any, res: any) => {
         try {
@@ -534,6 +792,30 @@ router.route('/:id/tags')
 // ---- Level Variants ----
 
 // Get variants for a level
+/**
+ * @openapi
+ * "/levels/{id}/variants":
+ *   get:
+ *     tags:
+ *       - Level
+ *     summary: Get variants for a level
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The ID of the level
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/:id/variants')
     .get(checkID, async (req, res) => {
         try {
@@ -546,6 +828,41 @@ router.route('/:id/variants')
     })
 
 // Admin: add a variant to a level
+/**
+ * @openapi
+ * "/levels/{id}/variants":
+ *   post:
+ *     tags:
+ *       - Level
+ *     summary: Add a variant to a level (admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The ID of the main level
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - variantLevelId
+ *             properties:
+ *               variantLevelId:
+ *                 type: integer
+ *     responses:
+ *       201:
+ *         description: Variant added successfully
+ *       400:
+ *         description: Missing variantLevelId
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/:id/variants')
     .post([adminAuth, checkID], async (req: any, res: any) => {
         const mainLevelId = parseInt(req.params.id)
@@ -581,6 +898,34 @@ router.route('/:id/variants')
     })
 
 // Admin: remove a variant from a level
+/**
+ * @openapi
+ * "/levels/{id}/variants/{variantId}":
+ *   delete:
+ *     tags:
+ *       - Level
+ *     summary: Remove a variant from a level (admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The ID of the main level
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: variantId
+ *         in: path
+ *         description: The ID of the variant to remove
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Variant removed successfully
+ *       500:
+ *         description: Internal server error
+ */
 router.route('/:id/variants/:variantId')
     .delete([adminAuth, checkID], async (req: any, res: any) => {
         try {

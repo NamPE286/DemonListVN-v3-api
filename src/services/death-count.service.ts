@@ -1,6 +1,8 @@
 import supabase from "@src/client/supabase";
 import { fetchLevelFromGD } from "@src/services/level.service";
-import { getActiveseason, getActiveBattlePassLevelByLevelID, getCourseEntries } from "@src/services/battlepass.service";
+import { getActiveseason, getActiveBattlePassLevelByLevelID, getCourseEntries, checkLevelInSeasonMappack } from "@src/services/battlepass.service";
+
+const DEATH_COUNT_AUTO_RECORD_SOURCE = 'Submitted via Death Count'
 
 export async function fetchPlayerDeathCount(uid: string, levelID: number, tag: string) {
     let { data, error } = await supabase
@@ -23,6 +25,21 @@ export async function fetchPlayerDeathCount(uid: string, levelID: number, tag: s
     return data
 }
 
+async function fetchExistingPlayerDeathCount(uid: string, levelID: number, tag: string) {
+    const { data, error } = await supabase
+        .from('deathCount')
+        .select('*')
+        .match({ uid, levelID, tag })
+        .limit(1)
+        .maybeSingle()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}
+
 async function fetchLevelData(levelID: number) {
     let { data, error } = await supabase
         .from('levelDeathCount')
@@ -36,6 +53,76 @@ async function fetchLevelData(levelID: number) {
     }
 
     return data
+}
+
+async function fetchExistingLevelData(levelID: number) {
+    const { data, error } = await supabase
+        .from('levelDeathCount')
+        .select('*')
+        .eq('levelID', levelID)
+        .limit(1)
+        .maybeSingle()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}
+
+function subtractDeathCountArrays(levelCount: unknown, playerCount: unknown) {
+    return Array.from({ length: 100 }, (_, index) => {
+        const levelValue = Number(Array.isArray(levelCount) ? levelCount[index] : 0) || 0
+        const playerValue = Number(Array.isArray(playerCount) ? playerCount[index] : 0) || 0
+
+        return Math.max(0, levelValue - playerValue)
+    })
+}
+
+async function deleteDeathCountAutoRecord(uid: string, levelID: number) {
+    const { error } = await supabase
+        .from('records')
+        .delete()
+        .eq('userid', uid)
+        .eq('levelid', levelID)
+        .eq('acceptedAuto', true)
+        .or('acceptedManually.is.null,acceptedManually.eq.false')
+        .eq('videoLink', DEATH_COUNT_AUTO_RECORD_SOURCE)
+        .eq('raw', DEATH_COUNT_AUTO_RECORD_SOURCE)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+}
+
+function listAllowsAutoAcceptedRecords(list: any) {
+    const status = list?.recordFilterAcceptanceStatus;
+
+    if (status === 'auto' || status === 'any') {
+        return true;
+    }
+
+    return status !== 'manual' && list?.recordFilterManualAcceptanceOnly === false;
+}
+
+async function isLevelInAutoAcceptedRecordList(levelID: number): Promise<boolean> {
+    const { data, error } = await (supabase as any)
+        .from('listLevels')
+        .select('listId, lists!inner(recordFilterAcceptanceStatus, recordFilterManualAcceptanceOnly, isBanned, leaderboardEnabled)')
+        .eq('levelId', levelID)
+        .eq('accepted', true)
+        .eq('lists.isBanned', false)
+        .eq('lists.leaderboardEnabled', true)
+
+    if (error) {
+        return false;
+    }
+
+    return (data || []).some((entry: any) => {
+        const list = Array.isArray(entry.lists) ? entry.lists[0] : entry.lists;
+
+        return listAllowsAutoAcceptedRecords(list);
+    });
 }
 
 async function isEligible(levelID: number, eventCheck = true, battlepassCheck = false): Promise<boolean> {
@@ -72,20 +159,32 @@ async function isEligible(levelID: number, eventCheck = true, battlepassCheck = 
                 }
             }
         }
+
+        if (await isLevelInAutoAcceptedRecordList(levelID)) {
+            return true;
+        }
     }
 
     if (battlepassCheck) {
         try {
-            // Check if level is part of active season battle pass or active season course
-            const activeSeason = await getActiveseason() as any;
+            // Check if level is part of active season Pass or active season course
+            const activeSeason = await getActiveseason();
 
             if (activeSeason) {
-                // Check if level is a battle pass level (normal, daily, weekly)
+                // Check if level is a Pass level (normal, daily, weekly)
 
                 try {
                     const battlePassLevel = await getActiveBattlePassLevelByLevelID(levelID);
-
+                    
                     if (battlePassLevel) {
+                        return true;
+                    }
+                } catch { }
+
+                try {
+                    const check = await checkLevelInSeasonMappack(activeSeason.id, levelID)
+
+                    if (check) {
                         return true;
                     }
                 } catch { }
@@ -215,6 +314,56 @@ export async function updateDeathCount(uid: string, levelID: number, tag: string
     }
 
     return player;
+}
+
+export async function resetDeathCount(uid: string, levelID: number, tag: string) {
+    const player = await fetchExistingPlayerDeathCount(uid, levelID, tag)
+    const isBattlepass = tag.startsWith('battlepass')
+
+    if (player) {
+        const { error: deathCountError } = await supabase
+            .from('deathCount')
+            .delete()
+            .match({ uid, levelID, tag })
+
+        if (deathCountError) {
+            throw new Error(deathCountError.message)
+        }
+
+        if (!isBattlepass) {
+            const level = await fetchExistingLevelData(levelID)
+
+            if (level) {
+                const nextCount = subtractDeathCountArrays(level.count, player.count)
+
+                if (nextCount.some((value) => value > 0)) {
+                    const { error: levelDeathCountError } = await supabase
+                        .from('levelDeathCount')
+                        .upsert({
+                            ...level,
+                            count: nextCount
+                        })
+
+                    if (levelDeathCountError) {
+                        throw new Error(levelDeathCountError.message)
+                    }
+                } else {
+                    const { error: levelDeathCountError } = await supabase
+                        .from('levelDeathCount')
+                        .delete()
+                        .eq('levelID', levelID)
+
+                    if (levelDeathCountError) {
+                        throw new Error(levelDeathCountError.message)
+                    }
+                }
+            }
+        }
+    }
+
+    if (tag === 'default') {
+        await deleteDeathCountAutoRecord(uid, levelID)
+    }
 }
 
 /**

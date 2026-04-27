@@ -193,7 +193,7 @@ router.route('/getPaymentLink')
         const redirectUrl = await getSepayPaymentLink(orderID, amount, description)
 
         if (redirectUrl) {
-            res.send({ checkoutUrl: redirectUrl })
+            res.send({ checkoutUrl: redirectUrl, orderID })
             return
         }
 

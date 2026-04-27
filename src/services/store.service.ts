@@ -8,17 +8,21 @@ import { sepay } from "@src/client/sepay";
 import type { SepayWebhookOrder } from "@src/types/sepay-webhook";
 import { getClan, extendClanBoost } from "@src/services/clan.service";
 import { getPlayer, extendPlayerSupporter } from "@src/services/player.service";
+import { buildFullTextSearchParams, mergeUniqueById } from '@src/utils/full-text-search'
 
 interface Item {
     id: number;
     quantity: number;
 }
 
-export async function getProducts(ids: number[] | null = []) {
+export async function getProducts(ids: number[] | null = [], includeHidden: boolean = false) {
     const query = supabase
         .from("products")
         .select("*")
-        .eq('hidden', false)
+
+    if (!includeHidden) {
+        query.eq('hidden', false)
+    }
 
     if (ids !== null) {
         query.in('id', ids)
@@ -100,11 +104,13 @@ export async function changeOrderState(orderID: number, state: string) {
 }
 
 export async function getOrders(userID: string) {
+    // @ts-ignore
     const { data, error } = await supabase
         .from("orders")
-        .select("*, products(*), coupons(*), players!giftTo(*, clans!id(*))")
+        .select("*, products(*), coupons(*), players!giftTo(*, clans!id(*)), recordCards!orderID(*)")
         .eq("userID", userID)
         .order("created_at", { ascending: false })
+        .returns<(Tables<"orders"> & { products: Tables<"products"> | null, coupons: Tables<"coupons"> | null, players: (Tables<"players"> & { clans: Tables<"clans"> | null }) | null })[]>()
 
     if (error) {
         throw new Error(error.message)
@@ -128,6 +134,18 @@ export async function getCoupon(code: string) {
 }
 
 export async function redeem(code: string, player: Tables<"players">) {
+    const { data: existingOrder } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("userID", player.uid!)
+        .eq("address", code)
+        .eq("paymentMethod", "Coupon")
+        .limit(1);
+
+    if (existingOrder && existingOrder.length > 0) {
+        throw new Error("You have already redeemed this coupon");
+    }
+
     const coupon = await getCoupon(code);
     const product = coupon.products
 
@@ -199,26 +217,26 @@ export async function redeem(code: string, player: Tables<"players">) {
 }
 
 export async function updateStock(items: TablesInsert<"orderItems">[], products: Tables<"products">[]) {
-    const sortedProducts = products.sort((a, b) => a.id - b.id);
+    const sortedProducts = [...new Map(products.map(products => [products.id, products])).values()]
+        .sort((a, b) => a.id - b.id);
     const sortedItems = items.sort((a, b) => a.productID - b.productID);
 
-    for (let i = 0; i < sortedItems.length; i++) {
-        const product = sortedProducts[i];
-        const item = sortedItems[i];
+    for (const item of sortedItems) {
+        const product = sortedProducts.find(p => p.id === item.productID);
 
-        if (product.id !== item.productID) {
-            throw new Error("Product ID mismatch");
+        if (!product) {
+            throw new Error(`Product ID ${item.productID} not found`);
         }
 
         if (product.stock === null) {
             continue
         }
 
-        if (product.stock < item.quantity!) {
+        if (product.stock < (item.quantity || 0)) {
             throw new Error(`Insufficient stock for product ID ${product.id}`);
         }
 
-        if (product.maxQuantity && product.maxQuantity < item.quantity!) {
+        if (product.maxQuantity && product.maxQuantity < (item.quantity || 0)) {
             throw new Error(`Quantity ${item.quantity} exceeds maximum allowed ${product.maxQuantity} for product ID ${product.id}`);
         }
 
@@ -253,22 +271,21 @@ export async function addOrderItems(
     }
 
     for (const i of items) {
-        ids.push(i.productID)
+        if (!ids.includes(i.productID)) ids.push(i.productID)
     }
 
-    const products = (await getProducts(ids)).sort((a, b) => a.id - b.id);
+    const products = (await getProducts(ids, true)).sort((a, b) => a.id - b.id);
     let amount = 0, fee = 25000;
 
     if (pending) {
         await updateStock(items, products)
     }
 
-    for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        const product = products[i];
+    for (const item of items) {
+        const product = products.find(p => p.id === item.productID);
 
-        if (product.price === null) {
-            throw new Error(`Product ID ${product.id} has no price`);
+        if (!product || product.price === null) {
+            throw new Error(`Product ID ${item.productID} has no price`);
         }
 
         amount += product.price * item.quantity!;
@@ -290,7 +307,7 @@ export async function addOrderItems(
 export async function getOrder(id: number) {
     const { data, error } = await supabase
         .from("orders")
-        .select("*, orderItems(*, products(*)), products(*), coupons(*), players!giftTo(*, clans!id(*)), orderTracking(*)")
+        .select("*, orderItems(*, products(*)), products(*), coupons(*), players!giftTo(*, clans!id(*)), ownerPlayer:players!userID(name, clans!id(tag, tagBgColor, tagTextColor)), orderTracking(*), recordCards!orderID(*, levels(*))")
         .eq("id", id)
         .single();
 
@@ -311,6 +328,22 @@ export async function getOrder(id: number) {
             created_at: new Date().toISOString(),
             products: await getProductByID(1)
         });
+    }
+
+    if ((data as any).recordCards?.length) {
+        const cards = (data as any).recordCards as { levelID: number; owner: string;[key: string]: any }[]
+        const recordLookups = cards.map(rc =>
+            supabase
+                .from('records')
+                .select('progress, userid, levelid')
+                .eq('levelid', rc.levelID)
+                .eq('userid', rc.owner)
+                .single()
+        )
+        const results = await Promise.all(recordLookups)
+        for (let i = 0; i < cards.length; i++) {
+            cards[i].records = results[i].data ?? null
+        }
     }
 
     return data;
@@ -424,4 +457,100 @@ export async function handlePayment(id: number, sepayOrderData: SepayWebhookOrde
 
     await pre(buyer, recipient, order)
     await post(buyer, recipient, order)
+}
+
+export async function getAllOrders(filters: { state?: string, paymentMethod?: string, search?: string, searchType?: string }) {
+    const searchParams = buildFullTextSearchParams(filters.search, filters.searchType)
+
+    const createQuery = () => {
+        let query = supabase
+            .from("orders")
+            .select("*, orderTracking(*), products(*), orderItems(*, products(*))")
+
+        if (filters.state) {
+            query = query.eq('state', filters.state)
+        }
+
+        if (filters.paymentMethod) {
+            query = query.eq('paymentMethod', filters.paymentMethod)
+        }
+
+        return query
+    }
+
+    if (searchParams) {
+        const searchNum = parseInt(filters.search || '')
+
+        if (!isNaN(searchNum)) {
+            const [{ data: idData, error: idError }, { data: recipientData, error: recipientError }] = await Promise.all([
+                createQuery()
+                    .eq('id', searchNum)
+                    .order("created_at", { ascending: false })
+                    .order("created_at", { referencedTable: "orderTracking", ascending: false }),
+                createQuery()
+                    .textSearch('recipientNameFts', searchParams.query, searchParams.options)
+                    .order("created_at", { ascending: false })
+                    .order("created_at", { referencedTable: "orderTracking", ascending: false })
+            ])
+
+            if (idError) {
+                throw new Error(idError.message)
+            }
+
+            if (recipientError) {
+                throw new Error(recipientError.message)
+            }
+
+            return mergeUniqueById(idData, recipientData)
+                .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
+        }
+
+        const { data, error } = await createQuery()
+            .textSearch('recipientNameFts', searchParams.query, searchParams.options)
+            .order("created_at", { ascending: false })
+            .order("created_at", { referencedTable: "orderTracking", ascending: false })
+
+        if (error) {
+            throw new Error(error.message)
+        }
+
+        return data
+    }
+
+    const { data, error } = await createQuery()
+        .order("created_at", { ascending: false })
+        .order("created_at", { referencedTable: "orderTracking", ascending: false })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}
+
+export async function getAllProducts() {
+    const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}
+
+export async function upsertProduct(product: any) {
+    const { data, error } = await supabase
+        .from("products")
+        .upsert(product)
+        .select()
+        .single()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
 }

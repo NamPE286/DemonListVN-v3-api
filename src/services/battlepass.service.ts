@@ -10,8 +10,25 @@ const XP_PER_TIER = 100;
 const MAX_TIER = 100;
 const COMPLETION_THRESHOLD = 100;
 const COURSE_CLEAR_XP = 100;
+const MAPPACK_LEVEL_XP = 25;
 
 // ==================== Season Functions ====================
+
+export async function fetchActiveSeason() {
+    const now = new Date().toISOString()
+
+    const { data } = await supabase
+        .from('battlePassSeasons')
+        .select('id, title, start, end, primaryColor, isArchived')
+        .lte('start', now)
+        .gte('end', now)
+        .eq('isArchived', false)
+        .order('start', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+    return data
+}
 
 export async function getActiveseason() {
     const now = new Date().toISOString();
@@ -281,7 +298,7 @@ export async function upgradeToPremium(seasonId: number, userId: string) {
             .insert({
                 type: SubscriptionType.BP_PREMIUM,
                 refId: seasonId,
-                name: `Battle Pass Premium - ${season.title}`,
+                name: `Pass Premium - ${season.title}`,
                 price: 0
             })
             .select()
@@ -506,7 +523,7 @@ export async function claimDailyWeeklyReward(
     userId: string,
     claimType: 'minProgress' | 'completion'
 ) {
-    // Get the battle pass level
+    // Get the Pass level
     const { data: bpLevel, error: bpLevelError } = await supabase
         .from('battlePassLevels')
         .select('*, levels(*)')
@@ -690,7 +707,7 @@ export async function updateLevelProgressWithMissionCheck(
     userId: string,
     progress: number
 ) {
-    // Get the battle pass level details
+    // Get the Pass level details
     const { data: bpLevel, error: bpLevelError } = await supabase
         .from('battlePassLevels')
         .select('*, levels(*)')
@@ -698,7 +715,7 @@ export async function updateLevelProgressWithMissionCheck(
         .single();
 
     if (bpLevelError || !bpLevel) {
-        throw new Error('Battle pass level not found');
+        throw new Error('Pass level not found');
     }
 
     // Update level progress
@@ -727,7 +744,7 @@ export async function updateLevelProgressWithMissionCheck(
                 const bpMapPackIds = bpMapPacks.map(bpmp => bpmp.id);
 
                 // 1. Update Map Pack LEVEL Progress to 100
-                await batchUpdateMapPackLevelProgress(bpMapPackIds, bpLevel.levelID, userId, 100);
+                await batchUpdateMapPackLevelProgress(bpMapPackIds, bpLevel.levelID, userId, 100, bpLevel.seasonId);
 
                 // 2. Recalculate Map Pack Progress
                 for (const bpMapPackId of bpMapPackIds) {
@@ -840,7 +857,7 @@ export async function deleteMapPackLevelGeneral(levelId: number) {
     }
 }
 
-// ==================== Battle Pass Map Pack Functions ====================
+// ==================== Pass Map Pack Functions ====================
 
 export async function getSeasonMapPacks(seasonId: number) {
     const now = new Date();
@@ -1014,6 +1031,15 @@ export async function getPlayerMapPackProgress(battlePassMapPackId: number, user
 }
 
 export async function completeMapPackLevel(battlePassMapPackId: number, userId: string, levelId: number) {
+    // Check if XP was already claimed for this level
+    const { data: existing } = await supabase
+        .from('battlePassMapPackLevelProgress')
+        .select('progress, xpClaimed')
+        .eq('battlePassMapPackId', battlePassMapPackId)
+        .eq('levelID', levelId)
+        .eq('userID', userId)
+        .maybeSingle();
+
     // Update level progress to 100%
     const { error } = await supabase
         .from('battlePassMapPackLevelProgress')
@@ -1026,6 +1052,29 @@ export async function completeMapPackLevel(battlePassMapPackId: number, userId: 
 
     if (error) {
         throw new Error(error.message);
+    }
+
+    // Award per-level XP if not already claimed
+    if (!(existing?.xpClaimed)) {
+        try {
+            const bpMapPack = await getBattlePassMapPack(battlePassMapPackId);
+            await addXp(
+                bpMapPack.seasonId,
+                userId,
+                MAPPACK_LEVEL_XP,
+                'mappack_level',
+                battlePassMapPackId,
+                `Map pack level ${levelId} completed`
+            );
+            await supabase
+                .from('battlePassMapPackLevelProgress')
+                .update({ xpClaimed: true })
+                .eq('battlePassMapPackId', battlePassMapPackId)
+                .eq('levelID', levelId)
+                .eq('userID', userId);
+        } catch (e: any) {
+            console.error(`Failed to award map pack level XP:`, e.message);
+        }
     }
 
     return await updatePlayerMapPackProgress(battlePassMapPackId, userId);
@@ -1915,14 +1964,14 @@ export async function isMissionCompleted(userId: string, missionId: number) {
                     .eq('userid', userId)
                     .eq('levelid', condition.targetId)
                     .eq('progress', 100)
-                    .not('isChecked', 'is', null)
+                    .not('acceptedManually', 'is', null)
                     .maybeSingle();
 
                 if (!data) return false;
                 break;
             }
             case 'clear_mappack': {
-                // Check if user has cleared all levels in a battle pass map pack
+                // Check if user has cleared all levels in a Pass map pack
                 if (!condition.targetId) {
                     console.error(`Mission ${missionId}: clear_mappack condition missing targetId`);
                     return false;
@@ -1952,7 +2001,7 @@ export async function isMissionCompleted(userId: string, missionId: number) {
 
                 let completedCount = 0;
 
-                // Count completed battle pass levels
+                // Count completed Pass levels
                 for (const level of seasonLevels) {
                     const levelProgress = await getPlayerLevelProgress(level.id, userId);
                     if (levelProgress && levelProgress.progress >= 100) {
@@ -2234,13 +2283,14 @@ export async function batchUpdateMapPackLevelProgress(
     mapPackIds: number[],
     levelID: number,
     userId: string,
-    progress: number
+    progress: number,
+    seasonId?: number
 ) {
     if (mapPackIds.length === 0) return;
 
     const { data: existingRows, error: existingError } = await supabase
         .from('battlePassMapPackLevelProgress')
-        .select('battlePassMapPackId, progress')
+        .select('battlePassMapPackId, progress, xpClaimed')
         .eq('userID', userId)
         .eq('levelID', levelID)
         .in('battlePassMapPackId', mapPackIds);
@@ -2250,8 +2300,10 @@ export async function batchUpdateMapPackLevelProgress(
     }
 
     const existingMap = new Map<number, number>();
+    const existingXpClaimedMap = new Map<number, boolean>();
     (existingRows as any[] | null | undefined)?.forEach(row => {
         existingMap.set(row.battlePassMapPackId, row.progress ?? 0);
+        existingXpClaimedMap.set(row.battlePassMapPackId, row.xpClaimed ?? false);
     });
 
     const records = mapPackIds
@@ -2274,6 +2326,33 @@ export async function batchUpdateMapPackLevelProgress(
 
     if (error) {
         throw new Error(error.message);
+    }
+
+    // Award per-level XP for levels that just reached 100%
+    if (progress >= 100 && seasonId) {
+        const newlyCompletedMapPackIds = records
+            .filter(r => !(existingXpClaimedMap.get(r.battlePassMapPackId) ?? false))
+            .map(r => r.battlePassMapPackId);
+
+        for (const mapPackId of newlyCompletedMapPackIds) {
+            await addXp(
+                seasonId,
+                userId,
+                MAPPACK_LEVEL_XP,
+                'mappack_level',
+                mapPackId,
+                `Map pack level ${levelID} completed`
+            );
+        }
+
+        if (newlyCompletedMapPackIds.length > 0) {
+            await supabase
+                .from('battlePassMapPackLevelProgress')
+                .update({ xpClaimed: true })
+                .eq('userID', userId)
+                .eq('levelID', levelID)
+                .in('battlePassMapPackId', newlyCompletedMapPackIds);
+        }
     }
 }
 
@@ -2471,13 +2550,13 @@ export async function trackProgressAfterDeathCount(
             mapPackIds,
             levelIDNum,
             uid,
-            progress
+            progress,
+            season.id
         );
     } catch (error: any) {
         console.error(`Failed to update map pack level progress:`, error.message);
     }
 
-    // Always update map pack progress
     try {
         await batchUpdatePlayerMapPackProgress(mapPackIds, uid);
     } catch (error: any) {
@@ -2575,4 +2654,27 @@ export async function refreshMissionsByType(refreshType: RefreshType) {
         total: missions.length,
         missions: results
     };
+}
+
+export async function checkLevelInSeasonMappack(seasonID: number, levelID: number) {
+    const { data: mappack, error: mappackError } = await supabase
+        .from('mapPackLevels')
+        .select('mapPackId')
+        .eq('levelID', levelID)
+        .single()
+
+    if (mappackError) {
+        throw new Error(mappackError.message)
+    }
+
+    const { data, error } = await supabase
+        .from('battlePassMapPacks')
+        .select('id')
+        .match({ seasonId: seasonID, mapPackId: mappack.mapPackId })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data.length !== 0
 }

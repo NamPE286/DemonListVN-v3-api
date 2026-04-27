@@ -1,10 +1,12 @@
 import supabase from "@src/client/supabase";
-import type { Tables } from "@src/types/supabase";
+import type { Tables, TablesInsert, TablesUpdate } from "@src/types/supabase";
+import { buildFullTextSearchParams } from '@src/utils/full-text-search'
 
 export const EVENT_SELECT_STR = 'id, created_at, start, end, title, description, imgUrl, exp, redirect, minExp, isSupporterOnly, isContest, hidden, isExternal, isRanked'
 
 interface EventFilter {
     search: string;
+    searchType?: string;
     eventType: 'all' | 'contest' | 'nonContest';
     contestType: 'all' | 'ranked' | 'unranked'; // all if eventType == 'all' or 'nonContest'
     start: string;
@@ -49,7 +51,7 @@ function formatEventSubmissions(submissions: Tables<"eventRecords">[], levels: T
     return result
 }
 
-export async function insertEvent(data: Tables<"events">) {
+export async function insertEvent(data: TablesInsert<"events">) {
     const { error } = await supabase
         .from("events")
         .insert(data)
@@ -59,12 +61,12 @@ export async function insertEvent(data: Tables<"events">) {
     }
 }
 
-export async function updateEvent(id: number, data: Tables<"events">) {
-    data.id = id;
+export async function updateEvent(id: number, data: TablesUpdate<"events">) {
+    const { id: _ignoredId, titleFts: _ignoredTitleFts, ...updates } = data;
 
     const { error } = await supabase
         .from("events")
-        .update(data)
+        .update(updates)
         .eq('id', id)
 
     if (error) {
@@ -72,7 +74,7 @@ export async function updateEvent(id: number, data: Tables<"events">) {
     }
 }
 
-export async function updateEventLevel(data: Tables<"eventLevels">) {
+export async function updateEventLevel(data: TablesUpdate<"eventLevels"> & Pick<Tables<"eventLevels">, 'id'>) {
     const { error } = await supabase
         .from("eventLevels")
         .update(data)
@@ -83,7 +85,7 @@ export async function updateEventLevel(data: Tables<"eventLevels">) {
     }
 }
 
-export async function upsertEventLevel(eventID: number, data: Tables<"eventLevels">) {
+export async function upsertEventLevel(eventID: number, data: TablesInsert<"eventLevels">) {
     data.eventID = eventID;
 
     const { error } = await supabase
@@ -107,13 +109,15 @@ export async function deleteEventLevel(eventID: number, levelID: number) {
 }
 
 export async function getEvents(filter: EventFilter) {
+    const searchParams = buildFullTextSearchParams(filter.search, filter.searchType)
+
     let query = supabase
         .from('events')
         .select(EVENT_SELECT_STR)
         .eq('hidden', false)
 
-    if (filter.search) {
-        query = query.ilike('title', `%${filter.search}%`)
+    if (searchParams) {
+        query = query.textSearch('titleFts', searchParams.query, searchParams.options)
     }
 
     if (filter.eventType === 'contest') {
@@ -166,28 +170,18 @@ export async function getEvent(id: number) {
 
 export async function getOngoingEvents() {
     const cur = new Date().toISOString()
-    var { data, error } = await supabase
+    const { data, error } = await supabase
         .from('events')
         .select('*')
-        .gte('end', cur)
+        .or(`end.gte.${cur},end.is.null`)
         .eq('hidden', false)
         .order('start', { ascending: false })
+        
     if (error) {
         throw new Error(error.message)
     }
 
-    const res = data
-
-    var { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .is('end', null)
-
-    if (error) {
-        throw new Error(error.message)
-    }
-
-    return res?.concat(data!)
+    return data
 }
 
 export async function getEventProof(eventID: number, uid: string) {
@@ -350,6 +344,7 @@ export async function getEventSubmissions(eventID: number, userID: string) {
 export async function get_event_leaderboard(eventID: number, ignoreFreeze: boolean) {
     const event = await getEvent(eventID)
     const levels = await getEventLevels(eventID)
+    // @ts-ignore
     const { data, error } = await supabase
         .from("eventProofs")
         .select("userid, eventID, diff, players!inner(*, clans!id(*), eventRecords(*, eventLevels(*)))")
@@ -367,7 +362,7 @@ export async function get_event_leaderboard(eventID: number, ignoreFreeze: boole
             continue
         }
 
-        if (!i.players.eventRecords === null) {
+        if (!i.players.eventRecords) {
             i.players.eventRecords = []
         }
         // @ts-ignore
@@ -399,11 +394,11 @@ export async function get_event_leaderboard(eventID: number, ignoreFreeze: boole
     } else {
         res.sort((a, b) => {
             const x = a.eventRecords.reduce((sum, record, index) => {
-                return sum + (record && (record.accepted === null || record.accepted === true) ? levels[index].point * record.progress : 0);
+                return sum + (record && levels[index] && (record.accepted === null || record.accepted === true) ? levels[index].point * record.progress : 0);
             }, 0);
 
             const y = b.eventRecords.reduce((sum, record, index) => {
-                return sum + (record && (record.accepted === null || record.accepted === true) ? levels[index].point * record.progress : 0);
+                return sum + (record && levels[index] && (record.accepted === null || record.accepted === true) ? levels[index].point * record.progress : 0);
             }, 0);
 
             if (x == y && x != 0) {

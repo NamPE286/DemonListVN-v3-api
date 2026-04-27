@@ -1,5 +1,6 @@
 import supabase from "@src/client/supabase"
 import { FRONTEND_URL } from '@src/config/url'
+import { touchCustomListActivity } from '@src/services/custom-list.service'
 import { fetchLevelFromGD, retrieveOrCreateLevel } from '@src/services/level.service'
 import { sendNotification } from '@src/services/notification.service'
 import { sendMessageToChannel } from '@src/services/discord.service'
@@ -8,6 +9,7 @@ import { s3 } from '@src/client/s3'
 import { DiscordChannel } from "@src/const/discord-channel-const"
 import { moderateContent } from '@src/services/moderation.service'
 import logger from "@src/utils/logger"
+import { buildFullTextSearchParams } from '@src/utils/full-text-search'
 import type { Json } from '@src/types/supabase'
 
 // ---- Custom error classes for business logic errors ----
@@ -48,6 +50,7 @@ export async function getCommunityPosts(options: {
     ascending?: boolean,
     pinFirst?: boolean,
     search?: string,
+    searchType?: string,
     hidden?: boolean,
     moderationStatus?: string,
     tagId?: number,
@@ -61,9 +64,11 @@ export async function getCommunityPosts(options: {
         ascending = false,
         pinFirst = true,
         search,
+        searchType,
         hidden,
         moderationStatus
     } = options
+    const searchParams = buildFullTextSearchParams(search, searchType)
 
     // Pre-filter: get post IDs that have the matching tag
     let tagFilteredIds: number[] | null = null
@@ -117,8 +122,8 @@ export async function getCommunityPosts(options: {
     }
 
     // Full-text search using the fts column
-    if (search) {
-        query = query.textSearch('fts', search, { type: 'websearch' })
+    if (searchParams) {
+        query = query.textSearch('fts', searchParams.query, searchParams.options)
     }
 
     if (pinFirst) {
@@ -142,7 +147,9 @@ export async function getCommunityPosts(options: {
     return data
 }
 
-export async function getCommunityPostsCount(type?: string, search?: string, hidden?: boolean, moderationStatus?: string, tagId?: number, clanId?: number | null) {
+export async function getCommunityPostsCount(type?: string, search?: string, hidden?: boolean, moderationStatus?: string, tagId?: number, clanId?: number | null, searchType?: string) {
+    const searchParams = buildFullTextSearchParams(search, searchType)
+
     // Pre-filter: get post IDs that have the matching tag
     let tagFilteredIds: number[] | null = null
     if (tagId) {
@@ -190,8 +197,8 @@ export async function getCommunityPostsCount(type?: string, search?: string, hid
         }
     }
 
-    if (search) {
-        query = query.textSearch('fts', search, { type: 'websearch' })
+    if (searchParams) {
+        query = query.textSearch('fts', searchParams.query, searchParams.options)
     }
 
     const { count, error } = await query
@@ -199,7 +206,7 @@ export async function getCommunityPostsCount(type?: string, search?: string, hid
     if (error) {
         // If the error is about the clanId column not existing yet (pre-migration), retry without it
         if (clanId !== undefined && (error.message?.includes('clanId') || error.message?.includes('does not exist'))) {
-            return getCommunityPostsCount(type, search, hidden, moderationStatus, tagId)
+            return getCommunityPostsCount(type, search, hidden, moderationStatus, tagId, undefined, searchType)
         }
         throw new Error(error.message)
     }
@@ -258,6 +265,7 @@ export async function createCommunityPost(post: {
     type: string,
     imageUrl?: string,
     videoUrl?: string,
+    attachedList?: any,
     attachedRecord?: any,
     attachedLevel?: any,
     isRecommended?: boolean,
@@ -305,6 +313,7 @@ export async function updateCommunityPost(id: number, updates: {
     imageUrl?: string,
     videoUrl?: string,
     pinned?: boolean,
+    attachedList?: any,
     attachedRecord?: any,
     attachedLevel?: any,
     isRecommended?: boolean,
@@ -639,7 +648,7 @@ export async function getUserRecordsForPicker(uid: string) {
         .from('records')
         .select('levelid, progress, videoLink, mobile, dlPt, flPt, plPt, clPt, levels!public_records_levelid_fkey!inner(id, name, creator, difficulty, isPlatformer)')
         .eq('userid', uid)
-        .eq('isChecked', true)
+        .eq('acceptedManually', true)
         .order('timestamp', { ascending: false })
         .limit(100)
 
@@ -647,14 +656,16 @@ export async function getUserRecordsForPicker(uid: string) {
     return data || []
 }
 
-export async function getLevelsForPicker(search?: string, limit = 20) {
+export async function getLevelsForPicker(search?: string, limit = 20, searchType?: string) {
+    const searchParams = buildFullTextSearchParams(search, searchType)
+
     let query = supabase
         .from('levels')
         .select('id, name, creator, difficulty, isPlatformer, rating')
         .eq('accepted', true)
 
-    if (search) {
-        query = query.ilike('name', `%${search}%`)
+    if (searchParams) {
+        query = query.textSearch('nameFts', searchParams.query, searchParams.options)
     }
 
     query = query.order('dlTop', { ascending: true }).limit(limit)
@@ -664,11 +675,17 @@ export async function getLevelsForPicker(search?: string, limit = 20) {
     return data || []
 }
 
-export async function searchPlayers(query: string, limit = 10) {
+export async function searchPlayers(query: string, limit = 10, searchType?: string) {
+    const searchParams = buildFullTextSearchParams(query, searchType)
+
+    if (!searchParams) {
+        return []
+    }
+
     const { data, error } = await supabase
         .from('players')
         .select('*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)')
-        .ilike('name', `%${query}%`)
+        .textSearch('nameFts', searchParams.query, searchParams.options)
         .limit(limit)
 
     if (error) throw new Error(error.message)
@@ -691,11 +708,42 @@ export async function getPostsByLevel(levelId: number, limit = 5) {
     return data || []
 }
 
+export async function getPostsByList(listId: number, limit = 5) {
+    const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
+
+    const { data: list, error: listError } = await supabase
+        .from('lists')
+        .select('visibility, communityEnabled')
+        .eq('id', listId)
+        .maybeSingle()
+
+    if (listError) {
+        throw new Error(listError.message)
+    }
+
+    if (!list || list.visibility === 'private' || list.communityEnabled === false) {
+        return []
+    }
+
+    const { data, error } = await supabase
+        .from('communityPosts')
+        .select(`*, players!uid(${playerSelect}), communityPostsAdmin!inner(moderationStatus, hidden)`)
+        .eq('communityPostsAdmin.hidden', false)
+        .eq('communityPostsAdmin.moderationStatus', 'approved')
+        .or(`attachedList->>id.eq.${listId}`)
+        .order('createdAt', { ascending: false })
+        .limit(limit)
+
+    if (error) throw new Error(error.message)
+    return data || []
+}
+
 /** Admin: get all comments with filtering (like getCommunityPosts but for comments) */
 export async function getAdminComments(options: {
     limit?: number,
     offset?: number,
     search?: string,
+    searchType?: string,
     hidden?: boolean,
     moderationStatus?: string,
     postId?: number
@@ -704,9 +752,11 @@ export async function getAdminComments(options: {
         limit = 50,
         offset = 0,
         search,
+        searchType,
         hidden,
         moderationStatus
     } = options
+    const searchParams = buildFullTextSearchParams(search, searchType)
 
     const playerSelect = '*, clans!id(tag, tagBgColor, tagTextColor, boostedUntil)'
 
@@ -732,8 +782,8 @@ export async function getAdminComments(options: {
     }
 
     // Search in comment content
-    if (search) {
-        query = query.ilike('content', `%${search}%`)
+    if (searchParams) {
+        query = query.textSearch('fts', searchParams.query, searchParams.options)
     }
 
     query = query
@@ -749,11 +799,13 @@ export async function getAdminComments(options: {
 /** Admin: get count of all comments with filtering */
 export async function getAdminCommentsCount(options: {
     search?: string,
+    searchType?: string,
     hidden?: boolean,
     moderationStatus?: string,
     postId?: number
 }) {
-    const { search, hidden, moderationStatus } = options
+    const { search, searchType, hidden, moderationStatus } = options
+    const searchParams = buildFullTextSearchParams(search, searchType)
 
     let query = supabase
         .from('communityComments')
@@ -773,8 +825,8 @@ export async function getAdminCommentsCount(options: {
         query = query.eq('postId', options.postId)
     }
 
-    if (search) {
-        query = query.ilike('content', `%${search}%`)
+    if (searchParams) {
+        query = query.textSearch('fts', searchParams.query, searchParams.options)
     }
 
     const { count, error } = await query
@@ -818,6 +870,7 @@ export async function getPostsWithLikeStatus(
         sortBy?: string,
         ascending?: boolean,
         search?: string,
+        searchType?: string,
         pinFirst?: boolean,
         hidden?: boolean,
         tagId?: number,
@@ -827,7 +880,7 @@ export async function getPostsWithLikeStatus(
 ) {
     const [posts, total] = await Promise.all([
         getCommunityPosts(options),
-        getCommunityPostsCount(options.type, options.search, options.hidden, undefined, options.tagId, options.clanId)
+        getCommunityPostsCount(options.type, options.search, options.hidden, undefined, options.tagId, options.clanId, options.searchType)
     ])
 
     let userLikedPostIds: number[] = []
@@ -871,6 +924,7 @@ export async function createPostFull(params: {
     type?: string,
     imageUrl?: string,
     videoUrl?: string,
+    attachedList?: any,
     attachedRecord?: any,
     attachedLevel?: any,
     isRecommended?: boolean,
@@ -878,7 +932,7 @@ export async function createPostFull(params: {
     maxParticipants?: number | null,
     clanId?: number | null
 }) {
-    const { uid, isAdmin, title, content, type, imageUrl, videoUrl, attachedRecord, attachedLevel, isRecommended, maxParticipants, clanId } = params
+    const { uid, isAdmin, title, content, type, imageUrl, videoUrl, attachedList, attachedRecord, attachedLevel, isRecommended, maxParticipants, clanId } = params
 
     if (!title) {
         throw new ValidationError('Title is required')
@@ -938,6 +992,38 @@ export async function createPostFull(params: {
         }
     }
 
+    let sanitizedAttachedList = attachedList || undefined
+
+    if (attachedList && attachedList.id) {
+        const { data: list, error: listError } = await supabase
+            .from('lists')
+            .select('id, title, owner, visibility, communityEnabled, isPlatformer, levelCount, mode, ownerData:players!lists_owner_fkey(name)')
+            .eq('id', attachedList.id)
+            .single()
+
+        if (listError || !list) {
+            throw new ValidationError('Attached list was not found')
+        }
+
+        if (list.visibility === 'private') {
+            throw new ValidationError('Private lists cannot be attached to community posts')
+        }
+
+        if (list.communityEnabled === false) {
+            throw new ValidationError('Community posts are disabled for this list')
+        }
+
+        sanitizedAttachedList = {
+            id: list.id,
+            title: list.title,
+            owner: list.owner,
+            ownerName: list.ownerData?.name || null,
+            isPlatformer: list.isPlatformer,
+            levelCount: list.levelCount,
+            mode: list.mode
+        }
+    }
+
     // Run OpenAI moderation check on title + content + image (single API call)
     // Clan posts are auto-approved (moderation skipped)
     let moderationStatus = 'approved'
@@ -965,6 +1051,7 @@ export async function createPostFull(params: {
         type: postType,
         imageUrl,
         videoUrl,
+        attachedList: sanitizedAttachedList,
         attachedRecord: attachedRecord || undefined,
         attachedLevel: attachedLevel || undefined,
         isRecommended: postType === 'review' ? isRecommended : undefined,
@@ -985,6 +1072,10 @@ export async function createPostFull(params: {
     // Apply user tags if provided
     if (params.tagIds && params.tagIds.length > 0) {
         await setPostTags(post.id, params.tagIds, false)
+    }
+
+    if (sanitizedAttachedList?.id) {
+        await touchCustomListActivity(sanitizedAttachedList.id)
     }
 
     // If post is pending moderation, return early (don't send notifications/Discord)
@@ -1372,6 +1463,21 @@ export async function getPostsByUserWithLikeStatus(uid: string, limit: number, o
 /** Get posts by level enriched with user like status */
 export async function getPostsByLevelWithLikeStatus(levelId: number, limit: number, userId?: string) {
     const posts = await getPostsByLevel(levelId, limit)
+
+    let userLikedPostIds: number[] = []
+    if (userId) {
+        const postIds = posts.map((p: any) => p.id)
+        userLikedPostIds = await getUserLikes(userId, postIds)
+    }
+
+    return posts.map((p: any) => ({
+        ...p,
+        liked: userLikedPostIds.includes(p.id)
+    }))
+}
+
+export async function getPostsByListWithLikeStatus(listId: number, limit: number, userId?: string) {
+    const posts = await getPostsByList(listId, limit)
 
     let userLikedPostIds: number[] = []
     if (userId) {

@@ -4,6 +4,30 @@ import { addChangelog } from '@src/services/changelog.service'
 import { refreshDailyLevelProgress, refreshWeeklyLevelProgress, getActiveseason, getSeasonLevelByType, addSeasonLevel, updateSeasonLevel } from '@src/services/battlepass.service'
 import type { TLevel } from "@src/types"
 import type { TablesInsert } from "@src/types/supabase"
+import { buildFullTextSearchParams } from '@src/utils/full-text-search'
+
+export async function fetchLevels(list: string) {
+    let query = supabase
+        .from('levels')
+        .select('*, levelsTags(levelTags(*))')
+        .not(list === 'fl' ? 'flTop' : 'dlTop', 'is', null)
+        .order('created_at', { ascending: false })
+        .range(0, 9)
+
+    if (list === 'cl') {
+        query = query.eq('isChallenge', true)
+    } else if (list === 'pl') {
+        query = query.eq('isPlatformer', true).eq('isChallenge', false)
+    } else if (list === 'dl') {
+        query = query.eq('isPlatformer', false).eq('isChallenge', false)
+    }
+
+    const { data, error } = await query
+
+    if (error) return []
+
+    return data
+}
 
 function convertToIDArray(levels: TLevel[]) {
     let res: number[] = []
@@ -15,10 +39,13 @@ function convertToIDArray(levels: TLevel[]) {
     return res
 }
 
-export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '' } = {}) {
+export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '', searchType }: { start?: number, end?: number, sortBy?: string, ascending?: boolean | string, uid?: string, topStart?: number | string | null, topEnd?: number | string | null, ratingMin?: number | string | null, ratingMax?: number | string | null, nameSearch?: string, creatorSearch?: string, tagIds?: string, searchType?: string } = {}) {
     if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
+
+    const nameSearchParams = buildFullTextSearchParams(nameSearch, searchType)
+    const creatorSearchParams = buildFullTextSearchParams(creatorSearch, searchType)
 
     // Pre-filter: get level IDs that have matching tags
     let tagFilteredIds: number[] | null = null
@@ -26,7 +53,7 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
         const ids = tagIds.split(',').map(Number).filter(Boolean)
         if (ids.length > 0) {
             const { data: tagRows, error: tagError } = await (supabase as any)
-                .from('levels_tags')
+                .from('levelsTags')
                 .select('level_id')
                 .in('tag_id', ids)
             if (tagError) throw tagError
@@ -37,7 +64,7 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
+        .select('*, creatorData:players!creatorId(*, clans!id(*)), levelsTags(tag_id, levelTags(id, name, color))')
         .not('dlTop', 'is', null)
         .eq('isPlatformer', false)
         .eq('isChallenge', false)
@@ -56,11 +83,11 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
     if (ratingMax !== null && ratingMax !== '') {
         query = query.lte('rating', ratingMax)
     }
-    if (nameSearch && nameSearch.trim() !== '') {
-        query = query.ilike('name', `%${nameSearch}%`)
+    if (nameSearchParams) {
+        query = query.textSearch('nameFts', nameSearchParams.query, nameSearchParams.options)
     }
-    if (creatorSearch && creatorSearch.trim() !== '') {
-        query = query.ilike('creator', `%${creatorSearch}%`)
+    if (creatorSearchParams) {
+        query = query.textSearch('creatorFts', creatorSearchParams.query, creatorSearchParams.options)
     }
 
     // Filter by tag IDs: only include levels that have at least one matching tag
@@ -88,7 +115,7 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
 
     var b = await supabase
         .from('records')
-        .select('levelid, userid, progress, isChecked')
+        .select('levelid, userid, progress, acceptedManually, acceptedAuto')
         .eq('userid', uid)
         .in('levelid', IDs)
 
@@ -96,11 +123,14 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
         throw b.error
     }
 
-    const mp = new Map<number, typeof b.data[0]>
+    const mp = new Map<number, (typeof b.data)[number] & { isChecked: boolean }>
     const res = []
 
     for (const i of b.data) {
-        mp.set(i.levelid, i)
+        mp.set(i.levelid, {
+            ...i,
+            isChecked: Boolean((i as any).acceptedManually) || Boolean((i as any).acceptedAuto)
+        })
     }
 
     for (const i of a.data) {
@@ -116,10 +146,13 @@ export async function getDemonListLevels({ start = 0, end = 50, sortBy = 'dlTop'
     return res
 }
 
-export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '' } = {}) {
+export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '', searchType }: { start?: number, end?: number, sortBy?: string, ascending?: boolean | string, uid?: string, topStart?: number | string | null, topEnd?: number | string | null, ratingMin?: number | string | null, ratingMax?: number | string | null, nameSearch?: string, creatorSearch?: string, tagIds?: string, searchType?: string } = {}) {
     if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
+
+    const nameSearchParams = buildFullTextSearchParams(nameSearch, searchType)
+    const creatorSearchParams = buildFullTextSearchParams(creatorSearch, searchType)
 
     // Pre-filter: get level IDs that have matching tags
     let tagFilteredIds: number[] | null = null
@@ -127,7 +160,7 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
         const ids = tagIds.split(',').map(Number).filter(Boolean)
         if (ids.length > 0) {
             const { data: tagRows, error: tagError } = await (supabase as any)
-                .from('levels_tags')
+                .from('levelsTags')
                 .select('level_id')
                 .in('tag_id', ids)
             if (tagError) throw tagError
@@ -138,7 +171,7 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
+        .select('*, creatorData:players!creatorId(*, clans!id(*)), levelsTags(tag_id, levelTags(id, name, color))')
         .not('dlTop', 'is', null)
         .eq('isPlatformer', true)
         .eq('isChallenge', false)
@@ -157,11 +190,11 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
     if (ratingMax !== null && ratingMax !== '') {
         query = query.lte('rating', ratingMax)
     }
-    if (nameSearch && nameSearch.trim() !== '') {
-        query = query.ilike('name', `%${nameSearch}%`)
+    if (nameSearchParams) {
+        query = query.textSearch('nameFts', nameSearchParams.query, nameSearchParams.options)
     }
-    if (creatorSearch && creatorSearch.trim() !== '') {
-        query = query.ilike('creator', `%${creatorSearch}%`)
+    if (creatorSearchParams) {
+        query = query.textSearch('creatorFts', creatorSearchParams.query, creatorSearchParams.options)
     }
 
     // Filter by tag IDs: only include levels that have at least one matching tag
@@ -189,7 +222,7 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
 
     var b = await supabase
         .from('records')
-        .select('levelid, userid, progress, isChecked')
+        .select('levelid, userid, progress, acceptedManually, acceptedAuto')
         .eq('userid', uid)
         .in('levelid', IDs)
 
@@ -197,11 +230,14 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
         throw b.error
     }
 
-    const mp = new Map<number, typeof b.data[0]>
+    const mp = new Map<number, (typeof b.data)[number] & { isChecked: boolean }>
     const res = []
 
     for (const i of b.data) {
-        mp.set(i.levelid, i)
+        mp.set(i.levelid, {
+            ...i,
+            isChecked: Boolean((i as any).acceptedManually) || Boolean((i as any).acceptedAuto)
+        })
     }
 
     for (const i of a.data) {
@@ -217,10 +253,13 @@ export async function getPlatformerListLevels({ start = 0, end = 50, sortBy = 'd
     return res
 }
 
-export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '' } = {}) {
+export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '', searchType }: { start?: number, end?: number, sortBy?: string, ascending?: boolean | string, uid?: string, topStart?: number | string | null, topEnd?: number | string | null, ratingMin?: number | string | null, ratingMax?: number | string | null, nameSearch?: string, creatorSearch?: string, tagIds?: string, searchType?: string } = {}) {
     if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
+
+    const nameSearchParams = buildFullTextSearchParams(nameSearch, searchType)
+    const creatorSearchParams = buildFullTextSearchParams(creatorSearch, searchType)
 
     // Pre-filter: get level IDs that have matching tags
     let tagFilteredIds: number[] | null = null
@@ -228,7 +267,7 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
         const ids = tagIds.split(',').map(Number).filter(Boolean)
         if (ids.length > 0) {
             const { data: tagRows, error: tagError } = await (supabase as any)
-                .from('levels_tags')
+                .from('levelsTags')
                 .select('level_id')
                 .in('tag_id', ids)
             if (tagError) throw tagError
@@ -239,7 +278,7 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
+        .select('*, creatorData:players!creatorId(*, clans!id(*)), levelsTags(tag_id, levelTags(id, name, color))')
         .not('flTop', 'is', null)
         .eq('isNonList', false)
 
@@ -256,11 +295,11 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
     if (ratingMax !== null && ratingMax !== '') {
         query = query.lte('flPt', ratingMax)
     }
-    if (nameSearch && nameSearch.trim() !== '') {
-        query = query.ilike('name', `%${nameSearch}%`)
+    if (nameSearchParams) {
+        query = query.textSearch('nameFts', nameSearchParams.query, nameSearchParams.options)
     }
-    if (creatorSearch && creatorSearch.trim() !== '') {
-        query = query.ilike('creator', `%${creatorSearch}%`)
+    if (creatorSearchParams) {
+        query = query.textSearch('creatorFts', creatorSearchParams.query, creatorSearchParams.options)
     }
 
     // Filter by tag IDs: only include levels that have at least one matching tag
@@ -288,20 +327,23 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
 
     var b = await supabase
         .from('records')
-        .select('levelid, userid, progress, isChecked')
+        .select('levelid, userid, progress, acceptedManually, acceptedAuto')
         .eq('userid', uid)
-        .eq('isChecked', true)
+        .eq('acceptedManually', true)
         .in('levelid', IDs)
 
     if (b.error || !b.data) {
         throw b.error
     }
 
-    const mp = new Map<number, typeof b.data[0]>
+    const mp = new Map<number, (typeof b.data)[number] & { isChecked: boolean }>
     const res = []
 
     for (const i of b.data) {
-        mp.set(i.levelid, i)
+        mp.set(i.levelid, {
+            ...i,
+            isChecked: Boolean((i as any).acceptedManually) || Boolean((i as any).acceptedAuto)
+        })
     }
 
     for (const i of a.data) {
@@ -317,10 +359,13 @@ export async function getFeaturedListLevels({ start = 0, end = 50, sortBy = 'flT
     return res
 }
 
-export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '' } = {}) {
+export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dlTop', ascending = true, uid = '', topStart = null, topEnd = null, ratingMin = null, ratingMax = null, nameSearch = '', creatorSearch = '', tagIds = '', searchType }: { start?: number, end?: number, sortBy?: string, ascending?: boolean | string, uid?: string, topStart?: number | string | null, topEnd?: number | string | null, ratingMin?: number | string | null, ratingMax?: number | string | null, nameSearch?: string, creatorSearch?: string, tagIds?: string, searchType?: string } = {}) {
     if (typeof ascending == 'string') {
         ascending = (ascending == 'true')
     }
+
+    const nameSearchParams = buildFullTextSearchParams(nameSearch, searchType)
+    const creatorSearchParams = buildFullTextSearchParams(creatorSearch, searchType)
 
     // Pre-filter: get level IDs that have matching tags
     let tagFilteredIds: number[] | null = null
@@ -328,7 +373,7 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
         const ids = tagIds.split(',').map(Number).filter(Boolean)
         if (ids.length > 0) {
             const { data: tagRows, error: tagError } = await (supabase as any)
-                .from('levels_tags')
+                .from('levelsTags')
                 .select('level_id')
                 .in('tag_id', ids)
             if (tagError) throw tagError
@@ -339,7 +384,7 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
 
     let query = supabase
         .from('levels')
-        .select('*, creatorData:players!creatorId(*, clans!id(*)), levels_tags(tag_id, level_tags(id, name, color))')
+        .select('*, creatorData:players!creatorId(*, clans!id(*)), levelsTags(tag_id, levelTags(id, name, color))')
         .not('dlTop', 'is', null)
         .eq('isChallenge', true)
         .eq('isNonList', false)
@@ -357,11 +402,11 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
     if (ratingMax !== null && ratingMax !== '') {
         query = query.lte('rating', ratingMax)
     }
-    if (nameSearch && nameSearch.trim() !== '') {
-        query = query.ilike('name', `%${nameSearch}%`)
+    if (nameSearchParams) {
+        query = query.textSearch('nameFts', nameSearchParams.query, nameSearchParams.options)
     }
-    if (creatorSearch && creatorSearch.trim() !== '') {
-        query = query.ilike('creator', `%${creatorSearch}%`)
+    if (creatorSearchParams) {
+        query = query.textSearch('creatorFts', creatorSearchParams.query, creatorSearchParams.options)
     }
 
     // Filter by tag IDs: only include levels that have at least one matching tag
@@ -389,7 +434,7 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
 
     var b = await supabase
         .from('records')
-        .select('levelid, userid, progress, isChecked')
+        .select('levelid, userid, progress, acceptedManually, acceptedAuto')
         .eq('userid', uid)
         .in('levelid', IDs)
 
@@ -397,11 +442,14 @@ export async function getChallengeListLevels({ start = 0, end = 50, sortBy = 'dl
         throw b.error
     }
 
-    const mp = new Map<number, typeof b.data[0]>
+    const mp = new Map<number, (typeof b.data)[number] & { isChecked: boolean }>
     const res = []
 
     for (const i of b.data) {
-        mp.set(i.levelid, i)
+        mp.set(i.levelid, {
+            ...i,
+            isChecked: Boolean((i as any).acceptedManually) || Boolean((i as any).acceptedAuto)
+        })
     }
 
     for (const i of a.data) {
@@ -431,6 +479,20 @@ export async function getLevel(levelId: number) {
     return data
 }
 
+export async function getLevelMaybe(levelId: number) {
+    const { data, error } = await supabase
+        .from('levels')
+        .select('*, creatorData:players!creatorId(*, clans!id(*))')
+        .eq('id', levelId)
+        .maybeSingle()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data || null
+}
+
 export async function fetchLevelFromGD(levelId: number) {
     // Use our custom GD API service
     return await getGJLevels21(levelId);
@@ -449,8 +511,6 @@ export async function updateLevel(levelData: Awaited<ReturnType<typeof getLevel>
     let { error } = await supabase
         .from('levels')
         .upsert(upsertData as any)
-
-    await supabase.rpc('update_list')
 
     if (error) {
         throw new Error(error.message)
@@ -496,6 +556,87 @@ export async function retrieveOrCreateLevel(payload: TablesInsert<'levels'>): Pr
     }
 
     return ins.data!
+}
+
+function buildCrawledLevelPayload(gdLevel: Awaited<ReturnType<typeof fetchLevelFromGD>>): TablesInsert<'levels'> {
+    return {
+        id: gdLevel.id,
+        name: gdLevel.name,
+        creator: gdLevel.author,
+        difficulty: gdLevel.difficulty ?? null,
+        isPlatformer: gdLevel.length === 5,
+        isChallenge: false,
+        isNonList: false
+    } as TablesInsert<'levels'>
+}
+
+async function upsertCrawledLevel(payload: TablesInsert<'levels'>) {
+    const { error } = await supabase
+        .from('levels')
+        .upsert(payload as any)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return await getLevel(payload.id!)
+}
+
+export async function crawlLevel(levelId: number, options: {
+    forced?: boolean
+} = {}) {
+    const forced = Boolean(options.forced)
+
+    if (!forced) {
+        const existingLevel = await getLevelMaybe(levelId)
+
+        if (existingLevel) {
+            return {
+                level: existingLevel,
+                status: 'skipped' as const
+            }
+        }
+    }
+
+    const gdLevel = await fetchLevelFromGD(levelId)
+    const level = forced
+        ? await upsertCrawledLevel(buildCrawledLevelPayload(gdLevel))
+        : await retrieveOrCreateLevel(buildCrawledLevelPayload(gdLevel))
+
+    return {
+        level,
+        status: 'crawled' as const
+    }
+}
+
+export async function crawlLevels(levelIds: number[], options: {
+    forced?: boolean
+} = {}) {
+    const results: Array<{
+        id: number
+        status: 'skipped' | 'crawled' | 'not_found'
+        level?: TLevel
+        error?: string
+    }> = []
+
+    for (const levelId of levelIds) {
+        try {
+            const result = await crawlLevel(levelId, options)
+            results.push({
+                id: levelId,
+                status: result.status,
+                level: result.level
+            })
+        } catch (error) {
+            results.push({
+                id: levelId,
+                status: 'not_found',
+                error: error instanceof Error ? error.message : 'Failed to crawl level'
+            })
+        }
+    }
+
+    return results
 }
 
 export async function refreshLevel() {
@@ -594,7 +735,7 @@ export async function refreshLevel() {
 /** Get all level tags */
 export async function getLevelTags() {
     const { data, error } = await supabase
-        .from('level_tags')
+        .from('levelTags')
         .select('*')
         .order('name', { ascending: true })
 
@@ -605,7 +746,7 @@ export async function getLevelTags() {
 /** Create a new level tag (admin only) */
 export async function createLevelTag(tag: { name: string, color?: string }) {
     const { data, error } = await (supabase as any)
-        .from('level_tags')
+        .from('levelTags')
         .insert(tag)
         .select('*')
         .single()
@@ -619,9 +760,9 @@ export async function createLevelTag(tag: { name: string, color?: string }) {
 
 /** Delete a level tag and all its associations (admin only) */
 export async function deleteLevelTag(tagId: number) {
-    // CASCADE will remove from levels_tags automatically
+    // CASCADE will remove from levelsTags automatically
     const { error } = await (supabase as any)
-        .from('level_tags')
+        .from('levelTags')
         .delete()
         .eq('id', tagId)
 
@@ -631,7 +772,7 @@ export async function deleteLevelTag(tagId: number) {
 /** Update a level tag's name and/or color (admin only) */
 export async function updateLevelTag(tagId: number, updates: { name?: string, color?: string }) {
     const { data, error } = await (supabase as any)
-        .from('level_tags')
+        .from('levelTags')
         .update(updates)
         .eq('id', tagId)
         .select('*')
@@ -650,7 +791,7 @@ export async function setLevelTags(levelId: number, tagIds: number[]) {
 
     // Remove existing tags
     await db
-        .from('levels_tags')
+        .from('levelsTags')
         .delete()
         .eq('level_id', levelId)
 
@@ -658,7 +799,7 @@ export async function setLevelTags(levelId: number, tagIds: number[]) {
     if (tagIds.length > 0) {
         const rows = tagIds.map((tag_id: number) => ({ level_id: levelId, tag_id }))
         const { error } = await db
-            .from('levels_tags')
+            .from('levelsTags')
             .insert(rows)
 
         if (error) throw new Error(error.message)
@@ -666,8 +807,8 @@ export async function setLevelTags(levelId: number, tagIds: number[]) {
 
     // Return updated tags
     const { data, error } = await db
-        .from('levels_tags')
-        .select('tag_id, level_tags(id, name, color)')
+        .from('levelsTags')
+        .select('tag_id, levelTags(id, name, color)')
         .eq('level_id', levelId)
 
     if (error) throw new Error(error.message)
@@ -677,8 +818,8 @@ export async function setLevelTags(levelId: number, tagIds: number[]) {
 /** Get tags for a level */
 export async function getLevelTagsForLevel(levelId: number) {
     const { data, error } = await (supabase as any)
-        .from('levels_tags')
-        .select('tag_id, level_tags(id, name, color)')
+        .from('levelsTags')
+        .select('tag_id, levelTags(id, name, color)')
         .eq('level_id', levelId)
 
     if (error) throw new Error(error.message)

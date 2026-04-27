@@ -72,7 +72,12 @@ router.route('/:a/:b')
             return
         }
 
-        await supabase.rpc('update_rank')
+        const { error: queueError } = await (supabase as any).rpc('calculate_record_queue_no')
+
+        if (queueError) {
+            res.status(500).send(queueError)
+            return
+        }
 
         res.send()
     })

@@ -1,7 +1,9 @@
 import { addOrderItems, getOrder, getOrders } from '@src/services/store.service';
+import { createRecordCard } from '@src/services/card.service';
 import userAuth from '@src/middleware/user-auth.middleware'
 import express from 'express'
 import { sepay } from '@src/client/sepay';
+import supabase from '@src/client/supabase';
 
 const router = express.Router()
 
@@ -145,6 +147,225 @@ router.route('/:id')
         } catch (err) {
             console.error(err)
             res.status(500).send()
+        }
+    })
+
+router.route('/:id/record-card')
+    /**
+     * @openapi
+     * "/orders/{id}/record-card":
+     *   post:
+     *     tags:
+     *       - Orders
+     *     summary: Create a record card for an existing order
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The order ID
+     *         required: true
+     *         schema:
+     *           type: integer
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+ *               - levelID
+ *               - template
+ *               - material
+     *             properties:
+     *               levelID:
+     *                 type: integer
+     *                 description: Level ID for the record card
+     *               template:
+     *                 type: integer
+     *                 description: Template ID
+     *               material:
+     *                 type: string
+     *                 enum: [paper, plastic]
+     *     responses:
+     *       200:
+     *         description: Record card created successfully
+     *         content:
+     *           application/json:
+     *             schema:
+     *               properties:
+     *                 cardID:
+     *                   type: string
+     *       400:
+     *         description: Missing required fields or invalid material
+     *       401:
+     *         description: Unauthorized - order doesn't belong to user
+     *       404:
+     *         description: Record not found or not accepted
+     */
+    .post(userAuth, async (req, res) => {
+        const { id } = req.params
+        const { user } = res.locals
+        const { levelID, template, material } = req.body as {
+            levelID: number
+            template: number
+            material: 'paper' | 'plastic'
+        }
+
+        if (levelID == null || template == null || !material) {
+            res.status(400).send({ message: 'Missing required fields' })
+            return
+        }
+
+        if (!['paper', 'plastic'].includes(material)) {
+            res.status(400).send({ message: 'Invalid material' })
+            return
+        }
+
+        try {
+            const order = await getOrder(parseInt(id))
+
+            if (order.userID !== user.uid) {
+                res.status(401).send()
+                return
+            }
+
+            const { data: record, error: recordError } = await supabase
+                .from('records')
+                .select('userid, acceptedManually')
+                .eq('levelid', levelID)
+                .eq('userid', user.uid!)
+                .eq('acceptedManually', true)
+                .single()
+
+            if (recordError || !record) {
+                res.status(404).send({ message: 'Record not found or not accepted' })
+                return
+            }
+
+            const cardID = await createRecordCard(parseInt(id), user.uid!, levelID, template, material)
+            res.send({ cardID })
+        } catch (err) {
+            console.error(err)
+            res.status(400).send({
+                // @ts-ignore
+                message: err.message
+            })
+        }
+    })
+
+const PAPER_CARD_PRODUCT_ID = 8
+const PLASTIC_CARD_PRODUCT_ID = 9
+
+router.route('/record-card')
+    /**
+     * @openapi
+     * "/orders/record-card":
+     *   post:
+     *     tags:
+     *       - Orders
+     *     summary: Create a record card with a new order
+     *     security:
+     *       - bearerAuth: []
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+ *               - levelID
+ *               - template
+ *               - material
+ *               - address
+ *               - phone
+ *               - recipientName
+     *             properties:
+     *               levelID:
+     *                 type: integer
+     *               template:
+     *                 type: integer
+     *               material:
+     *                 type: string
+     *                 enum: [paper, plastic]
+     *               address:
+     *                 type: string
+     *               phone:
+     *                 type: string
+     *               recipientName:
+     *                 type: string
+     *     responses:
+     *       200:
+     *         description: Order and record card created successfully
+     *         content:
+     *           application/json:
+     *             schema:
+     *               properties:
+     *                 orderID:
+     *                   type: integer
+     *                 cardID:
+     *                   type: string
+     *       400:
+     *         description: Missing required fields or invalid material
+     *       404:
+     *         description: Record not found or not accepted
+     */
+    .post(userAuth, async (req, res) => {
+        const { user } = res.locals
+        const { levelID, template, material, address, phone, recipientName } = req.body as {
+            levelID: number
+            template: number
+            material: 'paper' | 'plastic'
+            address: string
+            phone: number
+            recipientName: string
+        }
+
+        if (levelID == null || template == null || !material || !address || phone == null || !recipientName) {
+            res.status(400).send({ message: 'Missing required fields' })
+            return
+        }
+
+        if (!['paper', 'plastic'].includes(material)) {
+            res.status(400).send({ message: 'Invalid material' })
+            return
+        }
+
+        const { data: record, error: recordError } = await supabase
+            .from('records')
+            .select('userid, acceptedManually')
+            .eq('levelid', levelID)
+            .eq('userid', user.uid!)
+            .eq('acceptedManually', true)
+            .single()
+
+        if (recordError || !record) {
+            res.status(404).send({ message: 'Record not found or not accepted' })
+            return
+        }
+
+        const productID = material === 'paper' ? PAPER_CARD_PRODUCT_ID : PLASTIC_CARD_PRODUCT_ID
+
+        try {
+            const orderID = await addOrderItems(
+                user,
+                recipientName,
+                [{ productID, quantity: 1, orderID: 0 }],
+                address,
+                phone,
+                'COD',
+                true
+            )
+
+            const cardID = await createRecordCard(orderID, user.uid!, levelID, template, material)
+
+            res.send({ orderID, cardID })
+        } catch (err) {
+            console.error(err)
+            res.status(400).send({
+                // @ts-ignore
+                message: err.message
+            })
         }
     })
 

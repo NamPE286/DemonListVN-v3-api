@@ -1,5 +1,6 @@
-import { getCard, linkCard, updateCardContent } from '@src/services/card.service'
+import { getCard, linkCard, updateCardContent, activateCard, updateRecordCardImg, updateRecordCardAvatar } from '@src/services/card.service'
 import userAuth from '@src/middleware/user-auth.middleware'
+import managerAuth from '@src/middleware/manager-auth.middleware'
 import express from 'express'
 
 const router = express.Router()
@@ -78,6 +79,43 @@ router.route("/:id/link")
         res.send()
     })
 
+router.route("/:id/activate")
+    /**
+     * @openapi
+     * "/card/{id}/activate":
+     *   patch:
+     *     tags:
+     *       - Card
+     *     summary: Activate a card
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The ID of the card
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Card activated successfully
+     *       403:
+     *         description: Forbidden
+     *       500:
+     *         description: Internal server error
+     */
+    .patch(managerAuth, async (req, res) => {
+        const { id } = req.params
+
+        try {
+            await activateCard(id)
+            res.send()
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
 router.route("/:id/content")
     /**
      * @openapi
@@ -122,6 +160,104 @@ router.route("/:id/content")
         }
 
         res.send()
+    })
+
+router.route("/record/:id/img")
+    /**
+     * @openapi
+     * "/card/record/{id}/img":
+     *   patch:
+     *     tags:
+     *       - Card
+     *     summary: Update record card image
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The ID of the record card
+     *         required: true
+     *         schema:
+     *           type: string
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+     *               - imgURL
+     *             properties:
+     *               imgURL:
+     *                 type: string
+     *                 description: URL of the image
+     *     responses:
+     *       200:
+     *         description: Record card image updated successfully
+     *       500:
+     *         description: Internal server error
+     */
+    .patch(userAuth, async (req, res) => {
+        const { id } = req.params
+        const { user } = res.locals
+        const { imgURL } = req.body as { imgURL: string }
+
+        try {
+            await updateRecordCardImg(id, user.uid!, imgURL)
+            res.send()
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
+router.route("/record/:id/avatar")
+    /**
+     * @openapi
+     * "/card/record/{id}/avatar":
+     *   patch:
+     *     tags:
+     *       - Card
+     *     summary: Update record card avatar
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - name: id
+     *         in: path
+     *         description: The ID of the record card
+     *         required: true
+     *         schema:
+     *           type: string
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+     *               - avatarURL
+     *             properties:
+     *               avatarURL:
+     *                 type: string
+     *                 description: URL of the avatar image
+     *     responses:
+     *       200:
+     *         description: Record card avatar updated successfully
+     *       500:
+     *         description: Internal server error
+     */
+    .patch(userAuth, async (req, res) => {
+        const { id } = req.params
+        const { user } = res.locals
+        const { avatarURL } = req.body as { avatarURL: string }
+
+        try {
+            await updateRecordCardAvatar(id, user.uid!, avatarURL)
+            res.send()
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
     })
 
 export default router

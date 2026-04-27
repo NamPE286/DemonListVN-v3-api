@@ -1109,6 +1109,14 @@ router.route('/:id/calc')
         var { data, error } = await supabase
             .rpc('get_event_leaderboard', { event_id: Number(id) });
 
+        if (error) {
+            console.error(error)
+            res.status(500).send({
+                message: error.message
+            })
+            return;
+        }
+
         const newData = calcLeaderboard(data!)
 
         for (const i of newData) {
@@ -1150,15 +1158,124 @@ router.route('/:id/calc')
             return;
         }
 
-        event.isCalculated = true;
-        event.freeze = null;
+        try {
+            await updateEvent(Number(id), {
+                isCalculated: true,
+                freeze: null
+            })
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({
+                message: err.message
+            })
+            return;
+        }
 
-        var { error } = await supabase
-            .from('events')
-            .update(event)
-            .eq('id', event.id)
+        res.send({
+            message: 'Calculated'
+        })
+    })
 
-        res.send()
+router.route('/:id/revert-calc')
+    .patch(adminAuth, async (req, res) => {
+        const eventId = Number(req.params.id)
+        const event = await getEvent(eventId)
+
+        if (!event.isRanked) {
+            res.status(403).send({
+                message: 'This event is unranked'
+            })
+
+            return
+        }
+
+        const { data: appliedDiffs, error: appliedDiffsError } = await supabase
+            .from('eventProofs')
+            .select('userid, diff, players!inner(uid, elo, matchCount)')
+            .eq('eventID', eventId)
+            .not('diff', 'is', null)
+
+        if (appliedDiffsError) {
+            console.error(appliedDiffsError)
+            res.status(500).send({
+                message: appliedDiffsError.message
+            })
+            return
+        }
+
+        const revertedPlayersByUid = new Map<string, { uid: string, elo: number, matchCount: number, diffSum: number }>()
+
+        for (const item of appliedDiffs || []) {
+            const player = Array.isArray(item.players) ? item.players[0] : item.players
+
+            if (!player || item.diff === null) {
+                continue
+            }
+
+            const existing = revertedPlayersByUid.get(item.userid)
+
+            if (existing) {
+                existing.diffSum += item.diff
+                continue
+            }
+
+            revertedPlayersByUid.set(item.userid, {
+                uid: item.userid,
+                elo: player.elo,
+                matchCount: player.matchCount,
+                diffSum: item.diff
+            })
+        }
+
+        const revertedPlayers = Array.from(revertedPlayersByUid.values()).map((player) => ({
+            uid: player.uid,
+            elo: player.elo - player.diffSum,
+            matchCount: Math.max(0, player.matchCount - 1)
+        }))
+
+        if (revertedPlayers.length > 0) {
+            const { error: revertPlayersError } = await supabase
+                .from('players')
+                .upsert(revertedPlayers)
+
+            if (revertPlayersError) {
+                console.error(revertPlayersError)
+                res.status(500).send({
+                    message: revertPlayersError.message
+                })
+                return
+            }
+
+            const { error: resetDiffError } = await supabase
+                .from('eventProofs')
+                .update({ diff: null })
+                .eq('eventID', eventId)
+                .not('diff', 'is', null)
+
+            if (resetDiffError) {
+                console.error(resetDiffError)
+                res.status(500).send({
+                    message: resetDiffError.message
+                })
+                return
+            }
+        }
+
+        try {
+            await updateEvent(eventId, {
+                isCalculated: false
+            })
+        } catch (err: any) {
+            console.error(err)
+            res.status(500).send({
+                message: err.message
+            })
+            return
+        }
+
+        res.send({
+            message: 'Reverted'
+        })
     })
 
 /**

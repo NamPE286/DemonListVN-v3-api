@@ -33,12 +33,13 @@ const router = express.Router()
  */
 router.route('/')
     .get(adminAuth, async (req, res) => {
-        const { start = 0, end = 50 } = req.query
+        const { start = 0, end = 50, accepted = 'false' } = req.query
 
         const { data, error } = await supabase
             .from('levelSubmissions')
             .select('*, levels(*), players!userId(*)')
             .order('created_at', { ascending: true })
+            .eq('accepted', accepted === 'true')
             .range(Number(start), Number(end))
 
         if (error) {
@@ -122,16 +123,18 @@ router.route('/')
 
             // Create or update the level with isNonList = true
             if (!existingLevel) {
-                await updateLevel({
-                    id: levelId,
-                    name: apiLevel.name,
-                    creator: apiLevel.author,
-                    isPlatformer: apiLevel.length == 5,
-                    isChallenge: true,
-                    isNonList: true,
-                    creatorId: user.uid,
-                    videoID: videoID || null
-                })
+                await supabase
+                    .from('levels')
+                    .insert({
+                        id: levelId,
+                        name: apiLevel.name,
+                        creator: apiLevel.author,
+                        isPlatformer: apiLevel.length == 5,
+                        isChallenge: true,
+                        isNonList: true,
+                        creatorId: user.uid,
+                        videoID: videoID || null
+                    })
             } else if (videoID) {
                 // Update videoID if level exists but videoID is provided
                 await supabase

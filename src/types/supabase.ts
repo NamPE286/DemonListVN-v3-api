@@ -274,6 +274,7 @@ export type Database = {
           levelID: number
           progress: number
           userID: string
+          xpClaimed: boolean
         }
         Insert: {
           battlePassMapPackId: number
@@ -281,6 +282,7 @@ export type Database = {
           levelID: number
           progress?: number
           userID: string
+          xpClaimed?: boolean
         }
         Update: {
           battlePassMapPackId?: number
@@ -288,6 +290,7 @@ export type Database = {
           levelID?: number
           progress?: number
           userID?: string
+          xpClaimed?: boolean
         }
         Relationships: [
           {
@@ -996,6 +999,7 @@ export type Database = {
           memberLimit: number
           mode: string
           name: string
+          nameFts: unknown
           owner: string
           rank: number | null
           rating: number
@@ -1014,6 +1018,7 @@ export type Database = {
           memberLimit?: number
           mode?: string
           name: string
+          nameFts?: unknown
           owner?: string
           rank?: number | null
           rating?: number
@@ -1032,6 +1037,7 @@ export type Database = {
           memberLimit?: number
           mode?: string
           name?: string
+          nameFts?: unknown
           owner?: string
           rank?: number | null
           rating?: number
@@ -1054,6 +1060,7 @@ export type Database = {
           attachedLevel: Json | null
           content: string
           createdAt: string
+          fts: unknown
           hidden: boolean
           id: number
           likesCount: number
@@ -1064,6 +1071,7 @@ export type Database = {
           attachedLevel?: Json | null
           content: string
           createdAt?: string
+          fts?: unknown
           hidden?: boolean
           id?: number
           likesCount?: number
@@ -1074,6 +1082,7 @@ export type Database = {
           attachedLevel?: Json | null
           content?: string
           createdAt?: string
+          fts?: unknown
           hidden?: boolean
           id?: number
           likesCount?: number
@@ -1172,9 +1181,52 @@ export type Database = {
           },
         ]
       }
+      communityPostParticipants: {
+        Row: {
+          createdAt: string
+          id: number
+          postId: number
+          status: string
+          uid: string
+          updatedAt: string
+        }
+        Insert: {
+          createdAt?: string
+          id?: number
+          postId: number
+          status?: string
+          uid: string
+          updatedAt?: string
+        }
+        Update: {
+          createdAt?: string
+          id?: number
+          postId?: number
+          status?: string
+          uid?: string
+          updatedAt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communityPostParticipants_postId_fkey"
+            columns: ["postId"]
+            isOneToOne: false
+            referencedRelation: "communityPosts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communityPostParticipants_uid_fkey"
+            columns: ["uid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       communityPosts: {
         Row: {
           attachedLevel: Json | null
+          attachedList: Json | null
           attachedRecord: Json | null
           clanId: number | null
           commentsCount: number
@@ -1197,6 +1249,7 @@ export type Database = {
         }
         Insert: {
           attachedLevel?: Json | null
+          attachedList?: Json | null
           attachedRecord?: Json | null
           clanId?: number | null
           commentsCount?: number
@@ -1219,6 +1272,7 @@ export type Database = {
         }
         Update: {
           attachedLevel?: Json | null
+          attachedList?: Json | null
           attachedRecord?: Json | null
           clanId?: number | null
           commentsCount?: number
@@ -1248,53 +1302,11 @@ export type Database = {
             referencedColumns: ["uid"]
           },
           {
-            foreignKeyName: "community_posts_clan_id_fkey"
+            foreignKeyName: "communityPosts_clanId_fkey"
             columns: ["clanId"]
             isOneToOne: false
             referencedRelation: "clans"
             referencedColumns: ["id"]
-          },
-        ]
-      }
-      communityPostParticipants: {
-        Row: {
-          id: number
-          postId: number
-          uid: string
-          status: string
-          createdAt: string
-          updatedAt: string
-        }
-        Insert: {
-          id?: number
-          postId: number
-          uid: string
-          status?: string
-          createdAt?: string
-          updatedAt?: string
-        }
-        Update: {
-          id?: number
-          postId?: number
-          uid?: string
-          status?: string
-          createdAt?: string
-          updatedAt?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "community_post_participants_post_id_fkey"
-            columns: ["postId"]
-            isOneToOne: false
-            referencedRelation: "communityPosts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "community_post_participants_uid_fkey"
-            columns: ["uid"]
-            isOneToOne: false
-            referencedRelation: "players"
-            referencedColumns: ["uid"]
           },
         ]
       }
@@ -1844,6 +1856,7 @@ export type Database = {
           redirect: string | null
           start: string
           title: string
+          titleFts: unknown
           type: string
         }
         Insert: {
@@ -1868,6 +1881,7 @@ export type Database = {
           redirect?: string | null
           start?: string
           title: string
+          titleFts?: unknown
           type?: string
         }
         Update: {
@@ -1892,9 +1906,46 @@ export type Database = {
           redirect?: string | null
           start?: string
           title?: string
+          titleFts?: unknown
           type?: string
         }
         Relationships: []
+      }
+      friendships: {
+        Row: {
+          createdAt: string | null
+          friendId: string
+          id: string
+          userId: string
+        }
+        Insert: {
+          createdAt?: string | null
+          friendId: string
+          id?: string
+          userId: string
+        }
+        Update: {
+          createdAt?: string | null
+          friendId?: string
+          id?: string
+          userId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friendships_friend_id_fkey"
+            columns: ["friendId"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "friendships_user_id_fkey"
+            columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
       }
       heatmap: {
         Row: {
@@ -1979,6 +2030,7 @@ export type Database = {
           description: string | null
           id: number
           name: string
+          nameFts: unknown
           productId: number | null
           quantity: number
           rarity: number
@@ -1991,6 +2043,7 @@ export type Database = {
           description?: string | null
           id?: number
           name?: string
+          nameFts?: unknown
           productId?: number | null
           quantity?: number
           rarity?: number
@@ -2003,6 +2056,7 @@ export type Database = {
           description?: string | null
           id?: number
           name?: string
+          nameFts?: unknown
           productId?: number | null
           quantity?: number
           rarity?: number
@@ -2052,27 +2106,6 @@ export type Database = {
           },
         ]
       }
-      level_tags: {
-        Row: {
-          color: string
-          created_at: string
-          id: number
-          name: string
-        }
-        Insert: {
-          color?: string
-          created_at?: string
-          id?: number
-          name: string
-        }
-        Update: {
-          color?: string
-          created_at?: string
-          id?: number
-          name?: string
-        }
-        Relationships: []
-      }
       levelDeathCount: {
         Row: {
           count: number[]
@@ -2119,6 +2152,7 @@ export type Database = {
           accepted: boolean
           created_at: string
           creator: string | null
+          creatorFts: unknown
           creatorId: string | null
           difficulty: string | null
           dlTop: number | null
@@ -2132,6 +2166,7 @@ export type Database = {
           main_level_id: number | null
           minProgress: number | null
           name: string | null
+          nameFts: unknown
           rating: number | null
           videoID: string | null
         }
@@ -2139,6 +2174,7 @@ export type Database = {
           accepted?: boolean
           created_at?: string
           creator?: string | null
+          creatorFts?: unknown
           creatorId?: string | null
           difficulty?: string | null
           dlTop?: number | null
@@ -2152,6 +2188,7 @@ export type Database = {
           main_level_id?: number | null
           minProgress?: number | null
           name?: string | null
+          nameFts?: unknown
           rating?: number | null
           videoID?: string | null
         }
@@ -2159,6 +2196,7 @@ export type Database = {
           accepted?: boolean
           created_at?: string
           creator?: string | null
+          creatorFts?: unknown
           creatorId?: string | null
           difficulty?: string | null
           dlTop?: number | null
@@ -2172,6 +2210,7 @@ export type Database = {
           main_level_id?: number | null
           minProgress?: number | null
           name?: string | null
+          nameFts?: unknown
           rating?: number | null
           videoID?: string | null
         }
@@ -2192,7 +2231,7 @@ export type Database = {
           },
         ]
       }
-      levels_tags: {
+      levelsTags: {
         Row: {
           level_id: number
           tag_id: number
@@ -2217,7 +2256,7 @@ export type Database = {
             foreignKeyName: "levels_tags_tag_id_fkey"
             columns: ["tag_id"]
             isOneToOne: false
-            referencedRelation: "level_tags"
+            referencedRelation: "levelTags"
             referencedColumns: ["id"]
           },
         ]
@@ -2255,6 +2294,543 @@ export type Database = {
           {
             foreignKeyName: "levelSubmissions_userId_fkey"
             columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      levelTags: {
+        Row: {
+          color: string
+          created_at: string
+          id: number
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: number
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      listAuditLogs: {
+        Row: {
+          action: string
+          actorUid: string | null
+          created_at: string
+          id: number
+          listId: number
+          metadata: Json
+          targetUid: string | null
+        }
+        Insert: {
+          action: string
+          actorUid?: string | null
+          created_at?: string
+          id?: number
+          listId: number
+          metadata?: Json
+          targetUid?: string | null
+        }
+        Update: {
+          action?: string
+          actorUid?: string | null
+          created_at?: string
+          id?: number
+          listId?: number
+          metadata?: Json
+          targetUid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_audit_logs_actor_uid_fkey"
+            columns: ["actorUid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "list_audit_logs_list_id_fkey"
+            columns: ["listId"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "list_audit_logs_target_uid_fkey"
+            columns: ["targetUid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      listInvitations: {
+        Row: {
+          created_at: string
+          id: number
+          invitedBy: string
+          listId: number
+          role: string
+          uid: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          invitedBy: string
+          listId: number
+          role: string
+          uid: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          invitedBy?: string
+          listId?: number
+          role?: string
+          uid?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_invitations_invited_by_fkey"
+            columns: ["invitedBy"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "list_invitations_list_id_fkey"
+            columns: ["listId"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "list_invitations_uid_fkey"
+            columns: ["uid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      listLeaderboardEntries: {
+        Row: {
+          completedCount: number
+          created_at: string
+          id: number
+          listId: number
+          rank: number
+          score: number
+          uid: string
+        }
+        Insert: {
+          completedCount?: number
+          created_at?: string
+          id?: number
+          listId: number
+          rank: number
+          score: number
+          uid: string
+        }
+        Update: {
+          completedCount?: number
+          created_at?: string
+          id?: number
+          listId?: number
+          rank?: number
+          score?: number
+          uid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_leaderboard_entries_list_id_fkey"
+            columns: ["listId"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "list_leaderboard_entries_uid_fkey"
+            columns: ["uid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      listLeaderboardRecordEntries: {
+        Row: {
+          created_at: string
+          id: number
+          levelId: number
+          listId: number
+          no: number
+          point: number
+          uid: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          levelId: number
+          listId: number
+          no: number
+          point: number
+          uid: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          levelId?: number
+          listId?: number
+          no?: number
+          point?: number
+          uid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_leaderboard_record_entries_level_id_fkey"
+            columns: ["levelId"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "list_leaderboard_record_entries_list_id_fkey"
+            columns: ["listId"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "list_leaderboard_record_entries_uid_fkey"
+            columns: ["uid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      listLeaderboardRefreshes: {
+        Row: {
+          created_at: string
+          id: number
+          lastRefreshedAt: string
+          listId: number
+          totalPlayers: number
+          totalRecords: number
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          lastRefreshedAt?: string
+          listId: number
+          totalPlayers?: number
+          totalRecords?: number
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          lastRefreshedAt?: string
+          listId?: number
+          totalPlayers?: number
+          totalRecords?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_leaderboard_refreshes_list_id_fkey"
+            columns: ["listId"]
+            isOneToOne: true
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listLevels: {
+        Row: {
+          accepted: boolean
+          addedBy: string
+          created_at: string
+          id: number
+          levelId: number
+          listId: number
+          minProgress: number | null
+          position: number | null
+          rating: number
+          submissionComment: string | null
+          videoID: string | null
+        }
+        Insert: {
+          accepted?: boolean
+          addedBy: string
+          created_at?: string
+          id?: number
+          levelId: number
+          listId: number
+          minProgress?: number | null
+          position?: number | null
+          rating?: number
+          submissionComment?: string | null
+          videoID?: string | null
+        }
+        Update: {
+          accepted?: boolean
+          addedBy?: string
+          created_at?: string
+          id?: number
+          levelId?: number
+          listId?: number
+          minProgress?: number | null
+          position?: number | null
+          rating?: number
+          submissionComment?: string | null
+          videoID?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_levels_added_by_fkey"
+            columns: ["addedBy"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "list_levels_level_id_fkey"
+            columns: ["levelId"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "list_levels_list_id_fkey"
+            columns: ["listId"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listMembers: {
+        Row: {
+          addedBy: string
+          created_at: string
+          id: number
+          listId: number
+          role: string
+          uid: string
+          updated_at: string
+        }
+        Insert: {
+          addedBy: string
+          created_at?: string
+          id?: number
+          listId: number
+          role: string
+          uid: string
+          updated_at?: string
+        }
+        Update: {
+          addedBy?: string
+          created_at?: string
+          id?: number
+          listId?: number
+          role?: string
+          uid?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_members_added_by_fkey"
+            columns: ["addedBy"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "list_members_list_id_fkey"
+            columns: ["listId"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "list_members_uid_fkey"
+            columns: ["uid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      lists: {
+        Row: {
+          adminsCanManageHelpers: boolean
+          backgroundColor: string | null
+          bannerUrl: string | null
+          borderColor: string | null
+          communityEnabled: boolean
+          created_at: string
+          description: string
+          faviconUrl: string | null
+          fts: unknown
+          id: number
+          isBanned: boolean
+          isMirror: boolean
+          isOfficial: boolean
+          isPlatformer: boolean
+          isVerified: boolean
+          itemSort: string
+          leaderboardEnabled: boolean
+          levelCount: number
+          levelSubmissionEnabled: boolean
+          logoUrl: string | null
+          mode: string
+          owner: string
+          rankBadges: Json
+          recordFilterAcceptanceStatus: string
+          recordFilterManualAcceptanceOnly: boolean
+          recordFilterMaxRefreshRate: number | null
+          recordFilterMinRefreshRate: number | null
+          recordFilterPlatform: string
+          recordScoreFormula: string
+          slug: string | null
+          staffListEnabled: boolean
+          tags: string[]
+          title: string
+          topEnabled: boolean
+          updated_at: string
+          visibility: string
+          weightFormula: string
+        }
+        Insert: {
+          adminsCanManageHelpers?: boolean
+          backgroundColor?: string | null
+          bannerUrl?: string | null
+          borderColor?: string | null
+          communityEnabled?: boolean
+          created_at?: string
+          description?: string
+          faviconUrl?: string | null
+          fts?: unknown
+          id?: number
+          isBanned?: boolean
+          isMirror?: boolean
+          isOfficial?: boolean
+          isPlatformer?: boolean
+          isVerified?: boolean
+          itemSort?: string
+          leaderboardEnabled?: boolean
+          levelCount?: number
+          levelSubmissionEnabled?: boolean
+          logoUrl?: string | null
+          mode?: string
+          owner: string
+          rankBadges?: Json
+          recordFilterAcceptanceStatus?: string
+          recordFilterManualAcceptanceOnly?: boolean
+          recordFilterMaxRefreshRate?: number | null
+          recordFilterMinRefreshRate?: number | null
+          recordFilterPlatform?: string
+          recordScoreFormula?: string
+          slug?: string | null
+          staffListEnabled?: boolean
+          tags?: string[]
+          title: string
+          topEnabled?: boolean
+          updated_at?: string
+          visibility?: string
+          weightFormula?: string
+        }
+        Update: {
+          adminsCanManageHelpers?: boolean
+          backgroundColor?: string | null
+          bannerUrl?: string | null
+          borderColor?: string | null
+          communityEnabled?: boolean
+          created_at?: string
+          description?: string
+          faviconUrl?: string | null
+          fts?: unknown
+          id?: number
+          isBanned?: boolean
+          isMirror?: boolean
+          isOfficial?: boolean
+          isPlatformer?: boolean
+          isVerified?: boolean
+          itemSort?: string
+          leaderboardEnabled?: boolean
+          levelCount?: number
+          levelSubmissionEnabled?: boolean
+          logoUrl?: string | null
+          mode?: string
+          owner?: string
+          rankBadges?: Json
+          recordFilterAcceptanceStatus?: string
+          recordFilterManualAcceptanceOnly?: boolean
+          recordFilterMaxRefreshRate?: number | null
+          recordFilterMinRefreshRate?: number | null
+          recordFilterPlatform?: string
+          recordScoreFormula?: string
+          slug?: string | null
+          staffListEnabled?: boolean
+          tags?: string[]
+          title?: string
+          topEnabled?: boolean
+          updated_at?: string
+          visibility?: string
+          weightFormula?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lists_owner_fkey"
+            columns: ["owner"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
+      listStars: {
+        Row: {
+          created_at: string
+          id: number
+          listId: number
+          uid: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          listId: number
+          uid: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          listId?: number
+          uid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_stars_list_id_fkey"
+            columns: ["listId"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "list_stars_uid_fkey"
+            columns: ["uid"]
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["uid"]
@@ -2419,6 +2995,7 @@ export type Database = {
           productID: number | null
           quantity: number | null
           recipientName: string | null
+          recipientNameFts: unknown
           state: string
           targetClanID: number | null
           userID: string
@@ -2440,6 +3017,7 @@ export type Database = {
           productID?: number | null
           quantity?: number | null
           recipientName?: string | null
+          recipientNameFts?: unknown
           state: string
           targetClanID?: number | null
           userID: string
@@ -2461,6 +3039,7 @@ export type Database = {
           productID?: number | null
           quantity?: number | null
           recipientName?: string | null
+          recipientNameFts?: unknown
           state?: string
           targetClanID?: number | null
           userID?: string
@@ -2570,6 +3149,39 @@ export type Database = {
           },
         ]
       }
+      playerCardStatLines: {
+        Row: {
+          listId: number
+          position: number
+          uid: string
+        }
+        Insert: {
+          listId: number
+          position: number
+          uid: string
+        }
+        Update: {
+          listId?: number
+          position?: number
+          uid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playerCardStatLines_listId_fkey"
+            columns: ["listId"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playerCardStatLines_uid_fkey"
+            columns: ["uid"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       playerConvictions: {
         Row: {
           content: string
@@ -2615,6 +3227,8 @@ export type Database = {
           clan: number | null
           clrank: number | null
           clRating: number | null
+          country: string | null
+          countryLocked: boolean
           discord: string | null
           DiscordDMChannelID: string | null
           dlMaxPt: number | null
@@ -2632,12 +3246,18 @@ export type Database = {
           isBanned: boolean
           isBannerGif: boolean
           isHidden: boolean
+          isManager: boolean
           isTrusted: boolean
           matchCount: number
           name: string | null
+          nameFts: unknown
           nameLocked: boolean
+          onboarding_done: boolean
+          onboarding_step: number
           overallRank: number | null
           overviewData: Json | null
+          overwatchNonOfficialReviewCount: number
+          overwatchOfficialReviewCount: number
           overwatchReviewCount: number
           overwatchReviewDate: string | null
           plrank: number | null
@@ -2663,6 +3283,8 @@ export type Database = {
           clan?: number | null
           clrank?: number | null
           clRating?: number | null
+          country?: string | null
+          countryLocked?: boolean
           discord?: string | null
           DiscordDMChannelID?: string | null
           dlMaxPt?: number | null
@@ -2680,12 +3302,18 @@ export type Database = {
           isBanned?: boolean
           isBannerGif?: boolean
           isHidden?: boolean
+          isManager?: boolean
           isTrusted?: boolean
           matchCount?: number
           name?: string | null
+          nameFts?: unknown
           nameLocked?: boolean
+          onboarding_done?: boolean
+          onboarding_step?: number
           overallRank?: number | null
           overviewData?: Json | null
+          overwatchNonOfficialReviewCount?: number
+          overwatchOfficialReviewCount?: number
           overwatchReviewCount?: number
           overwatchReviewDate?: string | null
           plrank?: number | null
@@ -2711,6 +3339,8 @@ export type Database = {
           clan?: number | null
           clrank?: number | null
           clRating?: number | null
+          country?: string | null
+          countryLocked?: boolean
           discord?: string | null
           DiscordDMChannelID?: string | null
           dlMaxPt?: number | null
@@ -2728,12 +3358,18 @@ export type Database = {
           isBanned?: boolean
           isBannerGif?: boolean
           isHidden?: boolean
+          isManager?: boolean
           isTrusted?: boolean
           matchCount?: number
           name?: string | null
+          nameFts?: unknown
           nameLocked?: boolean
+          onboarding_done?: boolean
+          onboarding_step?: number
           overallRank?: number | null
           overviewData?: Json | null
+          overwatchNonOfficialReviewCount?: number
+          overwatchOfficialReviewCount?: number
           overwatchReviewCount?: number
           overwatchReviewDate?: string | null
           plrank?: number | null
@@ -2978,13 +3614,76 @@ export type Database = {
           },
         ]
       }
+      recordCards: {
+        Row: {
+          avatar: string | null
+          created_at: string | null
+          id: string
+          img: string | null
+          levelID: number
+          material: string
+          orderID: number | null
+          owner: string
+          printed: boolean | null
+          template: number
+        }
+        Insert: {
+          avatar?: string | null
+          created_at?: string | null
+          id?: string
+          img?: string | null
+          levelID: number
+          material: string
+          orderID?: number | null
+          owner: string
+          printed?: boolean | null
+          template?: number
+        }
+        Update: {
+          avatar?: string | null
+          created_at?: string | null
+          id?: string
+          img?: string | null
+          levelID?: number
+          material?: string
+          orderID?: number | null
+          owner?: string
+          printed?: boolean | null
+          template?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "record_cards_levelID_fkey"
+            columns: ["levelID"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_cards_orderID_fkey"
+            columns: ["orderID"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_cards_owner_fkey"
+            columns: ["owner"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["uid"]
+          },
+        ]
+      }
       records: {
         Row: {
+          acceptedAuto: boolean
+          acceptedManually: boolean | null
           clPt: number | null
           comment: string | null
           dlPt: number | null
           flPt: number | null
-          isChecked: boolean | null
+          id: number
           levelid: number
           mobile: boolean
           needMod: boolean
@@ -3000,15 +3699,16 @@ export type Database = {
           suggestedRating: number | null
           timestamp: number | null
           userid: string
-          variant_id: number | null
           videoLink: string | null
         }
         Insert: {
+          acceptedAuto?: boolean
+          acceptedManually?: boolean | null
           clPt?: number | null
           comment?: string | null
           dlPt?: number | null
           flPt?: number | null
-          isChecked?: boolean | null
+          id?: number
           levelid: number
           mobile?: boolean
           needMod?: boolean
@@ -3024,15 +3724,16 @@ export type Database = {
           suggestedRating?: number | null
           timestamp?: number | null
           userid: string
-          variant_id?: number | null
           videoLink?: string | null
         }
         Update: {
+          acceptedAuto?: boolean
+          acceptedManually?: boolean | null
           clPt?: number | null
           comment?: string | null
           dlPt?: number | null
           flPt?: number | null
-          isChecked?: boolean | null
+          id?: number
           levelid?: number
           mobile?: boolean
           needMod?: boolean
@@ -3048,7 +3749,6 @@ export type Database = {
           suggestedRating?: number | null
           timestamp?: number | null
           userid?: string
-          variant_id?: number | null
           videoLink?: string | null
         }
         Relationships: [
@@ -3072,13 +3772,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["uid"]
-          },
-          {
-            foreignKeyName: "records_variant_id_fkey"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "levels"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -3211,6 +3904,10 @@ export type Database = {
     }
     Functions: {
       add_event_levels_progress: { Args: { updates: Json }; Returns: undefined }
+      assert_custom_list_level_platformer_match: {
+        Args: { p_level_id: number; p_list_id: number }
+        Returns: undefined
+      }
       get_event_leaderboard: {
         Args: { event_id: number }
         Returns: {
@@ -3219,6 +3916,21 @@ export type Database = {
           penalty: number
           point: number
           userID: string
+        }[]
+      }
+      get_player_level_tag_analysis: {
+        Args: {
+          include_cl?: boolean
+          include_dl?: boolean
+          include_fl?: boolean
+          include_pl?: boolean
+          player_uid: string
+        }
+        Returns: {
+          record_count: number
+          tag_color: string
+          tag_id: number
+          tag_name: string
         }[]
       }
       get_queue_no: {
@@ -3231,6 +3943,7 @@ export type Database = {
           accepted: boolean
           created_at: string
           creator: string | null
+          creatorFts: unknown
           creatorId: string | null
           difficulty: string | null
           dlTop: number | null
@@ -3244,6 +3957,7 @@ export type Database = {
           main_level_id: number | null
           minProgress: number | null
           name: string | null
+          nameFts: unknown
           rating: number | null
           videoID: string | null
         }[]
@@ -3295,6 +4009,7 @@ export type Database = {
       }
       reset_overwatch_daily_limits: { Args: never; Returns: undefined }
       update_list: { Args: never; Returns: undefined }
+      update_queue_no: { Args: never; Returns: undefined }
       update_rank: { Args: never; Returns: undefined }
       update_supporter_until: { Args: never; Returns: undefined }
     }
