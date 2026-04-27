@@ -16,9 +16,144 @@ import { FRONTEND_URL } from "@src/config/url"
 
 const router = express.Router()
 
+function getHeaderValue(value: string | string[] | undefined): string | null {
+    if (typeof value === 'string') {
+        return value
+    }
+
+    if (Array.isArray(value) && value.length > 0) {
+        return value[0]
+    }
+
+    return null
+}
+
+function normalizeCountryCode(value: string | null | undefined): string | null {
+    if (!value) {
+        return null
+    }
+
+    const normalized = value.trim().toUpperCase()
+
+    if (!/^[A-Z]{2}$/.test(normalized) || normalized === 'XX') {
+        return null
+    }
+
+    return normalized
+}
+
+function isPrivateIp(ip: string): boolean {
+    const normalized = ip.trim().replace(/^::ffff:/, '').toLowerCase()
+
+    if (!normalized.length) {
+        return true
+    }
+
+    if (normalized === '::1' || normalized === '127.0.0.1' || normalized === 'localhost') {
+        return true
+    }
+
+    if (normalized.startsWith('10.') || normalized.startsWith('192.168.') || normalized.startsWith('169.254.')) {
+        return true
+    }
+
+    if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(normalized)) {
+        return true
+    }
+
+    return normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe80:')
+}
+
+function getRequestIp(req: express.Request): string | null {
+    const cfConnectingIp = getHeaderValue(req.headers['cf-connecting-ip'])
+
+    if (cfConnectingIp?.trim()) {
+        return cfConnectingIp.trim()
+    }
+
+    const forwardedFor = getHeaderValue(req.headers['x-forwarded-for'])
+
+    if (forwardedFor?.trim()) {
+        return forwardedFor.split(',')[0]?.trim() || null
+    }
+
+    const realIp = getHeaderValue(req.headers['x-real-ip'])
+
+    if (realIp?.trim()) {
+        return realIp.trim()
+    }
+
+    return req.ip?.trim() || null
+}
+
+async function getCountryCodeFromIp(ip: string): Promise<string | null> {
+    if (isPrivateIp(ip)) {
+        return null
+    }
+
+    const response = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`)
+
+    if (!response.ok) {
+        return null
+    }
+
+    const data = await response.json() as { success?: boolean, country_code?: unknown }
+
+    if (data.success === false) {
+        return null
+    }
+
+    return normalizeCountryCode(typeof data.country_code === 'string' ? data.country_code : null)
+}
+
+async function resolveRequestCountry(req: express.Request): Promise<string | null> {
+    const cloudflareCountry = normalizeCountryCode(getHeaderValue(req.headers['cf-ipcountry']))
+
+    if (cloudflareCountry) {
+        return cloudflareCountry
+    }
+
+    const ip = getRequestIp(req)
+
+    if (!ip) {
+        return null
+    }
+
+    try {
+        return await getCountryCodeFromIp(ip)
+    } catch (error) {
+        console.error('Failed to resolve request country', error)
+        return null
+    }
+}
+
+async function updatePlayerCountry(uid: string, country: string): Promise<void> {
+    const { error } = await supabase
+        .from('players')
+        .update({ country })
+        .eq('uid', uid)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+}
+
 router.route('/me')
     .get(userAuth, async (req, res) => {
         const { user } = res.locals
+
+        if (res.locals.authType === 'token' && user?.uid) {
+            const detectedCountry = await resolveRequestCountry(req)
+
+            if (detectedCountry && user.country !== detectedCountry) {
+                try {
+                    await updatePlayerCountry(user.uid, detectedCountry)
+                    user.country = detectedCountry
+                } catch (error) {
+                    console.error('Failed to update player country', error)
+                }
+            }
+        }
 
         res.send(user)
     })
