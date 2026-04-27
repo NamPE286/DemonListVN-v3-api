@@ -1,7 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import jwt from 'jsonwebtoken'
 import supabase from "@src/client/supabase";
-import { getPlayer } from '@src/services/player.service';
 
 export default async function (req: Request, res: Response, next: NextFunction) {
     res.locals.authenticated = false;
@@ -12,20 +10,22 @@ export default async function (req: Request, res: Response, next: NextFunction) 
         return
     }
 
-    const token = req.headers.authorization.split(' ')[1]
-    const { data, error } = await supabase.auth.getClaims(token)
+    try {
+        const token = req.headers.authorization.split(' ')[1]
+        const { data, error } = await supabase.auth.getUser(token)
 
-    if (error) {
-        console.error(error.message)
-        res.status(401).send()
+        if (error || !data.user) {
+            console.error(error?.message || 'Invalid token')
+            res.status(401).send()
+            return
+        }
 
-        return
+        res.locals.userId = String(data.user.id);
+        res.locals.authenticated = true;
+
+        next()
+    } catch (err) {
+        console.error(err);
+        res.status(500).send();
     }
-
-    const uid = String(data?.claims.sub)
-
-    res.locals.userId = uid;
-    res.locals.authenticated = true;
-
-    next()
 }

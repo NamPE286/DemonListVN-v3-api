@@ -1,5 +1,4 @@
 import type { Request, Response, NextFunction } from "express";
-import jwt from 'jsonwebtoken'
 import supabase from "@src/client/supabase";
 import { getPlayer } from '@src/services/player.service';
 
@@ -14,15 +13,13 @@ export default async function (req: Request, res: Response, next: NextFunction) 
 
     try {
         const token = req.headers.authorization.split(' ')[1]
-        const { data, error } = await supabase.auth.getClaims(token)
+        const { data, error } = await supabase.auth.getUser(token)
 
-        if (error) {
-            throw new Error(error.message)
-
-            return
+        if (error || !data.user) {
+            throw new Error(error?.message || 'Invalid token')
         }
 
-        const uid = String(data?.claims.sub)
+        const uid = String(data.user.id)
         let player;
 
         try {
