@@ -1,3 +1,4 @@
+import { getPlayerRankedLists } from '@src/services/custom-list.service';
 import { getPlayer, updatePlayer, isPlayerSupporterActive, getPlayerTitle } from '@src/services/player.service'
 import type { Tables } from '@src/types/supabase';
 
@@ -150,7 +151,7 @@ export async function updateRole(guildID: string, userID: string, roles: string[
 }
 
 export async function syncRoleGDVN(player: Tables<"players">) {
-    const roles = {
+    const roles: Record<string, string> = {
         trusted: "1469593519445377064",
         supporter: "1387306487168106568",
         AGM: "1469657496476979290",
@@ -181,12 +182,19 @@ export async function syncRoleGDVN(player: Tables<"players">) {
         s.add(roles.supporter)
     }
 
-    // @ts-ignore
-    const title = getPlayerTitle(player, 'dl')
+    const CLASSIC_LIST_ID = 63
 
-    if (title != null) {
-        // @ts-ignore
-        s.add(roles[title.title])
+    const list = (await getPlayerRankedLists(player.uid)).filter((x) => x.id == CLASSIC_LIST_ID)
+
+    if (list.length) {
+        const stat = list[0]
+
+        for (const rank of stat.rankBadges) {
+            if ((rank.minTop === null || stat.rank <= rank.minTop) && (rank.minRating === null || stat.score >= rank.minRating)) {
+                s.add(roles[rank.shorthand])
+                break
+            }
+        }
     }
 
     if (player.isTrusted) {

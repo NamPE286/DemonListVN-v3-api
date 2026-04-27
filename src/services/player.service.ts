@@ -180,6 +180,7 @@ async function attachPlayerCardStatLines<T extends { uid: string } | null | unde
 
 export async function getPlayer(uid?: string, name?: string) {
     if (uid) {
+        // @ts-ignore
         const { data, error } = await supabase
             .from('players')
             .select('*, clans!id(*)')
