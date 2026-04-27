@@ -1,1 +1,0 @@
-DROP FUNCTION IF EXISTS "public"."upsert_aredl_mirror_list"(bigint, uuid, boolean, jsonb);

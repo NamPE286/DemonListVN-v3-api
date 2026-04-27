@@ -31,13 +31,6 @@ COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
 
-CREATE EXTENSION IF NOT EXISTS "pg_graphql" WITH SCHEMA "graphql";
-
-
-
-
-
-
 CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
 
 
@@ -529,6 +522,8 @@ CREATE OR REPLACE FUNCTION "public"."reset_overwatch_daily_limits"() RETURNS "vo
 BEGIN
     UPDATE "public"."players"
     SET "overwatchReviewCount" = 0,
+        "overwatchOfficialReviewCount" = 0,
+        "overwatchNonOfficialReviewCount" = 0,
         "overwatchReviewDate" = CURRENT_DATE;
 END;
 $$;
@@ -828,6 +823,46 @@ end$$;
 
 
 ALTER FUNCTION "public"."update_list"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."update_queue_no"() RETURNS "void"
+    LANGUAGE "sql"
+    AS $$
+  update public.records
+  set "queueNo" = null;
+
+  with RankedRecords as (
+    select
+      row_number() over (
+        order by
+          case
+            when p."supporterUntil" is null
+              then r.timestamp - r."prioritizedBy"
+
+            when p."supporterUntil" > now()
+              then (r.timestamp - 2592000000)::bigint - r."prioritizedBy"
+
+            else r.timestamp - r."prioritizedBy"
+          end
+      ) as "queueNo",
+      r.userid,
+      r.levelid
+    from public.records r
+    join public.players p
+      on p.uid = r.userid
+    where r."acceptedManually" = false and r."acceptedAuto" = false
+      and r."needMod" = false
+      and r."reviewer" is null
+  )
+  update public.records r
+  set "queueNo" = rr."queueNo"
+  from RankedRecords rr
+  where r.userid = rr.userid
+    and r.levelid = rr.levelid;
+$$;
+
+
+ALTER FUNCTION "public"."update_queue_no"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."update_rank"() RETURNS "void"
@@ -2972,10 +3007,17 @@ CREATE TABLE IF NOT EXISTS "public"."lists" (
     "recordFilterMaxRefreshRate" integer,
     "recordFilterManualAcceptanceOnly" boolean DEFAULT true NOT NULL,
     "isMirror" boolean DEFAULT false NOT NULL,
+    "isVerified" boolean DEFAULT false NOT NULL,
+    "leaderboardEnabled" boolean DEFAULT true NOT NULL,
+    "recordFilterAcceptanceStatus" "text" DEFAULT 'manual'::"text" NOT NULL,
+    "recordScoreFormula" "text" DEFAULT '1'::"text" NOT NULL,
+    "staffListEnabled" boolean DEFAULT true NOT NULL,
     CONSTRAINT "lists_item_sort_check" CHECK (("itemSort" = ANY (ARRAY['mode_default'::"text", 'created_at'::"text"]))),
     CONSTRAINT "lists_mode_check" CHECK (("mode" = ANY (ARRAY['rating'::"text", 'top'::"text"]))),
+    CONSTRAINT "lists_recordFilterAcceptanceStatus_check" CHECK (("recordFilterAcceptanceStatus" = ANY (ARRAY['manual'::"text", 'auto'::"text", 'any'::"text"]))),
     CONSTRAINT "lists_recordFilterPlatform_check" CHECK (("recordFilterPlatform" = ANY (ARRAY['any'::"text", 'pc'::"text", 'mobile'::"text"]))),
     CONSTRAINT "lists_recordFilterRefreshRate_check" CHECK (((("recordFilterMinRefreshRate" IS NULL) OR ("recordFilterMinRefreshRate" > 0)) AND (("recordFilterMaxRefreshRate" IS NULL) OR ("recordFilterMaxRefreshRate" > 0)) AND (("recordFilterMinRefreshRate" IS NULL) OR ("recordFilterMaxRefreshRate" IS NULL) OR ("recordFilterMinRefreshRate" <= "recordFilterMaxRefreshRate")))),
+    CONSTRAINT "lists_record_score_formula_check" CHECK ((("length"("recordScoreFormula") >= 1) AND ("length"("recordScoreFormula") <= 500))),
     CONSTRAINT "lists_slug_check" CHECK ((("slug" IS NULL) OR (("length"("slug") >= 1) AND ("length"("slug") <= 100) AND ("slug" ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'::"text")))),
     CONSTRAINT "lists_title_check" CHECK ((("length"("title") >= 1) AND ("length"("title") <= 100))),
     CONSTRAINT "lists_visibility_check" CHECK (("visibility" = ANY (ARRAY['private'::"text", 'unlisted'::"text", 'public'::"text"]))),
@@ -3176,6 +3218,17 @@ CREATE TABLE IF NOT EXISTS "public"."otp" (
 ALTER TABLE "public"."otp" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."playerCardStatLines" (
+    "uid" "uuid" NOT NULL,
+    "position" smallint NOT NULL,
+    "listId" bigint NOT NULL,
+    CONSTRAINT "playerCardStatLines_position_check" CHECK ((("position" >= 0) AND ("position" < 16)))
+);
+
+
+ALTER TABLE "public"."playerCardStatLines" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."playerConvictions" (
     "id" bigint NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -3275,6 +3328,9 @@ CREATE TABLE IF NOT EXISTS "public"."players" (
     "onboarding_step" smallint DEFAULT '1'::smallint NOT NULL,
     "isManager" boolean DEFAULT false NOT NULL,
     "nameFts" "tsvector" GENERATED ALWAYS AS ("setweight"("to_tsvector"('"simple"'::"regconfig", COALESCE("name", ''::"text")), 'A'::"char")) STORED,
+    "overwatchOfficialReviewCount" integer DEFAULT 0 NOT NULL,
+    "overwatchNonOfficialReviewCount" integer DEFAULT 0 NOT NULL,
+    "country" "text",
     CONSTRAINT "players_name_check" CHECK (("length"("name") <= 20))
 );
 
@@ -4154,6 +4210,11 @@ ALTER TABLE ONLY "public"."otp"
 
 
 
+ALTER TABLE ONLY "public"."playerCardStatLines"
+    ADD CONSTRAINT "playerCardStatLines_pkey" PRIMARY KEY ("uid", "position");
+
+
+
 ALTER TABLE ONLY "public"."playerConvictions"
     ADD CONSTRAINT "playerConvictions_pkey" PRIMARY KEY ("id");
 
@@ -4510,11 +4571,19 @@ CREATE INDEX "orders_recipient_name_fts_idx" ON "public"."orders" USING "gin" ("
 
 
 
+CREATE INDEX "playerCardStatLines_listId_idx" ON "public"."playerCardStatLines" USING "btree" ("listId");
+
+
+
 CREATE INDEX "players_name_fts_idx" ON "public"."players" USING "gin" ("nameFts");
 
 
 
-CREATE UNIQUE INDEX "records_accepted_userid_levelid_key" ON "public"."records" USING "btree" ("userid", "levelid") WHERE (("acceptedManually" IS TRUE) OR ("acceptedAuto" IS TRUE));
+CREATE UNIQUE INDEX "records_auto_accepted_userid_levelid_key" ON "public"."records" USING "btree" ("userid", "levelid") WHERE ((COALESCE("acceptedManually", false) = false) AND ("acceptedAuto" IS TRUE));
+
+
+
+CREATE UNIQUE INDEX "records_manually_accepted_userid_levelid_key" ON "public"."records" USING "btree" ("userid", "levelid") WHERE ("acceptedManually" IS TRUE);
 
 
 
@@ -5163,6 +5232,16 @@ ALTER TABLE ONLY "public"."otp"
 
 
 
+ALTER TABLE ONLY "public"."playerCardStatLines"
+    ADD CONSTRAINT "playerCardStatLines_listId_fkey" FOREIGN KEY ("listId") REFERENCES "public"."lists"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."playerCardStatLines"
+    ADD CONSTRAINT "playerCardStatLines_uid_fkey" FOREIGN KEY ("uid") REFERENCES "public"."players"("uid") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."playerConvictions"
     ADD CONSTRAINT "playerConvictions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."players"("uid");
 
@@ -5577,6 +5656,9 @@ ALTER TABLE "public"."orders" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."otp" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."playerCardStatLines" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."playerConvictions" ENABLE ROW LEVEL SECURITY;
 
 
@@ -5634,9 +5716,6 @@ GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
-
-
-
 
 
 
@@ -5931,6 +6010,12 @@ GRANT ALL ON FUNCTION "public"."update_community_post_views_count"() TO "service
 GRANT ALL ON FUNCTION "public"."update_list"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_list"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_list"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_queue_no"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_queue_no"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_queue_no"() TO "service_role";
 
 
 
@@ -6688,6 +6773,12 @@ GRANT ALL ON SEQUENCE "public"."orders_id_seq" TO "service_role";
 GRANT ALL ON TABLE "public"."otp" TO "anon";
 GRANT ALL ON TABLE "public"."otp" TO "authenticated";
 GRANT ALL ON TABLE "public"."otp" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."playerCardStatLines" TO "anon";
+GRANT ALL ON TABLE "public"."playerCardStatLines" TO "authenticated";
+GRANT ALL ON TABLE "public"."playerCardStatLines" TO "service_role";
 
 
 
