@@ -451,6 +451,45 @@ router.route('/batch')
         }
     })
 
+// Return IDs from the provided batch that do NOT exist in the `levels` table
+router.route('/missing')
+    .post(async (req, res) => {
+        const { batch } = req.body ?? {}
+
+        if (!Array.isArray(batch) || batch.length === 0) {
+            res.send([])
+            return
+        }
+
+        const ids = [...new Set(batch.map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id)))]
+
+        if (ids.length === 0) {
+            res.send([])
+            return
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('levels')
+                .select('id')
+                .in('id', ids)
+
+            if (error) {
+                console.error(error)
+                res.status(500).send()
+                return
+            }
+
+            const existingIds = (data || []).map((d: any) => Number(d.id))
+            const missing = ids.filter((id: number) => !existingIds.includes(id))
+
+            res.send(missing)
+        } catch (err) {
+            console.error(err)
+            res.status(500).send()
+        }
+    })
+
 
 router.route('/:id')
     /**
