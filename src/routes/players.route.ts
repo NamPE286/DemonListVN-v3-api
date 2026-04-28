@@ -23,7 +23,7 @@ import {
 } from '@src/services/player.service'
 import { getPostsByUserWithLikeStatus } from '@src/services/community.service'
 import getAuthUid from '@src/middleware/get-auth-uid'
-import { getPlayerRankedLists } from '@src/services/custom-list.service'
+import { getPlayerRankedLists } from '@src/services/list/list-leaderboard.service'
 
 const router = express.Router()
 

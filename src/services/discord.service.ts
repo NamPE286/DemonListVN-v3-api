@@ -1,4 +1,4 @@
-import { getPlayerRankedLists } from '@src/services/custom-list.service';
+import { getPlayerRankedLists } from '@src/services/list/list-leaderboard.service';
 import { getPlayer, updatePlayer, isPlayerSupporterActive, getPlayerTitle } from '@src/services/player.service'
 import type { Tables } from '@src/types/supabase';
 

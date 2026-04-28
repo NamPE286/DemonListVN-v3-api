@@ -1,6 +1,6 @@
 import supabase from "@src/client/supabase"
 import { FRONTEND_URL } from '@src/config/url'
-import { touchCustomListActivity } from '@src/services/custom-list.service'
+import { touchCustomListActivity } from '@src/services/list/list-access.service'
 import { fetchLevelFromGD, retrieveOrCreateLevel } from '@src/services/level.service'
 import { sendNotification } from '@src/services/notification.service'
 import { sendMessageToChannel } from '@src/services/discord.service'

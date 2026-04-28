@@ -5,46 +5,53 @@ import managerAuth from '@src/middleware/manager-auth.middleware'
 import optionalAuth from '@src/middleware/optional-user-auth.middleware'
 import userAuth from '@src/middleware/user-auth.middleware'
 import {
-    addLevelToCustomList,
-    batchAddExistingLevelsToCustomList,
-    batchSaveCustomListLevels,
     acceptCustomListInvitation,
     addCustomListMember,
     browseLists,
-    ConflictError,
-    crawlMirrorList,
     createCustomList,
     deleteCustomList,
-    ForbiddenError,
     getCustomList,
-    getCustomListLeaderboard,
-    getEligibleListsByLevel,
-    getCustomListRecordPoints,
-    getCustomListSubmissionQueueById,
     getOwnCustomLists,
-    getRandomCustomListLevel,
-    refreshCustomListLeaderboard,
     rejectCustomListInvitation,
     revokeCustomListInvitation,
     getStarredCustomLists,
-    getStarredListsByLevel,
-    NotFoundError,
-    removeCustomListMember,
-    removeLevelFromCustomList,
-    reorderListLevels,
-    resolveCustomListIdentifier,
-    reviewCustomListSubmission,
-    submitLevelToCustomList,
     setCustomListBanState,
     transferCustomListOwnership,
-    toggleCustomListStar,
     updateCustomList,
     updateCustomListCollaborationSettings,
     updateCustomListMemberRole,
     updateCustomListOfficialMetadata,
-    updateListLevel,
+    removeCustomListMember,
+} from '@src/services/list/list.service'
+import {
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
     ValidationError,
-} from '@src/services/custom-list.service'
+} from '@src/services/list/list.common'
+import { crawlMirrorList } from '@src/services/list/list-crawler.service'
+import {
+    getCustomListLeaderboard,
+    getCustomListRecordPoints,
+    refreshCustomListLeaderboard,
+} from '@src/services/list/list-leaderboard.service'
+import {
+    addLevelToCustomList,
+    batchAddExistingLevelsToCustomList,
+    batchSaveCustomListLevels,
+    getEligibleListsByLevel,
+    getRandomCustomListLevel,
+    getStarredListsByLevel,
+    removeLevelFromCustomList,
+    reorderListLevels,
+    toggleCustomListStar,
+    updateListLevel,
+} from '@src/services/list/list-levels.service'
+import {
+    getCustomListSubmissionQueueById,
+    reviewCustomListSubmission,
+    submitLevelToCustomList,
+} from '@src/services/list/list-level-submission.service'
 
 const router = express.Router()
 

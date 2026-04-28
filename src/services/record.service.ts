@@ -3,7 +3,7 @@ import { getLevel, fetchLevelFromGD, retrieveOrCreateLevel } from "@src/services
 import { getPlayer } from "@src/services/player.service";
 import { approved } from "@src/services/pointercrate.service";
 import { addInventoryItem } from "@src/services/inventory.service";
-import { getRecordPublicListStats } from "@src/services/custom-list.service";
+import { getRecordPublicListStats } from "@src/services/list/list-leaderboard.service";
 import type { TRecord, TPlayer } from "@src/types";
 import getVideoId from "get-video-id";
 import logger from "@src/utils/logger";
