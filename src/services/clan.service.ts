@@ -10,6 +10,7 @@ type Clan = Database['public']['Tables']['clans']['Update']
 export async function getClans({ start = 0, end = 50, sortBy = 'boostedUntil', ascending = 'false', searchQuery = '', searchType }: { start?: number, end?: number, sortBy?: string, ascending?: string, searchQuery?: string, searchType?: string } = {}) {
     const searchParams = buildFullTextSearchParams(searchQuery, searchType)
 
+    // @ts-ignore
     let query = supabase
         .from('clans')
         .select('*, players!owner(*, clans!id(*))')
