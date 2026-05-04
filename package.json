@@ -20,7 +20,7 @@
     "get-video-id": "^4.1.7",
     "jsonwebtoken": "^9.0.2",
     "mathjs": "^15.2.0",
-    "node-cron": "^3.0.3",
+    "node-cron": "^4.2.1",
     "octokit": "^5.0.5",
     "openai": "^6.18.0",
     "sepay-pg-node": "^1.0.0",
