@@ -904,10 +904,6 @@ export async function crawlAredlMirrorList(listId: number, actor: CustomListActo
 }
 
 export async function crawlMirrorList(listId: number, actor: CustomListActor) {
-    if (listId === AREDL_MIRROR_LIST_ID) {
-        return crawlAredlMirrorList(listId, actor)
-    }
-
     const list = await getCustomListRow(listId)
     await assertCanEditListLevels(list, actor)
 
@@ -915,9 +911,11 @@ export async function crawlMirrorList(listId: number, actor: CustomListActor) {
         throw new ValidationError('Mirror crawler is only available for mirror lists')
     }
 
-    if (list.id === POINTERCRATE_MIRROR_LIST_ID) {
+    if (listId === AREDL_MIRROR_LIST_ID) {
+        return crawlAredlMirrorList(listId, actor)
+    } else if (list.id === POINTERCRATE_MIRROR_LIST_ID) {
         return crawlPointercrateMirrorList(listId, actor)
+    } else {
+        throw new ValidationError('No crawler is configured for this mirror list')
     }
-
-    throw new ValidationError('No crawler is configured for this mirror list')
 }
